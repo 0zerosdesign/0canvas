@@ -146,7 +146,7 @@ export default function DocsPage() {
               Not published to npm yet
             </p>
             <p className="text-muted-foreground" style={{ fontSize: "13px", lineHeight: "1.6" }}>
-              Running <code className="text-[#f5a623]" style={{ fontFamily: "'Geist Mono', monospace" }}>npm install designdead</code> will fail with a 404 error because the package hasn't been published yet.
+              Running <code className="text-[#f5a623]" style={{ fontFamily: "'Geist Mono', monospace" }}>npm install @zerosdesign/design-dead</code> will fail with a 404 error because the package hasn't been published yet.
               To use DesignDead right now, install directly from GitHub or build from source. See the{" "}
               <a href="#install-from-github" className="text-[#0070f3] hover:underline">Install from GitHub</a> or{" "}
               <a href="#cursor-setup" className="text-[#0070f3] hover:underline">Build from Source</a> sections below.
@@ -183,7 +183,7 @@ export default function DocsPage() {
             <div className="flex items-center gap-2 bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl px-4 py-3 relative">
               <Terminal className="w-4 h-4 text-muted-foreground" />
               <code className="text-muted-foreground line-through" style={{ fontSize: "14px", fontFamily: "'Geist Mono', monospace" }}>
-                npm install designdead -D
+                npm install @zerosdesign/design-dead -D
               </code>
               <span className="text-[10px] text-[#f5a623] bg-[#f5a623]/10 px-1.5 py-0.5 rounded border border-[#f5a623]/20 ml-1">soon</span>
             </div>
@@ -222,7 +222,7 @@ export default function DocsPage() {
             </div>
             <CodeBlock
               lang="tsx"
-              code={`import { DesignDead } from "designdead";\n\nfunction App() {\n  return (\n    <>\n      <YourApp />\n      <DesignDead />\n    </>\n  );\n}`}
+              code={`import { DesignDead } from "@zerosdesign/design-dead";\n\nfunction App() {\n  return (\n    <>\n      <YourApp />\n      <DesignDead />\n    </>\n  );\n}`}
             />
           </div>
         </div>
@@ -252,7 +252,7 @@ export default function DocsPage() {
               <span className="w-6 h-6 rounded-full bg-[#0070f3]/10 border border-[#0070f3]/20 text-[#0070f3] flex items-center justify-center" style={{ fontSize: "12px" }}>1</span>
               <span className="text-foreground" style={{ fontSize: "14px" }}>Install the package</span>
             </div>
-            <CodeBlock code={`npm install designdead --save-dev\n# or\npnpm add designdead -D\n# or\nyarn add designdead -D`} />
+            <CodeBlock code={`npm install @zerosdesign/design-dead --save-dev\n# or\npnpm add @zerosdesign/design-dead -D\n# or\nyarn add @zerosdesign/design-dead -D`} />
           </div>
 
           {/* Step 2: Add to app */}
@@ -263,7 +263,7 @@ export default function DocsPage() {
             </div>
             <CodeBlock
               lang="tsx"
-              code={`import { DesignDead } from "designdead";\n\nfunction App() {\n  return (\n    <>\n      <YourApp />\n      <DesignDead />\n    </>\n  );\n}`}
+              code={`import { DesignDead } from "@zerosdesign/design-dead";\n\nfunction App() {\n  return (\n    <>\n      <YourApp />\n      <DesignDead />\n    </>\n  );\n}`}
             />
           </div>
         </div>
@@ -544,14 +544,14 @@ Direct DOM inspection · Works with any CSS framework`}
           <div className="p-5 bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl">
             <h3 className="text-foreground mb-4" style={{ fontSize: "15px" }}>5. Test locally before publishing</h3>
             <CodeBlock
-              code={`# Pack the package (creates a .tgz file)\nnpm pack\n\n# In another project, install from the .tgz\nnpm install ../design-dead/designdead-0.1.0.tgz\n\n# Or use npm link for live development\ncd design-dead && npm link\ncd ../your-project && npm link designdead`}
+              code={`# Pack the package (creates a .tgz file)\nnpm pack\n\n# In another project, install from the .tgz\nnpm install ../design-dead/zerosdesign-design-dead-0.0.1.tgz\n\n# Or use npm link for live development\ncd design-dead && npm link\ncd ../your-project && npm link @zerosdesign/design-dead`}
             />
           </div>
 
           <div className="p-5 bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl">
             <h3 className="text-foreground mb-4" style={{ fontSize: "15px" }}>6. Publish to npm</h3>
             <CodeBlock
-              code={`# Login to npm (first time only)\nnpm login\n\n# Publish\nnpm publish\n\n# Or publish with a tag\nnpm publish --tag beta`}
+              code={`# Login to npm (first time only)\nnpm login\n\n# Publish (scoped packages need --access public)\nnpm publish --access public\n\n# Or publish with a tag\nnpm publish --access public --tag beta`}
             />
           </div>
         </div>

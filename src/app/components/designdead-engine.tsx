@@ -4,7 +4,7 @@
 //
 // This is the component that consumers import:
 //
-//   import { DesignDead } from "designdead";
+//   import { DesignDead } from "@zerosdesign/design-dead";
 //   <DesignDead />
 //
 // It wraps the entire DesignDead workspace (store, toolbar,
