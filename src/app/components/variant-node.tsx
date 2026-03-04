@@ -120,6 +120,8 @@ export function VariantNode({ data }: NodeProps) {
     variant.status === "sent" ? "Sent" : "Draft";
 
   const canPushToMain = variant.status === "finalized" && !!variant.sourceElementId;
+  const hasActiveSelection = !!state.selectedElementId && state.selectionSource === "inspect" && state.activeVariantId === variant.id;
+  const iframeInteractive = inspecting || hasActiveSelection;
 
   return (
     <div
@@ -241,7 +243,7 @@ export function VariantNode({ data }: NodeProps) {
             height: "100%",
             border: "none",
             display: "block",
-            pointerEvents: inspecting ? "auto" : "none",
+            pointerEvents: iframeInteractive ? "auto" : "none",
           }}
         />
         {inspecting && (
