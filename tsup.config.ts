@@ -12,6 +12,7 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   external: ["react", "react-dom"],
+  tsconfig: "tsconfig.build.json",
   define: {
     __VERSION__: JSON.stringify(VERSION),
   },

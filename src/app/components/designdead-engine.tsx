@@ -22,9 +22,18 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { WorkspaceProvider, useWorkspace } from "../store";
-import WorkspacePage from "../pages/workspace";
 import { injectStyles, removeStyles } from "./designdead-styles";
 import { cleanup } from "./dom-inspector";
+import { WorkspaceToolbar } from "./workspace-toolbar";
+import { LayersPanel } from "./layers-panel";
+import { StylePanel } from "./style-panel";
+import { LiveCanvas } from "./live-canvas";
+import { AgentPanel } from "./agent-panel";
+import { BrainstormPanel } from "./brainstorm-panel";
+import { VersionManager } from "./version-manager";
+import { CommandPalette } from "./command-palette";
+import { FileMapPanel } from "./file-map-panel";
+import { AnnotationOverlay } from "./annotation-overlay";
 
 // ── Props ──────────────────────────────────────────────────
 
@@ -302,7 +311,7 @@ export function DesignDead({
             </svg>
           </button>
 
-          <WorkspacePage />
+          <EngineWorkspace />
         </AutoConnect>
       </WorkspaceProvider>
     </div>
@@ -311,3 +320,97 @@ export function DesignDead({
 
 // ── Default export for convenience ─────────────────────────
 export default DesignDead;
+
+// ── Engine Workspace Layout ────────────────────────────────
+// Self-contained workspace layout (no react-router dependency).
+// Mirrors the same panel arrangement as the docs site workspace
+// but without any navigation links.
+
+function EngineWorkspace() {
+  const { state, dispatch } = useWorkspace();
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey) {
+        if (e.key === "k") {
+          e.preventDefault();
+          dispatch({ type: "TOGGLE_COMMAND_PALETTE" });
+        }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [dispatch]);
+
+  const showVersions =
+    !state.idePanelOpen &&
+    !state.brainstormMode &&
+    !state.fileMapPanelOpen;
+
+  return (
+    <div
+      style={{
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        background: "#000000",
+        overflow: "hidden",
+      }}
+      data-designdead="workspace"
+    >
+      {/* Top toolbar */}
+      <WorkspaceToolbar />
+
+      {/* Main workspace */}
+      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+        {/* Left: Layers Panel */}
+        {state.layersPanelOpen && (
+          <div style={{ width: 260, flexShrink: 0, height: "100%", overflow: "hidden" }}>
+            <LayersPanel />
+          </div>
+        )}
+
+        {/* Center: Live Canvas + Annotation Overlay */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
+          <LiveCanvas />
+          <AnnotationOverlay />
+        </div>
+
+        {/* Right panels */}
+        {state.stylePanelOpen && (
+          <div style={{ width: 280, flexShrink: 0, height: "100%", overflow: "hidden" }}>
+            <StylePanel />
+          </div>
+        )}
+
+        {state.fileMapPanelOpen && !state.stylePanelOpen && (
+          <div style={{ width: 280, flexShrink: 0, borderLeft: "1px solid #1a1a1a" }}>
+            <FileMapPanel />
+          </div>
+        )}
+
+        {state.idePanelOpen && (
+          <div style={{ width: 300, flexShrink: 0, borderLeft: "1px solid #1a1a1a" }}>
+            <AgentPanel />
+          </div>
+        )}
+
+        {state.brainstormMode && !state.idePanelOpen && (
+          <div style={{ width: 300, flexShrink: 0, borderLeft: "1px solid #1a1a1a" }}>
+            <BrainstormPanel />
+          </div>
+        )}
+
+        {showVersions && !state.stylePanelOpen && (
+          <div style={{ width: 280, flexShrink: 0, borderLeft: "1px solid #1a1a1a", background: "#0a0a0a" }}>
+            <VersionManager />
+          </div>
+        )}
+      </div>
+
+      {/* Command palette overlay */}
+      {state.commandPaletteOpen && <CommandPalette />}
+    </div>
+  );
+}
