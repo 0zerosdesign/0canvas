@@ -17,9 +17,14 @@ import {
   HelpCircle,
   ThumbsUp,
   X,
+  Clipboard,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
-import { useWorkspace, FeedbackItem } from "../store";
+import { useWorkspace, FeedbackItem, WSLogEntry } from "../store";
 import { copyToClipboard } from "./clipboard";
+
+const MCP_PORT = 24192;
 
 const INTENT_CONFIG: Record<string, { icon: React.ReactNode; color: string }> = {
   fix: { icon: <Bug style={{ width: 10, height: 10 }} />, color: "#ff4444" },
@@ -39,6 +44,7 @@ export function AgentWaitlist() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(true);
+  const [sendStatus, setSendStatus] = useState<"idle" | "sending" | "sent-bridge" | "sent-clipboard">("idle");
 
   const activeVariantId = state.activeVariantId || "main";
 
@@ -112,14 +118,48 @@ export function AgentWaitlist() {
     setTimeout(() => setCopied(false), 2000);
   }, [selectedIds, pendingItems, generateBatchMarkdown]);
 
-  const handleSend = useCallback(() => {
-    const ids =
+  const handleSend = useCallback(async () => {
+    const items =
       selectedIds.size > 0
-        ? Array.from(selectedIds)
-        : pendingItems.map((f) => f.id);
+        ? pendingItems.filter((f) => selectedIds.has(f.id))
+        : pendingItems;
+
+    if (items.length === 0) return;
+    setSendStatus("sending");
+
+    const md = generateBatchMarkdown(items);
+    const ids = items.map((f) => f.id);
+    let bridgeSuccess = false;
+
+    const port = state.wsPort || MCP_PORT;
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/api/feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items }),
+        signal: AbortSignal.timeout(3000),
+      });
+      if (res.ok) {
+        bridgeSuccess = true;
+        const entry: WSLogEntry = {
+          id: `log-${Date.now()}`,
+          timestamp: Date.now(),
+          direction: "sent",
+          method: "feedback",
+          summary: `Sent ${items.length} feedback items to MCP bridge`,
+        };
+        dispatch({ type: "WS_LOG", entry });
+      }
+    } catch { /* bridge not running */ }
+
+    copyToClipboard(md);
+
     dispatch({ type: "MARK_FEEDBACK_SENT", ids });
     setSelectedIds(new Set());
-  }, [selectedIds, pendingItems, dispatch]);
+
+    setSendStatus(bridgeSuccess ? "sent-bridge" : "sent-clipboard");
+    setTimeout(() => setSendStatus("idle"), 4000);
+  }, [selectedIds, pendingItems, state.wsPort, generateBatchMarkdown, dispatch]);
 
   if (!state.waitlistOpen) return null;
 
@@ -202,11 +242,18 @@ export function AgentWaitlist() {
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleSend(); }}
-                  style={{ ...toolBtnStyle, background: "#0070f3", color: "#fff", borderColor: "#0070f3" }}
-                  title="Send to agent"
+                  disabled={sendStatus === "sending"}
+                  style={{
+                    ...toolBtnStyle,
+                    background: sendStatus === "sending" ? "#333" : "#0070f3",
+                    color: "#fff",
+                    borderColor: sendStatus === "sending" ? "#333" : "#0070f3",
+                    cursor: sendStatus === "sending" ? "wait" : "pointer",
+                  }}
+                  title="Send to agent (copies to clipboard + pushes to MCP bridge)"
                 >
                   <Send style={{ width: 11, height: 11 }} />
-                  <span style={{ fontSize: 10 }}>Send</span>
+                  <span style={{ fontSize: 10 }}>{sendStatus === "sending" ? "Sending..." : "Send"}</span>
                 </button>
               </>
             )}
@@ -215,6 +262,24 @@ export function AgentWaitlist() {
               : <ChevronUp style={{ width: 14, height: 14, color: "#666" }} />}
           </div>
         </div>
+
+        {/* Send status toast */}
+        {sendStatus === "sent-bridge" && (
+          <div style={{ padding: "8px 12px", background: "#50e3c2" + "15", borderBottom: "1px solid #50e3c2" + "30", display: "flex", alignItems: "center", gap: 8 }}>
+            <Wifi style={{ width: 12, height: 12, color: "#50e3c2", flexShrink: 0 }} />
+            <span style={{ fontSize: 10, color: "#50e3c2" }}>
+              Sent to MCP bridge &amp; copied to clipboard. Your AI agent can now pick it up.
+            </span>
+          </div>
+        )}
+        {sendStatus === "sent-clipboard" && (
+          <div style={{ padding: "8px 12px", background: "#ff9500" + "15", borderBottom: "1px solid #ff9500" + "30", display: "flex", alignItems: "center", gap: 8 }}>
+            <Clipboard style={{ width: 12, height: 12, color: "#ff9500", flexShrink: 0 }} />
+            <span style={{ fontSize: 10, color: "#ff9500" }}>
+              Copied to clipboard! Paste in Cursor chat. For auto-sync, run: <code style={{ fontFamily: "'SF Mono',monospace", background: "#222", padding: "1px 4px", borderRadius: 3 }}>npx @zerosdesign/design-dead mcp</code>
+            </span>
+          </div>
+        )}
 
         {/* Items list */}
         {expanded && (
