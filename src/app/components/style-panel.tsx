@@ -8,13 +8,27 @@ import {
   Type,
   Box,
   Grid3x3,
-  Minus,
   Globe,
   MousePointer2,
 } from "lucide-react";
 import { useWorkspace, findElement } from "../store";
 import { copyToClipboard } from "./clipboard";
 import { ScrollArea } from "./ui/scroll-area";
+
+const FONT = "'Geist Sans','Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif";
+const MONO = "'JetBrains Mono','Geist Mono','SF Mono','Fira Code',monospace";
+const C = {
+  bg: "#0a0a0a",
+  surface: "#111111",
+  surfaceHover: "#1a1a1a",
+  border: "#1e1e1e",
+  fg: "#ededed",
+  fgMuted: "#888888",
+  fgDim: "#555555",
+  accent: "#0070f3",
+  green: "#50e3c2",
+  orange: "#f5a623",
+};
 
 type StyleCategory = {
   name: string;
@@ -25,7 +39,7 @@ type StyleCategory = {
 const STYLE_CATEGORIES: StyleCategory[] = [
   {
     name: "Layout",
-    icon: <Grid3x3 className="w-3.5 h-3.5" />,
+    icon: <Grid3x3 size={14} color={C.fgMuted} />,
     properties: [
       "display", "position", "flexDirection", "alignItems", "justifyContent",
       "flexWrap", "gap", "gridTemplateColumns", "gridTemplateRows",
@@ -34,7 +48,7 @@ const STYLE_CATEGORIES: StyleCategory[] = [
   },
   {
     name: "Spacing",
-    icon: <Box className="w-3.5 h-3.5" />,
+    icon: <Box size={14} color={C.fgMuted} />,
     properties: [
       "padding", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft",
       "margin", "marginTop", "marginRight", "marginBottom", "marginLeft",
@@ -42,12 +56,12 @@ const STYLE_CATEGORIES: StyleCategory[] = [
   },
   {
     name: "Size",
-    icon: <Ruler className="w-3.5 h-3.5" />,
+    icon: <Ruler size={14} color={C.fgMuted} />,
     properties: ["width", "height", "maxWidth", "maxHeight", "minHeight", "minWidth"],
   },
   {
     name: "Typography",
-    icon: <Type className="w-3.5 h-3.5" />,
+    icon: <Type size={14} color={C.fgMuted} />,
     properties: [
       "fontSize", "fontWeight", "lineHeight", "textAlign", "color",
       "letterSpacing", "fontFamily", "textDecoration", "textTransform",
@@ -56,7 +70,7 @@ const STYLE_CATEGORIES: StyleCategory[] = [
   },
   {
     name: "Fill & Border",
-    icon: <Palette className="w-3.5 h-3.5" />,
+    icon: <Palette size={14} color={C.fgMuted} />,
     properties: [
       "background", "backgroundColor", "border", "borderTop", "borderBottom",
       "borderLeft", "borderRight", "borderRadius", "opacity", "boxShadow",
@@ -77,6 +91,7 @@ function StylePropertyRow({
   const { dispatch } = useWorkspace();
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
+  const [hovered, setHovered] = useState(false);
 
   const isColor =
     property === "background" ||
@@ -89,29 +104,53 @@ function StylePropertyRow({
     setEditing(false);
   };
 
-  const formatProperty = (prop: string) => {
-    return prop.replace(/([A-Z])/g, "-$1").toLowerCase();
-  };
+  const formatProperty = (prop: string) =>
+    prop.replace(/([A-Z])/g, "-$1").toLowerCase();
 
-  // Try to extract a color swatch from the value
   const colorMatch = typeof value === "string"
     ? value.match(/(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\))/)
     : null;
   const swatchColor = isColor && colorMatch ? colorMatch[0] : null;
 
   return (
-    <div className="flex items-center h-7 group hover:bg-[#ffffff06] px-3">
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        height: 28,
+        padding: "0 12px",
+        background: hovered ? "rgba(255,255,255,0.02)" : "transparent",
+        fontFamily: FONT,
+      }}
+    >
       <span
-        className="w-[120px] shrink-0 text-[11px] text-muted-foreground truncate"
-        style={{ fontFamily: "'JetBrains Mono', monospace" }}
+        style={{
+          width: 120,
+          flexShrink: 0,
+          fontSize: 11,
+          color: C.fgMuted,
+          fontFamily: MONO,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
       >
         {formatProperty(property)}
       </span>
-      <div className="flex-1 flex items-center gap-1.5">
+      <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 6 }}>
         {swatchColor && (
           <span
-            className="w-3 h-3 rounded-sm border border-[#333333] shrink-0"
-            style={{ background: swatchColor }}
+            style={{
+              width: 12,
+              height: 12,
+              borderRadius: 2,
+              border: `1px solid ${C.border}`,
+              flexShrink: 0,
+              background: swatchColor,
+              display: "inline-block",
+            }}
           />
         )}
         {editing ? (
@@ -122,21 +161,32 @@ function StylePropertyRow({
             onBlur={handleSave}
             onKeyDown={(e) => {
               if (e.key === "Enter") handleSave();
-              if (e.key === "Escape") {
-                setEditValue(value);
-                setEditing(false);
-              }
+              if (e.key === "Escape") { setEditValue(value); setEditing(false); }
             }}
-            className="flex-1 bg-[#0070f3]/10 border border-[#0070f3]/30 rounded px-1.5 py-0 text-[11px] text-foreground focus:outline-none"
-            style={{ fontFamily: "'JetBrains Mono', monospace" }}
+            style={{
+              flex: 1,
+              background: `${C.accent}15`,
+              border: `1px solid ${C.accent}50`,
+              borderRadius: 4,
+              padding: "1px 6px",
+              fontSize: 11,
+              color: C.fg,
+              fontFamily: MONO,
+              outline: "none",
+            }}
           />
         ) : (
           <span
-            className="flex-1 text-[11px] text-foreground truncate cursor-text"
-            style={{ fontFamily: "'JetBrains Mono', monospace" }}
-            onClick={() => {
-              setEditValue(value);
-              setEditing(true);
+            onClick={() => { setEditValue(value); setEditing(true); }}
+            style={{
+              flex: 1,
+              fontSize: 11,
+              color: C.fg,
+              fontFamily: MONO,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              cursor: "text",
             }}
           >
             {value}
@@ -157,6 +207,7 @@ function StyleSection({
   elementId: string;
 }) {
   const [expanded, setExpanded] = useState(true);
+  const [hovered, setHovered] = useState(false);
   const activeProperties = category.properties.filter(
     (p) => elementStyles[p] !== undefined && elementStyles[p] !== ""
   );
@@ -164,31 +215,37 @@ function StyleSection({
   if (activeProperties.length === 0) return null;
 
   return (
-    <div className="border-b border-[#1a1a1a]">
+    <div style={{ borderBottom: `1px solid ${C.border}` }}>
       <button
-        className="flex items-center w-full px-3 py-2 hover:bg-[#ffffff06] transition-colors"
         onClick={() => setExpanded(!expanded)}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          width: "100%",
+          padding: "8px 12px",
+          background: hovered ? "rgba(255,255,255,0.02)" : "transparent",
+          border: "none",
+          cursor: "pointer",
+          fontFamily: FONT,
+          color: C.fg,
+          transition: "background 0.1s ease",
+        }}
       >
         {expanded ? (
-          <ChevronDown className="w-3 h-3 text-muted-foreground mr-1.5" />
+          <ChevronDown size={12} color={C.fgMuted} style={{ marginRight: 6 }} />
         ) : (
-          <ChevronRight className="w-3 h-3 text-muted-foreground mr-1.5" />
+          <ChevronRight size={12} color={C.fgMuted} style={{ marginRight: 6 }} />
         )}
-        <span className="mr-1.5 text-muted-foreground">{category.icon}</span>
-        <span className="text-[11px] text-foreground">{category.name}</span>
-        <span className="ml-auto text-[10px] text-muted-foreground">
-          {activeProperties.length}
-        </span>
+        <span style={{ marginRight: 6, display: "inline-flex" }}>{category.icon}</span>
+        <span style={{ fontSize: 12, fontWeight: 450 }}>{category.name}</span>
+        <span style={{ marginLeft: "auto", fontSize: 10, color: C.fgMuted }}>{activeProperties.length}</span>
       </button>
       {expanded && (
-        <div className="pb-1">
+        <div style={{ paddingBottom: 4 }}>
           {activeProperties.map((prop) => (
-            <StylePropertyRow
-              key={prop}
-              property={prop}
-              value={elementStyles[prop]}
-              elementId={elementId}
-            />
+            <StylePropertyRow key={prop} property={prop} value={elementStyles[prop]} elementId={elementId} />
           ))}
         </div>
       )}
@@ -206,27 +263,21 @@ export function StylePanel() {
 
   if (!selectedElement) {
     return (
-      <div className="h-full flex flex-col bg-[#0a0a0a] border-l border-border">
-        <div className="px-3 py-2.5 border-b border-border">
-          <span className="text-[11px] tracking-wider text-muted-foreground uppercase">
-            Style
-          </span>
+      <div style={{ height: "100%", display: "flex", flexDirection: "column", background: C.bg, borderLeft: `1px solid ${C.border}`, fontFamily: FONT, color: C.fg }}>
+        <div style={{ padding: "10px 14px", borderBottom: `1px solid ${C.border}` }}>
+          <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color: C.fgMuted }}>Style</span>
         </div>
-        <div className="flex-1 flex items-center justify-center p-6">
-          <div className="text-center">
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ textAlign: "center" }}>
             {state.elements.length === 0 ? (
               <>
-                <Globe className="w-8 h-8 text-[#222222] mx-auto mb-3" />
-                <p className="text-[12px] text-muted-foreground">
-                  Connect a project to inspect styles
-                </p>
+                <Globe size={28} color="#333" style={{ margin: "0 auto 12px" }} />
+                <p style={{ fontSize: 13, color: C.fgMuted }}>Connect a project to inspect styles</p>
               </>
             ) : (
               <>
-                <MousePointer2 className="w-8 h-8 text-[#222222] mx-auto mb-3" />
-                <p className="text-[12px] text-muted-foreground">
-                  Select an element to inspect its styles
-                </p>
+                <MousePointer2 size={28} color="#333" style={{ margin: "0 auto 12px" }} />
+                <p style={{ fontSize: 13, color: C.fgMuted }}>Select an element to inspect its styles</p>
               </>
             )}
           </div>
@@ -236,205 +287,184 @@ export function StylePanel() {
   }
 
   const styleCount = Object.keys(selectedElement.styles).length;
-
   const cssOutput = Object.entries(selectedElement.styles)
-    .map(
-      ([k, v]) =>
-        `  ${k.replace(/([A-Z])/g, "-$1").toLowerCase()}: ${v};`
-    )
+    .map(([k, v]) => `  ${k.replace(/([A-Z])/g, "-$1").toLowerCase()}: ${v};`)
     .join("\n");
 
   return (
-    <div className="h-full flex flex-col bg-[#0a0a0a] border-l border-border">
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", background: C.bg, borderLeft: `1px solid ${C.border}`, fontFamily: FONT, color: C.fg }}>
       {/* Header */}
-      <div className="px-3 py-2.5 border-b border-border">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px] tracking-wider text-muted-foreground uppercase">
-            Style
-          </span>
-          <button
-            className="p-1 hover:bg-[#1a1a1a] rounded transition-colors"
-            onClick={() => {
-              copyToClipboard(
-                `${selectedElement.selector} {\n${cssOutput}\n}`
-              );
-            }}
-            title="Copy CSS"
-          >
-            <Copy className="w-3.5 h-3.5 text-muted-foreground" />
-          </button>
+      <div style={{ padding: "10px 14px", borderBottom: `1px solid ${C.border}` }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+          <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color: C.fgMuted }}>Style</span>
+          <CopyBtn onClick={() => copyToClipboard(`${selectedElement.selector} {\n${cssOutput}\n}`)} />
         </div>
 
-        {/* Element info */}
-        <div className="flex items-center gap-2 mb-2">
-          <span
-            className="text-[12px] text-[#0070f3] bg-[#0070f3]/10 px-1.5 py-0.5 rounded"
-            style={{ fontFamily: "'JetBrains Mono', monospace" }}
-          >
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+          <span style={{ fontSize: 12, color: C.accent, background: `${C.accent}18`, padding: "2px 8px", borderRadius: 4, fontFamily: MONO }}>
             {"<"}{selectedElement.tag}{">"}
           </span>
           {styleCount > 0 && (
-            <span className="text-[10px] text-muted-foreground">
-              {styleCount} properties
-            </span>
+            <span style={{ fontSize: 11, color: C.fgMuted }}>{styleCount} properties</span>
           )}
         </div>
+
         {selectedElement.classes.length > 0 && (
-          <div className="flex flex-wrap gap-1">
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
             {selectedElement.classes.slice(0, 6).map((cls) => (
-              <span
-                key={cls}
-                className="text-[10px] text-muted-foreground bg-[#111111] px-1.5 py-0.5 rounded border border-[#1a1a1a]"
-                style={{ fontFamily: "'JetBrains Mono', monospace" }}
-              >
+              <span key={cls} style={{ fontSize: 10, color: C.fgMuted, background: C.surface, padding: "2px 6px", borderRadius: 3, border: `1px solid ${C.border}`, fontFamily: MONO }}>
                 .{cls}
               </span>
             ))}
             {selectedElement.classes.length > 6 && (
-              <span className="text-[10px] text-muted-foreground">
-                +{selectedElement.classes.length - 6}
-              </span>
+              <span style={{ fontSize: 10, color: C.fgDim }}>+{selectedElement.classes.length - 6}</span>
             )}
           </div>
         )}
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-border">
+      <div style={{ display: "flex", borderBottom: `1px solid ${C.border}` }}>
         {(["styles", "computed", "code"] as const).map((t) => (
-          <button
-            key={t}
-            className={`flex-1 py-2 text-[11px] transition-colors ${
-              tab === t
-                ? "text-foreground border-b border-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-            onClick={() => setTab(t)}
-          >
-            {t.charAt(0).toUpperCase() + t.slice(1)}
-          </button>
+          <TabBtn key={t} label={t.charAt(0).toUpperCase() + t.slice(1)} active={tab === t} onClick={() => setTab(t)} />
         ))}
       </div>
 
       {/* Content */}
-      <ScrollArea className="flex-1">
+      <ScrollArea style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
         {tab === "styles" && (
           <div>
             {STYLE_CATEGORIES.map((cat) => (
-              <StyleSection
-                key={cat.name}
-                category={cat}
-                elementStyles={selectedElement.styles}
-                elementId={selectedElement.id}
-              />
+              <StyleSection key={cat.name} category={cat} elementStyles={selectedElement.styles} elementId={selectedElement.id} />
             ))}
             {styleCount === 0 && (
-              <div className="p-6 text-center">
-                <p className="text-[12px] text-muted-foreground">
-                  No computed styles available yet.
-                </p>
-                <p className="text-[10px] text-muted-foreground mt-1">
-                  Click this element in the preview to load styles.
-                </p>
+              <div style={{ padding: 24, textAlign: "center" }}>
+                <p style={{ fontSize: 12, color: C.fgMuted }}>No computed styles available yet.</p>
+                <p style={{ fontSize: 11, color: C.fgDim, marginTop: 4 }}>Click this element in the preview to load styles.</p>
               </div>
             )}
           </div>
         )}
 
         {tab === "computed" && (
-          <div className="p-3">
-            {/* Box model visualization */}
-            <div className="mb-4">
-              <span className="text-[11px] text-muted-foreground mb-2 block">
-                Box Model
-              </span>
-              <div className="bg-[#ff980020] border border-[#ff980040] rounded-lg p-3 text-center">
-                <div className="text-[10px] text-[#ff9800] mb-1">
-                  margin
-                  <span className="text-[9px] opacity-60 ml-1">
-                    {selectedElement.styles.margin || selectedElement.styles.marginTop || "0"}
-                  </span>
-                </div>
-                <div className="bg-[#4caf5020] border border-[#4caf5040] rounded p-3">
-                  <div className="text-[10px] text-[#4caf50] mb-1">
-                    padding
-                    <span className="text-[9px] opacity-60 ml-1">
-                      {selectedElement.styles.padding || selectedElement.styles.paddingTop || "0"}
-                    </span>
-                  </div>
-                  <div className="bg-[#2196f320] border border-[#2196f340] rounded p-2">
-                    <span className="text-[11px] text-[#2196f3]">
-                      {selectedElement.styles.width || "auto"} x{" "}
-                      {selectedElement.styles.height || "auto"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Selector */}
-            <div className="mb-3">
-              <span className="text-[11px] text-muted-foreground mb-1 block">
-                Selector
-              </span>
-              <code
-                className="text-[11px] text-[#50e3c2] bg-[#111111] px-2 py-1.5 rounded block border border-[#1a1a1a] break-all"
-                style={{ fontFamily: "'JetBrains Mono', monospace" }}
-              >
+          <div style={{ padding: 12 }}>
+            <BoxModel styles={selectedElement.styles} />
+            <div style={{ marginBottom: 12 }}>
+              <span style={{ fontSize: 11, color: C.fgMuted, display: "block", marginBottom: 6 }}>Selector</span>
+              <code style={{ fontSize: 11, color: C.green, background: C.surface, padding: "6px 10px", borderRadius: 6, display: "block", border: `1px solid ${C.border}`, wordBreak: "break-all", fontFamily: MONO }}>
                 {selectedElement.selector}
               </code>
             </div>
-
-            {/* All properties flat list */}
             <div>
-              <span className="text-[11px] text-muted-foreground mb-2 block">
-                All Properties ({styleCount})
-              </span>
-              <div className="space-y-0">
-                {Object.entries(selectedElement.styles)
-                  .sort(([a], [b]) => a.localeCompare(b))
-                  .map(([k, v]) => (
-                    <div
-                      key={k}
-                      className="flex items-center py-1 text-[10px] border-b border-[#111111]"
-                      style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                    >
-                      <span className="text-muted-foreground w-[110px] shrink-0 truncate">
-                        {k.replace(/([A-Z])/g, "-$1").toLowerCase()}
-                      </span>
-                      <span className="text-foreground truncate">{v}</span>
-                    </div>
-                  ))}
-              </div>
+              <span style={{ fontSize: 11, color: C.fgMuted, display: "block", marginBottom: 6 }}>All Properties ({styleCount})</span>
+              {Object.entries(selectedElement.styles)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([k, v]) => (
+                  <div key={k} style={{ display: "flex", alignItems: "center", padding: "3px 0", fontSize: 10, borderBottom: `1px solid ${C.surface}`, fontFamily: MONO }}>
+                    <span style={{ color: C.fgMuted, width: 110, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {k.replace(/([A-Z])/g, "-$1").toLowerCase()}
+                    </span>
+                    <span style={{ color: C.fg, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v}</span>
+                  </div>
+                ))}
             </div>
           </div>
         )}
 
         {tab === "code" && (
-          <div className="p-3">
-            <pre
-              className="text-[11px] text-foreground bg-[#111111] p-3 rounded border border-[#1a1a1a] overflow-x-auto whitespace-pre"
-              style={{ fontFamily: "'JetBrains Mono', monospace" }}
-            >
-              <span className="text-muted-foreground">{"/* CSS */\n"}</span>
-              <span className="text-[#50e3c2]">{selectedElement.selector}</span>
-              <span className="text-muted-foreground">{" {\n"}</span>
+          <div style={{ padding: 12 }}>
+            <pre style={{ fontSize: 11, color: C.fg, background: C.surface, padding: 12, borderRadius: 8, border: `1px solid ${C.border}`, overflowX: "auto", whiteSpace: "pre", fontFamily: MONO }}>
+              <span style={{ color: C.fgMuted }}>{"/* CSS */\n"}</span>
+              <span style={{ color: C.green }}>{selectedElement.selector}</span>
+              <span style={{ color: C.fgMuted }}>{" {\n"}</span>
               {Object.entries(selectedElement.styles).map(([k, v]) => (
                 <span key={k}>
-                  <span className="text-[#79b8ff]">
-                    {"  "}
-                    {k.replace(/([A-Z])/g, "-$1").toLowerCase()}
-                  </span>
-                  <span className="text-muted-foreground">{": "}</span>
-                  <span className="text-[#f5a623]">{v}</span>
-                  <span className="text-muted-foreground">{";\n"}</span>
+                  <span style={{ color: "#79b8ff" }}>{"  "}{k.replace(/([A-Z])/g, "-$1").toLowerCase()}</span>
+                  <span style={{ color: C.fgMuted }}>{": "}</span>
+                  <span style={{ color: C.orange }}>{v}</span>
+                  <span style={{ color: C.fgMuted }}>{";\n"}</span>
                 </span>
               ))}
-              <span className="text-muted-foreground">{"}"}</span>
+              <span style={{ color: C.fgMuted }}>{"}"}</span>
             </pre>
           </div>
         )}
       </ScrollArea>
+    </div>
+  );
+}
+
+function TabBtn({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        flex: 1,
+        padding: "8px 0",
+        fontSize: 12,
+        fontFamily: FONT,
+        fontWeight: active ? 500 : 400,
+        color: active ? C.fg : hovered ? C.fg : C.fgMuted,
+        background: "transparent",
+        border: "none",
+        borderBottom: active ? `2px solid ${C.fg}` : "2px solid transparent",
+        cursor: "pointer",
+        transition: "all 0.15s ease",
+        textAlign: "center",
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function CopyBtn({ onClick }: { onClick: () => void }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      title="Copy CSS"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 4,
+        borderRadius: 4,
+        background: hovered ? C.surfaceHover : "transparent",
+        border: "none",
+        cursor: "pointer",
+        transition: "background 0.1s ease",
+      }}
+    >
+      <Copy size={14} color={C.fgMuted} />
+    </button>
+  );
+}
+
+function BoxModel({ styles }: { styles: Record<string, string> }) {
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <span style={{ fontSize: 11, color: C.fgMuted, display: "block", marginBottom: 8 }}>Box Model</span>
+      <div style={{ background: "#ff980020", border: "1px solid #ff980040", borderRadius: 8, padding: 12, textAlign: "center" }}>
+        <div style={{ fontSize: 10, color: "#ff9800", marginBottom: 4 }}>
+          margin <span style={{ fontSize: 9, opacity: 0.6, marginLeft: 4 }}>{styles.margin || styles.marginTop || "0"}</span>
+        </div>
+        <div style={{ background: "#4caf5020", border: "1px solid #4caf5040", borderRadius: 6, padding: 12 }}>
+          <div style={{ fontSize: 10, color: "#4caf50", marginBottom: 4 }}>
+            padding <span style={{ fontSize: 9, opacity: 0.6, marginLeft: 4 }}>{styles.padding || styles.paddingTop || "0"}</span>
+          </div>
+          <div style={{ background: "#2196f320", border: "1px solid #2196f340", borderRadius: 4, padding: 8 }}>
+            <span style={{ fontSize: 11, color: "#2196f3" }}>
+              {styles.width || "auto"} x {styles.height || "auto"}
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -19,6 +19,9 @@
       }
     }
   },
+  "bin": {
+    "designdead-mcp": "./dist/mcp/server.mjs"
+  },
   "files": [
     "dist"
   ],
@@ -41,12 +44,14 @@
     }
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
     "@radix-ui/react-scroll-area": "^1.2.0",
     "@xyflow/react": "^12.10.1",
     "clsx": "^2.1.0",
     "idb": "^8.0.3",
     "lucide-react": "^0.400.0",
-    "tailwind-merge": "^3.0.0"
+    "tailwind-merge": "^3.0.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.0.0",

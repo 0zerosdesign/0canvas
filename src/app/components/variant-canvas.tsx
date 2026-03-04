@@ -20,7 +20,7 @@ import "@xyflow/react/dist/style.css";
 import { useWorkspace, VariantData } from "../store";
 import { SourceNode, type SourceNodeData } from "./source-node";
 import { VariantNode, type VariantNodeData } from "./variant-node";
-import { capturePageSnapshot, captureComponentSnapshot } from "./dom-inspector";
+import { capturePageSnapshot, captureComponentSnapshot, getElementOuterHTML, pushVariantToMain as domPushToMain } from "./dom-inspector";
 import { saveVariant, deleteVariant as dbDeleteVariant } from "./variant-db";
 import { copyToClipboard } from "./clipboard";
 
@@ -54,6 +54,8 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
       id: getNodeId(),
       name: `Page Fork ${state.variants.length + 1}`,
       ...snapshot,
+      sourceElementId: null,
+      sourcePageRoute: state.currentRoute,
       parentId: null,
       status: "draft",
       createdAt: Date.now(),
@@ -61,16 +63,21 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
 
     dispatch({ type: "ADD_VARIANT", variant });
     saveVariant(variant).catch(console.warn);
-  }, [state.variants.length, dispatch]);
+  }, [state.variants.length, state.currentRoute, dispatch]);
 
   const handleForkComponent = useCallback((elementId: string) => {
     const snapshot = captureComponentSnapshot(elementId);
     if (!snapshot) return;
 
+    const outerHTML = getElementOuterHTML(elementId) || "";
+
     const variant: VariantData = {
       id: getNodeId(),
       name: `Component Fork ${state.variants.length + 1}`,
       ...snapshot,
+      sourceElementId: elementId,
+      sourcePageRoute: state.currentRoute,
+      sourceOuterHTML: outerHTML,
       parentId: null,
       status: "draft",
       createdAt: Date.now(),
@@ -78,7 +85,7 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
 
     dispatch({ type: "ADD_VARIANT", variant });
     saveVariant(variant).catch(console.warn);
-  }, [state.variants.length, dispatch]);
+  }, [state.variants.length, state.currentRoute, dispatch]);
 
   const handleForkVariant = useCallback((sourceVariantId: string) => {
     const source = state.variants.find((v) => v.id === sourceVariantId);
@@ -92,6 +99,9 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
       mockData: { ...source.mockData },
       sourceType: source.sourceType,
       sourceSelector: source.sourceSelector,
+      sourceElementId: source.sourceElementId,
+      sourcePageRoute: source.sourcePageRoute,
+      sourceOuterHTML: source.sourceOuterHTML,
       parentId: sourceVariantId,
       status: "draft",
       createdAt: Date.now(),
@@ -134,6 +144,19 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
 
     copyToClipboard(output);
     dispatch({ type: "UPDATE_VARIANT", id: variantId, updates: { status: "sent" } });
+  }, [state.variants, dispatch]);
+
+  const handlePushToMain = useCallback((variantId: string) => {
+    const variant = state.variants.find((v) => v.id === variantId);
+    if (!variant || !variant.sourceElementId) return;
+
+    const html = variant.modifiedHtml || variant.html;
+    const css = variant.modifiedCss || variant.css;
+
+    const success = domPushToMain(variant.sourceElementId, html, css || undefined);
+    if (success) {
+      dispatch({ type: "PUSH_VARIANT_TO_MAIN", id: variantId });
+    }
   }, [state.variants, dispatch]);
 
   // ── Compute ReactFlow nodes + edges from state variants ─
@@ -183,6 +206,7 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
           onDelete: handleDeleteVariant,
           onFinalize: handleFinalizeVariant,
           onSendToAgent: handleSendToAgent,
+          onPushToMain: handlePushToMain,
         } satisfies VariantNodeData,
         draggable: true,
       });
@@ -215,6 +239,7 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
     handleDeleteVariant,
     handleFinalizeVariant,
     handleSendToAgent,
+    handlePushToMain,
   ]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(flowNodes);

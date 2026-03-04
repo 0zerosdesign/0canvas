@@ -96,12 +96,23 @@ export type FileMapping = {
   confidence: "high" | "medium" | "low";
 };
 
+// ── Project types ──
+export type DDProject = {
+  id: string;
+  name: string;
+  createdAt: number;
+  updatedAt: number;
+  appUrl: string;
+  saved: boolean;
+};
+
 // ── Feedback / Agent Waitlist types ──
 export type FeedbackIntent = "fix" | "change" | "question" | "approve";
 export type FeedbackSeverity = "blocking" | "important" | "suggestion";
 
 export type FeedbackItem = {
   id: string;
+  variantId: string;
   elementId: string;
   elementSelector: string;
   elementTag: string;
@@ -127,8 +138,11 @@ export type VariantData = {
   };
   sourceType: "page" | "component";
   sourceSelector?: string;
+  sourceElementId?: string | null;
+  sourcePageRoute?: string;
+  sourceOuterHTML?: string;
   parentId: string | null;
-  status: "draft" | "finalized" | "sent";
+  status: "draft" | "finalized" | "sent" | "pushed";
   createdAt: number;
   modifiedHtml?: string;
   modifiedCss?: string;
@@ -166,9 +180,6 @@ export type WorkspaceState = {
   // IDE connections
   ides: IDEConnection[];
 
-  // Brainstorm
-  brainstormNotes: BrainstormNote[];
-
   // Annotations
   annotations: Annotation[];
   annotationMode: boolean;
@@ -188,9 +199,15 @@ export type WorkspaceState = {
   feedbackItems: FeedbackItem[];
   waitlistOpen: boolean;
 
+  // Selection source tracking
+  selectionSource: "inspect" | "panel" | null;
+
   // Variants
   variants: VariantData[];
   activeVariantId: string | null;
+
+  // Project management
+  ddProject: DDProject;
 
   // Route switching
   currentRoute: string;
@@ -201,13 +218,12 @@ export type WorkspaceState = {
   layersPanelOpen: boolean;
   stylePanelOpen: boolean;
   idePanelOpen: boolean;
-  brainstormMode: boolean;
   commandPaletteOpen: boolean;
   isLoading: boolean;
 };
 
 type Action =
-  | { type: "SELECT_ELEMENT"; id: string | null }
+  | { type: "SELECT_ELEMENT"; id: string | null; source?: "inspect" | "panel" }
   | { type: "HOVER_ELEMENT"; id: string | null }
   | { type: "UPDATE_STYLE"; elementId: string; property: string; value: string }
   | { type: "SET_ELEMENT_STYLES"; id: string; styles: Record<string, string> }
@@ -216,13 +232,10 @@ type Action =
   | { type: "UPDATE_VERSION_STATUS"; id: string; status: DesignVersion["status"] }
   | { type: "UPDATE_IDE_STATUS"; id: string; status: IDEConnection["status"] }
   | { type: "SEND_TO_IDE"; versionId: string; ideId: string }
-  | { type: "ADD_BRAINSTORM_NOTE"; note: BrainstormNote }
-  | { type: "DELETE_BRAINSTORM_NOTE"; id: string }
   | { type: "TOGGLE_INSPECTOR" }
   | { type: "TOGGLE_LAYERS_PANEL" }
   | { type: "TOGGLE_STYLE_PANEL" }
   | { type: "TOGGLE_IDE_PANEL" }
-  | { type: "TOGGLE_BRAINSTORM" }
   | { type: "TOGGLE_COMMAND_PALETTE" }
   | { type: "TOGGLE_ELEMENT_VISIBILITY"; id: string }
   | { type: "TOGGLE_ELEMENT_LOCK"; id: string }
@@ -257,6 +270,11 @@ type Action =
   | { type: "DELETE_VARIANT"; id: string }
   | { type: "SET_ACTIVE_VARIANT"; id: string | null }
   | { type: "FINALIZE_VARIANT"; id: string }
+  | { type: "PUSH_VARIANT_TO_MAIN"; id: string }
+  // Project management actions
+  | { type: "SET_DD_PROJECT_NAME"; name: string }
+  | { type: "SAVE_DD_PROJECT" }
+  | { type: "LOAD_DD_PROJECT"; project: DDProject; variants: VariantData[]; feedbackItems: FeedbackItem[] }
   // Route actions
   | { type: "SET_CURRENT_ROUTE"; route: string }
   | { type: "ADD_ROUTE_HISTORY"; route: string }
@@ -335,7 +353,6 @@ const initialState: WorkspaceState = {
   activeVersionId: null,
   styleChanges: [],
   ides: defaultIDEs,
-  brainstormNotes: [],
   annotations: [],
   annotationMode: false,
   annotationTool: "select",
@@ -347,15 +364,23 @@ const initialState: WorkspaceState = {
   wsPort: 0,
   feedbackItems: [],
   waitlistOpen: false,
+  selectionSource: null,
   variants: [],
   activeVariantId: null,
+  ddProject: {
+    id: `proj-${Date.now()}`,
+    name: "Untitled",
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    appUrl: typeof window !== "undefined" ? window.location.origin : "",
+    saved: false,
+  },
   currentRoute: typeof window !== "undefined" ? window.location.pathname : "/",
   routeHistory: typeof window !== "undefined" ? [window.location.pathname] : ["/"],
   inspectorMode: true,
   layersPanelOpen: true,
   stylePanelOpen: true,
   idePanelOpen: false,
-  brainstormMode: false,
   commandPaletteOpen: false,
   isLoading: false,
 };
@@ -389,7 +414,7 @@ function updateElementInTree(
 function reducer(state: WorkspaceState, action: Action): WorkspaceState {
   switch (action.type) {
     case "SELECT_ELEMENT":
-      return { ...state, selectedElementId: action.id };
+      return { ...state, selectedElementId: action.id, selectionSource: action.source || "panel" };
     case "HOVER_ELEMENT":
       return { ...state, hoveredElementId: action.id };
     case "UPDATE_STYLE": {
@@ -456,13 +481,6 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
         ),
       };
     }
-    case "ADD_BRAINSTORM_NOTE":
-      return { ...state, brainstormNotes: [...state.brainstormNotes, action.note] };
-    case "DELETE_BRAINSTORM_NOTE":
-      return {
-        ...state,
-        brainstormNotes: state.brainstormNotes.filter((n) => n.id !== action.id),
-      };
     case "TOGGLE_INSPECTOR":
       return { ...state, inspectorMode: !state.inspectorMode };
     case "TOGGLE_LAYERS_PANEL":
@@ -471,8 +489,6 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
       return { ...state, stylePanelOpen: !state.stylePanelOpen };
     case "TOGGLE_IDE_PANEL":
       return { ...state, idePanelOpen: !state.idePanelOpen };
-    case "TOGGLE_BRAINSTORM":
-      return { ...state, brainstormMode: !state.brainstormMode };
     case "TOGGLE_COMMAND_PALETTE":
       return { ...state, commandPaletteOpen: !state.commandPaletteOpen };
     case "TOGGLE_ELEMENT_VISIBILITY":
@@ -614,6 +630,31 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
         variants: state.variants.map((v) =>
           v.id === action.id ? { ...v, status: "finalized" as const } : v
         ),
+      };
+    case "PUSH_VARIANT_TO_MAIN":
+      return {
+        ...state,
+        variants: state.variants.map((v) =>
+          v.id === action.id ? { ...v, status: "pushed" as const } : v
+        ),
+      };
+    // Project management
+    case "SET_DD_PROJECT_NAME":
+      return {
+        ...state,
+        ddProject: { ...state.ddProject, name: action.name, updatedAt: Date.now() },
+      };
+    case "SAVE_DD_PROJECT":
+      return {
+        ...state,
+        ddProject: { ...state.ddProject, saved: true, updatedAt: Date.now() },
+      };
+    case "LOAD_DD_PROJECT":
+      return {
+        ...state,
+        ddProject: action.project,
+        variants: action.variants,
+        feedbackItems: action.feedbackItems,
       };
     // Route actions
     case "SET_CURRENT_ROUTE":

@@ -21,6 +21,7 @@
 // ──────────────────────────────────────────────────────────
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import ReactDOM from "react-dom";
 import { WorkspaceProvider, useWorkspace } from "../store";
 import { injectStyles, removeStyles } from "./designdead-styles";
 import { cleanup } from "./dom-inspector";
@@ -30,7 +31,6 @@ import { StylePanel } from "./style-panel";
 import { LiveCanvas } from "./live-canvas";
 import { VariantCanvas } from "./variant-canvas";
 import { AgentPanel } from "./agent-panel";
-import { BrainstormPanel } from "./brainstorm-panel";
 import { VersionManager } from "./version-manager";
 import { CommandPalette } from "./command-palette";
 import { FileMapPanel } from "./file-map-panel";
@@ -182,6 +182,16 @@ function ToggleButton({
 
 // ── Main DesignDead Component ──────────────────────────────
 
+const IFRAME_GUARD =
+  typeof window !== "undefined" && window.name === "designdead-preview";
+
+const IS_PRODUCTION = (() => {
+  const _g = globalThis as Record<string, unknown>;
+  const _proc = typeof _g["process"] === "object" ? (_g["process"] as Record<string, unknown>) : undefined;
+  const _env = _proc && typeof _proc["env"] === "object" ? (_proc["env"] as Record<string, string>) : undefined;
+  return _env?.["NODE_ENV"] === "production";
+})();
+
 export function DesignDead({
   position = "bottom-right",
   defaultOpen = false,
@@ -192,29 +202,22 @@ export function DesignDead({
   onToggle,
 }: DesignDeadProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const portalRef = useRef<HTMLDivElement | null>(null);
 
-  // ── Preview iframe guard ───────────────────────────────
-  // When DesignDead loads the consumer's app inside its preview iframe,
-  // it sets iframe.name = "designdead-preview". If we detect that, don't
-  // render DesignDead in the iframe (prevents infinite recursion).
-  if (typeof window !== "undefined" && window.name === "designdead-preview") {
-    return null;
-  }
-
-  // ── Dev-only guard ─────────────────────────────────────
-  // In production, hide DesignDead entirely if devOnly is true
-  // Use globalThis to avoid TS2580 "Cannot find name 'process'" during DTS generation
-  const _g = globalThis as Record<string, unknown>;
-  const _proc = typeof _g["process"] === "object" ? (_g["process"] as Record<string, unknown>) : undefined;
-  const _env = _proc && typeof _proc["env"] === "object" ? (_proc["env"] as Record<string, string>) : undefined;
-  const isProduction = _env?.["NODE_ENV"] === "production";
-
-  // ── Inject/remove styles ───────────────────────────────
+  // ── Create/destroy a portal container on document.body ──
   useEffect(() => {
+    const container = document.createElement("div");
+    container.id = "designdead-portal";
+    container.setAttribute("data-designdead", "portal");
+    container.style.cssText = "position:relative;z-index:2147483640;pointer-events:none;";
+    document.body.appendChild(container);
+    portalRef.current = container;
     injectStyles();
     return () => {
-      removeStyles();
       cleanup();
+      portalRef.current = null;
+      document.body.removeChild(container);
+      setTimeout(removeStyles, 0);
     };
   }, []);
 
@@ -243,23 +246,26 @@ export function DesignDead({
     return () => window.removeEventListener("keydown", handler);
   }, [shortcut, toggle]);
 
-  // ── Dev-only: don't render in production ───────────────
-  if (devOnly && isProduction) return null;
+  // Guards evaluated after all hooks (Rules of Hooks compliance)
+  if (IFRAME_GUARD) return null;
+  if (devOnly && IS_PRODUCTION) return null;
+  if (!portalRef.current) return null;
 
-  // ── Closed state: show FAB button ──────────────────────
+  // ── Closed state: FAB button via portal ────────────────
   if (!isOpen) {
-    return (
+    return ReactDOM.createPortal(
       <ToggleButton
         position={position}
         zIndex={zIndex}
         shortcut={shortcut}
         onClick={toggle}
-      />
+      />,
+      portalRef.current,
     );
   }
 
-  // ── Open state: full workspace overlay ─────────────────
-  return (
+  // ── Open state: full workspace overlay via portal ──────
+  return ReactDOM.createPortal(
     <div
       data-designdead-root=""
       data-designdead="root"
@@ -267,13 +273,12 @@ export function DesignDead({
         position: "fixed",
         inset: 0,
         zIndex,
-        // Isolate our styles from the consumer's app
         isolation: "isolate",
+        pointerEvents: "auto",
       }}
     >
       <WorkspaceProvider>
         <AutoConnect>
-          {/* Close button (top-right corner, always visible) */}
           <button
             onClick={toggle}
             data-designdead="close"
@@ -326,7 +331,8 @@ export function DesignDead({
           <EngineWorkspace />
         </AutoConnect>
       </WorkspaceProvider>
-    </div>
+    </div>,
+    portalRef.current,
   );
 }
 
@@ -362,7 +368,6 @@ function EngineWorkspace() {
 
   const showVersions =
     !state.idePanelOpen &&
-    !state.brainstormMode &&
     !state.fileMapPanelOpen;
 
   return (
@@ -411,12 +416,6 @@ function EngineWorkspace() {
         {state.idePanelOpen && (
           <div style={{ width: 300, flexShrink: 0, borderLeft: "1px solid #1a1a1a" }}>
             <AgentPanel />
-          </div>
-        )}
-
-        {state.brainstormMode && !state.idePanelOpen && (
-          <div style={{ width: 300, flexShrink: 0, borderLeft: "1px solid #1a1a1a" }}>
-            <BrainstormPanel />
           </div>
         )}
 

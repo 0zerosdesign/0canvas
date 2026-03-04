@@ -81,18 +81,6 @@ export function CommandPalette() {
       category: "Panels",
     },
     {
-      id: "toggle-brainstorm",
-      label: "Toggle Brainstorm Mode",
-      description: "Open the brainstorming panel",
-      icon: <Lightbulb className="w-4 h-4" />,
-      shortcut: "B",
-      action: () => {
-        dispatch({ type: "TOGGLE_BRAINSTORM" });
-        dispatch({ type: "TOGGLE_COMMAND_PALETTE" });
-      },
-      category: "Panels",
-    },
-    {
       id: "toggle-inspector",
       label: "Toggle Inspector",
       description: "Enable or disable element inspector",

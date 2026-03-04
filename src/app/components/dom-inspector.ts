@@ -375,7 +375,8 @@ export function highlightElement(
  * Remove all DesignDead overlays from the page.
  */
 export function cleanup(): void {
-  document.querySelectorAll(`[${DD_ATTR}]`).forEach((el) => el.remove());
+  if (highlightOverlay?.parentNode) highlightOverlay.remove();
+  if (selectOverlay?.parentNode) selectOverlay.remove();
   highlightOverlay = null;
   selectOverlay = null;
   idToElement.clear();
@@ -516,34 +517,55 @@ export function generateAgentOutput(elementId: string): string {
 
 // ── Snapshot capture for variants ───────────────────────────
 
-function inlineComputedStyles(el: Element, doc: Document): void {
+/**
+ * Collect computed styles from the LIVE DOM tree into a flat array,
+ * then apply them to the corresponding elements in a cloned tree.
+ * This avoids calling getComputedStyle on detached nodes (which returns defaults).
+ */
+function collectAndApplyStyles(original: Element, clone: Element, doc: Document): void {
   const win = doc.defaultView || window;
-  const computed = win.getComputedStyle(el);
-  const htmlEl = el as HTMLElement;
+  const origEls: Element[] = [];
+  const cloneEls: Element[] = [];
 
-  for (const prop of STYLE_PROPS) {
-    const cssProp = prop.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
-    const val = computed.getPropertyValue(cssProp);
-    if (val && val !== "none" && val !== "normal" && val !== "auto" && val !== "0px") {
-      htmlEl.style.setProperty(cssProp, val);
-    }
+  function walkOriginal(el: Element) {
+    if (el.hasAttribute(DD_ATTR) || el.closest(`[${DD_ATTR}]`)) return;
+    origEls.push(el);
+    for (const child of el.children) walkOriginal(child);
   }
 
-  for (const child of el.children) {
-    inlineComputedStyles(child, doc);
+  function walkClone(el: Element) {
+    cloneEls.push(el);
+    for (const child of el.children) walkClone(child);
+  }
+
+  walkOriginal(original);
+  walkClone(clone);
+
+  const len = Math.min(origEls.length, cloneEls.length);
+  for (let i = 0; i < len; i++) {
+    const computed = win.getComputedStyle(origEls[i]);
+    const htmlEl = cloneEls[i] as HTMLElement;
+    for (const prop of STYLE_PROPS) {
+      const cssProp = prop.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
+      const val = computed.getPropertyValue(cssProp);
+      if (val && val !== "none" && val !== "normal" && val !== "auto" && val !== "0px") {
+        htmlEl.style.setProperty(cssProp, val);
+      }
+    }
   }
 }
 
 function extractMockData(el: Element): { images: string[]; texts: string[] } {
   const images: string[] = [];
   const texts: string[] = [];
+  const ownerDoc = el.ownerDocument || document;
 
   const imgs = el.querySelectorAll("img");
   imgs.forEach((img) => {
     if (img.src) images.push(img.src);
   });
 
-  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  const walker = ownerDoc.createTreeWalker(el, NodeFilter.SHOW_TEXT);
   let node: Node | null;
   while ((node = walker.nextNode())) {
     const text = node.textContent?.trim();
@@ -553,12 +575,45 @@ function extractMockData(el: Element): { images: string[]; texts: string[] } {
   return { images: [...new Set(images)], texts: [...new Set(texts)] };
 }
 
+/** Convert relative image/link URLs to absolute so they work in sandboxed iframes. */
+function absolutifyUrls(html: string, baseUrl: string): string {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+
+  doc.querySelectorAll("img[src], video[src], source[src], audio[src]").forEach((el) => {
+    const src = el.getAttribute("src");
+    if (src && !src.startsWith("data:") && !src.startsWith("http")) {
+      try { el.setAttribute("src", new URL(src, baseUrl).href); } catch {}
+    }
+  });
+  doc.querySelectorAll("img[srcset]").forEach((el) => {
+    const srcset = el.getAttribute("srcset");
+    if (srcset) {
+      const fixed = srcset.replace(/(\S+)(\s+\S+)?/g, (_, url, descriptor) => {
+        if (url.startsWith("data:") || url.startsWith("http")) return _;
+        try { return new URL(url, baseUrl).href + (descriptor || ""); } catch { return _; }
+      });
+      el.setAttribute("srcset", fixed);
+    }
+  });
+  doc.querySelectorAll("[style]").forEach((el) => {
+    const style = el.getAttribute("style") || "";
+    const fixed = style.replace(/url\(["']?([^"')]+)["']?\)/g, (match, url) => {
+      if (url.startsWith("data:") || url.startsWith("http")) return match;
+      try { return `url("${new URL(url, baseUrl).href}")`; } catch { return match; }
+    });
+    el.setAttribute("style", fixed);
+  });
+
+  return doc.body.innerHTML;
+}
+
 function sanitizeSnapshot(html: string): string {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, "text/html");
 
   doc.querySelectorAll("script").forEach((s) => s.remove());
-  doc.querySelectorAll("[onclick], [onload], [onerror], [onmouseover]").forEach((el) => {
+  doc.querySelectorAll("*").forEach((el) => {
     Array.from(el.attributes)
       .filter((attr) => attr.name.startsWith("on"))
       .forEach((attr) => el.removeAttribute(attr.name));
@@ -568,47 +623,43 @@ function sanitizeSnapshot(html: string): string {
   return doc.body.innerHTML;
 }
 
+function collectCssRules(doc: Document): string {
+  const cssRules: string[] = [];
+  for (const sheet of doc.styleSheets) {
+    try {
+      for (const rule of sheet.cssRules) cssRules.push(rule.cssText);
+    } catch {
+      // Cross-origin stylesheet — skip
+    }
+  }
+  return cssRules.join("\n");
+}
+
 /**
  * Capture a full-page HTML/CSS snapshot from the target document.
- * Strips scripts and event handlers, inlines computed styles.
+ * Collects computed styles from the live DOM before cloning.
  */
 export function capturePageSnapshot(): Omit<VariantData, "id" | "name" | "parentId" | "status" | "createdAt"> | null {
   const body = targetDoc.body;
   if (!body) return null;
 
   const clone = body.cloneNode(true) as HTMLElement;
-  const tempDiv = targetDoc.createElement("div");
-  tempDiv.appendChild(clone);
-
-  inlineComputedStyles(clone, targetDoc);
+  collectAndApplyStyles(body, clone, targetDoc);
 
   const mockData = extractMockData(body);
-  const rawHtml = tempDiv.innerHTML;
-  const html = sanitizeSnapshot(rawHtml);
+  const tempDiv = targetDoc.createElement("div");
+  tempDiv.appendChild(clone);
+  const rawHtml = sanitizeSnapshot(tempDiv.innerHTML);
+  const baseUrl = (targetDoc.defaultView || window).location.href;
+  const html = absolutifyUrls(rawHtml, baseUrl);
+  const css = collectCssRules(targetDoc);
 
-  const styleSheets = Array.from(targetDoc.styleSheets);
-  const cssRules: string[] = [];
-  for (const sheet of styleSheets) {
-    try {
-      for (const rule of sheet.cssRules) {
-        cssRules.push(rule.cssText);
-      }
-    } catch {
-      // Cross-origin stylesheet
-    }
-  }
-
-  return {
-    html,
-    css: cssRules.join("\n"),
-    mockData,
-    sourceType: "page",
-  };
+  return { html, css, mockData, sourceType: "page" };
 }
 
 /**
  * Capture an HTML/CSS snapshot of a specific element by its DesignDead ID.
- * Returns the element's subtree with inlined styles.
+ * Collects computed styles from the live DOM, plus relevant CSS rules.
  */
 export function captureComponentSnapshot(
   elementId: string
@@ -617,22 +668,60 @@ export function captureComponentSnapshot(
   if (!el) return null;
 
   const clone = el.cloneNode(true) as HTMLElement;
-  const tempDiv = targetDoc.createElement("div");
-  tempDiv.appendChild(clone);
-
-  inlineComputedStyles(clone, targetDoc);
+  collectAndApplyStyles(el, clone, targetDoc);
 
   const mockData = extractMockData(el);
-  const rawHtml = tempDiv.innerHTML;
-  const html = sanitizeSnapshot(rawHtml);
-
+  const tempDiv = targetDoc.createElement("div");
+  tempDiv.appendChild(clone);
+  const rawHtml = sanitizeSnapshot(tempDiv.innerHTML);
+  const baseUrl = (targetDoc.defaultView || window).location.href;
+  const html = absolutifyUrls(rawHtml, baseUrl);
+  const css = collectCssRules(targetDoc);
   const selector = getSelector(el);
 
-  return {
-    html,
-    css: "",
-    mockData,
-    sourceType: "component",
-    sourceSelector: selector,
-  };
+  return { html, css, mockData, sourceType: "component", sourceSelector: selector };
+}
+
+/**
+ * Push a variant's HTML back to the live DOM, replacing the original element.
+ * Returns true if the replacement succeeded.
+ */
+export function pushVariantToMain(
+  sourceElementId: string,
+  newHtml: string,
+  newCss?: string
+): boolean {
+  const el = getElementById(sourceElementId);
+  if (!el) return false;
+
+  const parent = el.parentElement;
+  if (!parent) return false;
+
+  const temp = targetDoc.createElement("div");
+  temp.innerHTML = newHtml;
+
+  const newEl = temp.firstElementChild;
+  if (newEl) {
+    parent.replaceChild(newEl, el);
+  } else {
+    (el as HTMLElement).innerHTML = newHtml;
+  }
+
+  if (newCss) {
+    const styleEl = targetDoc.createElement("style");
+    styleEl.setAttribute("data-designdead-variant-css", "true");
+    styleEl.textContent = newCss;
+    targetDoc.head.appendChild(styleEl);
+  }
+
+  return true;
+}
+
+/**
+ * Get the outerHTML of an element by its DesignDead ID.
+ * Useful for storing the original state before push-to-main.
+ */
+export function getElementOuterHTML(elementId: string): string | null {
+  const el = getElementById(elementId);
+  return el ? (el as HTMLElement).outerHTML : null;
 }

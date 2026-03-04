@@ -6,6 +6,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { MessageSquarePlus, Send, X, Bug, Pencil, HelpCircle, ThumbsUp } from "lucide-react";
 import { useWorkspace, FeedbackIntent, FeedbackSeverity } from "../store";
 import { getElementById } from "./dom-inspector";
+import { saveFeedbackItem } from "./variant-db";
 
 const INTENTS: { value: FeedbackIntent; label: string; icon: React.ReactNode }[] = [
   { value: "fix", label: "Fix", icon: <Bug style={{ width: 11, height: 11 }} /> },
@@ -30,14 +31,16 @@ export function ElementChat() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const selectedId = state.selectedElementId;
+  const isInspectSelection = state.selectionSource === "inspect";
+  const activeVariantId = state.activeVariantId || "main";
 
   const existingCount = selectedId
-    ? state.feedbackItems.filter((f) => f.elementId === selectedId && f.status === "pending").length
+    ? state.feedbackItems.filter((f) => f.elementId === selectedId && f.variantId === activeVariantId && f.status === "pending").length
     : 0;
 
   // Position the chat near the selected element's highlight
   useEffect(() => {
-    if (!selectedId) {
+    if (!selectedId || !isInspectSelection) {
       setPosition(null);
       return;
     }
@@ -62,7 +65,7 @@ export function ElementChat() {
     if (left < 8) left = 8;
 
     setPosition({ top, left });
-  }, [selectedId]);
+  }, [selectedId, isInspectSelection]);
 
   useEffect(() => {
     if (position && inputRef.current) {
@@ -76,24 +79,25 @@ export function ElementChat() {
     const el = getElementById(selectedId);
     const rect = el?.getBoundingClientRect();
 
-    dispatch({
-      type: "ADD_FEEDBACK",
-      item: {
-        id: `fb-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        elementId: selectedId,
-        elementSelector: el ? buildSelectorPath(el) : selectedId,
-        elementTag: el?.tagName.toLowerCase() || "unknown",
-        elementClasses: el ? Array.from(el.classList) : [],
-        comment: comment.trim(),
-        intent,
-        severity,
-        status: "pending",
-        timestamp: Date.now(),
-        boundingBox: rect
-          ? { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height) }
-          : undefined,
-      },
-    });
+    const feedbackItem = {
+      id: `fb-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      variantId: activeVariantId,
+      elementId: selectedId,
+      elementSelector: el ? buildSelectorPath(el) : selectedId,
+      elementTag: el?.tagName.toLowerCase() || "unknown",
+      elementClasses: el ? Array.from(el.classList) : [],
+      comment: comment.trim(),
+      intent,
+      severity,
+      status: "pending" as const,
+      timestamp: Date.now(),
+      boundingBox: rect
+        ? { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height) }
+        : undefined,
+    };
+
+    dispatch({ type: "ADD_FEEDBACK", item: feedbackItem });
+    saveFeedbackItem(feedbackItem).catch(console.warn);
 
     setComment("");
   }, [comment, selectedId, intent, severity, dispatch]);
@@ -105,7 +109,7 @@ export function ElementChat() {
     }
   };
 
-  if (!selectedId || !position) return null;
+  if (!selectedId || !position || !isInspectSelection) return null;
 
   return (
     <div

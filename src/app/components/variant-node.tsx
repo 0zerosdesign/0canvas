@@ -4,7 +4,7 @@
 
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { GitFork, Check, Send, Trash2, Pencil, CheckCircle2, Copy } from "lucide-react";
+import { GitFork, Check, Send, Trash2, Pencil, CheckCircle2, Copy, ArrowUpToLine } from "lucide-react";
 import { useWorkspace, VariantData } from "../store";
 import { copyToClipboard } from "./clipboard";
 
@@ -14,10 +14,11 @@ export type VariantNodeData = {
   onDelete: (variantId: string) => void;
   onFinalize: (variantId: string) => void;
   onSendToAgent: (variantId: string) => void;
+  onPushToMain: (variantId: string) => void;
 };
 
 export function VariantNode({ data }: NodeProps) {
-  const { variant, onFork, onDelete, onFinalize, onSendToAgent } = data as VariantNodeData;
+  const { variant, onFork, onDelete, onFinalize, onSendToAgent, onPushToMain } = data as VariantNodeData;
   const { dispatch } = useWorkspace();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [editing, setEditing] = useState(false);
@@ -47,12 +48,16 @@ export function VariantNode({ data }: NodeProps) {
   }, [htmlContent]);
 
   const statusColor =
+    variant.status === "pushed" ? "#0070f3" :
     variant.status === "finalized" ? "#50e3c2" :
     variant.status === "sent" ? "#7928ca" : "#444";
 
   const statusLabel =
+    variant.status === "pushed" ? "Pushed" :
     variant.status === "finalized" ? "Finalized" :
     variant.status === "sent" ? "Sent" : "Draft";
+
+  const canPushToMain = variant.status === "finalized" && !!variant.sourceElementId;
 
   return (
     <div
@@ -146,6 +151,11 @@ export function VariantNode({ data }: NodeProps) {
           {variant.status === "finalized" && (
             <NodeBtn onClick={() => onSendToAgent(variant.id)} accent title="Send to Agent">
               <Send style={{ width: 11, height: 11 }} />
+            </NodeBtn>
+          )}
+          {canPushToMain && (
+            <NodeBtn onClick={() => onPushToMain(variant.id)} title="Push to Main App">
+              <ArrowUpToLine style={{ width: 11, height: 11, color: "#0070f3" }} />
             </NodeBtn>
           )}
           <NodeBtn onClick={() => onDelete(variant.id)} danger title="Delete">

@@ -33,23 +33,67 @@ ${S} {
   --dd-muted-fg: #888888;
   --dd-border: #222222;
   --dd-ring: #333333;
-  font-family: 'Geist Sans','Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--dd-fg);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
-/* ── Reset ── */
+/* ── Targeted reset: override inherited consumer styles ── */
+${S} {
+  font-family: 'Geist Sans','Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  color: var(--dd-fg) !important;
+  letter-spacing: normal !important;
+  font-weight: 400 !important;
+  text-transform: none !important;
+  font-style: normal !important;
+  text-decoration: none !important;
+  word-spacing: normal !important;
+  white-space: normal !important;
+  direction: ltr !important;
+  text-align: left !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
 ${S} *, ${S} *::before, ${S} *::after {
-  box-sizing: border-box;
+  box-sizing: border-box !important;
   margin: 0;
   padding: 0;
   border: 0 solid var(--dd-border);
+  font-family: inherit !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  color: inherit;
+  letter-spacing: inherit !important;
+  font-weight: inherit !important;
+  text-transform: inherit !important;
+  text-decoration: inherit !important;
+  -webkit-font-smoothing: inherit;
 }
-${S} button { background: transparent; border: none; cursor: pointer; font: inherit; color: inherit; }
-${S} input, ${S} textarea { font: inherit; }
+
+${S} button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  padding: 0;
+  margin: 0;
+  text-align: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+}
+${S} input, ${S} textarea {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+}
+${S} svg { display: inline-block; vertical-align: middle; }
+${S} img { display: block; max-width: 100%; }
+${S} a { color: inherit; text-decoration: none; }
+${S} ul, ${S} ol { list-style: none; }
 ${S} *:focus-visible { outline: 2px solid var(--dd-ring); outline-offset: 2px; }
 
 /* ── Scrollbar ── */

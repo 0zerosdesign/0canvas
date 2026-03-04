@@ -40,9 +40,11 @@ export function AgentWaitlist() {
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(true);
 
+  const activeVariantId = state.activeVariantId || "main";
+
   const pendingItems = useMemo(
-    () => state.feedbackItems.filter((f) => f.status === "pending"),
-    [state.feedbackItems]
+    () => state.feedbackItems.filter((f) => f.status === "pending" && f.variantId === activeVariantId),
+    [state.feedbackItems, activeVariantId]
   );
 
   const grouped = useMemo(() => {
@@ -160,7 +162,7 @@ export function AgentWaitlist() {
         >
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: 11, color: "#ededed", fontWeight: 500 }}>
-              Agent Waitlist
+              Waitlist {activeVariantId !== "main" ? `— ${state.variants.find(v => v.id === activeVariantId)?.name || "Variant"}` : "— Main App"}
             </span>
             {pendingItems.length > 0 && (
               <span

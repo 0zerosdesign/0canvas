@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Zap,
   Wifi,
@@ -6,16 +6,32 @@ import {
   RefreshCw,
   Check,
   Clock,
-  Terminal,
   Copy,
-  Code2,
   Send,
-  FileCode,
-  ArrowRight,
+  Activity,
+  Server,
+  Circle,
 } from "lucide-react";
-import { useWorkspace, IDEConnection } from "../store";
-import { ScrollArea } from "./ui/scroll-area";
+import { useWorkspace, IDEConnection, WSLogEntry } from "../store";
 import { copyToClipboard } from "./clipboard";
+
+const FONT = "'Geist Sans','Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif";
+const MONO = "'Geist Mono','SF Mono','Fira Code',monospace";
+const C = {
+  bg: "#0a0a0a",
+  surface: "#111111",
+  surfaceHover: "#1a1a1a",
+  border: "#1e1e1e",
+  fg: "#ededed",
+  fgMuted: "#888888",
+  fgDim: "#555555",
+  accent: "#0070f3",
+  green: "#50e3c2",
+  orange: "#f5a623",
+  red: "#ff4444",
+};
+
+const MCP_PORT = 24192;
 
 function formatTimeAgo(ts: number): string {
   const diff = Date.now() - ts;
@@ -29,7 +45,7 @@ function IDECard({ ide }: { ide: IDEConnection }) {
   const { dispatch } = useWorkspace();
   const [copied, setCopied] = useState(false);
 
-  const copyCmd = (cmd: string) => {
+  const handleCopy = (cmd: string) => {
     copyToClipboard(cmd);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -37,90 +53,138 @@ function IDECard({ ide }: { ide: IDEConnection }) {
 
   const setupCmd =
     ide.type === "claude-code"
-      ? "claude mcp add designdead"
-      : `npx designdead@latest init --${ide.type}`;
+      ? "claude mcp add designdead -- npx @zerosdesign/design-dead mcp"
+      : ide.type === "cursor"
+      ? "npx @zerosdesign/design-dead mcp"
+      : `npx @zerosdesign/design-dead mcp --${ide.type}`;
+
+  const statusColor = ide.status === "connected" ? C.green : ide.status === "connecting" ? C.orange : "#444";
+  const statusLabel = ide.status === "connected" ? "Connected" : ide.status === "connecting" ? "Connecting" : "Offline";
 
   return (
-    <div className="p-3 border border-[#1a1a1a] rounded-xl bg-[#080808] hover:border-[#333333] transition-colors">
-      <div className="flex items-center justify-between mb-2.5">
-        <div className="flex items-center gap-2.5">
+    <div
+      style={{
+        padding: 12,
+        border: `1px solid ${C.border}`,
+        borderRadius: 10,
+        background: "#080808",
+        marginBottom: 8,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-[11px] text-white"
-            style={{ background: ide.color }}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              background: ide.color,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 11,
+              fontWeight: 600,
+              color: "#fff",
+              fontFamily: FONT,
+            }}
           >
             {ide.icon}
           </div>
           <div>
-            <span className="text-[13px] text-foreground block">{ide.name}</span>
-            <span className="text-[10px] text-muted-foreground">{ide.description}</span>
+            <div style={{ fontSize: 13, color: C.fg, fontFamily: FONT }}>{ide.name}</div>
+            <div style={{ fontSize: 10, color: C.fgMuted, fontFamily: FONT }}>{ide.description}</div>
           </div>
         </div>
-        <div>
-          {ide.status === "connected" ? (
-            <span className="flex items-center gap-1 text-[10px] text-[#50e3c2] bg-[#50e3c2]/10 px-1.5 py-0.5 rounded">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#50e3c2] animate-pulse" />
-              Connected
-            </span>
-          ) : ide.status === "connecting" ? (
-            <span className="flex items-center gap-1 text-[10px] text-[#f5a623] bg-[#f5a623]/10 px-1.5 py-0.5 rounded">
-              <RefreshCw className="w-3 h-3 animate-spin" />
-              Connecting
-            </span>
-          ) : (
-            <span className="flex items-center gap-1 text-[10px] text-muted-foreground bg-[#1a1a1a] px-1.5 py-0.5 rounded">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#444444]" />
-              Offline
-            </span>
-          )}
-        </div>
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+            fontSize: 10,
+            color: statusColor,
+            background: `${statusColor}15`,
+            padding: "2px 8px",
+            borderRadius: 4,
+            fontFamily: FONT,
+          }}
+        >
+          <span style={{ width: 6, height: 6, borderRadius: "50%", background: statusColor }} />
+          {statusLabel}
+        </span>
       </div>
 
       {ide.lastSync && (
-        <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-2.5">
-          <Clock className="w-3 h-3" />
+        <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: C.fgMuted, marginBottom: 10, fontFamily: FONT }}>
+          <Clock size={12} />
           Last synced {formatTimeAgo(ide.lastSync)}
         </div>
       )}
 
-      {/* Setup command */}
       {ide.status === "disconnected" && (
         <button
-          onClick={() => copyCmd(setupCmd)}
-          className="w-full flex items-center justify-between bg-[#111111] border border-[#1a1a1a] rounded-lg px-3 py-2 hover:border-[#333333] transition-colors group mb-2.5"
+          onClick={() => handleCopy(setupCmd)}
+          style={{
+            width: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            background: C.surface,
+            border: `1px solid ${C.border}`,
+            borderRadius: 8,
+            padding: "8px 12px",
+            cursor: "pointer",
+            marginBottom: 10,
+          }}
         >
-          <code
-            className="text-[10px] text-[#50e3c2]"
-            style={{ fontFamily: "'Geist Mono', monospace" }}
-          >
-            {setupCmd}
-          </code>
-          {copied ? (
-            <Check className="w-3 h-3 text-[#50e3c2]" />
-          ) : (
-            <Copy className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-          )}
+          <code style={{ fontSize: 10, color: C.green, fontFamily: MONO }}>{setupCmd}</code>
+          {copied ? <Check size={12} color={C.green} /> : <Copy size={12} color={C.fgDim} />}
         </button>
       )}
 
-      <div className="flex gap-2">
+      <div style={{ display: "flex", gap: 8 }}>
         {ide.status === "connected" ? (
           <button
-            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 border border-[#1a1a1a] rounded-lg text-[11px] text-muted-foreground hover:text-foreground hover:border-[#333333] transition-colors"
-            onClick={() =>
-              dispatch({ type: "UPDATE_IDE_STATUS", id: ide.id, status: "disconnected" })
-            }
+            onClick={() => dispatch({ type: "UPDATE_IDE_STATUS", id: ide.id, status: "disconnected" })}
+            style={{
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+              padding: "6px 0",
+              border: `1px solid ${C.border}`,
+              borderRadius: 8,
+              background: "transparent",
+              color: C.fgMuted,
+              fontSize: 11,
+              fontFamily: FONT,
+              cursor: "pointer",
+            }}
           >
-            <WifiOff className="w-3 h-3" />
+            <WifiOff size={12} />
             Disconnect
           </button>
         ) : (
           <button
-            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-foreground text-background rounded-lg text-[11px] hover:opacity-90 transition-opacity"
-            onClick={() =>
-              dispatch({ type: "UPDATE_IDE_STATUS", id: ide.id, status: "connected" })
-            }
+            onClick={() => dispatch({ type: "UPDATE_IDE_STATUS", id: ide.id, status: "connected" })}
+            style={{
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+              padding: "6px 0",
+              border: "none",
+              borderRadius: 8,
+              background: C.fg,
+              color: C.bg,
+              fontSize: 11,
+              fontFamily: FONT,
+              fontWeight: 500,
+              cursor: "pointer",
+            }}
           >
-            <Wifi className="w-3 h-3" />
+            <Wifi size={12} />
             Connect
           </button>
         )}
@@ -130,152 +194,288 @@ function IDECard({ ide }: { ide: IDEConnection }) {
 }
 
 export function AgentPanel() {
-  const { state } = useWorkspace();
-  const [tab, setTab] = useState<"ides" | "output" | "activity">("ides");
+  const { state, dispatch } = useWorkspace();
+  const [tab, setTab] = useState<"ides" | "mcp" | "activity">("ides");
+  const [mcpStatus, setMcpStatus] = useState<"checking" | "online" | "offline">("checking");
+  const [mcpPort, setMcpPort] = useState(MCP_PORT);
   const [copied, setCopied] = useState(false);
 
   const connectedCount = state.ides.filter((i) => i.status === "connected").length;
 
-  // Generate structured output for agents
-  const generateOutput = () => {
-    const changes = state.styleChanges.map((c) => {
-      const findSel = (els: typeof state.elements, id: string): string => {
-        for (const el of els) {
-          if (el.id === id) return el.selector;
-          const found = findSel(el.children, id);
-          if (found) return found;
-        }
-        return "";
-      };
-      return {
-        selector: findSel(state.elements, c.elementId),
-        property: c.property.replace(/([A-Z])/g, "-$1").toLowerCase(),
-        from: c.oldValue,
-        to: c.newValue,
-      };
-    });
+  const checkMcpHealth = useCallback(async () => {
+    setMcpStatus("checking");
+    try {
+      const res = await fetch(`http://127.0.0.1:${mcpPort}/api/health`, { signal: AbortSignal.timeout(2000) });
+      if (res.ok) {
+        setMcpStatus("online");
+        dispatch({ type: "WS_STATUS_UPDATE", status: "connected" });
+        dispatch({ type: "WS_SET_PORT", port: mcpPort });
+      } else {
+        setMcpStatus("offline");
+        dispatch({ type: "WS_STATUS_UPDATE", status: "disconnected" });
+      }
+    } catch {
+      setMcpStatus("offline");
+      dispatch({ type: "WS_STATUS_UPDATE", status: "disconnected" });
+    }
+  }, [mcpPort, dispatch]);
 
-    return `## Design Changes from designdead\n\n${changes
-      .map(
-        (c) =>
-          `- **${c.selector}**: \`${c.property}\` changed from \`${c.from || "(none)"}\` to \`${c.to}\``
-      )
-      .join("\n")}\n\n---\n\nPlease apply these CSS changes to the codebase. Use \`grep\` to find the relevant selectors and update the styles accordingly.`;
-  };
+  useEffect(() => {
+    checkMcpHealth();
+    const interval = setInterval(checkMcpHealth, 15000);
+    return () => clearInterval(interval);
+  }, [checkMcpHealth]);
+
+  const syncFeedbackToMcp = useCallback(async () => {
+    if (mcpStatus !== "online") return;
+    const pendingItems = state.feedbackItems.filter((f) => f.status === "pending");
+    try {
+      await fetch(`http://127.0.0.1:${mcpPort}/api/feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: pendingItems }),
+      });
+      await fetch(`http://127.0.0.1:${mcpPort}/api/variants`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ variants: state.variants }),
+      });
+      await fetch(`http://127.0.0.1:${mcpPort}/api/project`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ project: state.ddProject }),
+      });
+
+      const now = new Date();
+      const entry: WSLogEntry = {
+        id: `log-${Date.now()}`,
+        timestamp: Date.now(),
+        direction: "sent",
+        method: "sync",
+        summary: `Synced ${pendingItems.length} feedback items and ${state.variants.length} variants`,
+      };
+      dispatch({ type: "WS_LOG", entry });
+    } catch {}
+  }, [mcpStatus, mcpPort, state.feedbackItems, state.variants, state.ddProject, dispatch]);
+
+  const mcpStatusColor = mcpStatus === "online" ? C.green : mcpStatus === "checking" ? C.orange : C.red;
+  const mcpStatusLabel = mcpStatus === "online" ? "Online" : mcpStatus === "checking" ? "Checking..." : "Offline";
+
+  const tabs = ["ides", "mcp", "activity"] as const;
+  const tabLabels = { ides: "IDE", mcp: "MCP Server", activity: "Activity" };
 
   return (
-    <div className="h-full flex flex-col bg-[#0a0a0a]">
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Zap className="w-4 h-4 text-[#f5a623]" />
-          <span className="text-[13px] text-foreground">IDE & Agents</span>
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", background: C.bg, fontFamily: FONT, color: C.fg }}>
+      <div style={{ padding: "10px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Zap size={16} color={C.orange} />
+          <span style={{ fontSize: 13 }}>IDE & Agents</span>
           {connectedCount > 0 && (
-            <span className="text-[10px] text-[#50e3c2] bg-[#50e3c2]/10 px-1.5 py-0.5 rounded">
+            <span style={{ fontSize: 10, color: C.green, background: `${C.green}15`, padding: "2px 8px", borderRadius: 4 }}>
               {connectedCount} active
             </span>
           )}
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-border">
-        {(["ides", "output", "activity"] as const).map((t) => (
+      <div style={{ display: "flex", borderBottom: `1px solid ${C.border}` }}>
+        {tabs.map((t) => (
           <button
             key={t}
-            className={`flex-1 py-2 text-[11px] transition-colors ${
-              tab === t
-                ? "text-foreground border-b border-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
             onClick={() => setTab(t)}
+            style={{
+              flex: 1,
+              padding: "8px 0",
+              fontSize: 11,
+              fontFamily: FONT,
+              background: "transparent",
+              border: "none",
+              borderBottom: tab === t ? `2px solid ${C.fg}` : "2px solid transparent",
+              color: tab === t ? C.fg : C.fgMuted,
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+            }}
           >
-            {t === "ides" ? "IDE" : t.charAt(0).toUpperCase() + t.slice(1)}
+            {tabLabels[t]}
           </button>
         ))}
       </div>
 
-      <ScrollArea className="flex-1">
-        {tab === "ides" && (
-          <div className="p-3 space-y-2">
-            {state.ides.map((ide) => (
-              <IDECard key={ide.id} ide={ide} />
-            ))}
-          </div>
-        )}
+      <div style={{ flex: 1, overflowY: "auto", padding: 12 }}>
+        {tab === "ides" && state.ides.map((ide) => <IDECard key={ide.id} ide={ide} />)}
 
-        {tab === "output" && (
-          <div className="p-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] text-muted-foreground">
-                Structured output for AI agents
-              </span>
+        {tab === "mcp" && (
+          <div>
+            <div style={{ padding: 16, border: `1px solid ${C.border}`, borderRadius: 10, background: "#080808", marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <Server size={16} color={mcpStatusColor} />
+                  <span style={{ fontSize: 13 }}>MCP Server</span>
+                </div>
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    fontSize: 10,
+                    color: mcpStatusColor,
+                    background: `${mcpStatusColor}15`,
+                    padding: "2px 8px",
+                    borderRadius: 4,
+                  }}
+                >
+                  <Circle size={6} fill={mcpStatusColor} stroke="none" />
+                  {mcpStatusLabel}
+                </span>
+              </div>
+
+              <div style={{ fontSize: 11, color: C.fgMuted, marginBottom: 8 }}>
+                URL: <code style={{ fontFamily: MONO, color: C.fg }}>http://127.0.0.1:{mcpPort}</code>
+              </div>
+
+              <div style={{ fontSize: 11, color: C.fgMuted, marginBottom: 12 }}>
+                The MCP server bridges DesignDead with AI agents like Cursor and Claude Code.
+                Feedback and variants are synced automatically when the server is running.
+              </div>
+
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  onClick={checkMcpHealth}
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                    padding: "6px 0",
+                    border: `1px solid ${C.border}`,
+                    borderRadius: 8,
+                    background: "transparent",
+                    color: C.fgMuted,
+                    fontSize: 11,
+                    fontFamily: FONT,
+                    cursor: "pointer",
+                  }}
+                >
+                  <RefreshCw size={12} />
+                  Refresh
+                </button>
+                <button
+                  onClick={syncFeedbackToMcp}
+                  disabled={mcpStatus !== "online"}
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                    padding: "6px 0",
+                    border: "none",
+                    borderRadius: 8,
+                    background: mcpStatus === "online" ? C.accent : "#222",
+                    color: mcpStatus === "online" ? "#fff" : "#555",
+                    fontSize: 11,
+                    fontFamily: FONT,
+                    fontWeight: 500,
+                    cursor: mcpStatus === "online" ? "pointer" : "default",
+                  }}
+                >
+                  <Send size={12} />
+                  Sync Now
+                </button>
+              </div>
+            </div>
+
+            <div style={{ padding: 12, border: `1px solid ${C.border}`, borderRadius: 10, background: "#080808" }}>
+              <div style={{ fontSize: 11, color: C.fgMuted, marginBottom: 8 }}>Quick Setup</div>
+              <div style={{ fontSize: 10, color: C.fgDim, marginBottom: 8 }}>
+                Run the MCP server in your terminal:
+              </div>
               <button
-                className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => {
-                  copyToClipboard(generateOutput());
+                  copyToClipboard("npx @zerosdesign/design-dead mcp");
                   setCopied(true);
                   setTimeout(() => setCopied(false), 2000);
                 }}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  background: C.surface,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 8,
+                  padding: "8px 12px",
+                  cursor: "pointer",
+                  marginBottom: 8,
+                }}
               >
-                {copied ? (
-                  <Check className="w-3 h-3 text-[#50e3c2]" />
-                ) : (
-                  <Copy className="w-3 h-3" />
-                )}
-                {copied ? "Copied" : "Copy"}
+                <code style={{ fontSize: 10, color: C.green, fontFamily: MONO }}>npx @zerosdesign/design-dead mcp</code>
+                {copied ? <Check size={12} color={C.green} /> : <Copy size={12} color={C.fgDim} />}
               </button>
+              <div style={{ fontSize: 10, color: C.fgDim }}>
+                Or add to your MCP config:
+              </div>
+              <pre
+                style={{
+                  fontSize: 10,
+                  fontFamily: MONO,
+                  color: C.fg,
+                  background: C.surface,
+                  padding: 10,
+                  borderRadius: 8,
+                  border: `1px solid ${C.border}`,
+                  marginTop: 6,
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-all",
+                }}
+              >
+{`{
+  "designdead": {
+    "command": "npx",
+    "args": ["@zerosdesign/design-dead", "mcp"]
+  }
+}`}
+              </pre>
             </div>
-            <pre
-              className="text-[11px] text-foreground bg-[#111111] p-3 rounded-xl border border-[#1a1a1a] overflow-x-auto whitespace-pre-wrap"
-              style={{ fontFamily: "'Geist Mono', 'JetBrains Mono', monospace" }}
-            >
-              {state.styleChanges.length > 0
-                ? generateOutput()
-                : "No style changes yet.\n\nEdit element styles in the Style panel to generate\nstructured instructions for your AI agent."}
-            </pre>
-
-            {state.styleChanges.length > 0 && connectedCount > 0 && (
-              <button className="w-full mt-3 flex items-center justify-center gap-2 py-2 bg-foreground text-background rounded-lg text-[12px] hover:opacity-90 transition-opacity">
-                <Send className="w-3.5 h-3.5" />
-                Send to connected IDE
-              </button>
-            )}
           </div>
         )}
 
         {tab === "activity" && (
-          <div className="p-3 space-y-1">
-            {[
-              { time: "12:45:02", msg: "Connected to Claude Code via MCP", type: "success" as const },
-              { time: "12:45:05", msg: "Project detected: Next.js (localhost:3000)", type: "info" as const },
-              { time: "12:46:12", msg: "3 style changes captured", type: "info" as const },
-              { time: "12:46:14", msg: "Changes sent to Claude Code", type: "success" as const },
-              { time: "12:47:30", msg: "Applied: src/components/Hero.tsx", type: "success" as const },
-              { time: "12:48:01", msg: "Watching for new edits...", type: "info" as const },
-            ].map((log, i) => (
-              <div
-                key={i}
-                className="flex items-start gap-2 py-1.5 border-b border-[#111111] last:border-0"
-              >
-                <span
-                  className="text-[10px] text-muted-foreground shrink-0 mt-0.5"
-                  style={{ fontFamily: "'Geist Mono', monospace" }}
-                >
-                  {log.time}
-                </span>
-                <span
-                  className={`text-[11px] ${
-                    log.type === "success" ? "text-[#50e3c2]" : "text-muted-foreground"
-                  }`}
-                >
-                  {log.msg}
-                </span>
+          <div>
+            {state.wsLogs.length === 0 ? (
+              <div style={{ padding: "24px 16px", textAlign: "center", color: C.fgDim, fontSize: 11 }}>
+                No activity yet. Sync feedback or connect an agent to see events here.
               </div>
-            ))}
+            ) : (
+              state.wsLogs.slice().reverse().map((log) => (
+                <div
+                  key={log.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 8,
+                    padding: "6px 0",
+                    borderBottom: `1px solid ${C.surface}`,
+                  }}
+                >
+                  <span style={{ fontSize: 10, color: C.fgDim, fontFamily: MONO, flexShrink: 0, marginTop: 1 }}>
+                    {new Date(log.timestamp).toLocaleTimeString()}
+                  </span>
+                  <div>
+                    <div style={{ fontSize: 11, color: log.direction === "sent" ? C.accent : log.direction === "received" ? C.green : C.fgMuted }}>
+                      {log.summary}
+                    </div>
+                    {log.method && (
+                      <span style={{ fontSize: 9, color: C.fgDim }}>{log.method}</span>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         )}
-      </ScrollArea>
+      </div>
     </div>
   );
 }

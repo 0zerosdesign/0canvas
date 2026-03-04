@@ -23,52 +23,55 @@ import {
 import { useWorkspace, ElementNode } from "../store";
 import { ScrollArea } from "./ui/scroll-area";
 
-const TAG_ICONS: Record<string, React.ReactNode> = {
-  body: <Layout className="w-3.5 h-3.5 text-blue-400" />,
-  html: <Layout className="w-3.5 h-3.5 text-blue-400" />,
-  main: <Layout className="w-3.5 h-3.5 text-blue-400" />,
-  nav: <Layout className="w-3.5 h-3.5 text-purple-400" />,
-  header: <Layout className="w-3.5 h-3.5 text-purple-400" />,
-  footer: <Layout className="w-3.5 h-3.5 text-purple-400" />,
-  aside: <Layout className="w-3.5 h-3.5 text-indigo-400" />,
-  section: <Square className="w-3.5 h-3.5 text-green-400" />,
-  article: <FileText className="w-3.5 h-3.5 text-green-400" />,
-  div: <Box className="w-3.5 h-3.5 text-muted-foreground" />,
-  span: <Type className="w-3.5 h-3.5 text-orange-400" />,
-  h1: <Type className="w-3.5 h-3.5 text-yellow-400" />,
-  h2: <Type className="w-3.5 h-3.5 text-yellow-400" />,
-  h3: <Type className="w-3.5 h-3.5 text-yellow-400" />,
-  h4: <Type className="w-3.5 h-3.5 text-yellow-300" />,
-  h5: <Type className="w-3.5 h-3.5 text-yellow-300" />,
-  h6: <Type className="w-3.5 h-3.5 text-yellow-300" />,
-  p: <Type className="w-3.5 h-3.5 text-muted-foreground" />,
-  a: <Link2 className="w-3.5 h-3.5 text-blue-400" />,
-  button: <Square className="w-3.5 h-3.5 text-blue-500" />,
-  input: <Square className="w-3.5 h-3.5 text-cyan-400" />,
-  textarea: <Square className="w-3.5 h-3.5 text-cyan-400" />,
-  select: <Square className="w-3.5 h-3.5 text-cyan-400" />,
-  form: <Square className="w-3.5 h-3.5 text-teal-400" />,
-  img: <Image className="w-3.5 h-3.5 text-pink-400" />,
-  svg: <Circle className="w-3.5 h-3.5 text-cyan-400" />,
-  ul: <List className="w-3.5 h-3.5 text-muted-foreground" />,
-  ol: <List className="w-3.5 h-3.5 text-muted-foreground" />,
-  li: <Minus className="w-3.5 h-3.5 text-muted-foreground" />,
-  table: <Table className="w-3.5 h-3.5 text-indigo-400" />,
-  thead: <Table className="w-3.5 h-3.5 text-indigo-300" />,
-  tbody: <Table className="w-3.5 h-3.5 text-indigo-300" />,
-  tr: <Minus className="w-3.5 h-3.5 text-indigo-300" />,
-  td: <Box className="w-3.5 h-3.5 text-indigo-200" />,
-  th: <Box className="w-3.5 h-3.5 text-indigo-200" />,
-  label: <Type className="w-3.5 h-3.5 text-muted-foreground" />,
-  strong: <Type className="w-3.5 h-3.5 text-orange-300" />,
-  em: <Type className="w-3.5 h-3.5 text-orange-300" />,
-  blockquote: <FileText className="w-3.5 h-3.5 text-blue-300" />,
-  code: <Type className="w-3.5 h-3.5 text-green-300" />,
-  pre: <FileText className="w-3.5 h-3.5 text-green-300" />,
+const FONT = "'Geist Sans','Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif";
+const C = {
+  bg: "#0a0a0a",
+  surface: "#111111",
+  border: "#1e1e1e",
+  fg: "#ededed",
+  fgMuted: "#888888",
+  fgDim: "#555555",
+  accent: "#0070f3",
 };
 
-function getIcon(tag: string) {
-  return TAG_ICONS[tag] || <Box className="w-3.5 h-3.5 text-muted-foreground" />;
+const ICON_SIZE = 14;
+
+const TAG_COLORS: Record<string, string> = {
+  body: "#60a5fa", html: "#60a5fa", main: "#60a5fa",
+  nav: "#c084fc", header: "#c084fc", footer: "#c084fc",
+  aside: "#818cf8",
+  section: "#4ade80", article: "#4ade80",
+  span: "#fb923c", strong: "#fdba74", em: "#fdba74",
+  h1: "#facc15", h2: "#facc15", h3: "#facc15", h4: "#fde047", h5: "#fde047", h6: "#fde047",
+  a: "#60a5fa", button: "#3b82f6",
+  input: "#22d3ee", textarea: "#22d3ee", select: "#22d3ee", form: "#2dd4bf",
+  img: "#f472b6", svg: "#22d3ee",
+  ul: "#888", ol: "#888", li: "#888",
+  table: "#818cf8", thead: "#a5b4fc", tbody: "#a5b4fc", tr: "#a5b4fc", td: "#c7d2fe", th: "#c7d2fe",
+  label: "#888", code: "#86efac", pre: "#86efac", blockquote: "#93c5fd",
+  p: "#888", div: "#888",
+};
+
+function getTagIcon(tag: string) {
+  const color = TAG_COLORS[tag] || "#888";
+  const iconProps = { size: ICON_SIZE, color, strokeWidth: 1.5 };
+  switch (tag) {
+    case "body": case "html": case "main": case "nav": case "header":
+    case "footer": case "aside": return <Layout {...iconProps} />;
+    case "section": case "button": case "input": case "textarea":
+    case "select": case "form": case "td": case "th": return <Square {...iconProps} />;
+    case "article": case "blockquote": case "pre": return <FileText {...iconProps} />;
+    case "div": case "box": return <Box {...iconProps} />;
+    case "span": case "h1": case "h2": case "h3": case "h4": case "h5": case "h6":
+    case "p": case "label": case "strong": case "em": case "code": return <Type {...iconProps} />;
+    case "a": return <Link2 {...iconProps} />;
+    case "img": return <Image {...iconProps} />;
+    case "svg": return <Circle {...iconProps} />;
+    case "ul": case "ol": return <List {...iconProps} />;
+    case "li": case "tr": return <Minus {...iconProps} />;
+    case "table": case "thead": case "tbody": return <Table {...iconProps} />;
+    default: return <Box {...iconProps} />;
+  }
 }
 
 function matchesSearch(element: ElementNode, search: string): boolean {
@@ -91,14 +94,13 @@ function LayerItem({
 }) {
   const { state, dispatch } = useWorkspace();
   const [expanded, setExpanded] = useState(depth < 2);
+  const [hovered, setHovered] = useState(false);
   const hasChildren = element.children.length > 0;
   const isSelected = state.selectedElementId === element.id;
-  const isHovered = state.hoveredElementId === element.id;
+  const isHoveredEl = state.hoveredElementId === element.id;
 
-  // If searching, auto-expand matching branches
   const isSearching = search.length > 0;
   const shouldShow = !isSearching || matchesSearch(element, search);
-
   if (!shouldShow) return null;
 
   const displayName = element.text
@@ -109,88 +111,110 @@ function LayerItem({
     ? `.${element.classes.slice(0, 2).join(".")}`
     : "";
 
+  const rowBg = isSelected
+    ? "rgba(0,112,243,0.12)"
+    : isHoveredEl || hovered
+    ? "rgba(255,255,255,0.03)"
+    : "transparent";
+
   return (
-    <div>
+    <div style={{ fontFamily: FONT }}>
       <div
-        className={`group flex items-center h-7 cursor-pointer transition-colors ${
-          isSelected
-            ? "bg-[#0070f3]/15 text-[#0070f3]"
-            : isHovered
-            ? "bg-[#ffffff08]"
-            : "hover:bg-[#ffffff06]"
-        }`}
-        style={{ paddingLeft: `${depth * 14 + 8}px` }}
-        onClick={() => dispatch({ type: "SELECT_ELEMENT", id: element.id })}
-        onMouseEnter={() => dispatch({ type: "HOVER_ELEMENT", id: element.id })}
-        onMouseLeave={() => dispatch({ type: "HOVER_ELEMENT", id: null })}
+        onMouseEnter={() => {
+          setHovered(true);
+          dispatch({ type: "HOVER_ELEMENT", id: element.id });
+        }}
+        onMouseLeave={() => {
+          setHovered(false);
+          dispatch({ type: "HOVER_ELEMENT", id: null });
+        }}
+        onClick={() => dispatch({ type: "SELECT_ELEMENT", id: element.id, source: "panel" })}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          height: 30,
+          paddingLeft: depth * 16 + 8,
+          paddingRight: 8,
+          cursor: "pointer",
+          background: rowBg,
+          transition: "background 0.1s ease",
+          borderLeft: isSelected ? `2px solid ${C.accent}` : "2px solid transparent",
+        }}
       >
-        {/* Expand toggle */}
         <button
-          className="w-4 h-4 flex items-center justify-center shrink-0"
           onClick={(e) => {
             e.stopPropagation();
             if (hasChildren) setExpanded(!expanded);
           }}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 18,
+            height: 18,
+            flexShrink: 0,
+            background: "transparent",
+            border: "none",
+            cursor: hasChildren ? "pointer" : "default",
+            padding: 0,
+            color: C.fgDim,
+          }}
         >
           {hasChildren ? (
             expanded || isSearching ? (
-              <ChevronDown className="w-3 h-3 text-muted-foreground" />
+              <ChevronDown size={12} />
             ) : (
-              <ChevronRight className="w-3 h-3 text-muted-foreground" />
+              <ChevronRight size={12} />
             )
           ) : null}
         </button>
 
-        {/* Icon */}
-        <span className="ml-0.5 mr-1.5 shrink-0">{getIcon(element.tag)}</span>
+        <span style={{ flexShrink: 0, marginRight: 6, display: "inline-flex" }}>
+          {getTagIcon(element.tag)}
+        </span>
 
-        {/* Name */}
         <span
-          className={`truncate flex-1 ${
-            !element.visible ? "opacity-40" : ""
-          }`}
-          style={{ fontSize: "12px" }}
+          style={{
+            flex: 1,
+            fontSize: 12,
+            fontWeight: isSelected ? 500 : 400,
+            color: isSelected ? C.accent : C.fg,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            opacity: element.visible ? 1 : 0.35,
+          }}
         >
           {displayName}
           {classPreview && (
-            <span className="text-muted-foreground opacity-50 ml-1" style={{ fontSize: "10px" }}>
+            <span style={{ color: C.fgDim, marginLeft: 4, fontSize: 10 }}>
               {classPreview}
             </span>
           )}
         </span>
 
-        {/* Actions */}
-        <div className="hidden group-hover:flex items-center gap-0.5 mr-2 shrink-0">
-          <button
-            className="p-0.5 hover:bg-[#ffffff10] rounded"
-            onClick={(e) => {
-              e.stopPropagation();
-              dispatch({ type: "TOGGLE_ELEMENT_VISIBILITY", id: element.id });
-            }}
-          >
-            {element.visible ? (
-              <Eye className="w-3 h-3 text-muted-foreground" />
-            ) : (
-              <EyeOff className="w-3 h-3 text-muted-foreground" />
-            )}
-          </button>
-          <button
-            className="p-0.5 hover:bg-[#ffffff10] rounded"
-            onClick={(e) => {
-              e.stopPropagation();
-              dispatch({ type: "TOGGLE_ELEMENT_LOCK", id: element.id });
-            }}
-          >
-            {element.locked ? (
-              <Lock className="w-3 h-3 text-orange-400" />
-            ) : (
-              <Unlock className="w-3 h-3 text-muted-foreground" />
-            )}
-          </button>
-        </div>
+        {hovered && (
+          <div style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
+            <IconBtn
+              onClick={(e) => {
+                e.stopPropagation();
+                dispatch({ type: "TOGGLE_ELEMENT_VISIBILITY", id: element.id });
+              }}
+            >
+              {element.visible ? <Eye size={12} color={C.fgDim} /> : <EyeOff size={12} color={C.fgDim} />}
+            </IconBtn>
+            <IconBtn
+              onClick={(e) => {
+                e.stopPropagation();
+                dispatch({ type: "TOGGLE_ELEMENT_LOCK", id: element.id });
+              }}
+            >
+              {element.locked ? <Lock size={12} color={C.orange} /> : <Unlock size={12} color={C.fgDim} />}
+            </IconBtn>
+          </div>
+        )}
       </div>
 
-      {/* Children */}
       {(expanded || isSearching) &&
         hasChildren &&
         element.children.map((child) => (
@@ -200,60 +224,117 @@ function LayerItem({
   );
 }
 
+const C_ORANGE = "#f5a623";
+
+function IconBtn({ children, onClick }: { children: React.ReactNode; onClick: (e: React.MouseEvent) => void }) {
+  const [h, setH] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setH(true)}
+      onMouseLeave={() => setH(false)}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: 20,
+        height: 20,
+        borderRadius: 4,
+        background: h ? "rgba(255,255,255,0.06)" : "transparent",
+        border: "none",
+        cursor: "pointer",
+        padding: 0,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
 export function LayersPanel() {
   const { state } = useWorkspace();
   const [search, setSearch] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
 
   const elementCount = countElements(state.elements);
   const isEmpty = state.elements.length === 0;
 
   return (
-    <div className="h-full flex flex-col bg-[#0a0a0a] border-r border-border">
-      {/* Header */}
-      <div className="px-3 py-2.5 border-b border-border flex items-center justify-between">
-        <span className="text-[11px] tracking-wider text-muted-foreground uppercase">
+    <div
+      style={{
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        background: C.bg,
+        borderRight: `1px solid ${C.border}`,
+        fontFamily: FONT,
+        color: C.fg,
+      }}
+    >
+      <div
+        style={{
+          padding: "10px 14px",
+          borderBottom: `1px solid ${C.border}`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color: C.fgMuted }}>
           Layers
         </span>
-        <span className="text-[10px] text-muted-foreground bg-[#1a1a1a] px-1.5 py-0.5 rounded">
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 500,
+            color: C.fgMuted,
+            background: C.surface,
+            padding: "2px 8px",
+            borderRadius: 4,
+          }}
+        >
           {elementCount}
         </span>
       </div>
 
-      {/* Search */}
-      <div className="px-3 py-2 border-b border-border">
+      <div style={{ padding: "8px 10px", borderBottom: `1px solid ${C.border}` }}>
         <input
           type="text"
           placeholder="Search layers..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-[#111111] border border-[#222222] rounded px-2 py-1 text-[12px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#333333] transition-colors"
+          onFocus={() => setSearchFocused(true)}
+          onBlur={() => setSearchFocused(false)}
+          style={{
+            width: "100%",
+            background: C.surface,
+            border: `1px solid ${searchFocused ? C.accent + "60" : C.border}`,
+            borderRadius: 6,
+            padding: "6px 10px",
+            fontSize: 12,
+            color: C.fg,
+            fontFamily: FONT,
+            outline: "none",
+            transition: "border-color 0.15s ease",
+          }}
         />
       </div>
 
-      {/* Tree */}
-      <ScrollArea className="flex-1 min-h-0">
+      <ScrollArea style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
         {isEmpty && state.isLoading ? (
-          <div className="flex flex-col items-center justify-center p-6 pt-16 text-center">
-            <Loader2 className="w-6 h-6 text-[#0070f3] animate-spin mb-3" />
-            <p className="text-[12px] text-muted-foreground mb-1">
-              Loading page...
-            </p>
-            <p className="text-[10px] text-muted-foreground">
-              Scanning DOM tree and building layers
-            </p>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "48px 24px", textAlign: "center" }}>
+            <Loader2 size={22} color={C.accent} style={{ animation: "dd-spin 1s linear infinite", marginBottom: 12 }} />
+            <p style={{ fontSize: 13, color: C.fgMuted, marginBottom: 4 }}>Loading page...</p>
+            <p style={{ fontSize: 11, color: C.fgDim }}>Scanning DOM tree and building layers</p>
           </div>
         ) : isEmpty ? (
-          <div className="flex flex-col items-center justify-center p-6 pt-16 text-center">
-            <Globe className="w-8 h-8 text-[#222222] mb-3" />
-            <p className="text-[12px] text-muted-foreground mb-1">
-              No page loaded
-            </p>
-            <p className="text-[10px] text-muted-foreground">
-              Connect your project to inspect its structure
-            </p>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "48px 24px", textAlign: "center" }}>
+            <Globe size={28} color="#333" style={{ marginBottom: 12 }} />
+            <p style={{ fontSize: 13, color: C.fgMuted, marginBottom: 4 }}>No page loaded</p>
+            <p style={{ fontSize: 11, color: C.fgDim }}>Connect your project to inspect its structure</p>
           </div>
         ) : (
-          <div className="py-1">
+          <div style={{ padding: "4px 0" }}>
             {state.elements.map((el) => (
               <LayerItem key={el.id} element={el} search={search} />
             ))}
