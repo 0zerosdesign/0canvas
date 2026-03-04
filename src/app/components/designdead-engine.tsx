@@ -194,8 +194,8 @@ export function DesignDead({
   // In production, hide DesignDead entirely if devOnly is true
   const isProduction =
     typeof process !== "undefined" &&
-    process.env &&
-    process.env.NODE_ENV === "production";
+    typeof (process as any).env !== "undefined" &&
+    (process as any).env.NODE_ENV === "production";
 
   // ── Inject/remove styles ───────────────────────────────
   useEffect(() => {
