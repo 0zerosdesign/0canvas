@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
-import { useWorkspace } from "../store";
+import { Link } from "react-router";
+import { useWorkspace, WorkspaceProvider } from "../store";
 import { WorkspaceToolbar } from "../components/workspace-toolbar";
 import { LayersPanel } from "../components/layers-panel";
 import { StylePanel } from "../components/style-panel";
@@ -13,6 +14,21 @@ import { AnnotationOverlay } from "../components/annotation-overlay";
 
 function WorkspaceInner() {
   const { state, dispatch } = useWorkspace();
+
+  // Auto-connect project for testing
+  useEffect(() => {
+    if (!state.project) {
+      dispatch({
+        type: "CONNECT_PROJECT",
+        project: {
+          name: "DesignDead Test Page",
+          devServerUrl: window.location.origin,
+          framework: "Engine Mode",
+          status: "connected",
+        },
+      });
+    }
+  }, [state.project, dispatch]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -36,6 +52,20 @@ function WorkspaceInner() {
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden" data-designdead="workspace">
+      {/* Back to docs link */}
+      <div className="absolute top-[14px] right-[56px] z-50">
+        <Link
+          to="/"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] bg-[#111111] border border-[#222222] text-muted-foreground hover:text-foreground hover:border-[#333333] transition-all"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 12H5" />
+            <path d="M12 19l-7-7 7-7" />
+          </svg>
+          Docs
+        </Link>
+      </div>
+
       {/* Top toolbar */}
       <WorkspaceToolbar />
 
@@ -93,5 +123,9 @@ function WorkspaceInner() {
 }
 
 export default function WorkspacePage() {
-  return <WorkspaceInner />;
+  return (
+    <WorkspaceProvider>
+      <WorkspaceInner />
+    </WorkspaceProvider>
+  );
 }
