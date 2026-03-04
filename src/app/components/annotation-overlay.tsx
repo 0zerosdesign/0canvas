@@ -12,7 +12,9 @@ import {
   X,
   Undo2,
 } from "lucide-react";
-import { useWorkspace, Annotation, AnnotationTool } from "../store";
+import { useWorkspace } from "../store";
+import type { AnnotationTool, Annotation } from "../store";
+import { copyToClipboard } from "./clipboard";
 
 // ──────────────────────────────────────────────────────────
 // Annotation colors
@@ -392,7 +394,7 @@ export function AnnotationOverlay() {
   // Export annotations as JSON
   const exportAnnotations = () => {
     const data = JSON.stringify(state.annotations, null, 2);
-    navigator.clipboard.writeText(data);
+    copyToClipboard(data);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

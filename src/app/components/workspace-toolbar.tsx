@@ -199,15 +199,6 @@ export function WorkspaceToolbar() {
           <Command className="w-3 h-3 text-muted-foreground" />
           <span className="text-[11px] text-muted-foreground">K</span>
         </button>
-
-        {/* Disconnect / Switch project */}
-        <button
-          onClick={() => dispatch({ type: "DISCONNECT_PROJECT" })}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] text-muted-foreground hover:text-foreground hover:bg-[#1a1a1a] transition-colors"
-          title="Switch project"
-        >
-          <LogOut className="w-3 h-3" />
-        </button>
       </div>
     </div>
   );

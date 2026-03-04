@@ -1,30 +1,29 @@
+// ──────────────────────────────────────────────────────────
+// DesignDead — Development Preview
+// ──────────────────────────────────────────────────────────
+//
+// This file is the Figma Make / dev server entry point.
+// It dogfoods the <DesignDead /> component exactly as a
+// consumer would use it — proving the npm package works.
+//
+// In production (npm), consumers do:
+//   import { DesignDead } from "designdead";
+//   <DesignDead />
+//
+// Here we render it with defaultOpen={true} for development.
+// ──────────────────────────────────────────────────────────
+
 import React from "react";
-import { WorkspaceProvider, useWorkspace } from "./store";
-import { ConnectProject } from "./components/connect-project";
-import WorkspacePage from "./pages/workspace";
 import { DesignDead } from "./components/designdead-engine";
-
-function AppRouter() {
-  const { state } = useWorkspace();
-
-  if (state.currentView === "onboarding" || !state.project) {
-    return <ConnectProject />;
-  }
-
-  return <WorkspacePage />;
-}
 
 export default function App() {
   return (
-    <WorkspaceProvider>
-      <AppRouter />
-      {/* 
-        The DesignDead Engine — this is what gets published to npm.
-        It works as a floating overlay inspecting the current page.
-        Users install: npm install designdead -D
-        Then: import { DesignDead } from 'designdead'; <DesignDead />
-      */}
-      <DesignDead position="bottom-right" theme="dark" devOnly={false} />
-    </WorkspaceProvider>
+    <DesignDead
+      defaultOpen={true}
+      devOnly={false}
+      shortcut="d"
+      theme="dark"
+      position="bottom-right"
+    />
   );
 }

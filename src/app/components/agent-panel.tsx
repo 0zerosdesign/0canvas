@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { useWorkspace, IDEConnection } from "../store";
 import { ScrollArea } from "./ui/scroll-area";
-import { WSBridgePanel } from "./ws-bridge";
+import { copyToClipboard } from "./clipboard";
 
 function formatTimeAgo(ts: number): string {
   const diff = Date.now() - ts;
@@ -30,7 +30,7 @@ function IDECard({ ide }: { ide: IDEConnection }) {
   const [copied, setCopied] = useState(false);
 
   const copyCmd = (cmd: string) => {
-    navigator.clipboard.writeText(cmd);
+    copyToClipboard(cmd);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -131,7 +131,7 @@ function IDECard({ ide }: { ide: IDEConnection }) {
 
 export function AgentPanel() {
   const { state } = useWorkspace();
-  const [tab, setTab] = useState<"ides" | "bridge" | "output" | "activity">("ides");
+  const [tab, setTab] = useState<"ides" | "output" | "activity">("ides");
   const [copied, setCopied] = useState(false);
 
   const connectedCount = state.ides.filter((i) => i.status === "connected").length;
@@ -180,7 +180,7 @@ export function AgentPanel() {
 
       {/* Tabs */}
       <div className="flex border-b border-border">
-        {(["ides", "bridge", "output", "activity"] as const).map((t) => (
+        {(["ides", "output", "activity"] as const).map((t) => (
           <button
             key={t}
             className={`flex-1 py-2 text-[11px] transition-colors ${
@@ -190,26 +190,11 @@ export function AgentPanel() {
             }`}
             onClick={() => setTab(t)}
           >
-            {t === "ides" ? "IDE" : t === "bridge" ? (
-              <span className="flex items-center justify-center gap-1">
-                MCP
-                {state.wsStatus === "connected" && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#50e3c2]" />
-                )}
-              </span>
-            ) : t.charAt(0).toUpperCase() + t.slice(1)}
+            {t === "ides" ? "IDE" : t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
         ))}
       </div>
 
-      {/* Bridge tab renders outside ScrollArea (has its own) */}
-      {tab === "bridge" && (
-        <div className="flex-1 min-h-0 overflow-hidden">
-          <WSBridgePanel />
-        </div>
-      )}
-
-      {tab !== "bridge" && (
       <ScrollArea className="flex-1">
         {tab === "ides" && (
           <div className="p-3 space-y-2">
@@ -228,7 +213,7 @@ export function AgentPanel() {
               <button
                 className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => {
-                  navigator.clipboard.writeText(generateOutput());
+                  copyToClipboard(generateOutput());
                   setCopied(true);
                   setTimeout(() => setCopied(false), 2000);
                 }}
@@ -291,7 +276,6 @@ export function AgentPanel() {
           </div>
         )}
       </ScrollArea>
-      )}
     </div>
   );
 }

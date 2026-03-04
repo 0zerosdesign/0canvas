@@ -260,7 +260,7 @@ const defaultIDEs: IDEConnection[] = [
 // Initial state
 // ──────────────────────────────────────────────────────────
 const initialState: WorkspaceState = {
-  currentView: "onboarding",
+  currentView: "workspace",
   project: null,
   elements: [],
   selectedElementId: null,

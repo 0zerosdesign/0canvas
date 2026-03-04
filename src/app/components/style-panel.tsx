@@ -13,6 +13,7 @@ import {
   MousePointer2,
 } from "lucide-react";
 import { useWorkspace, findElement } from "../store";
+import { copyToClipboard } from "./clipboard";
 import { ScrollArea } from "./ui/scroll-area";
 
 type StyleCategory = {
@@ -254,7 +255,7 @@ export function StylePanel() {
           <button
             className="p-1 hover:bg-[#1a1a1a] rounded transition-colors"
             onClick={() => {
-              navigator.clipboard.writeText(
+              copyToClipboard(
                 `${selectedElement.selector} {\n${cssOutput}\n}`
               );
             }}

@@ -3,7 +3,7 @@ import { useWorkspace } from "../store";
 import { WorkspaceToolbar } from "../components/workspace-toolbar";
 import { LayersPanel } from "../components/layers-panel";
 import { StylePanel } from "../components/style-panel";
-import { PreviewCanvas } from "../components/preview-canvas";
+import { LiveCanvas } from "../components/live-canvas";
 import { AgentPanel } from "../components/agent-panel";
 import { BrainstormPanel } from "../components/brainstorm-panel";
 import { VersionManager } from "../components/version-manager";
@@ -35,7 +35,7 @@ function WorkspaceInner() {
     !state.fileMapPanelOpen;
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
+    <div className="h-screen flex flex-col bg-background overflow-hidden" data-designdead="workspace">
       {/* Top toolbar */}
       <WorkspaceToolbar />
 
@@ -48,9 +48,9 @@ function WorkspaceInner() {
           </div>
         )}
 
-        {/* Center: Preview Canvas + Annotation Overlay */}
+        {/* Center: Live Canvas + Annotation Overlay */}
         <div className="flex-1 flex flex-col relative overflow-hidden">
-          <PreviewCanvas />
+          <LiveCanvas />
           <AnnotationOverlay />
         </div>
 
