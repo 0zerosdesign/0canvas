@@ -192,10 +192,11 @@ export function DesignDead({
 
   // ── Dev-only guard ─────────────────────────────────────
   // In production, hide DesignDead entirely if devOnly is true
-  const isProduction =
-    typeof process !== "undefined" &&
-    typeof (process as any).env !== "undefined" &&
-    (process as any).env.NODE_ENV === "production";
+  // Use globalThis to avoid TS2580 "Cannot find name 'process'" during DTS generation
+  const _g = globalThis as Record<string, unknown>;
+  const _proc = typeof _g["process"] === "object" ? (_g["process"] as Record<string, unknown>) : undefined;
+  const _env = _proc && typeof _proc["env"] === "object" ? (_proc["env"] as Record<string, string>) : undefined;
+  const isProduction = _env?.["NODE_ENV"] === "production";
 
   // ── Inject/remove styles ───────────────────────────────
   useEffect(() => {
