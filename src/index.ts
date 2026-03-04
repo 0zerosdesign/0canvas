@@ -23,6 +23,8 @@ export {
   isInspecting,
   generateAgentOutput,
   cleanup,
+  setInspectionTarget,
+  resetInspectionTarget,
 } from "./app/components/dom-inspector";
 
 // Runtime CSS injection (for advanced consumers)

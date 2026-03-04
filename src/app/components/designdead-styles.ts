@@ -242,6 +242,7 @@ ${S} .border-\\[\\#0070f3\\]\\/30 { border-color: rgba(0,112,243,0.3); }
 ${S} .border-\\[\\#0070f3\\]\\/40 { border-color: rgba(0,112,243,0.4); }
 ${S} .border-\\[\\#50e3c2\\]\\/20 { border-color: rgba(80,227,194,0.2); }
 ${S} .border-\\[\\#ff0080\\]\\/20 { border-color: rgba(255,0,128,0.2); }
+${S} .border-\\[\\#ff4444\\]\\/20 { border-color: rgba(255,68,68,0.2); }
 ${S} .border-\\[\\#ff980040\\] { border-color: #ff980040; }
 ${S} .border-\\[\\#4caf5040\\] { border-color: #4caf5040; }
 ${S} .border-\\[\\#2196f340\\] { border-color: #2196f340; }

@@ -190,6 +190,14 @@ export function DesignDead({
 }: DesignDeadProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
+  // ── Preview iframe guard ───────────────────────────────
+  // When DesignDead loads the consumer's app inside its preview iframe,
+  // it sets iframe.name = "designdead-preview". If we detect that, don't
+  // render DesignDead in the iframe (prevents infinite recursion).
+  if (typeof window !== "undefined" && window.name === "designdead-preview") {
+    return null;
+  }
+
   // ── Dev-only guard ─────────────────────────────────────
   // In production, hide DesignDead entirely if devOnly is true
   // Use globalThis to avoid TS2580 "Cannot find name 'process'" during DTS generation
@@ -374,7 +382,7 @@ function EngineWorkspace() {
 
         {/* Center: Live Canvas + Annotation Overlay */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
-          <LiveCanvas />
+          <LiveCanvas useIframePreview={true} />
           <AnnotationOverlay />
         </div>
 

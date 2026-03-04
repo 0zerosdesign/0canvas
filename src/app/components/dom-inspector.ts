@@ -1,13 +1,18 @@
 // ──────────────────────────────────────────────────────────
-// DOM Inspector — Direct page inspection (no iframe/bridge)
+// DOM Inspector — Inspects consumer's app (via iframe preview)
 // ──────────────────────────────────────────────────────────
 //
-// When DesignDead runs AS A PACKAGE inside the user's app,
-// it inspects the current page DOM directly. No proxy, no
-// iframe, no postMessage bridge, no PNA issues.
+// When DesignDead runs AS A PACKAGE, the consumer's app is
+// loaded in an iframe inside the preview panel. This module
+// inspects that iframe's DOM — reading elements, highlighting
+// on hover, selecting on click, and applying live style edits.
 //
-// This module provides the same ElementNode tree that the
-// iframe bridge provides, but reads from `document` directly.
+// It also supports direct document inspection (no iframe) for
+// the Figma Make development preview.
+//
+// Key concept: "target document" — the document being inspected.
+// This is either iframe.contentDocument (package mode) or
+// window.document (dev mode).
 // ──────────────────────────────────────────────────────────
 
 import type { ElementNode } from "../store";
@@ -27,6 +32,32 @@ const IGNORED_TAGS = new Set([
 
 /** DesignDead's own UI elements — skip during inspection */
 const DD_ATTR = "data-designdead";
+
+// ── Target document (iframe or main page) ──────────────────
+
+let targetDoc: Document = document;
+let targetIframe: HTMLIFrameElement | null = null;
+
+/**
+ * Set the document to inspect. Call this when the preview iframe loads.
+ * @param doc - The iframe's contentDocument (or window.document for direct mode)
+ * @param iframe - The iframe element (for coordinate mapping). Null for direct mode.
+ */
+export function setInspectionTarget(
+  doc: Document,
+  iframe: HTMLIFrameElement | null = null
+): void {
+  targetDoc = doc;
+  targetIframe = iframe;
+}
+
+/**
+ * Reset inspection target to the main document.
+ */
+export function resetInspectionTarget(): void {
+  targetDoc = document;
+  targetIframe = null;
+}
 
 // ── Selector generation ────────────────────────────────────
 
@@ -118,7 +149,8 @@ const STYLE_PROPS = [
 ];
 
 function getComputedStyles(el: Element): Record<string, string> {
-  const computed = window.getComputedStyle(el);
+  const win = targetDoc.defaultView || window;
+  const computed = win.getComputedStyle(el);
   const styles: Record<string, string> = {};
 
   for (const prop of STYLE_PROPS) {
@@ -183,12 +215,12 @@ function walkElement(el: Element, depth: number = 0): ElementNode | null {
 }
 
 /**
- * Build the full ElementNode tree from the current page DOM.
- * Skips DesignDead's own overlay elements.
+ * Build the full ElementNode tree from the TARGET document's DOM.
+ * Uses the iframe's document if setInspectionTarget() was called.
  */
 export function buildElementTree(): ElementNode[] {
   resetIdCounter();
-  const body = document.body;
+  const body = targetDoc.body;
   if (!body) return [];
 
   const nodes: ElementNode[] = [];
@@ -220,13 +252,14 @@ function buildElementMap(el: Element, depth: number = 0): void {
 }
 
 /**
- * Rebuild the id↔element mapping.
- * Call after buildElementTree() to keep maps in sync.
+ * Rebuild the id↔element mapping from the TARGET document.
  */
 export function rebuildElementMap(): void {
   idToElement.clear();
   resetIdCounter();
-  for (const child of document.body.children) {
+  const body = targetDoc.body;
+  if (!body) return;
+  for (const child of body.children) {
     buildElementMap(child, 0);
   }
 }
@@ -259,13 +292,13 @@ export function applyStyle(
 }
 
 // ── Hover/select highlight ─────────────────────────────────
+// Overlays are created in the MAIN document (parent of iframe),
+// positioned using coordinate mapping from iframe space to parent space.
 
 let highlightOverlay: HTMLDivElement | null = null;
 let selectOverlay: HTMLDivElement | null = null;
 
-function ensureOverlay(
-  type: "hover" | "select"
-): HTMLDivElement {
+function ensureOverlay(type: "hover" | "select"): HTMLDivElement {
   const isHover = type === "hover";
   let overlay = isHover ? highlightOverlay : selectOverlay;
 
@@ -292,6 +325,25 @@ function ensureOverlay(
 }
 
 /**
+ * Map an element's bounding rect from the target document
+ * to the main document's coordinate space.
+ * If inspecting via iframe, adds the iframe's offset.
+ */
+function getScreenRect(el: Element): DOMRect {
+  const rect = el.getBoundingClientRect();
+  if (targetIframe) {
+    const iframeRect = targetIframe.getBoundingClientRect();
+    return new DOMRect(
+      rect.x + iframeRect.x,
+      rect.y + iframeRect.y,
+      rect.width,
+      rect.height
+    );
+  }
+  return rect;
+}
+
+/**
  * Show a highlight overlay on a DOM element.
  */
 export function highlightElement(
@@ -311,7 +363,7 @@ export function highlightElement(
     return;
   }
 
-  const rect = el.getBoundingClientRect();
+  const rect = getScreenRect(el);
   overlay.style.display = "block";
   overlay.style.top = `${rect.top}px`;
   overlay.style.left = `${rect.left}px`;
@@ -327,6 +379,7 @@ export function cleanup(): void {
   highlightOverlay = null;
   selectOverlay = null;
   idToElement.clear();
+  resetInspectionTarget();
 }
 
 // ── Click-to-inspect ───────────────────────────────────────
@@ -339,13 +392,13 @@ let inspectHoverHandler: ((e: MouseEvent) => void) | null = null;
 
 /**
  * Start click-to-inspect mode.
- * Click any element on the page to select it.
+ * Listens on the TARGET document (iframe or main page).
  */
 export function startInspect(onSelect: InspectCallback): void {
   stopInspect();
   inspectActive = true;
 
-  // Rebuild element map
+  // Rebuild element map from target document
   rebuildElementMap();
 
   inspectHoverHandler = (e: MouseEvent) => {
@@ -372,11 +425,14 @@ export function startInspect(onSelect: InspectCallback): void {
     }
   };
 
-  document.addEventListener("mousemove", inspectHoverHandler, true);
-  document.addEventListener("click", inspectHandler, true);
+  // Listen on the TARGET document (iframe's document or main document)
+  targetDoc.addEventListener("mousemove", inspectHoverHandler, true);
+  targetDoc.addEventListener("click", inspectHandler, true);
 
-  // Change cursor
-  document.body.style.cursor = "crosshair";
+  // Change cursor on the target document's body
+  if (targetDoc.body) {
+    targetDoc.body.style.cursor = "crosshair";
+  }
 }
 
 /**
@@ -384,15 +440,17 @@ export function startInspect(onSelect: InspectCallback): void {
  */
 export function stopInspect(): void {
   if (inspectHandler) {
-    document.removeEventListener("click", inspectHandler, true);
+    targetDoc.removeEventListener("click", inspectHandler, true);
     inspectHandler = null;
   }
   if (inspectHoverHandler) {
-    document.removeEventListener("mousemove", inspectHoverHandler, true);
+    targetDoc.removeEventListener("mousemove", inspectHoverHandler, true);
     inspectHoverHandler = null;
   }
   highlightElement(null, "hover");
-  document.body.style.cursor = "";
+  if (targetDoc.body) {
+    targetDoc.body.style.cursor = "";
+  }
   inspectActive = false;
 }
 
@@ -444,7 +502,8 @@ export function generateAgentOutput(elementId: string): string {
   // Add DOM path
   const path: string[] = [];
   let current: Element | null = el;
-  while (current && current !== document.body) {
+  const bodyEl = targetDoc.body;
+  while (current && current !== bodyEl) {
     path.unshift(getSelector(current));
     current = current.parentElement;
   }
