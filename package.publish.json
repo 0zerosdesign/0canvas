@@ -70,10 +70,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/Withso/design-dead.git"
+    "url": "https://github.com/zerosdesign/design-dead.git"
   },
-  "homepage": "https://github.com/Withso/design-dead#readme",
+  "homepage": "https://github.com/zerosdesign/design-dead#readme",
   "bugs": {
-    "url": "https://github.com/Withso/design-dead/issues"
+    "url": "https://github.com/zerosdesign/design-dead/issues"
   }
 }
