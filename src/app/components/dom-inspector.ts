@@ -8,14 +8,14 @@
 // on hover, selecting on click, and applying live style edits.
 //
 // It also supports direct document inspection (no iframe) for
-// the Figma Make development preview.
+// local development.
 //
 // Key concept: "target document" — the document being inspected.
 // This is either iframe.contentDocument (package mode) or
 // window.document (dev mode).
 // ──────────────────────────────────────────────────────────
 
-import type { ElementNode } from "../store";
+import type { ElementNode, VariantData } from "../store";
 
 // ── Configuration ──────────────────────────────────────────
 
@@ -512,4 +512,127 @@ export function generateAgentOutput(elementId: string): string {
   }
 
   return lines.join("\n");
+}
+
+// ── Snapshot capture for variants ───────────────────────────
+
+function inlineComputedStyles(el: Element, doc: Document): void {
+  const win = doc.defaultView || window;
+  const computed = win.getComputedStyle(el);
+  const htmlEl = el as HTMLElement;
+
+  for (const prop of STYLE_PROPS) {
+    const cssProp = prop.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
+    const val = computed.getPropertyValue(cssProp);
+    if (val && val !== "none" && val !== "normal" && val !== "auto" && val !== "0px") {
+      htmlEl.style.setProperty(cssProp, val);
+    }
+  }
+
+  for (const child of el.children) {
+    inlineComputedStyles(child, doc);
+  }
+}
+
+function extractMockData(el: Element): { images: string[]; texts: string[] } {
+  const images: string[] = [];
+  const texts: string[] = [];
+
+  const imgs = el.querySelectorAll("img");
+  imgs.forEach((img) => {
+    if (img.src) images.push(img.src);
+  });
+
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  let node: Node | null;
+  while ((node = walker.nextNode())) {
+    const text = node.textContent?.trim();
+    if (text && text.length > 0) texts.push(text);
+  }
+
+  return { images: [...new Set(images)], texts: [...new Set(texts)] };
+}
+
+function sanitizeSnapshot(html: string): string {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+
+  doc.querySelectorAll("script").forEach((s) => s.remove());
+  doc.querySelectorAll("[onclick], [onload], [onerror], [onmouseover]").forEach((el) => {
+    Array.from(el.attributes)
+      .filter((attr) => attr.name.startsWith("on"))
+      .forEach((attr) => el.removeAttribute(attr.name));
+  });
+  doc.querySelectorAll(`[${DD_ATTR}]`).forEach((el) => el.remove());
+
+  return doc.body.innerHTML;
+}
+
+/**
+ * Capture a full-page HTML/CSS snapshot from the target document.
+ * Strips scripts and event handlers, inlines computed styles.
+ */
+export function capturePageSnapshot(): Omit<VariantData, "id" | "name" | "parentId" | "status" | "createdAt"> | null {
+  const body = targetDoc.body;
+  if (!body) return null;
+
+  const clone = body.cloneNode(true) as HTMLElement;
+  const tempDiv = targetDoc.createElement("div");
+  tempDiv.appendChild(clone);
+
+  inlineComputedStyles(clone, targetDoc);
+
+  const mockData = extractMockData(body);
+  const rawHtml = tempDiv.innerHTML;
+  const html = sanitizeSnapshot(rawHtml);
+
+  const styleSheets = Array.from(targetDoc.styleSheets);
+  const cssRules: string[] = [];
+  for (const sheet of styleSheets) {
+    try {
+      for (const rule of sheet.cssRules) {
+        cssRules.push(rule.cssText);
+      }
+    } catch {
+      // Cross-origin stylesheet
+    }
+  }
+
+  return {
+    html,
+    css: cssRules.join("\n"),
+    mockData,
+    sourceType: "page",
+  };
+}
+
+/**
+ * Capture an HTML/CSS snapshot of a specific element by its DesignDead ID.
+ * Returns the element's subtree with inlined styles.
+ */
+export function captureComponentSnapshot(
+  elementId: string
+): Omit<VariantData, "id" | "name" | "parentId" | "status" | "createdAt"> | null {
+  const el = getElementById(elementId);
+  if (!el) return null;
+
+  const clone = el.cloneNode(true) as HTMLElement;
+  const tempDiv = targetDoc.createElement("div");
+  tempDiv.appendChild(clone);
+
+  inlineComputedStyles(clone, targetDoc);
+
+  const mockData = extractMockData(el);
+  const rawHtml = tempDiv.innerHTML;
+  const html = sanitizeSnapshot(rawHtml);
+
+  const selector = getSelector(el);
+
+  return {
+    html,
+    css: "",
+    mockData,
+    sourceType: "component",
+    sourceSelector: selector,
+  };
 }

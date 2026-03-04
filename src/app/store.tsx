@@ -96,6 +96,44 @@ export type FileMapping = {
   confidence: "high" | "medium" | "low";
 };
 
+// ── Feedback / Agent Waitlist types ──
+export type FeedbackIntent = "fix" | "change" | "question" | "approve";
+export type FeedbackSeverity = "blocking" | "important" | "suggestion";
+
+export type FeedbackItem = {
+  id: string;
+  elementId: string;
+  elementSelector: string;
+  elementTag: string;
+  elementClasses: string[];
+  comment: string;
+  intent: FeedbackIntent;
+  severity: FeedbackSeverity;
+  status: "pending" | "sent" | "resolved";
+  timestamp: number;
+  computedStyles?: Record<string, string>;
+  boundingBox?: { x: number; y: number; width: number; height: number };
+};
+
+// ── Variant types ──
+export type VariantData = {
+  id: string;
+  name: string;
+  html: string;
+  css: string;
+  mockData: {
+    images: string[];
+    texts: string[];
+  };
+  sourceType: "page" | "component";
+  sourceSelector?: string;
+  parentId: string | null;
+  status: "draft" | "finalized" | "sent";
+  createdAt: number;
+  modifiedHtml?: string;
+  modifiedCss?: string;
+};
+
 // ── WebSocket / MCP types ──
 export type WSStatus = "disconnected" | "connecting" | "connected" | "error";
 
@@ -146,6 +184,18 @@ export type WorkspaceState = {
   wsLogs: WSLogEntry[];
   wsPort: number;
 
+  // Feedback / Agent Waitlist
+  feedbackItems: FeedbackItem[];
+  waitlistOpen: boolean;
+
+  // Variants
+  variants: VariantData[];
+  activeVariantId: string | null;
+
+  // Route switching
+  currentRoute: string;
+  routeHistory: string[];
+
   // UI state
   inspectorMode: boolean;
   layersPanelOpen: boolean;
@@ -194,6 +244,22 @@ type Action =
   // File mapping actions
   | { type: "SET_FILE_MAPPINGS"; mappings: FileMapping[] }
   | { type: "TOGGLE_FILE_MAP_PANEL" }
+  // Feedback / Agent Waitlist actions
+  | { type: "ADD_FEEDBACK"; item: FeedbackItem }
+  | { type: "UPDATE_FEEDBACK"; id: string; updates: Partial<FeedbackItem> }
+  | { type: "REMOVE_FEEDBACK"; id: string }
+  | { type: "CLEAR_FEEDBACK" }
+  | { type: "MARK_FEEDBACK_SENT"; ids: string[] }
+  | { type: "SET_WAITLIST_OPEN"; open: boolean }
+  // Variant actions
+  | { type: "ADD_VARIANT"; variant: VariantData }
+  | { type: "UPDATE_VARIANT"; id: string; updates: Partial<VariantData> }
+  | { type: "DELETE_VARIANT"; id: string }
+  | { type: "SET_ACTIVE_VARIANT"; id: string | null }
+  | { type: "FINALIZE_VARIANT"; id: string }
+  // Route actions
+  | { type: "SET_CURRENT_ROUTE"; route: string }
+  | { type: "ADD_ROUTE_HISTORY"; route: string }
   // WebSocket actions
   | { type: "WS_STATUS_UPDATE"; status: WSStatus }
   | { type: "WS_LOG"; entry: WSLogEntry }
@@ -279,6 +345,12 @@ const initialState: WorkspaceState = {
   wsStatus: "disconnected",
   wsLogs: [],
   wsPort: 0,
+  feedbackItems: [],
+  waitlistOpen: false,
+  variants: [],
+  activeVariantId: null,
+  currentRoute: typeof window !== "undefined" ? window.location.pathname : "/",
+  routeHistory: typeof window !== "undefined" ? [window.location.pathname] : ["/"],
   inspectorMode: true,
   layersPanelOpen: true,
   stylePanelOpen: true,
@@ -492,6 +564,66 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
       return { ...state, fileMappings: action.mappings };
     case "TOGGLE_FILE_MAP_PANEL":
       return { ...state, fileMapPanelOpen: !state.fileMapPanelOpen };
+    // Feedback / Agent Waitlist
+    case "ADD_FEEDBACK":
+      return { ...state, feedbackItems: [...state.feedbackItems, action.item] };
+    case "UPDATE_FEEDBACK":
+      return {
+        ...state,
+        feedbackItems: state.feedbackItems.map((f) =>
+          f.id === action.id ? { ...f, ...action.updates } : f
+        ),
+      };
+    case "REMOVE_FEEDBACK":
+      return {
+        ...state,
+        feedbackItems: state.feedbackItems.filter((f) => f.id !== action.id),
+      };
+    case "CLEAR_FEEDBACK":
+      return { ...state, feedbackItems: [] };
+    case "MARK_FEEDBACK_SENT":
+      return {
+        ...state,
+        feedbackItems: state.feedbackItems.map((f) =>
+          action.ids.includes(f.id) ? { ...f, status: "sent" as const } : f
+        ),
+      };
+    case "SET_WAITLIST_OPEN":
+      return { ...state, waitlistOpen: action.open };
+    // Variant actions
+    case "ADD_VARIANT":
+      return { ...state, variants: [...state.variants, action.variant] };
+    case "UPDATE_VARIANT":
+      return {
+        ...state,
+        variants: state.variants.map((v) =>
+          v.id === action.id ? { ...v, ...action.updates } : v
+        ),
+      };
+    case "DELETE_VARIANT":
+      return {
+        ...state,
+        variants: state.variants.filter((v) => v.id !== action.id),
+        activeVariantId: state.activeVariantId === action.id ? null : state.activeVariantId,
+      };
+    case "SET_ACTIVE_VARIANT":
+      return { ...state, activeVariantId: action.id };
+    case "FINALIZE_VARIANT":
+      return {
+        ...state,
+        variants: state.variants.map((v) =>
+          v.id === action.id ? { ...v, status: "finalized" as const } : v
+        ),
+      };
+    // Route actions
+    case "SET_CURRENT_ROUTE":
+      return { ...state, currentRoute: action.route };
+    case "ADD_ROUTE_HISTORY": {
+      const history = state.routeHistory.includes(action.route)
+        ? state.routeHistory
+        : [...state.routeHistory, action.route];
+      return { ...state, routeHistory: history };
+    }
     // WebSocket actions
     case "WS_STATUS_UPDATE":
       return { ...state, wsStatus: action.status };

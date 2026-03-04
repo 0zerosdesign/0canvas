@@ -25,10 +25,12 @@ export {
   cleanup,
   setInspectionTarget,
   resetInspectionTarget,
+  capturePageSnapshot,
+  captureComponentSnapshot,
 } from "./app/components/dom-inspector";
 
 // Runtime CSS injection (for advanced consumers)
 export { injectStyles, removeStyles } from "./app/components/designdead-styles";
 
 // Store types (for TypeScript consumers)
-export type { ElementNode, StyleChange } from "./app/store";
+export type { ElementNode, StyleChange, FeedbackItem, FeedbackIntent, FeedbackSeverity, VariantData } from "./app/store";

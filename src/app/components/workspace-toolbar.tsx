@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Layers,
   Palette,
@@ -13,16 +13,24 @@ import {
   FileCode,
   PenTool,
   Wifi,
+  ListChecks,
+  Globe,
+  ChevronDown,
 } from "lucide-react";
 import { useWorkspace } from "../store";
 
-export function WorkspaceToolbar() {
+interface WorkspaceToolbarProps {
+  onNavigate?: (route: string) => void;
+}
+
+export function WorkspaceToolbar({ onNavigate }: WorkspaceToolbarProps = {}) {
   const { state, dispatch } = useWorkspace();
 
   const connectedIDEs = state.ides.filter((i) => i.status === "connected").length;
   const projectName = state.project?.name || "Untitled";
   const framework = state.project?.framework || "";
   const annotationCount = state.annotations.length;
+  const pendingFeedback = state.feedbackItems.filter((f) => f.status === "pending").length;
 
   return (
     <div className="h-12 border-b border-border bg-[#0a0a0a] flex items-center justify-between px-3">
@@ -76,6 +84,17 @@ export function WorkspaceToolbar() {
             MCP
           </span>
         )}
+
+        {/* Route switcher */}
+        <RouteSwitcher
+          currentRoute={state.currentRoute}
+          routeHistory={state.routeHistory}
+          onNavigate={(route) => {
+            dispatch({ type: "SET_CURRENT_ROUTE", route });
+            dispatch({ type: "ADD_ROUTE_HISTORY", route });
+            onNavigate?.(route);
+          }}
+        />
       </div>
 
       {/* Center: Panel toggles */}
@@ -172,6 +191,23 @@ export function WorkspaceToolbar() {
           <Lightbulb className="w-3.5 h-3.5" />
           Ideas
         </button>
+        <button
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] transition-colors ${
+            state.waitlistOpen
+              ? "bg-[#50e3c2]/15 text-[#50e3c2]"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+          onClick={() => dispatch({ type: "SET_WAITLIST_OPEN", open: !state.waitlistOpen })}
+          title="Agent Waitlist"
+        >
+          <ListChecks className="w-3.5 h-3.5" />
+          Waitlist
+          {pendingFeedback > 0 && (
+            <span className="text-[9px] bg-[#50e3c2]/20 text-[#50e3c2] px-1 rounded">
+              {pendingFeedback}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Right: Actions */}
@@ -200,6 +236,136 @@ export function WorkspaceToolbar() {
           <span className="text-[11px] text-muted-foreground">K</span>
         </button>
       </div>
+    </div>
+  );
+}
+
+function RouteSwitcher({
+  currentRoute,
+  routeHistory,
+  onNavigate,
+}: {
+  currentRoute: string;
+  routeHistory: string[];
+  onNavigate: (route: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [customRoute, setCustomRoute] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const handleGo = () => {
+    const route = customRoute.trim();
+    if (!route) return;
+    onNavigate(route.startsWith("/") ? route : `/${route}`);
+    setCustomRoute("");
+    setOpen(false);
+  };
+
+  return (
+    <div ref={dropdownRef} style={{ position: "relative" }}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] bg-[#111111] border border-[#1a1a1a] text-muted-foreground hover:text-foreground hover:border-[#333333] transition-colors"
+        title="Switch route"
+      >
+        <Globe className="w-3 h-3" />
+        <span className="max-w-[100px] truncate">{currentRoute}</span>
+        <ChevronDown className="w-2.5 h-2.5 opacity-50" />
+      </button>
+
+      {open && (
+        <div
+          data-designdead="route-dropdown"
+          style={{
+            position: "absolute",
+            top: "100%",
+            left: 0,
+            marginTop: 4,
+            width: 220,
+            background: "#0a0a0a",
+            border: "1px solid #1a1a1a",
+            borderRadius: 8,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+            zIndex: 100,
+            overflow: "hidden",
+            fontFamily: "'Geist Sans', 'Inter', system-ui, sans-serif",
+          }}
+        >
+          <div style={{ padding: "6px 8px", borderBottom: "1px solid #1a1a1a" }}>
+            <div style={{ display: "flex", gap: 4 }}>
+              <input
+                value={customRoute}
+                onChange={(e) => setCustomRoute(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleGo()}
+                placeholder="/path..."
+                style={{
+                  flex: 1,
+                  padding: "4px 8px",
+                  background: "#111",
+                  border: "1px solid #1a1a1a",
+                  borderRadius: 5,
+                  color: "#ededed",
+                  fontSize: 11,
+                  fontFamily: "inherit",
+                  outline: "none",
+                }}
+              />
+              <button
+                onClick={handleGo}
+                style={{
+                  padding: "4px 10px",
+                  background: "#0070f3",
+                  border: "none",
+                  borderRadius: 5,
+                  color: "#fff",
+                  fontSize: 10,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                Go
+              </button>
+            </div>
+          </div>
+          <div style={{ maxHeight: 160, overflowY: "auto" }}>
+            {routeHistory.map((route) => (
+              <button
+                key={route}
+                onClick={() => {
+                  onNavigate(route);
+                  setOpen(false);
+                }}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  padding: "6px 12px",
+                  background: route === currentRoute ? "#0070f3" + "12" : "transparent",
+                  border: "none",
+                  borderLeft: route === currentRoute ? "2px solid #0070f3" : "2px solid transparent",
+                  color: route === currentRoute ? "#0070f3" : "#888",
+                  fontSize: 11,
+                  textAlign: "left",
+                  cursor: "pointer",
+                  fontFamily: "'Geist Mono', 'SF Mono', monospace",
+                }}
+              >
+                {route}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -12,7 +12,7 @@
 // can be toggled with a keyboard shortcut or FAB button.
 //
 // Architecture:
-//   - No server, no proxy, no iframe, no Figma dependency
+//   - No server, no proxy, no external dependency
 //   - Inspects the current page DOM directly via dom-inspector.ts
 //   - All UI is marked with data-designdead so the inspector skips it
 //   - CSS is injected at runtime via designdead-styles.ts
@@ -20,7 +20,7 @@
 //
 // ──────────────────────────────────────────────────────────
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { WorkspaceProvider, useWorkspace } from "../store";
 import { injectStyles, removeStyles } from "./designdead-styles";
 import { cleanup } from "./dom-inspector";
@@ -28,12 +28,15 @@ import { WorkspaceToolbar } from "./workspace-toolbar";
 import { LayersPanel } from "./layers-panel";
 import { StylePanel } from "./style-panel";
 import { LiveCanvas } from "./live-canvas";
+import { VariantCanvas } from "./variant-canvas";
 import { AgentPanel } from "./agent-panel";
 import { BrainstormPanel } from "./brainstorm-panel";
 import { VersionManager } from "./version-manager";
 import { CommandPalette } from "./command-palette";
 import { FileMapPanel } from "./file-map-panel";
 import { AnnotationOverlay } from "./annotation-overlay";
+import { ElementChat } from "./element-chat";
+import { AgentWaitlist } from "./agent-waitlist";
 
 // ── Props ──────────────────────────────────────────────────
 
@@ -337,6 +340,7 @@ export default DesignDead;
 
 function EngineWorkspace() {
   const { state, dispatch } = useWorkspace();
+  const iframeNavRef = React.useRef<((route: string) => void) | null>(null);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -351,6 +355,10 @@ function EngineWorkspace() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [dispatch]);
+
+  const handleNavigate = useCallback((route: string) => {
+    iframeNavRef.current?.(route);
+  }, []);
 
   const showVersions =
     !state.idePanelOpen &&
@@ -369,7 +377,7 @@ function EngineWorkspace() {
       data-designdead="workspace"
     >
       {/* Top toolbar */}
-      <WorkspaceToolbar />
+      <WorkspaceToolbar onNavigate={handleNavigate} />
 
       {/* Main workspace */}
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
@@ -380,10 +388,11 @@ function EngineWorkspace() {
           </div>
         )}
 
-        {/* Center: Live Canvas + Annotation Overlay */}
+        {/* Center: Variant Canvas (contains source preview + variant cards) */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
-          <LiveCanvas useIframePreview={true} />
+          <VariantCanvas onNavigateRef={iframeNavRef} />
           <AnnotationOverlay />
+          <AgentWaitlist />
         </div>
 
         {/* Right panels */}
@@ -420,6 +429,9 @@ function EngineWorkspace() {
 
       {/* Command palette overlay */}
       {state.commandPaletteOpen && <CommandPalette />}
+
+      {/* Element feedback chat (floating, positioned near selected element) */}
+      <ElementChat />
     </div>
   );
 }

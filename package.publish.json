@@ -1,7 +1,7 @@
 {
   "name": "@zerosdesign/design-dead",
   "version": "0.0.4",
-  "description": "Visual feedback engine for AI-powered development. Inspect elements, edit styles, and send structured instructions to your AI coding agent.",
+  "description": "Design engine for AI-powered development. Inspect elements, fork variants, brainstorm designs on an infinite canvas, and send structured feedback to AI coding agents.",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -42,13 +42,15 @@
   },
   "dependencies": {
     "@radix-ui/react-scroll-area": "^1.2.0",
-    "lucide-react": "^0.400.0",
-    "clsx": "^2.1.0",
-    "tailwind-merge": "^3.0.0"
+    "@xyflow/react": "^12.0.0",
+    "idb": "^8.0.0",
+    "lucide-react": "^0.400.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
+    "clsx": "^2.1.0",
+    "tailwind-merge": "^3.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "tsup": "^8.0.0",
@@ -66,7 +68,13 @@
     "css",
     "devtools",
     "overlay",
-    "react"
+    "react",
+    "variants",
+    "canvas",
+    "forking",
+    "brainstorm",
+    "cursor",
+    "claude-code"
   ],
   "repository": {
     "type": "git",

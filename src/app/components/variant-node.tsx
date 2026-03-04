@@ -1,0 +1,196 @@
+// ──────────────────────────────────────────────────────────
+// Variant Node — ReactFlow custom node for a forked variant
+// ──────────────────────────────────────────────────────────
+
+import React, { useRef, useEffect, useState, useCallback } from "react";
+import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { GitFork, Check, Send, Trash2, Pencil, CheckCircle2, Copy } from "lucide-react";
+import { useWorkspace, VariantData } from "../store";
+import { copyToClipboard } from "./clipboard";
+
+export type VariantNodeData = {
+  variant: VariantData;
+  onFork: (variantId: string) => void;
+  onDelete: (variantId: string) => void;
+  onFinalize: (variantId: string) => void;
+  onSendToAgent: (variantId: string) => void;
+};
+
+export function VariantNode({ data }: NodeProps) {
+  const { variant, onFork, onDelete, onFinalize, onSendToAgent } = data as VariantNodeData;
+  const { dispatch } = useWorkspace();
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(variant.name);
+  const [copied, setCopied] = useState(false);
+
+  const htmlContent = variant.modifiedHtml || variant.html;
+  const cssContent = variant.modifiedCss || variant.css;
+
+  const srcdoc = `<!DOCTYPE html>
+<html>
+<head><style>${cssContent}</style><style>body{margin:0;overflow:auto;}</style></head>
+<body>${htmlContent}</body>
+</html>`;
+
+  const handleRename = () => {
+    if (name.trim() && name !== variant.name) {
+      dispatch({ type: "UPDATE_VARIANT", id: variant.id, updates: { name: name.trim() } });
+    }
+    setEditing(false);
+  };
+
+  const handleCopyHtml = useCallback(() => {
+    copyToClipboard(htmlContent);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }, [htmlContent]);
+
+  const statusColor =
+    variant.status === "finalized" ? "#50e3c2" :
+    variant.status === "sent" ? "#7928ca" : "#444";
+
+  const statusLabel =
+    variant.status === "finalized" ? "Finalized" :
+    variant.status === "sent" ? "Sent" : "Draft";
+
+  return (
+    <div
+      data-designdead="variant-node"
+      style={{
+        width: 480,
+        background: "#0a0a0a",
+        border: `1px solid ${variant.status === "finalized" ? "#50e3c2" + "40" : "#1a1a1a"}`,
+        borderRadius: 10,
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        fontFamily: "'Geist Sans', 'Inter', system-ui, sans-serif",
+        boxShadow: "0 4px 20px rgba(0,0,0,0.25)",
+      }}
+    >
+      <Handle type="target" position={Position.Left} style={{ background: "#0070f3", width: 8, height: 8 }} />
+      <Handle type="source" position={Position.Right} style={{ background: "#0070f3", width: 8, height: 8 }} />
+
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "6px 10px",
+          borderBottom: "1px solid #1a1a1a",
+          background: "#0a0a0a",
+          minHeight: 32,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, minWidth: 0 }}>
+          {editing ? (
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onBlur={handleRename}
+              onKeyDown={(e) => e.key === "Enter" && handleRename()}
+              autoFocus
+              style={{
+                flex: 1,
+                padding: "2px 6px",
+                background: "#111",
+                border: "1px solid #333",
+                borderRadius: 4,
+                color: "#ededed",
+                fontSize: 11,
+                fontFamily: "inherit",
+                outline: "none",
+              }}
+            />
+          ) : (
+            <span
+              onDoubleClick={() => setEditing(true)}
+              style={{ fontSize: 11, color: "#ededed", cursor: "text", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+              title="Double-click to rename"
+            >
+              {variant.name}
+            </span>
+          )}
+          <span style={{
+            padding: "1px 6px",
+            borderRadius: 4,
+            background: statusColor + "18",
+            color: statusColor,
+            fontSize: 9,
+            fontWeight: 500,
+            flexShrink: 0,
+          }}>
+            {statusLabel}
+          </span>
+          {variant.sourceType === "component" && (
+            <span style={{ fontSize: 8, color: "#555", background: "#111", padding: "1px 4px", borderRadius: 3, flexShrink: 0 }}>
+              {variant.sourceSelector}
+            </span>
+          )}
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 3, marginLeft: 8 }}>
+          <NodeBtn onClick={() => onFork(variant.id)} title="Fork variant">
+            <GitFork style={{ width: 11, height: 11 }} />
+          </NodeBtn>
+          <NodeBtn onClick={handleCopyHtml} title="Copy HTML">
+            {copied ? <Check style={{ width: 11, height: 11, color: "#50e3c2" }} /> : <Copy style={{ width: 11, height: 11 }} />}
+          </NodeBtn>
+          {variant.status === "draft" && (
+            <NodeBtn onClick={() => onFinalize(variant.id)} accent title="Finalize">
+              <CheckCircle2 style={{ width: 11, height: 11 }} />
+            </NodeBtn>
+          )}
+          {variant.status === "finalized" && (
+            <NodeBtn onClick={() => onSendToAgent(variant.id)} accent title="Send to Agent">
+              <Send style={{ width: 11, height: 11 }} />
+            </NodeBtn>
+          )}
+          <NodeBtn onClick={() => onDelete(variant.id)} danger title="Delete">
+            <Trash2 style={{ width: 11, height: 11 }} />
+          </NodeBtn>
+        </div>
+      </div>
+
+      {/* Sandboxed preview */}
+      <div style={{ height: 320, position: "relative", overflow: "hidden", background: "#fff" }}>
+        <iframe
+          ref={iframeRef}
+          srcDoc={srcdoc}
+          sandbox="allow-same-origin"
+          title={`Variant: ${variant.name}`}
+          style={{ width: "100%", height: "100%", border: "none", display: "block", pointerEvents: "none" }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function NodeBtn({ children, onClick, accent, danger, title }: {
+  children: React.ReactNode;
+  onClick: () => void;
+  accent?: boolean;
+  danger?: boolean;
+  title?: string;
+}) {
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      title={title}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        padding: 3,
+        borderRadius: 4,
+        border: "none",
+        background: "transparent",
+        color: danger ? "#ff4444" : accent ? "#50e3c2" : "#666",
+        cursor: "pointer",
+      }}
+    >
+      {children}
+    </button>
+  );
+}

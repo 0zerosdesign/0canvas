@@ -8,7 +8,7 @@
 //    Loads the consumer's app inside an iframe. Inspects
 //    elements within the iframe's DOM.
 //
-// 2. DIRECT MODE (useIframePreview=false) — dev/Figma Make
+// 2. DIRECT MODE (useIframePreview=false) — local dev
 //    Inspects the current page DOM directly (no iframe).
 //    Shows instructions in the center.
 //
@@ -47,9 +47,11 @@ interface LiveCanvasProps {
   /** When true, loads the consumer's app in an iframe for preview.
    *  When false (default), uses direct DOM inspection (dev mode). */
   useIframePreview?: boolean;
+  /** Mutable ref for programmatic route navigation from the toolbar. */
+  onNavigateRef?: React.MutableRefObject<((route: string) => void) | null>;
 }
 
-export function LiveCanvas({ useIframePreview = false }: LiveCanvasProps) {
+export function LiveCanvas({ useIframePreview = false, onNavigateRef }: LiveCanvasProps) {
   const { state, dispatch } = useWorkspace();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [inspecting, setInspecting] = useState(false);
@@ -62,6 +64,51 @@ export function LiveCanvas({ useIframePreview = false }: LiveCanvasProps) {
 
   // ── Build iframe src — same URL ─────────────────────────
   const iframeSrc = typeof window !== "undefined" ? window.location.href : "";
+
+  // ── Route navigation via ref callback ──────────────────
+  useEffect(() => {
+    if (!onNavigateRef || !useIframePreview) return;
+    onNavigateRef.current = (route: string) => {
+      const iframe = iframeRef.current;
+      if (!iframe) return;
+      try {
+        const baseUrl = new URL(window.location.origin);
+        const targetUrl = new URL(route, baseUrl);
+        iframe.src = targetUrl.href;
+        setIframeLoaded(false);
+        setIframeError(false);
+        hasScannedRef.current = false;
+
+        dispatch({ type: "SET_CURRENT_ROUTE", route });
+        dispatch({ type: "ADD_ROUTE_HISTORY", route });
+      } catch (err) {
+        console.warn("[DesignDead] Invalid route:", route, err);
+      }
+    };
+    return () => {
+      if (onNavigateRef) onNavigateRef.current = null;
+    };
+  }, [onNavigateRef, useIframePreview, dispatch]);
+
+  // ── Detect route changes from iframe navigation ─────────
+  useEffect(() => {
+    if (!useIframePreview || !iframeLoaded) return;
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+
+    const checkRoute = () => {
+      try {
+        const iframePath = iframe.contentWindow?.location.pathname;
+        if (iframePath && iframePath !== state.currentRoute) {
+          dispatch({ type: "SET_CURRENT_ROUTE", route: iframePath });
+          dispatch({ type: "ADD_ROUTE_HISTORY", route: iframePath });
+        }
+      } catch { /* cross-origin */ }
+    };
+
+    const interval = setInterval(checkRoute, 2000);
+    return () => clearInterval(interval);
+  }, [useIframePreview, iframeLoaded, state.currentRoute, dispatch]);
 
   // ── Handle iframe load (iframe mode only) ───────────────
   const handleIframeLoad = useCallback(() => {
