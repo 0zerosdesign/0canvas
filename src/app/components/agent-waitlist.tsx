@@ -83,12 +83,49 @@ export function AgentWaitlist() {
 
   const generateBatchMarkdown = useCallback(
     (items: FeedbackItem[]): string => {
-      const lines: string[] = [`# DesignDead Feedback Batch (${items.length} items)`, ""];
+      const isVariant = activeVariantId !== "main";
+      const variant = isVariant ? state.variants.find((v) => v.id === activeVariantId) : null;
+      const lines: string[] = [];
+
+      if (isVariant && variant) {
+        lines.push(`# DesignDead Feedback — Variant: "${variant.name}" (${items.length} items)`);
+        lines.push("");
+        lines.push("## IMPORTANT: This feedback is for a VARIANT (sandbox copy), NOT the main application.");
+        lines.push("Do NOT modify the main app source code. Apply these changes to the variant HTML/CSS below.");
+        lines.push("");
+        lines.push(`- **Variant ID:** ${variant.id}`);
+        lines.push(`- **Source type:** ${variant.sourceType}`);
+        if (variant.sourceSelector) lines.push(`- **Forked from:** \`${variant.sourceSelector}\``);
+        if (variant.sourcePageRoute) lines.push(`- **Source route:** ${variant.sourcePageRoute}`);
+        lines.push("");
+        lines.push("### Current Variant HTML");
+        lines.push("```html");
+        const html = variant.modifiedHtml || variant.html;
+        lines.push(html.length > 8000 ? html.slice(0, 8000) + "\n<!-- truncated -->" : html);
+        lines.push("```");
+        if (variant.css) {
+          lines.push("");
+          lines.push("### Current Variant CSS");
+          lines.push("```css");
+          const css = variant.modifiedCss || variant.css;
+          lines.push(css.length > 4000 ? css.slice(0, 4000) + "\n/* truncated */" : css);
+          lines.push("```");
+        }
+        lines.push("");
+      } else {
+        lines.push(`# DesignDead Feedback — Main App (${items.length} items)`);
+        lines.push("");
+        lines.push("This feedback is for the main application. Modify the source code directly.");
+        lines.push("");
+      }
+
+      lines.push("## Feedback Items");
+      lines.push("");
 
       items.forEach((item, i) => {
         const intentLabel = item.intent.toUpperCase();
         const sevLabel = item.severity.toUpperCase();
-        lines.push(`## ${i + 1}. ${item.elementSelector} [${intentLabel} - ${sevLabel}]`);
+        lines.push(`### ${i + 1}. ${item.elementSelector} [${intentLabel} - ${sevLabel}]`);
         lines.push(`- **Selector:** \`${item.elementSelector}\``);
         lines.push(`- **Tag:** ${item.elementTag} | **Classes:** ${item.elementClasses.join(", ") || "(none)"}`);
         if (item.computedStyles) {
@@ -102,9 +139,15 @@ export function AgentWaitlist() {
         lines.push("");
       });
 
+      if (isVariant) {
+        lines.push("## Instructions");
+        lines.push("Please output the modified HTML and CSS for this variant based on the feedback above.");
+        lines.push("Do NOT change the main application source files.");
+      }
+
       return lines.join("\n");
     },
-    []
+    [activeVariantId, state.variants]
   );
 
   const handleCopy = useCallback(() => {
