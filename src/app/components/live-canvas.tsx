@@ -204,7 +204,7 @@ export function LiveCanvas({ useIframePreview = false, onNavigateRef }: LiveCanv
       }
 
       startInspect((id, el) => {
-        dispatch({ type: "SELECT_ELEMENT", id });
+        dispatch({ type: "SELECT_ELEMENT", id, source: "inspect" });
 
         // Get computed styles for the style panel
         const doc = useIframePreview

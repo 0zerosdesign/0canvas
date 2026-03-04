@@ -1,6 +1,6 @@
 {
   "name": "@zerosdesign/design-dead",
-  "version": "0.0.3",
+  "version": "0.0.5",
   "description": "Visual feedback engine for AI-powered development. Inspect elements, edit styles, and send structured instructions to your AI coding agent.",
   "license": "MIT",
   "main": "./dist/index.js",

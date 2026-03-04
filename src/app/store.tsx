@@ -198,6 +198,7 @@ export type WorkspaceState = {
   // Feedback / Agent Waitlist
   feedbackItems: FeedbackItem[];
   waitlistOpen: boolean;
+  feedbackPanelOpen: boolean;
 
   // Selection source tracking
   selectionSource: "inspect" | "panel" | null;
@@ -264,6 +265,7 @@ type Action =
   | { type: "CLEAR_FEEDBACK" }
   | { type: "MARK_FEEDBACK_SENT"; ids: string[] }
   | { type: "SET_WAITLIST_OPEN"; open: boolean }
+  | { type: "SET_FEEDBACK_PANEL_OPEN"; open: boolean }
   // Variant actions
   | { type: "ADD_VARIANT"; variant: VariantData }
   | { type: "UPDATE_VARIANT"; id: string; updates: Partial<VariantData> }
@@ -364,6 +366,7 @@ const initialState: WorkspaceState = {
   wsPort: 0,
   feedbackItems: [],
   waitlistOpen: false,
+  feedbackPanelOpen: false,
   selectionSource: null,
   variants: [],
   activeVariantId: null,
@@ -414,7 +417,7 @@ function updateElementInTree(
 function reducer(state: WorkspaceState, action: Action): WorkspaceState {
   switch (action.type) {
     case "SELECT_ELEMENT":
-      return { ...state, selectedElementId: action.id, selectionSource: action.source || "panel" };
+      return { ...state, selectedElementId: action.id, selectionSource: action.source || "panel", feedbackPanelOpen: false };
     case "HOVER_ELEMENT":
       return { ...state, hoveredElementId: action.id };
     case "UPDATE_STYLE": {
@@ -606,6 +609,8 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
       };
     case "SET_WAITLIST_OPEN":
       return { ...state, waitlistOpen: action.open };
+    case "SET_FEEDBACK_PANEL_OPEN":
+      return { ...state, feedbackPanelOpen: action.open };
     // Variant actions
     case "ADD_VARIANT":
       return { ...state, variants: [...state.variants, action.variant] };

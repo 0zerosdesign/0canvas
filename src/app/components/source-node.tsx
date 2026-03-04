@@ -26,6 +26,7 @@ import {
   captureComponentSnapshot,
   generateAgentOutput,
   highlightElement,
+  onFeedbackRequest,
 } from "./dom-inspector";
 import { copyToClipboard } from "./clipboard";
 
@@ -86,8 +87,11 @@ export function SourceNode({ data }: NodeProps) {
       setInspectionTarget(iframe.contentDocument, iframe);
       rebuildElementMap();
     }
+
+    dispatch({ type: "SET_ACTIVE_VARIANT", id: null });
+
     startInspect((id, el) => {
-      dispatch({ type: "SELECT_ELEMENT", id });
+      dispatch({ type: "SELECT_ELEMENT", id, source: "inspect" });
       const doc = iframeRef.current?.contentDocument || document;
       const win = doc.defaultView || window;
       const computed = win.getComputedStyle(el);
@@ -119,6 +123,13 @@ export function SourceNode({ data }: NodeProps) {
   }, [state.selectedElementId]);
 
   useEffect(() => {
+    onFeedbackRequest(() => {
+      dispatch({ type: "SET_FEEDBACK_PANEL_OPEN", open: true });
+    });
+    return () => { onFeedbackRequest(null); };
+  }, [dispatch]);
+
+  useEffect(() => {
     if (state.hoveredElementId) highlightElement(state.hoveredElementId, "hover");
     else highlightElement(null, "hover");
   }, [state.hoveredElementId]);
@@ -127,6 +138,25 @@ export function SourceNode({ data }: NodeProps) {
     if (state.selectedElementId) highlightElement(state.selectedElementId, "select");
     else highlightElement(null, "select");
   }, [state.selectedElementId]);
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (state.feedbackPanelOpen) {
+          dispatch({ type: "SET_FEEDBACK_PANEL_OPEN", open: false });
+        } else if (state.selectedElementId) {
+          dispatch({ type: "SELECT_ELEMENT", id: null });
+          highlightElement(null, "select");
+        }
+        if (isInspecting()) {
+          stopInspect();
+          setInspecting(false);
+        }
+      }
+    };
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [state.feedbackPanelOpen, state.selectedElementId, dispatch]);
 
   useEffect(() => {
     return () => { stopInspect(); };

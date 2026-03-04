@@ -1,12 +1,31 @@
 // ──────────────────────────────────────────────────────────
 // Variant Node — ReactFlow custom node for a forked variant
+// Supports inspection and feedback inside the variant iframe.
 // ──────────────────────────────────────────────────────────
 
-import React, { useRef, useEffect, useState, useCallback } from "react";
+import React, { useRef, useState, useCallback } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { GitFork, Check, Send, Trash2, Pencil, CheckCircle2, Copy, ArrowUpToLine } from "lucide-react";
+import {
+  GitFork,
+  Check,
+  Send,
+  Trash2,
+  CheckCircle2,
+  Copy,
+  ArrowUpToLine,
+  Crosshair,
+} from "lucide-react";
 import { useWorkspace, VariantData } from "../store";
 import { copyToClipboard } from "./clipboard";
+import {
+  setInspectionTarget,
+  rebuildElementMap,
+  startInspect,
+  stopInspect,
+  isInspecting,
+  highlightElement,
+  onFeedbackRequest,
+} from "./dom-inspector";
 
 export type VariantNodeData = {
   variant: VariantData;
@@ -19,11 +38,12 @@ export type VariantNodeData = {
 
 export function VariantNode({ data }: NodeProps) {
   const { variant, onFork, onDelete, onFinalize, onSendToAgent, onPushToMain } = data as VariantNodeData;
-  const { dispatch } = useWorkspace();
+  const { state, dispatch } = useWorkspace();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(variant.name);
   const [copied, setCopied] = useState(false);
+  const [inspecting, setInspectingState] = useState(false);
 
   const htmlContent = variant.modifiedHtml || variant.html;
   const cssContent = variant.modifiedCss || variant.css;
@@ -46,6 +66,48 @@ export function VariantNode({ data }: NodeProps) {
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }, [htmlContent]);
+
+  const toggleVariantInspect = useCallback(() => {
+    if (inspecting) {
+      stopInspect();
+      setInspectingState(false);
+      return;
+    }
+
+    const iframe = iframeRef.current;
+    if (!iframe?.contentDocument) return;
+
+    setInspectionTarget(iframe.contentDocument, iframe);
+    rebuildElementMap();
+    dispatch({ type: "SET_ACTIVE_VARIANT", id: variant.id });
+
+    onFeedbackRequest(() => {
+      dispatch({ type: "SET_FEEDBACK_PANEL_OPEN", open: true });
+    });
+
+    startInspect((id, el) => {
+      dispatch({ type: "SELECT_ELEMENT", id, source: "inspect" });
+      const doc = iframe.contentDocument || document;
+      const win = doc.defaultView || window;
+      const computed = win.getComputedStyle(el);
+      const styles: Record<string, string> = {};
+      const props = [
+        "color", "backgroundColor", "fontSize", "fontFamily", "fontWeight",
+        "lineHeight", "padding", "margin", "width", "height", "display",
+        "flexDirection", "alignItems", "justifyContent", "gap", "position",
+        "borderRadius", "border", "boxShadow", "opacity", "transform",
+      ];
+      for (const prop of props) {
+        const cssProp = prop.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
+        const val = computed.getPropertyValue(cssProp);
+        if (val && val !== "none" && val !== "normal" && val !== "auto") styles[prop] = val;
+      }
+      dispatch({ type: "SET_ELEMENT_STYLES", id, styles });
+      stopInspect();
+      setInspectingState(false);
+    });
+    setInspectingState(true);
+  }, [inspecting, variant.id, dispatch]);
 
   const statusColor =
     variant.status === "pushed" ? "#0070f3" :
@@ -137,6 +199,9 @@ export function VariantNode({ data }: NodeProps) {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 3, marginLeft: 8 }}>
+          <NodeBtn onClick={toggleVariantInspect} active={inspecting} title="Inspect variant">
+            <Crosshair style={{ width: 11, height: 11 }} />
+          </NodeBtn>
           <NodeBtn onClick={() => onFork(variant.id)} title="Fork variant">
             <GitFork style={{ width: 11, height: 11 }} />
           </NodeBtn>
@@ -171,16 +236,41 @@ export function VariantNode({ data }: NodeProps) {
           srcDoc={srcdoc}
           sandbox="allow-same-origin"
           title={`Variant: ${variant.name}`}
-          style={{ width: "100%", height: "100%", border: "none", display: "block", pointerEvents: "none" }}
+          style={{
+            width: "100%",
+            height: "100%",
+            border: "none",
+            display: "block",
+            pointerEvents: inspecting ? "auto" : "none",
+          }}
         />
+        {inspecting && (
+          <div style={{ position: "absolute", top: 6, left: "50%", transform: "translateX(-50%)", zIndex: 10, pointerEvents: "none" }}>
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              padding: "3px 8px",
+              borderRadius: 5,
+              background: "#0070f3",
+              color: "#fff",
+              fontSize: 9,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+            }}>
+              <Crosshair style={{ width: 10, height: 10 }} />
+              Click to inspect
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function NodeBtn({ children, onClick, accent, danger, title }: {
+function NodeBtn({ children, onClick, active, accent, danger, title }: {
   children: React.ReactNode;
   onClick: () => void;
+  active?: boolean;
   accent?: boolean;
   danger?: boolean;
   title?: string;
@@ -194,9 +284,9 @@ function NodeBtn({ children, onClick, accent, danger, title }: {
         alignItems: "center",
         padding: 3,
         borderRadius: 4,
-        border: "none",
-        background: "transparent",
-        color: danger ? "#ff4444" : accent ? "#50e3c2" : "#666",
+        border: active ? "1px solid #0070f3" : "none",
+        background: active ? "#0070f3" : "transparent",
+        color: active ? "#fff" : danger ? "#ff4444" : accent ? "#50e3c2" : "#666",
         cursor: "pointer",
       }}
     >

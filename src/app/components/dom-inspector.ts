@@ -40,13 +40,23 @@ let targetIframe: HTMLIFrameElement | null = null;
 
 /**
  * Set the document to inspect. Call this when the preview iframe loads.
- * @param doc - The iframe's contentDocument (or window.document for direct mode)
- * @param iframe - The iframe element (for coordinate mapping). Null for direct mode.
+ * Cleans up overlays from the previous document if the target changes.
  */
 export function setInspectionTarget(
   doc: Document,
   iframe: HTMLIFrameElement | null = null
 ): void {
+  if (targetDoc !== doc) {
+    if (highlightOverlay?.parentNode) highlightOverlay.remove();
+    if (selectOverlay?.parentNode) selectOverlay.remove();
+    highlightOverlay = null;
+    selectOverlay = null;
+    _selectedEl = null;
+    if (_scrollHandler) {
+      try { targetDoc.removeEventListener("scroll", _scrollHandler, true); } catch { /* noop */ }
+      _scrollHandler = null;
+    }
+  }
   targetDoc = doc;
   targetIframe = iframe;
 }
@@ -55,6 +65,13 @@ export function setInspectionTarget(
  * Reset inspection target to the main document.
  */
 export function resetInspectionTarget(): void {
+  if (targetDoc !== document) {
+    if (highlightOverlay?.parentNode) highlightOverlay.remove();
+    if (selectOverlay?.parentNode) selectOverlay.remove();
+    highlightOverlay = null;
+    selectOverlay = null;
+    _selectedEl = null;
+  }
   targetDoc = document;
   targetIframe = null;
 }
@@ -292,31 +309,148 @@ export function applyStyle(
 }
 
 // ── Hover/select highlight ─────────────────────────────────
-// Overlays are created in the MAIN document (parent of iframe),
-// positioned using coordinate mapping from iframe space to parent space.
+// Overlays are created in the TARGET document (inside the iframe),
+// so they naturally move with the canvas when ReactFlow pans/zooms.
 
 let highlightOverlay: HTMLDivElement | null = null;
 let selectOverlay: HTMLDivElement | null = null;
+let _selectedEl: Element | null = null;
+let _scrollHandler: (() => void) | null = null;
+let _feedbackCallback: (() => void) | null = null;
+
+/**
+ * Register a callback that fires when the user clicks the "+ Feedback"
+ * button on the selection overlay inside the iframe.
+ */
+export function onFeedbackRequest(cb: (() => void) | null): void {
+  _feedbackCallback = cb;
+}
 
 function ensureOverlay(type: "hover" | "select"): HTMLDivElement {
   const isHover = type === "hover";
   let overlay = isHover ? highlightOverlay : selectOverlay;
 
-  if (!overlay) {
-    overlay = document.createElement("div");
-    overlay.setAttribute(DD_ATTR, "overlay");
-    overlay.style.cssText = `
-      position: fixed;
-      pointer-events: none;
-      z-index: 2147483646;
-      border: ${isHover ? "1.5px dashed rgba(0, 112, 243, 0.6)" : "2px solid rgba(0, 112, 243, 0.9)"};
-      background: ${isHover ? "rgba(0, 112, 243, 0.04)" : "rgba(0, 112, 243, 0.06)"};
-      border-radius: 2px;
-      transition: all 0.1s ease;
-      display: none;
-    `;
-    document.body.appendChild(overlay);
+  if (overlay) {
+    try {
+      if (overlay.ownerDocument !== targetDoc) {
+        if (overlay.parentNode) overlay.remove();
+        overlay = null;
+        if (isHover) highlightOverlay = null;
+        else selectOverlay = null;
+      }
+    } catch {
+      overlay = null;
+      if (isHover) highlightOverlay = null;
+      else selectOverlay = null;
+    }
+  }
 
+  if (!overlay) {
+    overlay = targetDoc.createElement("div");
+    overlay.setAttribute(DD_ATTR, "overlay");
+
+    if (isHover) {
+      overlay.style.cssText = `
+        position: fixed;
+        pointer-events: none;
+        z-index: 2147483646;
+        border: 1.5px dashed rgba(0, 112, 243, 0.6);
+        background: rgba(0, 112, 243, 0.04);
+        border-radius: 2px;
+        display: none;
+      `;
+    } else {
+      overlay.style.cssText = `
+        position: fixed;
+        pointer-events: none;
+        z-index: 2147483646;
+        border: 2px solid rgba(0, 112, 243, 0.9);
+        background: rgba(0, 112, 243, 0.06);
+        border-radius: 2px;
+        transition: all 0.12s ease-out;
+        display: none;
+      `;
+
+      const tagLabel = targetDoc.createElement("div");
+      tagLabel.setAttribute("data-dd-role", "tag-label");
+      tagLabel.style.cssText = `
+        position: absolute;
+        top: -24px;
+        left: -2px;
+        padding: 2px 8px;
+        border-radius: 4px 4px 0 0;
+        background: #0070f3;
+        color: #fff;
+        font-size: 10px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-weight: 500;
+        white-space: nowrap;
+        line-height: 16px;
+        pointer-events: none;
+      `;
+      overlay.appendChild(tagLabel);
+
+      const sizeLabel = targetDoc.createElement("div");
+      sizeLabel.setAttribute("data-dd-role", "size-label");
+      sizeLabel.style.cssText = `
+        position: absolute;
+        bottom: -20px;
+        left: -2px;
+        padding: 1px 6px;
+        border-radius: 3px;
+        background: #0070f3;
+        color: rgba(255,255,255,0.85);
+        font-size: 9px;
+        font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+        white-space: nowrap;
+        line-height: 14px;
+        pointer-events: none;
+      `;
+      overlay.appendChild(sizeLabel);
+
+      const feedbackBtn = targetDoc.createElement("button");
+      feedbackBtn.setAttribute("data-dd-role", "feedback-btn");
+      feedbackBtn.setAttribute(DD_ATTR, "feedback-btn");
+      feedbackBtn.textContent = "+ Feedback";
+      feedbackBtn.style.cssText = `
+        position: absolute;
+        bottom: -32px;
+        right: -2px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 12px;
+        border-radius: 6px;
+        border: none;
+        background: #0070f3;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 500;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        cursor: pointer;
+        pointer-events: auto;
+        white-space: nowrap;
+        box-shadow: 0 2px 8px rgba(0, 112, 243, 0.4);
+        transition: all 0.15s ease;
+        line-height: 16px;
+      `;
+      feedbackBtn.addEventListener("mouseenter", () => {
+        feedbackBtn.style.background = "#005bb5";
+        feedbackBtn.style.transform = "scale(1.03)";
+      });
+      feedbackBtn.addEventListener("mouseleave", () => {
+        feedbackBtn.style.background = "#0070f3";
+        feedbackBtn.style.transform = "scale(1)";
+      });
+      feedbackBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        _feedbackCallback?.();
+      });
+      overlay.appendChild(feedbackBtn);
+    }
+
+    targetDoc.body?.appendChild(overlay);
     if (isHover) highlightOverlay = overlay;
     else selectOverlay = overlay;
   }
@@ -325,26 +459,9 @@ function ensureOverlay(type: "hover" | "select"): HTMLDivElement {
 }
 
 /**
- * Map an element's bounding rect from the target document
- * to the main document's coordinate space.
- * If inspecting via iframe, adds the iframe's offset.
- */
-function getScreenRect(el: Element): DOMRect {
-  const rect = el.getBoundingClientRect();
-  if (targetIframe) {
-    const iframeRect = targetIframe.getBoundingClientRect();
-    return new DOMRect(
-      rect.x + iframeRect.x,
-      rect.y + iframeRect.y,
-      rect.width,
-      rect.height
-    );
-  }
-  return rect;
-}
-
-/**
  * Show a highlight overlay on a DOM element.
+ * Overlays are rendered inside the target document so they move
+ * with the iframe when the ReactFlow canvas pans/zooms.
  */
 export function highlightElement(
   elementId: string | null,
@@ -354,6 +471,13 @@ export function highlightElement(
 
   if (!elementId) {
     overlay.style.display = "none";
+    if (type === "select") {
+      _selectedEl = null;
+      if (_scrollHandler) {
+        try { targetDoc.removeEventListener("scroll", _scrollHandler, true); } catch { /* noop */ }
+        _scrollHandler = null;
+      }
+    }
     return;
   }
 
@@ -363,12 +487,43 @@ export function highlightElement(
     return;
   }
 
-  const rect = getScreenRect(el);
+  const rect = el.getBoundingClientRect();
   overlay.style.display = "block";
   overlay.style.top = `${rect.top}px`;
   overlay.style.left = `${rect.left}px`;
   overlay.style.width = `${rect.width}px`;
   overlay.style.height = `${rect.height}px`;
+
+  if (type === "select") {
+    _selectedEl = el;
+
+    const tagLabel = overlay.querySelector("[data-dd-role='tag-label']") as HTMLElement;
+    if (tagLabel) {
+      const tag = el.tagName.toLowerCase();
+      const cls = Array.from(el.classList).slice(0, 2).map(c => `.${c}`).join("");
+      tagLabel.textContent = `${tag}${cls}`;
+    }
+
+    const sizeLabel = overlay.querySelector("[data-dd-role='size-label']") as HTMLElement;
+    if (sizeLabel) {
+      sizeLabel.textContent = `${Math.round(rect.width)} \u00d7 ${Math.round(rect.height)}`;
+    }
+
+    if (_scrollHandler) {
+      try { targetDoc.removeEventListener("scroll", _scrollHandler, true); } catch { /* noop */ }
+    }
+    _scrollHandler = () => {
+      if (!_selectedEl || !selectOverlay) return;
+      const r = _selectedEl.getBoundingClientRect();
+      selectOverlay.style.top = `${r.top}px`;
+      selectOverlay.style.left = `${r.left}px`;
+      selectOverlay.style.width = `${r.width}px`;
+      selectOverlay.style.height = `${r.height}px`;
+      const sl = selectOverlay.querySelector("[data-dd-role='size-label']") as HTMLElement;
+      if (sl) sl.textContent = `${Math.round(r.width)} \u00d7 ${Math.round(r.height)}`;
+    };
+    targetDoc.addEventListener("scroll", _scrollHandler, true);
+  }
 }
 
 /**
@@ -379,6 +534,11 @@ export function cleanup(): void {
   if (selectOverlay?.parentNode) selectOverlay.remove();
   highlightOverlay = null;
   selectOverlay = null;
+  _selectedEl = null;
+  if (_scrollHandler) {
+    try { targetDoc.removeEventListener("scroll", _scrollHandler, true); } catch { /* noop */ }
+    _scrollHandler = null;
+  }
   idToElement.clear();
   resetInspectionTarget();
 }
@@ -412,15 +572,15 @@ export function startInspect(onSelect: InspectCallback): void {
   };
 
   inspectHandler = (e: MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
     const target = e.target as Element;
     if (target.hasAttribute(DD_ATTR) || target.closest(`[${DD_ATTR}]`)) return;
 
+    e.preventDefault();
+    e.stopPropagation();
+
     const id = elementMap.get(target);
     if (id) {
-      highlightElement(null, "hover"); // Clear hover
+      highlightElement(null, "hover");
       highlightElement(id, "select");
       onSelect(id, target);
     }

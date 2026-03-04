@@ -1,5 +1,7 @@
 // ──────────────────────────────────────────────────────────
-// Element Chat — Floating feedback popup per inspected element
+// Element Chat — Floating feedback panel for inspected elements
+// Appears as a fixed panel when "+ Feedback" is clicked on
+// the selection overlay inside the iframe.
 // ──────────────────────────────────────────────────────────
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
@@ -9,10 +11,10 @@ import { getElementById } from "./dom-inspector";
 import { saveFeedbackItem } from "./variant-db";
 
 const INTENTS: { value: FeedbackIntent; label: string; icon: React.ReactNode }[] = [
-  { value: "fix", label: "Fix", icon: <Bug style={{ width: 11, height: 11 }} /> },
-  { value: "change", label: "Change", icon: <Pencil style={{ width: 11, height: 11 }} /> },
-  { value: "question", label: "Question", icon: <HelpCircle style={{ width: 11, height: 11 }} /> },
-  { value: "approve", label: "Approve", icon: <ThumbsUp style={{ width: 11, height: 11 }} /> },
+  { value: "fix", label: "Fix", icon: <Bug style={{ width: 12, height: 12 }} /> },
+  { value: "change", label: "Change", icon: <Pencil style={{ width: 12, height: 12 }} /> },
+  { value: "question", label: "Question", icon: <HelpCircle style={{ width: 12, height: 12 }} /> },
+  { value: "approve", label: "Approve", icon: <ThumbsUp style={{ width: 12, height: 12 }} /> },
 ];
 
 const SEVERITIES: { value: FeedbackSeverity; label: string; color: string }[] = [
@@ -26,52 +28,26 @@ export function ElementChat() {
   const [comment, setComment] = useState("");
   const [intent, setIntent] = useState<FeedbackIntent>("fix");
   const [severity, setSeverity] = useState<FeedbackSeverity>("important");
-  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const selectedId = state.selectedElementId;
   const isInspectSelection = state.selectionSource === "inspect";
   const activeVariantId = state.activeVariantId || "main";
+  const isOpen = state.feedbackPanelOpen && !!selectedId && isInspectSelection;
 
   const existingCount = selectedId
     ? state.feedbackItems.filter((f) => f.elementId === selectedId && f.variantId === activeVariantId && f.status === "pending").length
     : 0;
 
-  // Position the chat near the selected element's highlight
   useEffect(() => {
-    if (!selectedId || !isInspectSelection) {
-      setPosition(null);
-      return;
+    if (isOpen && inputRef.current) {
+      setTimeout(() => inputRef.current?.focus(), 100);
     }
+  }, [isOpen]);
 
-    const el = getElementById(selectedId);
-    if (!el) {
-      setPosition(null);
-      return;
-    }
-
-    const rect = el.getBoundingClientRect();
-    const viewH = window.innerHeight;
-    const viewW = window.innerWidth;
-    const panelW = 320;
-    const panelH = 260;
-
-    let top = rect.bottom + 8;
-    let left = rect.left;
-
-    if (top + panelH > viewH) top = Math.max(8, rect.top - panelH - 8);
-    if (left + panelW > viewW) left = Math.max(8, viewW - panelW - 8);
-    if (left < 8) left = 8;
-
-    setPosition({ top, left });
-  }, [selectedId, isInspectSelection]);
-
-  useEffect(() => {
-    if (position && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [position]);
+  const handleClose = useCallback(() => {
+    dispatch({ type: "SET_FEEDBACK_PANEL_OPEN", open: false });
+  }, [dispatch]);
 
   const handleSubmit = useCallback(() => {
     if (!comment.trim() || !selectedId) return;
@@ -100,37 +76,50 @@ export function ElementChat() {
     saveFeedbackItem(feedbackItem).catch(console.warn);
 
     setComment("");
-  }, [comment, selectedId, intent, severity, dispatch]);
+  }, [comment, selectedId, intent, severity, activeVariantId, dispatch]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       handleSubmit();
     }
+    if (e.key === "Escape") {
+      handleClose();
+    }
   };
 
-  if (!selectedId || !position || !isInspectSelection) return null;
+  if (!isOpen) return null;
+
+  const el = getElementById(selectedId!);
+  const elTag = el?.tagName.toLowerCase() || "element";
+  const elClass = el ? Array.from(el.classList).slice(0, 2).map(c => `.${c}`).join("") : "";
 
   return (
     <div
-      ref={panelRef}
       data-designdead="element-chat"
       style={{
-        position: "fixed",
-        top: position.top,
-        left: position.left,
-        width: 320,
+        position: "absolute",
+        bottom: 16,
+        right: 16,
+        width: 340,
         zIndex: 2147483647,
         fontFamily: "'Geist Sans', 'Inter', system-ui, sans-serif",
         fontSize: 12,
+        animation: "dd-slide-up 0.2s ease-out",
       }}
     >
+      <style>{`
+        @keyframes dd-slide-up {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
       <div
         style={{
           background: "#0a0a0a",
           border: "1px solid #1a1a1a",
-          borderRadius: 10,
-          boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+          borderRadius: 12,
+          boxShadow: "0 12px 40px rgba(0,0,0,0.6)",
           overflow: "hidden",
         }}
       >
@@ -140,21 +129,21 @@ export function ElementChat() {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            padding: "8px 12px",
+            padding: "10px 14px",
             borderBottom: "1px solid #1a1a1a",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#ededed", fontSize: 11 }}>
-            <MessageSquarePlus style={{ width: 13, height: 13, color: "#0070f3" }} />
-            <span>Add Feedback</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <MessageSquarePlus style={{ width: 14, height: 14, color: "#0070f3" }} />
+            <span style={{ color: "#ededed", fontSize: 12, fontWeight: 500 }}>Add Feedback</span>
             {existingCount > 0 && (
               <span
                 style={{
                   background: "#0070f3",
                   color: "#fff",
-                  borderRadius: 8,
-                  padding: "0 5px",
-                  fontSize: 9,
+                  borderRadius: 10,
+                  padding: "1px 7px",
+                  fontSize: 10,
                   fontWeight: 600,
                 }}
               >
@@ -163,22 +152,47 @@ export function ElementChat() {
             )}
           </div>
           <button
-            onClick={() => dispatch({ type: "SELECT_ELEMENT", id: null })}
+            onClick={handleClose}
             style={{
               background: "none",
               border: "none",
               color: "#666",
               cursor: "pointer",
-              padding: 2,
+              padding: 4,
               display: "flex",
+              borderRadius: 4,
             }}
           >
-            <X style={{ width: 13, height: 13 }} />
+            <X style={{ width: 14, height: 14 }} />
           </button>
         </div>
 
+        {/* Element context badge */}
+        <div style={{ padding: "8px 14px 4px" }}>
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              padding: "3px 8px",
+              borderRadius: 4,
+              background: "#111",
+              border: "1px solid #1e1e1e",
+              fontSize: 10,
+              color: "#888",
+              fontFamily: "'SF Mono', 'Fira Code', monospace",
+            }}
+          >
+            <span style={{ color: "#0070f3" }}>&lt;{elTag}&gt;</span>
+            {elClass && <span style={{ color: "#555" }}>{elClass}</span>}
+            {activeVariantId !== "main" && (
+              <span style={{ color: "#7928ca", marginLeft: 4 }}>variant</span>
+            )}
+          </div>
+        </div>
+
         {/* Intent picker */}
-        <div style={{ display: "flex", gap: 4, padding: "8px 12px 4px" }}>
+        <div style={{ display: "flex", gap: 4, padding: "8px 14px 4px" }}>
           {INTENTS.map((i) => (
             <button
               key={i.value}
@@ -186,15 +200,16 @@ export function ElementChat() {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 3,
-                padding: "3px 8px",
-                borderRadius: 5,
+                gap: 4,
+                padding: "4px 10px",
+                borderRadius: 6,
                 border: `1px solid ${intent === i.value ? "#0070f3" : "#1a1a1a"}`,
-                background: intent === i.value ? "#0070f3" + "18" : "transparent",
+                background: intent === i.value ? "rgba(0,112,243,0.1)" : "transparent",
                 color: intent === i.value ? "#0070f3" : "#888",
                 cursor: "pointer",
-                fontSize: 10,
+                fontSize: 11,
                 fontFamily: "inherit",
+                transition: "all 0.1s ease",
               }}
             >
               {i.icon}
@@ -204,20 +219,21 @@ export function ElementChat() {
         </div>
 
         {/* Severity picker */}
-        <div style={{ display: "flex", gap: 4, padding: "4px 12px 8px" }}>
+        <div style={{ display: "flex", gap: 4, padding: "4px 14px 8px" }}>
           {SEVERITIES.map((s) => (
             <button
               key={s.value}
               onClick={() => setSeverity(s.value)}
               style={{
-                padding: "2px 8px",
-                borderRadius: 5,
+                padding: "3px 10px",
+                borderRadius: 6,
                 border: `1px solid ${severity === s.value ? s.color : "#1a1a1a"}`,
                 background: severity === s.value ? s.color + "18" : "transparent",
                 color: severity === s.value ? s.color : "#666",
                 cursor: "pointer",
-                fontSize: 10,
+                fontSize: 11,
                 fontFamily: "inherit",
+                transition: "all 0.1s ease",
               }}
             >
               {s.label}
@@ -226,7 +242,7 @@ export function ElementChat() {
         </div>
 
         {/* Comment input */}
-        <div style={{ padding: "0 12px 8px" }}>
+        <div style={{ padding: "0 14px 10px" }}>
           <textarea
             ref={inputRef}
             value={comment}
@@ -235,20 +251,23 @@ export function ElementChat() {
             placeholder="Describe the change you want..."
             style={{
               width: "100%",
-              minHeight: 56,
-              maxHeight: 120,
-              padding: "8px 10px",
+              minHeight: 64,
+              maxHeight: 140,
+              padding: "10px 12px",
               background: "#111111",
-              border: "1px solid #1a1a1a",
-              borderRadius: 6,
+              border: "1px solid #1e1e1e",
+              borderRadius: 8,
               color: "#ededed",
-              fontSize: 11,
+              fontSize: 12,
               fontFamily: "inherit",
               resize: "vertical",
               outline: "none",
               lineHeight: "1.5",
               boxSizing: "border-box",
+              transition: "border-color 0.15s ease",
             }}
+            onFocus={(e) => { (e.target as HTMLTextAreaElement).style.borderColor = "#333"; }}
+            onBlur={(e) => { (e.target as HTMLTextAreaElement).style.borderColor = "#1e1e1e"; }}
           />
         </div>
 
@@ -258,11 +277,11 @@ export function ElementChat() {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            padding: "0 12px 10px",
+            padding: "0 14px 12px",
           }}
         >
-          <span style={{ fontSize: 9, color: "#444" }}>
-            {navigator.platform.includes("Mac") ? "Cmd" : "Ctrl"}+Enter to add
+          <span style={{ fontSize: 10, color: "#444" }}>
+            {navigator.platform.includes("Mac") ? "\u2318" : "Ctrl"}+Enter to add \u00b7 Esc to close
           </span>
           <button
             onClick={handleSubmit}
@@ -270,19 +289,20 @@ export function ElementChat() {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 5,
-              padding: "5px 12px",
-              borderRadius: 6,
+              gap: 6,
+              padding: "6px 14px",
+              borderRadius: 8,
               border: "none",
               background: comment.trim() ? "#0070f3" : "#222",
               color: comment.trim() ? "#fff" : "#555",
               cursor: comment.trim() ? "pointer" : "default",
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 500,
               fontFamily: "inherit",
+              transition: "all 0.15s ease",
             }}
           >
-            <Send style={{ width: 11, height: 11 }} />
+            <Send style={{ width: 12, height: 12 }} />
             Add to Waitlist
           </button>
         </div>
