@@ -347,6 +347,54 @@ export default DesignDead;
 function EngineWorkspace() {
   const { state, dispatch } = useWorkspace();
   const iframeNavRef = React.useRef<((route: string) => void) | null>(null);
+  const lastPollRef = useRef<number>(0);
+
+  // ── MCP Bridge Polling ──
+  // Listens for events from AI agents (like pushed changes)
+  useEffect(() => {
+    const poll = async () => {
+      const port = state.wsPort || 24192;
+      try {
+        const res = await fetch(`http://127.0.0.1:${port}/api/poll?since=${lastPollRef.current}`);
+        if (res.ok) {
+          const data = await res.json();
+          let hasUpdates = false;
+
+          if (data.resolved && data.resolved.length > 0) {
+            dispatch({ type: "MARK_FEEDBACK_SENT", ids: data.resolved });
+            hasUpdates = true;
+          }
+
+          if (data.pushed && data.pushed.length > 0) {
+            for (const change of data.pushed) {
+              dispatch({
+                type: "UPDATE_VARIANT",
+                id: change.variantId,
+                updates: {
+                  modifiedHtml: change.html,
+                  ...(change.css !== undefined && { modifiedCss: change.css }),
+                },
+              });
+            }
+            hasUpdates = true;
+          }
+
+          if (hasUpdates) {
+            lastPollRef.current = Date.now();
+          }
+        }
+      } catch { /* bridge offline */ }
+    };
+
+    poll();
+    const interval = setInterval(poll, 2000);
+    const onFocus = () => poll();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [state.wsPort, dispatch]);
 
   // Keyboard shortcuts
   useEffect(() => {

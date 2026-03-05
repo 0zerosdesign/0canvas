@@ -6,6 +6,7 @@ export type BridgeState = {
   variants: VariantData[];
   feedbackItems: FeedbackItem[];
   resolvedIds: Set<string>;
+  pushedChanges: { variantId: string; html: string; css?: string; timestamp: number }[];
   listeners: Set<(event: BridgeEvent) => void>;
 };
 
@@ -20,11 +21,22 @@ const state: BridgeState = {
   variants: [],
   feedbackItems: [],
   resolvedIds: new Set(),
+  pushedChanges: [],
   listeners: new Set(),
 };
 
 export function getBridgeState(): BridgeState {
   return state;
+}
+
+export function pushVariantChanges(variantId: string, html: string, css?: string): void {
+  const variant = state.variants.find((v) => v.id === variantId);
+  if (variant) {
+    variant.modifiedHtml = html;
+    if (css) variant.modifiedCss = css;
+  }
+  state.pushedChanges.push({ variantId, html, css, timestamp: Date.now() });
+  emit({ type: "changes_pushed", variantId, html, css });
 }
 
 export function subscribe(listener: (event: BridgeEvent) => void): () => void {
@@ -128,7 +140,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse) {
   if (path === "/api/push-changes" && req.method === "POST") {
     const body = JSON.parse(await readBody(req));
     const { variantId, html, css } = body;
-    emit({ type: "changes_pushed", variantId, html, css });
+    pushVariantChanges(variantId, html, css);
     jsonResponse(res, { pushed: true });
     return;
   }
@@ -144,7 +156,9 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse) {
     const since = parseInt(url.searchParams.get("since") || "0", 10);
     const newItems = state.feedbackItems.filter((f) => f.timestamp > since && f.status === "pending");
     const newResolved = Array.from(state.resolvedIds);
-    jsonResponse(res, { pending: newItems, resolved: newResolved });
+    const newPushed = state.pushedChanges.filter((p) => p.timestamp > since);
+    state.pushedChanges = state.pushedChanges.filter((p) => p.timestamp <= since);
+    jsonResponse(res, { pending: newItems, resolved: newResolved, pushed: newPushed });
     return;
   }
 

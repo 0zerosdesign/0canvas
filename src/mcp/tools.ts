@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { getBridgeState, subscribe, type BridgeEvent } from "./bridge";
+import { getBridgeState, pushVariantChanges, subscribe, type BridgeEvent } from "./bridge";
 
 export function registerTools(server: McpServer) {
   server.tool(
@@ -100,13 +100,8 @@ export function registerTools(server: McpServer) {
       css: z.string().optional().describe("The modified CSS content."),
     },
     async ({ variantId, html, css }) => {
-      const state = getBridgeState();
-      const variant = state.variants.find((v) => v.id === variantId);
-      if (variant) {
-        variant.modifiedHtml = html;
-        if (css) variant.modifiedCss = css;
-      }
-      return { content: [{ type: "text", text: `Updated variant '${variantId}'. Changes will be reflected in the DesignDead UI.` }] };
+      pushVariantChanges(variantId, html, css);
+      return { content: [{ type: "text", text: `Pushed changes to variant '${variantId}'. The DesignDead UI will update within 2 seconds.` }] };
     }
   );
 

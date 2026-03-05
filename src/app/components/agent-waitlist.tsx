@@ -142,6 +142,12 @@ export function AgentWaitlist() {
       if (isVariant) {
         lines.push("## Instructions");
         lines.push("Please output the modified HTML and CSS for this variant based on the feedback above.");
+        lines.push("");
+        lines.push(`**CRITICAL - When calling designdead_push_changes, you MUST use this exact variantId:** \`${variant.id}\``);
+        lines.push("(Do NOT use the variant name. Use the ID above exactly.)");
+        lines.push("");
+        lines.push("**The MCP Flow (Automatic):** If you have the MCP server running (`npx @zerosdesign/design-dead mcp`), call the `designdead_push_changes` tool with variantId, html, and css. The DesignDead UI will update the variant preview within 2 seconds.");
+        lines.push("");
         lines.push("Do NOT change the main application source files.");
       }
 
@@ -176,20 +182,34 @@ export function AgentWaitlist() {
 
     const port = state.wsPort || MCP_PORT;
     try {
-      const res = await fetch(`http://127.0.0.1:${port}/api/feedback`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items }),
-        signal: AbortSignal.timeout(3000),
-      });
-      if (res.ok) {
+      const [feedbackRes] = await Promise.all([
+        fetch(`http://127.0.0.1:${port}/api/feedback`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items }),
+          signal: AbortSignal.timeout(3000),
+        }),
+        fetch(`http://127.0.0.1:${port}/api/variants`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ variants: state.variants }),
+          signal: AbortSignal.timeout(2000),
+        }),
+        fetch(`http://127.0.0.1:${port}/api/project`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ project: state.ddProject }),
+          signal: AbortSignal.timeout(2000),
+        }),
+      ]);
+      if (feedbackRes.ok) {
         bridgeSuccess = true;
         const entry: WSLogEntry = {
           id: `log-${Date.now()}`,
           timestamp: Date.now(),
           direction: "sent",
           method: "feedback",
-          summary: `Sent ${items.length} feedback items to MCP bridge`,
+          summary: `Sent ${items.length} feedback items, ${state.variants.length} variants to MCP bridge`,
         };
         dispatch({ type: "WS_LOG", entry });
       }
@@ -202,7 +222,7 @@ export function AgentWaitlist() {
 
     setSendStatus(bridgeSuccess ? "sent-bridge" : "sent-clipboard");
     setTimeout(() => setSendStatus("idle"), 4000);
-  }, [selectedIds, pendingItems, state.wsPort, generateBatchMarkdown, dispatch]);
+  }, [selectedIds, pendingItems, state.wsPort, state.variants, state.ddProject, generateBatchMarkdown, dispatch]);
 
   if (!state.waitlistOpen) return null;
 

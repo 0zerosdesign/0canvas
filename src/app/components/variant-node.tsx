@@ -54,6 +54,8 @@ export function VariantNode({ data }: NodeProps) {
 <body>${htmlContent}</body>
 </html>`;
 
+  const contentHash = (htmlContent + (cssContent || "")).length;
+
   const handleRename = () => {
     if (name.trim() && name !== variant.name) {
       dispatch({ type: "UPDATE_VARIANT", id: variant.id, updates: { name: name.trim() } });
@@ -234,6 +236,7 @@ export function VariantNode({ data }: NodeProps) {
       {/* Sandboxed preview */}
       <div style={{ height: 320, position: "relative", overflow: "hidden", background: "#fff" }}>
         <iframe
+          key={`${variant.id}-${contentHash}`}
           ref={iframeRef}
           srcDoc={srcdoc}
           sandbox="allow-same-origin"

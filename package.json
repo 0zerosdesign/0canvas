@@ -47,6 +47,7 @@
     "@modelcontextprotocol/sdk": "^1.27.1",
     "@radix-ui/react-scroll-area": "^1.2.0",
     "@xyflow/react": "^12.10.1",
+    "@zerosdesign/design-dead": "file:zerosdesign-design-dead-0.0.5.tgz",
     "clsx": "^2.1.0",
     "idb": "^8.0.3",
     "lucide-react": "^0.400.0",
