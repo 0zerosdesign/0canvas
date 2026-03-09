@@ -1,0 +1,348 @@
+/* DesignDead VS Code Extension — Webview Styles */
+/* Canvas-first layout with ReactFlow infinite canvas */
+
+:root {
+  --dd-bg: #080808;
+  --dd-surface: #0a0a0a;
+  --dd-surface-2: #111111;
+  --dd-border: #1a1a1a;
+  --dd-text: #cccccc;
+  --dd-text-bright: #ededed;
+  --dd-text-dim: #555555;
+  --dd-accent: #0070f3;
+  --dd-accent-hover: #1a8cff;
+  --dd-danger: #ff4444;
+  --dd-success: #50e3c2;
+  --dd-warning: #f5a623;
+  --dd-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --dd-mono: "SF Mono", "Fira Code", "JetBrains Mono", Menlo, monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--dd-font);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--dd-text);
+  background: var(--dd-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #444; }
+
+/* ── Workspace Layout (full height: toolbar + canvas) ── */
+
+.dd-workspace {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--dd-bg);
+  overflow: hidden;
+}
+
+.dd-canvas-area {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── Loading ── */
+
+.dd-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  gap: 12px;
+  color: var(--dd-text-dim);
+  background: var(--dd-bg);
+}
+
+.dd-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--dd-border);
+  border-top-color: var(--dd-accent);
+  border-radius: 50%;
+  animation: dd-spin 0.8s linear infinite;
+}
+
+@keyframes dd-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Header / Toolbar ── */
+
+.dd-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  height: 40px;
+  border-bottom: 1px solid var(--dd-border);
+  background: var(--dd-surface);
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.dd-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dd-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dd-logo {
+  color: var(--dd-accent);
+  flex-shrink: 0;
+}
+
+.dd-header-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dd-text-bright);
+  cursor: default;
+}
+
+.dd-header-name-input {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dd-text-bright);
+  background: var(--dd-surface-2);
+  border: 1px solid var(--dd-accent);
+  border-radius: 4px;
+  padding: 2px 8px;
+  outline: none;
+  font-family: inherit;
+}
+
+.dd-meta {
+  font-size: 10px;
+  color: var(--dd-text-dim);
+}
+
+/* ── Badges ── */
+
+.dd-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  font-size: 10px;
+  border-radius: 3px;
+  background: var(--dd-surface-2);
+  color: var(--dd-text-dim);
+  border: 1px solid var(--dd-border);
+  white-space: nowrap;
+}
+
+.dd-badge-framework {
+  color: var(--dd-accent);
+  border-color: rgba(0, 112, 243, 0.3);
+  background: rgba(0, 112, 243, 0.1);
+  text-transform: capitalize;
+}
+
+.dd-badge-rev {
+  font-family: var(--dd-mono);
+  font-size: 9px;
+}
+
+/* ── Buttons ── */
+
+.dd-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  background: transparent;
+  color: var(--dd-text);
+}
+
+.dd-btn-primary {
+  background: var(--dd-accent);
+  color: #fff;
+  border-color: var(--dd-accent);
+}
+
+.dd-btn-primary:hover {
+  background: var(--dd-accent-hover);
+}
+
+.dd-btn-ghost {
+  color: var(--dd-text-dim);
+  border-color: transparent;
+}
+
+.dd-btn-ghost:hover {
+  background: var(--dd-surface-2);
+  color: var(--dd-text);
+}
+
+/* ── Error State ── */
+
+.dd-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  padding: 20px;
+  text-align: center;
+  background: var(--dd-bg);
+}
+
+.dd-error-icon {
+  font-size: 40px;
+  margin-bottom: 12px;
+}
+
+.dd-error-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--dd-text-bright);
+  margin-bottom: 8px;
+}
+
+.dd-error-desc {
+  color: var(--dd-text-dim);
+  margin-bottom: 16px;
+}
+
+.dd-error-list {
+  text-align: left;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: var(--dd-surface);
+  border: 1px solid var(--dd-danger);
+  border-radius: 6px;
+  list-style: none;
+}
+
+.dd-error-list li {
+  font-family: var(--dd-mono);
+  font-size: 12px;
+  color: var(--dd-danger);
+  padding: 2px 0;
+}
+
+.dd-error-list li::before {
+  content: "• ";
+}
+
+/* ── Feedback (used inside CanvasVariantNode) ── */
+
+.dd-feedback-list {
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dd-feedback-item {
+  padding: 6px 8px;
+  background: #111;
+  border-radius: 4px;
+  border-left: 3px solid #333;
+}
+
+.dd-feedback-item.dd-resolved {
+  opacity: 0.5;
+}
+
+.dd-feedback-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 3px;
+}
+
+.dd-feedback-element {
+  font-family: var(--dd-mono);
+  font-size: 9px;
+}
+
+.dd-feedback-date {
+  margin-left: auto;
+  font-size: 9px;
+}
+
+.dd-feedback-text {
+  font-size: 11px;
+  color: var(--dd-text);
+  line-height: 1.4;
+}
+
+.dd-line-through {
+  text-decoration: line-through;
+}
+
+.dd-feedback-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+/* ── ReactFlow overrides for dark theme ── */
+
+.react-flow__controls button {
+  background: #111 !important;
+  border-color: #1a1a1a !important;
+  color: #888 !important;
+  fill: #888 !important;
+}
+
+.react-flow__controls button:hover {
+  background: #1a1a1a !important;
+  color: #ccc !important;
+  fill: #ccc !important;
+}
+
+.react-flow__controls button svg {
+  fill: currentColor !important;
+}
+
+.react-flow__minimap {
+  background: #111 !important;
+}
+
+.react-flow__edge-path {
+  stroke: #333 !important;
+}
+
+/* Prevent ReactFlow from imposing default node styles on our custom nodes */
+.react-flow__node-page,
+.react-flow__node-variant {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}

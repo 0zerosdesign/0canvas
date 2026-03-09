@@ -317,6 +317,7 @@ let selectOverlay: HTMLDivElement | null = null;
 let _selectedEl: Element | null = null;
 let _scrollHandler: (() => void) | null = null;
 let _feedbackCallback: (() => void) | null = null;
+let _forkElementCallback: ((elementId: string) => void) | null = null;
 
 /**
  * Register a callback that fires when the user clicks the "+ Feedback"
@@ -324,6 +325,14 @@ let _feedbackCallback: (() => void) | null = null;
  */
 export function onFeedbackRequest(cb: (() => void) | null): void {
   _feedbackCallback = cb;
+}
+
+/**
+ * Register a callback for the "Fork" button on the selection overlay.
+ * When clicked, it passes the selected element's DesignDead ID.
+ */
+export function onForkElementRequest(cb: ((elementId: string) => void) | null): void {
+  _forkElementCallback = cb;
 }
 
 function ensureOverlay(type: "hover" | "select"): HTMLDivElement {
@@ -408,21 +417,27 @@ function ensureOverlay(type: "hover" | "select"): HTMLDivElement {
       `;
       overlay.appendChild(sizeLabel);
 
-      const feedbackBtn = targetDoc.createElement("button");
-      feedbackBtn.setAttribute("data-dd-role", "feedback-btn");
-      feedbackBtn.setAttribute(DD_ATTR, "feedback-btn");
-      feedbackBtn.textContent = "+ Feedback";
-      feedbackBtn.style.cssText = `
+      // Button bar container (holds Fork + Feedback)
+      const btnBar = targetDoc.createElement("div");
+      btnBar.setAttribute("data-dd-role", "btn-bar");
+      btnBar.setAttribute(DD_ATTR, "btn-bar");
+      btnBar.style.cssText = `
         position: absolute;
         bottom: -32px;
         right: -2px;
         display: flex;
         align-items: center;
         gap: 4px;
-        padding: 4px 12px;
+        pointer-events: auto;
+      `;
+
+      const overlayBtnStyle = `
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
         border-radius: 6px;
         border: none;
-        background: #0070f3;
         color: #fff;
         font-size: 11px;
         font-weight: 500;
@@ -430,9 +445,45 @@ function ensureOverlay(type: "hover" | "select"): HTMLDivElement {
         cursor: pointer;
         pointer-events: auto;
         white-space: nowrap;
-        box-shadow: 0 2px 8px rgba(0, 112, 243, 0.4);
         transition: all 0.15s ease;
         line-height: 16px;
+      `;
+
+      // Fork button
+      const forkBtn = targetDoc.createElement("button");
+      forkBtn.setAttribute("data-dd-role", "fork-btn");
+      forkBtn.setAttribute(DD_ATTR, "fork-btn");
+      forkBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9"/><path d="M12 12v3"/></svg> Fork`;
+      forkBtn.style.cssText = overlayBtnStyle + `
+        background: #10b981;
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+      `;
+      forkBtn.addEventListener("mouseenter", () => {
+        forkBtn.style.background = "#059669";
+        forkBtn.style.transform = "scale(1.03)";
+      });
+      forkBtn.addEventListener("mouseleave", () => {
+        forkBtn.style.background = "#10b981";
+        forkBtn.style.transform = "scale(1)";
+      });
+      forkBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (_selectedEl && _forkElementCallback) {
+          const elId = elementMap.get(_selectedEl);
+          if (elId) _forkElementCallback(elId);
+        }
+      });
+      btnBar.appendChild(forkBtn);
+
+      // Feedback button
+      const feedbackBtn = targetDoc.createElement("button");
+      feedbackBtn.setAttribute("data-dd-role", "feedback-btn");
+      feedbackBtn.setAttribute(DD_ATTR, "feedback-btn");
+      feedbackBtn.textContent = "+ Feedback";
+      feedbackBtn.style.cssText = overlayBtnStyle + `
+        background: #0070f3;
+        box-shadow: 0 2px 8px rgba(0, 112, 243, 0.4);
       `;
       feedbackBtn.addEventListener("mouseenter", () => {
         feedbackBtn.style.background = "#005bb5";
@@ -447,7 +498,9 @@ function ensureOverlay(type: "hover" | "select"): HTMLDivElement {
         e.stopPropagation();
         _feedbackCallback?.();
       });
-      overlay.appendChild(feedbackBtn);
+      btnBar.appendChild(feedbackBtn);
+
+      overlay.appendChild(btnBar);
     }
 
     targetDoc.body?.appendChild(overlay);
@@ -795,16 +848,26 @@ function collectCssRules(doc: Document): string {
   return cssRules.join("\n");
 }
 
+function collectExternalStylesheetLinks(doc: Document): string[] {
+  const links: string[] = [];
+  doc.querySelectorAll('link[rel="stylesheet"]').forEach((el) => {
+    const href = el.getAttribute("href");
+    if (href) links.push(href);
+  });
+  return links;
+}
+
 /**
  * Capture a full-page HTML/CSS snapshot from the target document.
- * Collects computed styles from the live DOM before cloning.
+ * Preserves original HTML structure and class names without baking computed
+ * styles as inline overrides — CSS rules (including media queries) handle
+ * responsiveness in the variant iframe.
  */
 export function capturePageSnapshot(): Omit<VariantData, "id" | "name" | "parentId" | "status" | "createdAt"> | null {
   const body = targetDoc.body;
   if (!body) return null;
 
   const clone = body.cloneNode(true) as HTMLElement;
-  collectAndApplyStyles(body, clone, targetDoc);
 
   const mockData = extractMockData(body);
   const tempDiv = targetDoc.createElement("div");
@@ -812,14 +875,17 @@ export function capturePageSnapshot(): Omit<VariantData, "id" | "name" | "parent
   const rawHtml = sanitizeSnapshot(tempDiv.innerHTML);
   const baseUrl = (targetDoc.defaultView || window).location.href;
   const html = absolutifyUrls(rawHtml, baseUrl);
-  const css = collectCssRules(targetDoc);
+  const cssRules = collectCssRules(targetDoc);
+  const externalLinks = collectExternalStylesheetLinks(targetDoc);
+  const linkTags = externalLinks.map((href) => `@import url("${href}");`).join("\n");
+  const css = linkTags ? linkTags + "\n" + cssRules : cssRules;
 
   return { html, css, mockData, sourceType: "page" };
 }
 
 /**
  * Capture an HTML/CSS snapshot of a specific element by its DesignDead ID.
- * Collects computed styles from the live DOM, plus relevant CSS rules.
+ * Preserves original HTML structure without baking computed styles inline.
  */
 export function captureComponentSnapshot(
   elementId: string
@@ -828,7 +894,6 @@ export function captureComponentSnapshot(
   if (!el) return null;
 
   const clone = el.cloneNode(true) as HTMLElement;
-  collectAndApplyStyles(el, clone, targetDoc);
 
   const mockData = extractMockData(el);
   const tempDiv = targetDoc.createElement("div");
@@ -836,7 +901,10 @@ export function captureComponentSnapshot(
   const rawHtml = sanitizeSnapshot(tempDiv.innerHTML);
   const baseUrl = (targetDoc.defaultView || window).location.href;
   const html = absolutifyUrls(rawHtml, baseUrl);
-  const css = collectCssRules(targetDoc);
+  const cssRules = collectCssRules(targetDoc);
+  const externalLinks = collectExternalStylesheetLinks(targetDoc);
+  const linkTags = externalLinks.map((href) => `@import url("${href}");`).join("\n");
+  const css = linkTags ? linkTags + "\n" + cssRules : cssRules;
   const selector = getSelector(el);
 
   return { html, css, mockData, sourceType: "component", sourceSelector: selector };

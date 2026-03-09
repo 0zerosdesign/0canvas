@@ -91,8 +91,8 @@ function WorkspaceInner() {
           </div>
         )}
 
-        {state.fileMapPanelOpen && !state.stylePanelOpen && (
-          <div className="w-[280px] shrink-0 border-l border-border">
+        {state.fileMapPanelOpen && (
+          <div className="w-[280px] shrink-0 border-l border-border h-full overflow-hidden">
             <FileMapPanel />
           </div>
         )}

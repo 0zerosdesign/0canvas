@@ -1,31 +1,140 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import {
   FileCode,
   FolderOpen,
+  FolderClosed,
   ChevronRight,
   ChevronDown,
   Search,
   ExternalLink,
   MapPin,
-  AlertCircle,
   Sparkles,
   ArrowRight,
   Eye,
+  Box,
+  Layout,
+  Type,
+  Image,
+  Link2,
+  Square,
+  Layers,
+  BarChart3,
+  RefreshCw,
 } from "lucide-react";
-import { useWorkspace, FileMapping, findElement } from "../store";
-import { ScrollArea } from "./ui/scroll-area";
+import { useWorkspace, FileMapping, ElementNode, findElement } from "../store";
 
-// ──────────────────────────────────────────────────────────
-// Heuristic file mapper (client-side inference)
-// ──────────────────────────────────────────────────────────
+const FONT = "'Geist Sans','Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif";
+const MONO = "'Geist Mono','SF Mono','Fira Code',monospace";
+const C = {
+  bg: "#0a0a0a",
+  surface: "#111111",
+  border: "#1e1e1e",
+  fg: "#ededed",
+  fgMuted: "#888888",
+  fgDim: "#555555",
+  accent: "#0070f3",
+  green: "#50e3c2",
+  orange: "#f5a623",
+  red: "#ff4444",
+  purple: "#7928ca",
+  pink: "#ff0080",
+};
+
+const CONFIDENCE_COLORS: Record<string, string> = {
+  high: C.green,
+  medium: C.orange,
+  low: C.fgDim,
+};
+
+// ── Enhanced inference engine ──────────────────────────────
+
+const COMPONENT_PATTERNS: [RegExp, string, string][] = [
+  [/navbar|nav-bar|navigation|main-nav/i, "Navbar", "components/Navbar"],
+  [/header|site-header|app-header/i, "Header", "components/Header"],
+  [/footer|site-footer|app-footer/i, "Footer", "components/Footer"],
+  [/sidebar|side-bar|side-nav/i, "Sidebar", "components/Sidebar"],
+  [/hero|hero-section|hero-banner/i, "Hero", "components/Hero"],
+  [/card|product-card|info-card/i, "Card", "components/Card"],
+  [/button|btn|cta-button/i, "Button", "components/ui/Button"],
+  [/modal|dialog|popup|overlay/i, "Modal", "components/Modal"],
+  [/form|login-form|signup-form|contact-form/i, "Form", "components/Form"],
+  [/input|text-input|search-input/i, "Input", "components/ui/Input"],
+  [/avatar|user-avatar|profile-pic/i, "Avatar", "components/Avatar"],
+  [/badge|status-badge|label-badge/i, "Badge", "components/ui/Badge"],
+  [/dropdown|select-menu|popover/i, "Dropdown", "components/Dropdown"],
+  [/tooltip|hint/i, "Tooltip", "components/ui/Tooltip"],
+  [/table|data-table/i, "Table", "components/Table"],
+  [/tabs?|tab-panel/i, "Tabs", "components/Tabs"],
+  [/accordion|collapsible/i, "Accordion", "components/Accordion"],
+  [/carousel|slider|swiper/i, "Carousel", "components/Carousel"],
+  [/search|search-bar|search-box/i, "SearchBar", "components/SearchBar"],
+  [/pricing|price-card|plan/i, "Pricing", "components/Pricing"],
+  [/features?|feature-grid|feature-list/i, "Features", "components/Features"],
+  [/testimonial|review|quote/i, "Testimonials", "components/Testimonials"],
+  [/cta|call.?to.?action/i, "CTA", "components/CTA"],
+  [/banner|alert-banner|notification/i, "Banner", "components/Banner"],
+  [/breadcrumb/i, "Breadcrumb", "components/Breadcrumb"],
+  [/pagination|pager/i, "Pagination", "components/Pagination"],
+  [/progress|loader|spinner|loading/i, "Progress", "components/ui/Progress"],
+  [/toggle|switch/i, "Toggle", "components/ui/Toggle"],
+  [/checkbox|check-box/i, "Checkbox", "components/ui/Checkbox"],
+  [/radio|radio-group/i, "Radio", "components/ui/Radio"],
+  [/textarea|text-area/i, "Textarea", "components/ui/Textarea"],
+  [/select|combo-box/i, "Select", "components/ui/Select"],
+  [/code|code-block|code-window|syntax/i, "CodeBlock", "components/CodeBlock"],
+  [/stats?|statistics|metric/i, "Stats", "components/Stats"],
+  [/grid|masonry/i, "Grid", "components/Grid"],
+  [/list|item-list/i, "List", "components/List"],
+  [/logo/i, "Logo", "components/Logo"],
+  [/menu|hamburger/i, "Menu", "components/Menu"],
+  [/notification|toast|snackbar/i, "Toast", "components/Toast"],
+  [/skeleton|placeholder/i, "Skeleton", "components/ui/Skeleton"],
+  [/divider|separator|hr/i, "Divider", "components/ui/Divider"],
+  [/chip|tag/i, "Tag", "components/ui/Tag"],
+  [/stepper|wizard|step/i, "Stepper", "components/Stepper"],
+  [/profile|user-profile/i, "Profile", "components/Profile"],
+  [/gallery|image-grid/i, "Gallery", "components/Gallery"],
+  [/timeline/i, "Timeline", "components/Timeline"],
+  [/chat|message/i, "Chat", "components/Chat"],
+  [/map|location/i, "Map", "components/Map"],
+  [/video|player/i, "VideoPlayer", "components/VideoPlayer"],
+  [/social|share/i, "Social", "components/Social"],
+];
+
+const SEMANTIC_MAP: Record<string, [string, string]> = {
+  nav: ["Navigation", "components/Navigation"],
+  header: ["Header", "layouts/Header"],
+  footer: ["Footer", "layouts/Footer"],
+  main: ["Main", "layouts/Main"],
+  aside: ["Sidebar", "components/Sidebar"],
+  article: ["Article", "components/Article"],
+  section: ["Section", "components/Section"],
+  form: ["Form", "components/Form"],
+  dialog: ["Dialog", "components/Dialog"],
+  details: ["Details", "components/Details"],
+};
+
+function getFileExtension(framework: string): string {
+  const f = framework.toLowerCase();
+  if (f.includes("next") || f.includes("react") || f.includes("remix")) return ".tsx";
+  if (f.includes("vue") || f.includes("nuxt")) return ".vue";
+  if (f.includes("svelte") || f.includes("sveltekit")) return ".svelte";
+  if (f.includes("angular")) return ".component.ts";
+  if (f.includes("astro")) return ".astro";
+  if (f.includes("solid")) return ".tsx";
+  return ".tsx";
+}
+
 function inferFileMappings(
-  elements: any[],
+  elements: ElementNode[],
   framework: string
 ): FileMapping[] {
   const mappings: FileMapping[] = [];
+  const ext = getFileExtension(framework);
+  const seen = new Set<string>();
 
-  function walk(el: any) {
-    const mapping = inferSingleMapping(el, framework);
+  function walk(el: ElementNode) {
+    const mapping = inferSingleMapping(el, ext, seen);
     if (mapping) mappings.push(mapping);
     if (el.children) el.children.forEach(walk);
   }
@@ -35,92 +144,109 @@ function inferFileMappings(
 }
 
 function inferSingleMapping(
-  el: any,
-  framework: string
+  el: ElementNode,
+  ext: string,
+  seen: Set<string>
 ): FileMapping | null {
   const classes = el.classes || [];
   const tag = el.tag || "";
   const selector = el.selector || "";
+  const text = el.text || "";
+  const id = el.id || "";
 
-  // Check for common component patterns in class names
-  const componentPatterns: [RegExp, string, string][] = [
-    [/navbar|nav-bar|navigation/i, "Navbar", "components/Navbar"],
-    [/header/i, "Header", "components/Header"],
-    [/footer/i, "Footer", "components/Footer"],
-    [/sidebar/i, "Sidebar", "components/Sidebar"],
-    [/hero/i, "Hero", "components/Hero"],
-    [/card/i, "Card", "components/Card"],
-    [/button|btn/i, "Button", "components/ui/Button"],
-    [/modal|dialog/i, "Modal", "components/Modal"],
-    [/form/i, "Form", "components/Form"],
-    [/input/i, "Input", "components/ui/Input"],
-    [/avatar/i, "Avatar", "components/Avatar"],
-    [/badge/i, "Badge", "components/ui/Badge"],
-    [/dropdown/i, "Dropdown", "components/Dropdown"],
-    [/tooltip/i, "Tooltip", "components/ui/Tooltip"],
-    [/table/i, "Table", "components/Table"],
-    [/tab/i, "Tabs", "components/Tabs"],
-    [/accordion/i, "Accordion", "components/Accordion"],
-    [/carousel|slider/i, "Carousel", "components/Carousel"],
-    [/search/i, "Search", "components/Search"],
-    [/pricing/i, "Pricing", "components/Pricing"],
-    [/features?/i, "Features", "components/Features"],
-    [/testimonial/i, "Testimonials", "components/Testimonials"],
-    [/cta|call.?to.?action/i, "CTA", "components/CTA"],
-    [/banner/i, "Banner", "components/Banner"],
-  ];
+  // Build a searchable string from all sources
+  const allText = [...classes, selector, tag, id].join(" ");
 
-  // Check class names and selector for component patterns
-  const allText = [...classes, selector, tag].join(" ");
-  for (const [pattern, name, path] of componentPatterns) {
+  // Check class names, selectors, IDs against component patterns
+  for (const [pattern, name, path] of COMPONENT_PATTERNS) {
     if (pattern.test(allText)) {
-      const ext = framework.toLowerCase().includes("next")
-        ? ".tsx"
-        : framework.toLowerCase().includes("vue")
-        ? ".vue"
-        : framework.toLowerCase().includes("svelte")
-        ? ".svelte"
-        : ".tsx";
+      const confidence: "high" | "medium" | "low" = classes.some((c: string) => pattern.test(c))
+        ? "high"
+        : selector && pattern.test(selector)
+        ? "medium"
+        : "medium";
+
+      const key = `${path}-${el.id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
 
       return {
         elementId: el.id,
         filePath: `src/${path}${ext}`,
         componentName: name,
-        confidence: classes.some((c: string) => pattern.test(c))
-          ? "high"
-          : "medium",
+        confidence,
       };
     }
   }
 
   // Infer from semantic HTML elements
-  const semanticMap: Record<string, [string, string]> = {
-    nav: ["Navigation", "components/Navigation"],
-    header: ["Header", "layouts/Header"],
-    footer: ["Footer", "layouts/Footer"],
-    main: ["Main", "layouts/Main"],
-    aside: ["Sidebar", "components/Sidebar"],
-    article: ["Article", "components/Article"],
-    section: ["Section", "components/Section"],
-    form: ["Form", "components/Form"],
-  };
+  if (SEMANTIC_MAP[tag]) {
+    const [name, path] = SEMANTIC_MAP[tag];
+    const key = `${path}-${el.id}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      return {
+        elementId: el.id,
+        filePath: `src/${path}${ext}`,
+        componentName: name,
+        confidence: "medium",
+      };
+    }
+  }
 
-  if (semanticMap[tag]) {
-    const [name, path] = semanticMap[tag];
-    return {
-      elementId: el.id,
-      filePath: `src/${path}.tsx`,
-      componentName: name,
-      confidence: "medium",
+  // Infer from data-component / data-testid attributes (if present in selector)
+  const dataMatch = selector.match(/\[data-(?:component|testid)="([^"]+)"\]/);
+  if (dataMatch) {
+    const componentName = dataMatch[1]
+      .split(/[-_]/)
+      .map((s: string) => s.charAt(0).toUpperCase() + s.slice(1))
+      .join("");
+    const key = `components/${componentName}-${el.id}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      return {
+        elementId: el.id,
+        filePath: `src/components/${componentName}${ext}`,
+        componentName,
+        confidence: "high",
+      };
+    }
+  }
+
+  // Infer from ARIA roles
+  const roleMatch = selector.match(/\[role="([^"]+)"\]/);
+  if (roleMatch) {
+    const role = roleMatch[1];
+    const roleMap: Record<string, [string, string]> = {
+      navigation: ["Navigation", "components/Navigation"],
+      banner: ["Banner", "components/Banner"],
+      contentinfo: ["Footer", "components/Footer"],
+      dialog: ["Dialog", "components/Dialog"],
+      alert: ["Alert", "components/Alert"],
+      tablist: ["Tabs", "components/Tabs"],
+      menu: ["Menu", "components/Menu"],
+      search: ["SearchBar", "components/SearchBar"],
     };
+    if (roleMap[role]) {
+      const [name, path] = roleMap[role];
+      const key = `${path}-${el.id}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        return {
+          elementId: el.id,
+          filePath: `src/${path}${ext}`,
+          componentName: name,
+          confidence: "medium",
+        };
+      }
+    }
   }
 
   return null;
 }
 
-// ──────────────────────────────────────────────────────────
-// File tree grouping
-// ──────────────────────────────────────────────────────────
+// ── File tree types ────────────────────────────────────────
+
 type FileTreeNode = {
   name: string;
   path: string;
@@ -130,13 +256,7 @@ type FileTreeNode = {
 };
 
 function buildFileTree(mappings: FileMapping[]): FileTreeNode {
-  const root: FileTreeNode = {
-    name: "src",
-    path: "src",
-    isDir: true,
-    children: [],
-    mappings: [],
-  };
+  const root: FileTreeNode = { name: "src", path: "src", isDir: true, children: [], mappings: [] };
 
   for (const m of mappings) {
     const parts = m.filePath.split("/");
@@ -147,30 +267,16 @@ function buildFileTree(mappings: FileMapping[]): FileTreeNode {
       const isLast = i === parts.length - 1;
 
       if (isLast) {
-        let existing = current.children.find(
-          (c) => !c.isDir && c.name === part
-        );
+        let existing = current.children.find((c) => !c.isDir && c.name === part);
         if (!existing) {
-          existing = {
-            name: part,
-            path: m.filePath,
-            isDir: false,
-            children: [],
-            mappings: [],
-          };
+          existing = { name: part, path: m.filePath, isDir: false, children: [], mappings: [] };
           current.children.push(existing);
         }
         existing.mappings.push(m);
       } else {
         let dir = current.children.find((c) => c.isDir && c.name === part);
         if (!dir) {
-          dir = {
-            name: part,
-            path: parts.slice(0, i + 1).join("/"),
-            isDir: true,
-            children: [],
-            mappings: [],
-          };
+          dir = { name: part, path: parts.slice(0, i + 1).join("/"), isDir: true, children: [], mappings: [] };
           current.children.push(dir);
         }
         current = dir;
@@ -178,7 +284,6 @@ function buildFileTree(mappings: FileMapping[]): FileTreeNode {
     }
   }
 
-  // Sort: directories first, then files
   function sortTree(node: FileTreeNode) {
     node.children.sort((a, b) => {
       if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
@@ -191,69 +296,99 @@ function buildFileTree(mappings: FileMapping[]): FileTreeNode {
   return root;
 }
 
-// ──────────────────────────────────────────────────────────
-// File tree item component
-// ──────────────────────────────────────────────────────────
+function countTreeMappings(node: FileTreeNode): number {
+  let count = node.mappings.length;
+  for (const child of node.children) count += countTreeMappings(child);
+  return count;
+}
+
+// ── Components ─────────────────────────────────────────────
+
+function getElementIcon(tag: string) {
+  const size = 12;
+  const props = { size, strokeWidth: 1.5 };
+  switch (tag) {
+    case "nav": case "header": case "footer": case "aside": case "main":
+      return <Layout {...props} />;
+    case "section": case "article": case "div":
+      return <Box {...props} />;
+    case "button": case "input": case "textarea": case "select": case "form":
+      return <Square {...props} />;
+    case "h1": case "h2": case "h3": case "h4": case "h5": case "h6":
+    case "p": case "span": case "label":
+      return <Type {...props} />;
+    case "a":
+      return <Link2 {...props} />;
+    case "img": case "svg": case "picture": case "video":
+      return <Image {...props} />;
+    default:
+      return <Box {...props} />;
+  }
+}
+
 function FileTreeItem({
   node,
   depth = 0,
   onSelectElement,
+  selectedElementId,
 }: {
   node: FileTreeNode;
   depth?: number;
   onSelectElement: (id: string) => void;
+  selectedElementId: string | null;
 }) {
   const [expanded, setExpanded] = useState(depth < 2);
-
-  const confidenceColor = {
-    high: "#50e3c2",
-    medium: "#f5a623",
-    low: "#666666",
-  };
+  const [hovered, setHovered] = useState(false);
+  const mappingCount = countTreeMappings(node);
+  const hasSelectedChild = node.mappings.some((m) => m.elementId === selectedElementId);
 
   if (!node.isDir) {
     return (
       <div>
         <div
-          className="flex items-center gap-1.5 py-1 px-2 hover:bg-[#111111] rounded transition-colors group"
-          style={{ paddingLeft: `${depth * 16 + 8}px` }}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          onClick={() => setExpanded(!expanded)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            height: 28,
+            paddingLeft: depth * 14 + 8,
+            paddingRight: 8,
+            cursor: "pointer",
+            background: hasSelectedChild ? `${C.accent}12` : hovered ? "rgba(255,255,255,0.03)" : "transparent",
+            borderLeft: hasSelectedChild ? `2px solid ${C.accent}` : "2px solid transparent",
+            transition: "background 0.1s",
+            fontFamily: FONT,
+          }}
         >
-          <FileCode className="w-3.5 h-3.5 text-[#0070f3] shrink-0" />
-          <span className="text-[11px] text-foreground truncate flex-1">
+          {node.mappings.length > 0 ? (
+            expanded ? <ChevronDown size={10} color={C.fgDim} /> : <ChevronRight size={10} color={C.fgDim} />
+          ) : (
+            <span style={{ width: 10 }} />
+          )}
+          <FileCode size={13} color={C.accent} style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: 11, color: C.fg, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {node.name}
           </span>
-          <span className="text-[9px] text-muted-foreground bg-[#1a1a1a] px-1 py-0.5 rounded">
-            {node.mappings.length}
-          </span>
-        </div>
-        {node.mappings.map((m) => (
-          <button
-            key={m.elementId}
-            onClick={() => onSelectElement(m.elementId)}
-            className="w-full flex items-center gap-1.5 py-1 px-2 hover:bg-[#0070f3]/5 rounded transition-colors text-left group"
-            style={{ paddingLeft: `${(depth + 1) * 16 + 8}px` }}
-          >
-            <MapPin
-              className="w-3 h-3 shrink-0"
-              style={{ color: confidenceColor[m.confidence] }}
-            />
-            <span className="text-[10px] text-muted-foreground truncate flex-1">
-              {m.componentName}
+          {node.mappings.length > 0 && (
+            <span style={{
+              fontSize: 9, color: C.fgDim, background: "#1a1a1a",
+              padding: "1px 5px", borderRadius: 3, fontFamily: MONO,
+            }}>
+              {node.mappings.length}
             </span>
-            <span
-              className="w-1.5 h-1.5 rounded-full shrink-0"
-              style={{ background: confidenceColor[m.confidence] }}
-            />
-            {m.lineNumber && (
-              <span
-                className="text-[9px] text-muted-foreground"
-                style={{ fontFamily: "'Geist Mono', monospace" }}
-              >
-                L{m.lineNumber}
-              </span>
-            )}
-            <Eye className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-          </button>
+          )}
+        </div>
+        {expanded && node.mappings.map((m) => (
+          <MappingItem
+            key={m.elementId}
+            mapping={m}
+            depth={depth + 1}
+            onSelect={() => onSelectElement(m.elementId)}
+            isSelected={m.elementId === selectedElementId}
+          />
         ))}
       </div>
     );
@@ -261,41 +396,310 @@ function FileTreeItem({
 
   return (
     <div>
-      <button
-        className="w-full flex items-center gap-1.5 py-1 px-2 hover:bg-[#111111] rounded transition-colors"
-        style={{ paddingLeft: `${depth * 16 + 8}px` }}
+      <div
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
         onClick={() => setExpanded(!expanded)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          height: 28,
+          paddingLeft: depth * 14 + 8,
+          paddingRight: 8,
+          cursor: "pointer",
+          background: hovered ? "rgba(255,255,255,0.03)" : "transparent",
+          transition: "background 0.1s",
+          fontFamily: FONT,
+        }}
       >
-        {expanded ? (
-          <ChevronDown className="w-3 h-3 text-muted-foreground shrink-0" />
-        ) : (
-          <ChevronRight className="w-3 h-3 text-muted-foreground shrink-0" />
+        {expanded ? <ChevronDown size={10} color={C.fgDim} /> : <ChevronRight size={10} color={C.fgDim} />}
+        {expanded ? <FolderOpen size={13} color={C.orange} /> : <FolderClosed size={13} color={C.orange} />}
+        <span style={{ fontSize: 11, color: C.fg, flex: 1 }}>{node.name}</span>
+        {mappingCount > 0 && (
+          <span style={{
+            fontSize: 9, color: C.fgDim, fontFamily: MONO,
+          }}>
+            {mappingCount}
+          </span>
         )}
-        <FolderOpen className="w-3.5 h-3.5 text-[#f5a623] shrink-0" />
-        <span className="text-[11px] text-foreground truncate">{node.name}</span>
-      </button>
-      {expanded &&
-        node.children.map((child) => (
-          <FileTreeItem
-            key={child.path}
-            node={child}
-            depth={depth + 1}
-            onSelectElement={onSelectElement}
-          />
-        ))}
+      </div>
+      {expanded && node.children.map((child) => (
+        <FileTreeItem
+          key={child.path}
+          node={child}
+          depth={depth + 1}
+          onSelectElement={onSelectElement}
+          selectedElementId={selectedElementId}
+        />
+      ))}
     </div>
   );
 }
 
-// ──────────────────────────────────────────────────────────
-// Main panel component
-// ──────────────────────────────────────────────────────────
+function MappingItem({
+  mapping,
+  depth,
+  onSelect,
+  isSelected,
+}: {
+  mapping: FileMapping;
+  depth: number;
+  onSelect: () => void;
+  isSelected: boolean;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const color = CONFIDENCE_COLORS[mapping.confidence];
+
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); onSelect(); }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        width: "100%",
+        height: 26,
+        paddingLeft: (depth + 1) * 14 + 8,
+        paddingRight: 8,
+        background: isSelected ? `${C.accent}12` : hovered ? "rgba(255,255,255,0.03)" : "transparent",
+        border: "none",
+        borderLeft: isSelected ? `2px solid ${C.accent}` : "2px solid transparent",
+        cursor: "pointer",
+        textAlign: "left",
+        fontFamily: FONT,
+        transition: "background 0.1s",
+      }}
+    >
+      <MapPin size={10} color={color} style={{ flexShrink: 0 }} />
+      <span style={{ fontSize: 10, color: C.fgMuted, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {mapping.componentName}
+      </span>
+      <span style={{ width: 5, height: 5, borderRadius: "50%", background: color, flexShrink: 0 }} />
+      {hovered && <Eye size={10} color={C.fgDim} style={{ flexShrink: 0 }} />}
+    </button>
+  );
+}
+
+function ConfidenceBadge({ confidence }: { confidence: "high" | "medium" | "low" }) {
+  const color = CONFIDENCE_COLORS[confidence];
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 4,
+      fontSize: 9, padding: "1px 6px", borderRadius: 4,
+      background: `${color}15`, color,
+      fontFamily: FONT,
+    }}>
+      <span style={{ width: 4, height: 4, borderRadius: "50%", background: color }} />
+      {confidence}
+    </span>
+  );
+}
+
+// ── Selected element panel ─────────────────────────────────
+
+function SelectedElementView({
+  element,
+  mapping,
+  allMappings,
+  isInferred,
+  onSelectElement,
+}: {
+  element: ElementNode;
+  mapping: FileMapping | null;
+  allMappings: FileMapping[];
+  isInferred: boolean;
+  onSelectElement: (id: string) => void;
+}) {
+  const childMappings = allMappings.filter((m) =>
+    element.children.some((c: ElementNode) => c.id === m.elementId)
+  );
+
+  return (
+    <div style={{ padding: 12, fontFamily: FONT }}>
+      {/* Element info card */}
+      <div style={{
+        padding: 12, background: C.surface, borderRadius: 10,
+        border: `1px solid ${C.border}`, marginBottom: 12,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+          <span style={{ color: C.accent }}>{getElementIcon(element.tag)}</span>
+          <span style={{ fontSize: 12, color: C.accent, fontWeight: 500 }}>
+            &lt;{element.tag}&gt;
+          </span>
+          {element.classes.length > 0 && (
+            <span style={{ fontSize: 10, color: C.fgDim, fontFamily: MONO }}>
+              .{element.classes.slice(0, 2).join(".")}
+            </span>
+          )}
+        </div>
+        <div style={{ fontSize: 10, color: C.fgDim, fontFamily: MONO, wordBreak: "break-all" }}>
+          {element.selector}
+        </div>
+        {element.text && (
+          <div style={{
+            fontSize: 10, color: C.fgMuted, marginTop: 6,
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          }}>
+            "{element.text.slice(0, 60)}{element.text.length > 60 ? "..." : ""}"
+          </div>
+        )}
+      </div>
+
+      {/* Mapped file card */}
+      {mapping ? (
+        <div style={{
+          padding: 12, borderRadius: 10, marginBottom: 12,
+          border: `1px solid ${C.accent}30`,
+          background: `${C.accent}08`,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <FileCode size={14} color={C.accent} />
+            <span style={{ fontSize: 12, color: C.fg, fontWeight: 500 }}>{mapping.componentName}</span>
+            <ConfidenceBadge confidence={mapping.confidence} />
+          </div>
+          <div style={{ fontSize: 11, color: C.fgMuted, fontFamily: MONO, marginBottom: 4 }}>
+            {mapping.filePath}{mapping.lineNumber ? `:${mapping.lineNumber}` : ""}
+          </div>
+          {isInferred && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: 4,
+              fontSize: 9, color: C.orange, marginBottom: 8,
+            }}>
+              <Sparkles size={10} />
+              Heuristic mapping — connect IDE for exact resolution
+            </div>
+          )}
+          <button
+            onClick={() => {
+              // Attempt VS Code open
+              const vscodeUrl = `vscode://file/${mapping.filePath}${mapping.lineNumber ? `:${mapping.lineNumber}` : ""}`;
+              window.open(vscodeUrl, "_blank");
+            }}
+            style={{
+              width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+              gap: 6, padding: "7px 0", borderRadius: 8,
+              border: `1px solid ${C.accent}40`, background: `${C.accent}10`,
+              color: C.accent, fontSize: 11, fontWeight: 500,
+              cursor: "pointer", fontFamily: FONT,
+              transition: "all 0.15s",
+            }}
+            onMouseEnter={(e) => { (e.target as HTMLElement).style.background = `${C.accent}20`; }}
+            onMouseLeave={(e) => { (e.target as HTMLElement).style.background = `${C.accent}10`; }}
+          >
+            <ExternalLink size={12} />
+            Open in VS Code
+          </button>
+        </div>
+      ) : (
+        <div style={{
+          padding: 12, borderRadius: 10, marginBottom: 12,
+          border: `1px solid ${C.border}`, background: C.surface,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <MapPin size={14} color={C.fgDim} />
+            <span style={{ fontSize: 12, color: C.fgMuted }}>No file mapping</span>
+          </div>
+          <div style={{ fontSize: 10, color: C.fgDim, lineHeight: 1.5 }}>
+            This element doesn't match known component patterns.
+            Connect an IDE or add data-component attributes for exact resolution.
+          </div>
+        </div>
+      )}
+
+      {/* Child component mappings */}
+      {childMappings.length > 0 && (
+        <div>
+          <div style={{
+            fontSize: 10, color: C.fgDim, textTransform: "uppercase",
+            letterSpacing: "0.05em", marginBottom: 6, fontWeight: 500,
+          }}>
+            Child Components ({childMappings.length})
+          </div>
+          <div style={{
+            borderRadius: 8, border: `1px solid ${C.border}`,
+            overflow: "hidden",
+          }}>
+            {childMappings.slice(0, 10).map((m) => (
+              <button
+                key={m.elementId}
+                onClick={() => onSelectElement(m.elementId)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  width: "100%", padding: "7px 10px",
+                  background: "transparent", border: "none",
+                  borderBottom: `1px solid ${C.border}`,
+                  cursor: "pointer", textAlign: "left", fontFamily: FONT,
+                  transition: "background 0.1s",
+                }}
+                onMouseEnter={(e) => { (e.target as HTMLElement).style.background = "rgba(255,255,255,0.03)"; }}
+                onMouseLeave={(e) => { (e.target as HTMLElement).style.background = "transparent"; }}
+              >
+                <ArrowRight size={10} color={C.fgDim} />
+                <span style={{ fontSize: 11, color: C.fg }}>{m.componentName}</span>
+                <span style={{ fontSize: 9, color: C.fgDim, fontFamily: MONO, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {m.filePath.split("/").pop()}
+                </span>
+                <ConfidenceBadge confidence={m.confidence} />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Summary stats ──────────────────────────────────────────
+
+function StatsBar({ mappings }: { mappings: FileMapping[] }) {
+  const high = mappings.filter((m) => m.confidence === "high").length;
+  const medium = mappings.filter((m) => m.confidence === "medium").length;
+  const low = mappings.filter((m) => m.confidence === "low").length;
+  const uniqueFiles = new Set(mappings.map((m) => m.filePath)).size;
+
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: 10,
+      padding: "6px 12px", borderBottom: `1px solid ${C.border}`,
+      fontFamily: FONT,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <FileCode size={10} color={C.fgDim} />
+        <span style={{ fontSize: 9, color: C.fgMuted }}>{uniqueFiles} files</span>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <Layers size={10} color={C.fgDim} />
+        <span style={{ fontSize: 9, color: C.fgMuted }}>{mappings.length} components</span>
+      </div>
+      <div style={{ flex: 1 }} />
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        {high > 0 && <span style={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <span style={{ width: 4, height: 4, borderRadius: "50%", background: C.green }} />
+          <span style={{ fontSize: 9, color: C.fgDim }}>{high}</span>
+        </span>}
+        {medium > 0 && <span style={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <span style={{ width: 4, height: 4, borderRadius: "50%", background: C.orange }} />
+          <span style={{ fontSize: 9, color: C.fgDim }}>{medium}</span>
+        </span>}
+        {low > 0 && <span style={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <span style={{ width: 4, height: 4, borderRadius: "50%", background: C.fgDim }} />
+          <span style={{ fontSize: 9, color: C.fgDim }}>{low}</span>
+        </span>}
+      </div>
+    </div>
+  );
+}
+
+// ── Main panel ─────────────────────────────────────────────
+
 export function FileMapPanel() {
   const { state, dispatch } = useWorkspace();
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"tree" | "element">("tree");
 
-  // Generate inferred mappings if none from server
   const allMappings = useMemo(() => {
     if (state.fileMappings.length > 0) return state.fileMappings;
     return inferFileMappings(
@@ -314,92 +718,114 @@ export function FileMapPanel() {
     );
   }, [allMappings, search]);
 
-  const fileTree = useMemo(
-    () => buildFileTree(filteredMappings),
-    [filteredMappings]
-  );
+  const fileTree = useMemo(() => buildFileTree(filteredMappings), [filteredMappings]);
 
-  // Get mapping for selected element
   const selectedMapping = state.selectedElementId
-    ? allMappings.find((m) => m.elementId === state.selectedElementId)
+    ? allMappings.find((m) => m.elementId === state.selectedElementId) || null
     : null;
 
   const selectedElement = state.selectedElementId
-    ? findElement(state.elements, state.selectedElementId)
+    ? findElement(state.elements, state.selectedElementId) || null
     : null;
 
-  const handleSelectElement = (id: string) => {
-    dispatch({ type: "SELECT_ELEMENT", id });
-  };
+  const handleSelectElement = useCallback((id: string) => {
+    dispatch({ type: "SELECT_ELEMENT", id, source: "panel" });
+  }, [dispatch]);
 
-  const serverMappingCount = state.fileMappings.length;
-  const isInferred = serverMappingCount === 0 && allMappings.length > 0;
+  const isInferred = state.fileMappings.length === 0 && allMappings.length > 0;
 
   return (
-    <div className="h-full flex flex-col bg-[#0a0a0a]">
+    <div style={{
+      height: "100%", display: "flex", flexDirection: "column",
+      background: C.bg, fontFamily: FONT, color: C.fg,
+    }}>
       {/* Header */}
-      <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <FileCode className="w-4 h-4 text-[#0070f3]" />
-          <span className="text-[13px] text-foreground">File Map</span>
+      <div style={{
+        padding: "10px 14px", borderBottom: `1px solid ${C.border}`,
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <FileCode size={14} color={C.accent} />
+          <span style={{ fontSize: 13, fontWeight: 500 }}>File Map</span>
           {isInferred && (
-            <span className="flex items-center gap-1 text-[9px] text-[#f5a623] bg-[#f5a623]/10 px-1.5 py-0.5 rounded">
-              <Sparkles className="w-2.5 h-2.5" />
+            <span style={{
+              display: "inline-flex", alignItems: "center", gap: 3,
+              fontSize: 9, color: C.orange, background: `${C.orange}15`,
+              padding: "1px 6px", borderRadius: 4,
+            }}>
+              <Sparkles size={9} />
               Inferred
             </span>
           )}
         </div>
-        <span className="text-[10px] text-muted-foreground">
-          {allMappings.length} mappings
+        <span style={{ fontSize: 10, color: C.fgDim, fontFamily: MONO }}>
+          {allMappings.length}
         </span>
       </div>
 
+      {/* Stats */}
+      {allMappings.length > 0 && <StatsBar mappings={allMappings} />}
+
       {/* Tabs */}
-      <div className="flex border-b border-border">
+      <div style={{ display: "flex", borderBottom: `1px solid ${C.border}` }}>
         {(["tree", "element"] as const).map((t) => (
           <button
             key={t}
-            className={`flex-1 py-2 text-[11px] transition-colors ${
-              tab === t
-                ? "text-foreground border-b border-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
             onClick={() => setTab(t)}
+            style={{
+              flex: 1, padding: "8px 0", fontSize: 11, fontWeight: 450,
+              fontFamily: FONT, border: "none", cursor: "pointer",
+              background: "transparent",
+              color: tab === t ? C.fg : C.fgDim,
+              borderBottom: tab === t ? `2px solid ${C.fg}` : "2px solid transparent",
+              transition: "all 0.15s",
+            }}
           >
             {t === "tree" ? "File Tree" : "Selected"}
           </button>
         ))}
       </div>
 
-      {/* Search */}
+      {/* Search (tree tab only) */}
       {tab === "tree" && (
-        <div className="px-3 py-2 border-b border-[#1a1a1a]">
-          <div className="flex items-center gap-2 bg-[#111111] border border-[#1a1a1a] rounded-lg px-2.5 h-[28px]">
-            <Search className="w-3 h-3 text-muted-foreground shrink-0" />
+        <div style={{ padding: "8px 10px", borderBottom: `1px solid ${C.border}` }}>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8,
+            background: C.surface, border: `1px solid ${C.border}`,
+            borderRadius: 8, padding: "0 10px", height: 28,
+          }}>
+            <Search size={12} color={C.fgDim} />
             <input
               type="text"
               placeholder="Search files or components..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 bg-transparent text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none"
+              style={{
+                flex: 1, background: "transparent", border: "none",
+                fontSize: 11, color: C.fg, fontFamily: FONT,
+                outline: "none",
+              }}
             />
           </div>
         </div>
       )}
 
-      <ScrollArea className="flex-1 min-h-0">
+      {/* Content */}
+      <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
         {tab === "tree" && (
-          <div className="py-1">
+          <div style={{ paddingTop: 4, paddingBottom: 8 }}>
             {allMappings.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-                <FileCode className="w-8 h-8 text-[#1a1a1a] mb-3" />
-                <p className="text-[12px] text-muted-foreground mb-1">
+              <div style={{
+                display: "flex", flexDirection: "column", alignItems: "center",
+                justifyContent: "center", padding: "48px 20px", textAlign: "center",
+              }}>
+                <FileCode size={32} color="#1a1a1a" style={{ marginBottom: 12 }} />
+                <div style={{ fontSize: 12, color: C.fgMuted, marginBottom: 4 }}>
                   No file mappings
-                </p>
-                <p className="text-[10px] text-muted-foreground">
-                  Load a page to auto-detect component-to-file mappings, or
-                  connect an IDE for precise resolution
-                </p>
+                </div>
+                <div style={{ fontSize: 10, color: C.fgDim, lineHeight: 1.5, maxWidth: 200 }}>
+                  Inspect the page to detect component-to-file mappings, or connect an IDE for precise resolution.
+                </div>
               </div>
             ) : (
               fileTree.children.map((child) => (
@@ -407,6 +833,7 @@ export function FileMapPanel() {
                   key={child.path}
                   node={child}
                   onSelectElement={handleSelectElement}
+                  selectedElementId={state.selectedElementId}
                 />
               ))
             )}
@@ -414,169 +841,45 @@ export function FileMapPanel() {
         )}
 
         {tab === "element" && (
-          <div className="p-3">
-            {!selectedElement ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <MapPin className="w-8 h-8 text-[#1a1a1a] mb-3" />
-                <p className="text-[12px] text-muted-foreground mb-1">
-                  No element selected
-                </p>
-                <p className="text-[10px] text-muted-foreground">
-                  Select an element to see its file mapping
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {/* Selected element info */}
-                <div className="p-3 bg-[#111111] rounded-xl border border-[#1a1a1a]">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[12px] text-[#0070f3]">
-                      &lt;{selectedElement.tag}&gt;
-                    </span>
-                    {selectedElement.classes.length > 0 && (
-                      <span
-                        className="text-[10px] text-muted-foreground truncate"
-                        style={{ fontFamily: "'Geist Mono', monospace" }}
-                      >
-                        .{selectedElement.classes[0]}
-                      </span>
-                    )}
-                  </div>
-                  <p
-                    className="text-[10px] text-muted-foreground"
-                    style={{ fontFamily: "'Geist Mono', monospace" }}
-                  >
-                    {selectedElement.selector}
-                  </p>
-                </div>
-
-                {/* Mapped file */}
-                {selectedMapping ? (
-                  <div className="p-3 border border-[#0070f3]/20 bg-[#0070f3]/5 rounded-xl">
-                    <div className="flex items-center gap-2 mb-2">
-                      <FileCode className="w-4 h-4 text-[#0070f3]" />
-                      <span className="text-[12px] text-foreground">
-                        {selectedMapping.componentName}
-                      </span>
-                      <span
-                        className="w-1.5 h-1.5 rounded-full"
-                        style={{
-                          background:
-                            selectedMapping.confidence === "high"
-                              ? "#50e3c2"
-                              : selectedMapping.confidence === "medium"
-                              ? "#f5a623"
-                              : "#666666",
-                        }}
-                      />
-                    </div>
-                    <p
-                      className="text-[11px] text-muted-foreground mb-1"
-                      style={{ fontFamily: "'Geist Mono', monospace" }}
-                    >
-                      {selectedMapping.filePath}
-                      {selectedMapping.lineNumber
-                        ? `:${selectedMapping.lineNumber}`
-                        : ""}
-                    </p>
-                    <div className="flex items-center gap-1.5 mt-2">
-                      <span
-                        className="text-[9px] px-1.5 py-0.5 rounded"
-                        style={{
-                          background:
-                            selectedMapping.confidence === "high"
-                              ? "rgba(80,227,194,0.1)"
-                              : "rgba(245,166,35,0.1)",
-                          color:
-                            selectedMapping.confidence === "high"
-                              ? "#50e3c2"
-                              : "#f5a623",
-                        }}
-                      >
-                        {selectedMapping.confidence} confidence
-                      </span>
-                      {isInferred && (
-                        <span className="text-[9px] text-muted-foreground">
-                          (heuristic)
-                        </span>
-                      )}
-                    </div>
-
-                    <button className="w-full mt-3 flex items-center justify-center gap-1.5 py-1.5 border border-[#0070f3]/30 rounded-lg text-[10px] text-[#0070f3] hover:bg-[#0070f3]/10 transition-colors">
-                      <ExternalLink className="w-3 h-3" />
-                      Open in IDE
-                    </button>
-                  </div>
-                ) : (
-                  <div className="p-3 border border-[#1a1a1a] rounded-xl">
-                    <div className="flex items-center gap-2 mb-2">
-                      <AlertCircle className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-[12px] text-muted-foreground">
-                        No mapping found
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground">
-                      This element doesn't match any known component pattern.
-                      Connect an IDE for exact file resolution via source maps.
-                    </p>
-                  </div>
-                )}
-
-                {/* Related mappings */}
-                {selectedElement.children.length > 0 && (
-                  <div>
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1.5">
-                      Child Components
-                    </span>
-                    {allMappings
-                      .filter((m) =>
-                        selectedElement.children.some(
-                          (c: any) => c.id === m.elementId
-                        )
-                      )
-                      .slice(0, 8)
-                      .map((m) => (
-                        <button
-                          key={m.elementId}
-                          onClick={() => handleSelectElement(m.elementId)}
-                          className="w-full flex items-center gap-2 py-1.5 px-2 hover:bg-[#111111] rounded transition-colors text-left"
-                        >
-                          <ArrowRight className="w-3 h-3 text-muted-foreground" />
-                          <span className="text-[10px] text-foreground">
-                            {m.componentName}
-                          </span>
-                          <span
-                            className="text-[9px] text-muted-foreground flex-1 truncate"
-                            style={{ fontFamily: "'Geist Mono', monospace" }}
-                          >
-                            {m.filePath}
-                          </span>
-                        </button>
-                      ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-      </ScrollArea>
-
-      {/* Confidence legend */}
-      <div className="px-3 py-2 border-t border-[#1a1a1a] flex items-center gap-3">
-        <span className="text-[9px] text-muted-foreground">Confidence:</span>
-        {(
-          [
-            ["#50e3c2", "High"],
-            ["#f5a623", "Med"],
-            ["#666666", "Low"],
-          ] as const
-        ).map(([color, label]) => (
-          <span key={label} className="flex items-center gap-1">
-            <span
-              className="w-1.5 h-1.5 rounded-full"
-              style={{ background: color }}
+          selectedElement ? (
+            <SelectedElementView
+              element={selectedElement}
+              mapping={selectedMapping}
+              allMappings={allMappings}
+              isInferred={isInferred}
+              onSelectElement={handleSelectElement}
             />
-            <span className="text-[9px] text-muted-foreground">{label}</span>
+          ) : (
+            <div style={{
+              display: "flex", flexDirection: "column", alignItems: "center",
+              justifyContent: "center", padding: "48px 20px", textAlign: "center",
+            }}>
+              <MapPin size={32} color="#1a1a1a" style={{ marginBottom: 12 }} />
+              <div style={{ fontSize: 12, color: C.fgMuted, marginBottom: 4 }}>
+                No element selected
+              </div>
+              <div style={{ fontSize: 10, color: C.fgDim, lineHeight: 1.5 }}>
+                Click an element in the canvas or layers panel to see its file mapping.
+              </div>
+            </div>
+          )
+        )}
+      </div>
+
+      {/* Footer */}
+      <div style={{
+        padding: "6px 12px", borderTop: `1px solid ${C.border}`,
+        display: "flex", alignItems: "center", gap: 10,
+      }}>
+        <span style={{ fontSize: 9, color: C.fgDim }}>Confidence:</span>
+        {([
+          [C.green, "High"],
+          [C.orange, "Med"],
+          [C.fgDim, "Low"],
+        ] as const).map(([color, label]) => (
+          <span key={label} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+            <span style={{ width: 4, height: 4, borderRadius: "50%", background: color }} />
+            <span style={{ fontSize: 9, color: C.fgDim }}>{label}</span>
           </span>
         ))}
       </div>

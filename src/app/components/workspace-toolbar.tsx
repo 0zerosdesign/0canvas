@@ -17,9 +17,19 @@ import {
   Save,
   FolderOpen,
   Trash2,
+  Download,
+  Upload,
+  RefreshCw,
 } from "lucide-react";
 import { useWorkspace, DDProject } from "../store";
 import { saveProject, getAllProjects, deleteProject as dbDeleteProject, type StoredProject } from "./variant-db";
+import {
+  downloadProjectFile,
+  importProjectFile,
+  buildCurrentProjectFile,
+  pushProjectToIDE,
+} from "./dd-project-store";
+import { projectFileToState } from "./dd-project";
 
 const FONT = "'Geist Sans','Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif";
 const MONO = "'Geist Mono','SF Mono','Fira Code',monospace";
@@ -78,6 +88,46 @@ export function WorkspaceToolbar({ onNavigate }: WorkspaceToolbarProps = {}) {
       feedbackItems: project.feedbackItems,
     });
   }, [dispatch]);
+
+  const handleExportDD = useCallback(async () => {
+    try {
+      const file = await buildCurrentProjectFile(
+        state.ddProject,
+        state.variants,
+        state.feedbackItems,
+        state.fileMappings,
+        state.currentRoute,
+      );
+      downloadProjectFile(file);
+    } catch (err) {
+      console.warn("[DD] Export failed:", err);
+    }
+  }, [state.ddProject, state.variants, state.feedbackItems, state.fileMappings, state.currentRoute]);
+
+  const handleImportDD = useCallback(async () => {
+    const file = await importProjectFile();
+    if (file) {
+      const { project, variants, feedbackItems } = projectFileToState(file);
+      dispatch({ type: "LOAD_FROM_DD_FILE", file, project, variants, feedbackItems });
+    }
+  }, [dispatch]);
+
+  const handleSyncToIDE = useCallback(async () => {
+    const port = state.wsPort || 24192;
+    try {
+      const file = await buildCurrentProjectFile(
+        state.ddProject,
+        state.variants,
+        state.feedbackItems,
+        state.fileMappings,
+        state.currentRoute,
+      );
+      const ok = await pushProjectToIDE(file, port);
+      if (ok) dispatch({ type: "SET_DD_PROJECT_FILE", file });
+    } catch (err) {
+      console.warn("[DD] Sync failed:", err);
+    }
+  }, [state.ddProject, state.variants, state.feedbackItems, state.fileMappings, state.currentRoute, state.wsPort, dispatch]);
 
   return (
     <div
@@ -224,6 +274,41 @@ export function WorkspaceToolbar({ onNavigate }: WorkspaceToolbarProps = {}) {
 
       {/* Right: Actions */}
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        {/* .dd file actions */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            background: C.surface,
+            borderRadius: 6,
+            padding: 3,
+            border: `1px solid ${C.border}`,
+          }}
+        >
+          <ToolbarBtn
+            icon={<Download size={14} />}
+            label=".dd"
+            active={false}
+            onClick={handleExportDD}
+          />
+          <ToolbarBtn
+            icon={<Upload size={14} />}
+            label="Import"
+            active={false}
+            onClick={handleImportDD}
+          />
+          <ToolbarBtn
+            icon={<RefreshCw size={14} />}
+            label="Sync"
+            active={false}
+            activeColor={C.green}
+            onClick={handleSyncToIDE}
+          />
+        </div>
+
+        <div style={{ width: 1, height: 20, background: C.border }} />
+
         <div
           style={{
             display: "flex",

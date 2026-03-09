@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useReducer, ReactNode } from "react";
+import type { DDProjectFile } from "./components/dd-project";
 
 // ──────────────────────────────────────────────────────────
 // Types
@@ -146,6 +147,7 @@ export type VariantData = {
   createdAt: number;
   modifiedHtml?: string;
   modifiedCss?: string;
+  sourceViewportWidth?: number;
 };
 
 // ── WebSocket / MCP types ──
@@ -209,6 +211,7 @@ export type WorkspaceState = {
 
   // Project management
   ddProject: DDProject;
+  ddProjectFile: DDProjectFile | null;
 
   // Route switching
   currentRoute: string;
@@ -277,6 +280,8 @@ type Action =
   | { type: "SET_DD_PROJECT_NAME"; name: string }
   | { type: "SAVE_DD_PROJECT" }
   | { type: "LOAD_DD_PROJECT"; project: DDProject; variants: VariantData[]; feedbackItems: FeedbackItem[] }
+  | { type: "SET_DD_PROJECT_FILE"; file: DDProjectFile | null }
+  | { type: "LOAD_FROM_DD_FILE"; file: DDProjectFile; project: DDProject; variants: VariantData[]; feedbackItems: FeedbackItem[] }
   // Route actions
   | { type: "SET_CURRENT_ROUTE"; route: string }
   | { type: "ADD_ROUTE_HISTORY"; route: string }
@@ -378,6 +383,7 @@ const initialState: WorkspaceState = {
     appUrl: typeof window !== "undefined" ? window.location.origin : "",
     saved: false,
   },
+  ddProjectFile: null,
   currentRoute: typeof window !== "undefined" ? window.location.pathname : "/",
   routeHistory: typeof window !== "undefined" ? [window.location.pathname] : ["/"],
   inspectorMode: true,
@@ -489,7 +495,12 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
     case "TOGGLE_LAYERS_PANEL":
       return { ...state, layersPanelOpen: !state.layersPanelOpen };
     case "TOGGLE_STYLE_PANEL":
-      return { ...state, stylePanelOpen: !state.stylePanelOpen };
+      return {
+        ...state,
+        stylePanelOpen: !state.stylePanelOpen,
+        // Close competing right panels
+        ...(!state.stylePanelOpen ? { fileMapPanelOpen: false } : {}),
+      };
     case "TOGGLE_IDE_PANEL":
       return { ...state, idePanelOpen: !state.idePanelOpen };
     case "TOGGLE_COMMAND_PALETTE":
@@ -582,7 +593,12 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
     case "SET_FILE_MAPPINGS":
       return { ...state, fileMappings: action.mappings };
     case "TOGGLE_FILE_MAP_PANEL":
-      return { ...state, fileMapPanelOpen: !state.fileMapPanelOpen };
+      return {
+        ...state,
+        fileMapPanelOpen: !state.fileMapPanelOpen,
+        // Close competing right panels
+        ...(!state.fileMapPanelOpen ? { stylePanelOpen: false } : {}),
+      };
     // Feedback / Agent Waitlist
     case "ADD_FEEDBACK":
       return { ...state, feedbackItems: [...state.feedbackItems, action.item] };
@@ -657,6 +673,16 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
     case "LOAD_DD_PROJECT":
       return {
         ...state,
+        ddProject: action.project,
+        variants: action.variants,
+        feedbackItems: action.feedbackItems,
+      };
+    case "SET_DD_PROJECT_FILE":
+      return { ...state, ddProjectFile: action.file };
+    case "LOAD_FROM_DD_FILE":
+      return {
+        ...state,
+        ddProjectFile: action.file,
         ddProject: action.project,
         variants: action.variants,
         feedbackItems: action.feedbackItems,

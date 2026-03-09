@@ -38,6 +38,9 @@ coverage/
 .tmp/
 temp/
 
+# Testing harness (local only)
+testing/
+
 # Publish workflow temp files
 package.figma.json
 package.figmamake.json

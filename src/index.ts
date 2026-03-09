@@ -44,3 +44,70 @@ export type {
   VariantData,
   DDProject,
 } from "./app/store";
+
+// .dd format — design-as-code variant format
+export {
+  DD_FORMAT_VERSION,
+  DEFAULT_BREAKPOINTS,
+  createDDDocument,
+  findNodeById,
+  updateNodeById,
+  deleteNodeById,
+  insertNode,
+  countDDNodes,
+} from "./app/components/dd-format";
+export type {
+  DDDocument,
+  DDNode,
+  DDStyles,
+  DDVariable,
+  DDBreakpoints,
+  DDBreakpoint,
+  DDResponsive,
+} from "./app/components/dd-format";
+export { htmlToDDDocument, ddDocumentToHtml } from "./app/components/dd-parser";
+
+// .dd project file — whole-project format
+export {
+  DD_PROJECT_SCHEMA_VERSION,
+  DDProjectFileSchema,
+  DEFAULT_PROJECT_BREAKPOINTS,
+  validateDDProjectFile,
+  migrateProjectFile,
+  computeProjectHash,
+  createEmptyProjectFile,
+  stateToProjectFile,
+  projectFileToState,
+  serializeProjectFile,
+  parseProjectFile,
+} from "./app/components/dd-project";
+export type {
+  DDProjectFile,
+  DDProjectMeta,
+  DDWorkspaceMeta,
+  DDBreakpointsConfig,
+  DDPage,
+  DDVariant,
+  DDAnnotation,
+  DDFeedback,
+  DDCheckpoint,
+  DDIntegrity,
+  DDFileMapEntry,
+  DDLayerNode,
+  DDValidationResult,
+} from "./app/components/dd-project";
+
+// .dd project store — IndexedDB persistence + import/export
+export {
+  saveProjectFile,
+  loadProjectFile,
+  listProjectFiles,
+  deleteProjectFile,
+  downloadProjectFile,
+  importProjectFile,
+  scheduleAutoSave,
+  buildCurrentProjectFile,
+  pushProjectToIDE,
+  pullProjectFromIDE,
+} from "./app/components/dd-project-store";
+export type { DDSyncMeta } from "./app/components/dd-project-store";

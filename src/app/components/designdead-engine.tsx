@@ -37,6 +37,16 @@ import { FileMapPanel } from "./file-map-panel";
 import { AnnotationOverlay } from "./annotation-overlay";
 import { ElementChat } from "./element-chat";
 import { AgentWaitlist } from "./agent-waitlist";
+import { projectFileToState } from "./dd-project";
+import {
+  scheduleAutoSave,
+  loadProjectFile,
+  saveProjectFile,
+  downloadProjectFile,
+  importProjectFile,
+  pushProjectToIDE,
+  buildCurrentProjectFile,
+} from "./dd-project-store";
 
 // ── Props ──────────────────────────────────────────────────
 
@@ -349,6 +359,79 @@ function EngineWorkspace() {
   const iframeNavRef = React.useRef<((route: string) => void) | null>(null);
   const lastPollRef = useRef<number>(0);
 
+  // ── Load .dd project file from IndexedDB on mount ──
+  useEffect(() => {
+    (async () => {
+      try {
+        const file = await loadProjectFile(state.ddProject.id);
+        if (file) {
+          const { project, variants, feedbackItems } = projectFileToState(file);
+          dispatch({ type: "LOAD_FROM_DD_FILE", file, project, variants, feedbackItems });
+        }
+      } catch { /* no saved file yet */ }
+    })();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Auto-save .dd project file on state changes ──
+  useEffect(() => {
+    scheduleAutoSave(
+      state.ddProject,
+      state.variants,
+      state.feedbackItems,
+      state.fileMappings,
+      state.currentRoute,
+      state.ddProjectFile,
+    );
+  }, [
+    state.ddProject,
+    state.variants,
+    state.feedbackItems,
+    state.fileMappings,
+    state.currentRoute,
+    state.ddProjectFile,
+  ]);
+
+  // ── Export .dd file ──
+  const handleExportDD = useCallback(async () => {
+    try {
+      const file = await buildCurrentProjectFile(
+        state.ddProject,
+        state.variants,
+        state.feedbackItems,
+        state.fileMappings,
+        state.currentRoute,
+      );
+      downloadProjectFile(file);
+    } catch (err) {
+      console.warn("[DD] Export failed:", err);
+    }
+  }, [state.ddProject, state.variants, state.feedbackItems, state.fileMappings, state.currentRoute]);
+
+  // ── Import .dd file ──
+  const handleImportDD = useCallback(async () => {
+    const file = await importProjectFile();
+    if (file) {
+      const { project, variants, feedbackItems } = projectFileToState(file);
+      dispatch({ type: "LOAD_FROM_DD_FILE", file, project, variants, feedbackItems });
+    }
+  }, [dispatch]);
+
+  // ── Push to IDE ──
+  const handlePushToIDE = useCallback(async () => {
+    const port = state.wsPort || 24192;
+    const file = await buildCurrentProjectFile(
+      state.ddProject,
+      state.variants,
+      state.feedbackItems,
+      state.fileMappings,
+      state.currentRoute,
+    );
+    const ok = await pushProjectToIDE(file, port);
+    if (ok) {
+      dispatch({ type: "SET_DD_PROJECT_FILE", file });
+    }
+  }, [state.ddProject, state.variants, state.feedbackItems, state.fileMappings, state.currentRoute, state.wsPort, dispatch]);
+
   // ── MCP Bridge Polling ──
   // Listens for events from AI agents (like pushed changes)
   useEffect(() => {
@@ -416,7 +499,8 @@ function EngineWorkspace() {
 
   const showVersions =
     !state.idePanelOpen &&
-    !state.fileMapPanelOpen;
+    !state.fileMapPanelOpen &&
+    !state.stylePanelOpen;
 
   return (
     <div
@@ -455,8 +539,8 @@ function EngineWorkspace() {
           </div>
         )}
 
-        {state.fileMapPanelOpen && !state.stylePanelOpen && (
-          <div style={{ width: 280, flexShrink: 0, borderLeft: "1px solid #1a1a1a" }}>
+        {state.fileMapPanelOpen && (
+          <div style={{ width: 280, flexShrink: 0, borderLeft: "1px solid #1a1a1a", height: "100%", overflow: "hidden" }}>
             <FileMapPanel />
           </div>
         )}

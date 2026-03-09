@@ -1,5 +1,8 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "http";
+import { writeFileSync, mkdirSync, readFileSync, existsSync } from "fs";
+import { dirname, resolve as resolvePath } from "path";
 import type { VariantData, FeedbackItem, DDProject } from "../app/store";
+import type { DDProjectFile } from "../app/components/dd-project";
 
 export type BridgeState = {
   project: DDProject | null;
@@ -8,13 +11,17 @@ export type BridgeState = {
   resolvedIds: Set<string>;
   pushedChanges: { variantId: string; html: string; css?: string; timestamp: number }[];
   listeners: Set<(event: BridgeEvent) => void>;
+  _projectFile: DDProjectFile | null;
+  _pendingFileWrite: { path: string; content: string } | null;
+  _workspaceRoot: string | null;
 };
 
 export type BridgeEvent =
   | { type: "feedback_added"; items: FeedbackItem[] }
   | { type: "feedback_resolved"; ids: string[] }
   | { type: "variant_updated"; variant: VariantData }
-  | { type: "changes_pushed"; variantId: string; html: string; css?: string };
+  | { type: "changes_pushed"; variantId: string; html: string; css?: string }
+  | { type: "project_file_updated"; file: DDProjectFile };
 
 const state: BridgeState = {
   project: null,
@@ -23,10 +30,36 @@ const state: BridgeState = {
   resolvedIds: new Set(),
   pushedChanges: [],
   listeners: new Set(),
+  _projectFile: null,
+  _pendingFileWrite: null,
+  _workspaceRoot: process.cwd(),
 };
 
 export function getBridgeState(): BridgeState {
   return state;
+}
+
+// ── Project file accessors ─────────────────────────────────
+
+export function getProjectFile(): DDProjectFile | null {
+  return state._projectFile;
+}
+
+export function setProjectFile(file: DDProjectFile): void {
+  state._projectFile = file;
+  emit({ type: "project_file_updated", file });
+
+  // Process pending file write if queued by MCP tool
+  if (state._pendingFileWrite && state._workspaceRoot) {
+    try {
+      const absPath = resolvePath(state._workspaceRoot, state._pendingFileWrite.path);
+      mkdirSync(dirname(absPath), { recursive: true });
+      writeFileSync(absPath, state._pendingFileWrite.content, "utf-8");
+      state._pendingFileWrite = null;
+    } catch (err) {
+      console.error("[DesignDead Bridge] Failed to write .dd file:", err);
+    }
+  }
 }
 
 export function pushVariantChanges(variantId: string, html: string, css?: string): void {
@@ -152,13 +185,77 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse) {
     return;
   }
 
+  // ── .dd Project File endpoints ──
+
+  if (path === "/api/dd-project" && req.method === "POST") {
+    const body = JSON.parse(await readBody(req));
+    state._projectFile = body;
+    emit({ type: "project_file_updated", file: body });
+    jsonResponse(res, { saved: true, revision: body?.project?.revision });
+    return;
+  }
+
+  if (path === "/api/dd-project" && req.method === "GET") {
+    if (!state._projectFile) {
+      jsonResponse(res, { error: "No project file" }, 404);
+    } else {
+      jsonResponse(res, state._projectFile);
+    }
+    return;
+  }
+
+  if (path === "/api/dd-project/write" && req.method === "POST") {
+    const body = JSON.parse(await readBody(req));
+    const filePath = body.filePath || "design/project.dd";
+    const content = body.content || JSON.stringify(state._projectFile, null, 2);
+
+    if (!state._workspaceRoot) {
+      jsonResponse(res, { error: "Workspace root not set" }, 400);
+      return;
+    }
+
+    try {
+      const absPath = resolvePath(state._workspaceRoot, filePath);
+      mkdirSync(dirname(absPath), { recursive: true });
+      writeFileSync(absPath, content, "utf-8");
+      jsonResponse(res, { written: true, path: absPath });
+    } catch (err) {
+      jsonResponse(res, { error: String(err) }, 500);
+    }
+    return;
+  }
+
+  if (path === "/api/dd-project/read" && req.method === "GET") {
+    const filePath = url.searchParams.get("path") || "design/project.dd";
+
+    if (!state._workspaceRoot) {
+      jsonResponse(res, { error: "Workspace root not set" }, 400);
+      return;
+    }
+
+    try {
+      const absPath = resolvePath(state._workspaceRoot, filePath);
+      if (!existsSync(absPath)) {
+        jsonResponse(res, { error: "File not found" }, 404);
+        return;
+      }
+      const content = readFileSync(absPath, "utf-8");
+      const parsed = JSON.parse(content);
+      jsonResponse(res, parsed);
+    } catch (err) {
+      jsonResponse(res, { error: String(err) }, 500);
+    }
+    return;
+  }
+
   if (path === "/api/poll" && req.method === "GET") {
     const since = parseInt(url.searchParams.get("since") || "0", 10);
     const newItems = state.feedbackItems.filter((f) => f.timestamp > since && f.status === "pending");
     const newResolved = Array.from(state.resolvedIds);
     const newPushed = state.pushedChanges.filter((p) => p.timestamp > since);
     state.pushedChanges = state.pushedChanges.filter((p) => p.timestamp <= since);
-    jsonResponse(res, { pending: newItems, resolved: newResolved, pushed: newPushed });
+    const projectRevision = state._projectFile?.project?.revision || null;
+    jsonResponse(res, { pending: newItems, resolved: newResolved, pushed: newPushed, projectRevision });
     return;
   }
 

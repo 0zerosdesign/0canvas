@@ -2,7 +2,7 @@
 // Variant Canvas — ReactFlow infinite canvas for main preview + variants
 // ──────────────────────────────────────────────────────────
 
-import React, { useCallback, useMemo, useRef, useEffect } from "react";
+import React, { useCallback, useMemo, useRef, useEffect, useState } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -20,7 +20,7 @@ import "@xyflow/react/dist/style.css";
 import { useWorkspace, VariantData } from "../store";
 import { SourceNode, type SourceNodeData } from "./source-node";
 import { VariantNode, type VariantNodeData } from "./variant-node";
-import { capturePageSnapshot, captureComponentSnapshot, getElementOuterHTML, pushVariantToMain as domPushToMain } from "./dom-inspector";
+import { capturePageSnapshot, captureComponentSnapshot, getElementOuterHTML, pushVariantToMain as domPushToMain, setInspectionTarget, rebuildElementMap, buildElementTree } from "./dom-inspector";
 import { saveVariant, deleteVariant as dbDeleteVariant } from "./variant-db";
 import { copyToClipboard } from "./clipboard";
 
@@ -30,9 +30,9 @@ const NODE_TYPES: NodeTypes = {
 };
 
 const SOURCE_NODE_ID = "source-main";
-const VARIANT_GAP_X = 60;
-const VARIANT_GAP_Y = 40;
-const VARIANT_COL_OFFSET = 900;
+const VARIANT_GAP_X = 80;
+const VARIANT_GAP_Y = 60;
+const VARIANT_COL_OFFSET = 1400;
 
 interface VariantCanvasProps {
   onNavigateRef?: React.MutableRefObject<((route: string) => void) | null>;
@@ -46,7 +46,7 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
 
   // ── Build nodes from state ─────────────────────────────
 
-  const handleForkPage = useCallback(() => {
+  const handleForkPage = useCallback((viewportWidth?: number) => {
     const snapshot = capturePageSnapshot();
     if (!snapshot) return;
 
@@ -59,13 +59,14 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
       parentId: null,
       status: "draft",
       createdAt: Date.now(),
+      sourceViewportWidth: viewportWidth,
     };
 
     dispatch({ type: "ADD_VARIANT", variant });
     saveVariant(variant).catch(console.warn);
   }, [state.variants.length, state.currentRoute, dispatch]);
 
-  const handleForkComponent = useCallback((elementId: string) => {
+  const handleForkComponent = useCallback((elementId: string, viewportWidth?: number) => {
     const snapshot = captureComponentSnapshot(elementId);
     if (!snapshot) return;
 
@@ -81,6 +82,7 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
       parentId: null,
       status: "draft",
       createdAt: Date.now(),
+      sourceViewportWidth: viewportWidth,
     };
 
     dispatch({ type: "ADD_VARIANT", variant });
@@ -165,7 +167,7 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
 
-    // Source node (always at 0,0)
+    // Source node (always at 0,0) — Framer-style resizable viewport
     nodes.push({
       id: SOURCE_NODE_ID,
       type: "source",
@@ -175,6 +177,7 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
         onForkPage: handleForkPage,
         onForkComponent: handleForkComponent,
       } satisfies SourceNodeData,
+      style: { width: 1280, height: 800 },
       draggable: true,
     });
 
@@ -191,10 +194,15 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
 
     let yOffset = 0;
 
+    const DEFAULT_VARIANT_W = 560;
+    const DEFAULT_VARIANT_H = 420;
+
     function layoutVariant(variant: VariantData, depth: number, parentNodeId: string) {
-      const x = VARIANT_COL_OFFSET + depth * (480 + VARIANT_GAP_X);
+      const nodeW = variant.sourceViewportWidth || DEFAULT_VARIANT_W;
+      const nodeH = Math.round(nodeW * (DEFAULT_VARIANT_H / DEFAULT_VARIANT_W));
+      const x = VARIANT_COL_OFFSET + depth * (Math.max(nodeW, DEFAULT_VARIANT_W) + VARIANT_GAP_X);
       const y = yOffset;
-      yOffset += 380 + VARIANT_GAP_Y;
+      yOffset += nodeH + VARIANT_GAP_Y;
 
       nodes.push({
         id: variant.id,
@@ -208,6 +216,7 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
           onSendToAgent: handleSendToAgent,
           onPushToMain: handlePushToMain,
         } satisfies VariantNodeData,
+        style: { width: nodeW, height: nodeH },
         draggable: true,
       });
 
@@ -244,12 +253,49 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
 
   const [nodes, setNodes, onNodesChange] = useNodesState(flowNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(flowEdges);
+  const [canvasInteracting, setCanvasInteracting] = useState(false);
 
   // Sync ReactFlow state when store variants change
   useEffect(() => {
     setNodes(flowNodes);
     setEdges(flowEdges);
   }, [flowNodes, flowEdges, setNodes, setEdges]);
+
+  // Disable iframe pointer events during canvas interactions (pan/zoom/drag)
+  // This prevents iframes from stealing mouse events during drag operations
+  useEffect(() => {
+    if (!canvasInteracting) return;
+    const style = document.createElement("style");
+    style.id = "dd-canvas-interaction-guard";
+    style.textContent = `[data-designdead] iframe { pointer-events: none !important; }`;
+    document.head.appendChild(style);
+    return () => { style.remove(); };
+  }, [canvasInteracting]);
+
+  const handleMoveStart = useCallback(() => setCanvasInteracting(true), []);
+  const handleMoveEnd = useCallback(() => setCanvasInteracting(false), []);
+  const handleNodeDragStart = useCallback(() => setCanvasInteracting(true), []);
+  const handleNodeDragStop = useCallback(() => setCanvasInteracting(false), []);
+
+  // Auto-scan variant DOM into layers/styles when clicking on a variant node
+  const handleNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
+    if (node.type !== "variant") return;
+    const variantData = (node.data as VariantNodeData).variant;
+
+    dispatch({ type: "SET_ACTIVE_VARIANT", id: variantData.id });
+
+    // Find the variant's iframe and scan its DOM
+    setTimeout(() => {
+      const variantContainer = document.querySelector(`[data-variant-id="${variantData.id}"]`);
+      const iframe = variantContainer?.querySelector("iframe") as HTMLIFrameElement | null;
+      if (!iframe?.contentDocument?.body) return;
+
+      setInspectionTarget(iframe.contentDocument, iframe);
+      const tree = buildElementTree();
+      rebuildElementMap();
+      dispatch({ type: "SET_ELEMENTS", elements: tree });
+    }, 100);
+  }, [dispatch]);
 
   return (
     <div
@@ -262,15 +308,23 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
         nodeTypes={NODE_TYPES}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onMoveStart={handleMoveStart}
+        onMoveEnd={handleMoveEnd}
+        onNodeDragStart={handleNodeDragStart}
+        onNodeDragStop={handleNodeDragStop}
+        onNodeClick={handleNodeClick}
         fitView
         fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
         minZoom={0.05}
         maxZoom={2}
         panOnScroll
-        zoomOnScroll={false}
+        panOnScrollMode="free" as any
+        zoomOnScroll
         zoomOnPinch
         nodesDraggable
+        nodeDragThreshold={5}
         nodesConnectable={false}
+        selectNodesOnDrag={false}
         proOptions={{ hideAttribution: true }}
         style={{ background: "#080808" }}
       >
