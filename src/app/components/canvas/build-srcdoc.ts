@@ -33,7 +33,7 @@ export function buildSrcDoc(html: string, css: string): string {
 <style>${importRules.join("\n")}</style>
 <style>
 *,*::before,*::after{box-sizing:border-box;}
-body{margin:0;overflow:auto;width:100%;min-height:100%;}
+body{margin:0;overflow:auto;width:100%;min-height:100%;height:fit-content;}
 ${otherRules.join("\n")}
 </style>
 </head>

@@ -122,6 +122,7 @@ const VariantSchema = z.object({
   name: nonEmptyString,
   sourceElementId: z.string().nullable(),
   sourceViewportWidth: z.number().int().min(1),
+  sourceContentHeight: z.number().int().min(0).optional(),
   viewport: ViewportSchema,
   content: VariantContentSchema,
   annotations: z.array(AnnotationSchema),
@@ -352,9 +353,10 @@ export function stateToProjectFile(
       name: v.name,
       sourceElementId: v.sourceElementId || null,
       sourceViewportWidth: v.sourceViewportWidth || 1280,
+      sourceContentHeight: v.sourceContentHeight,
       viewport: {
         width: v.sourceViewportWidth || 560,
-        height: Math.round((v.sourceViewportWidth || 560) * (420 / 560)),
+        height: v.sourceContentHeight || Math.round((v.sourceViewportWidth || 560) * (420 / 560)),
       },
       content: {
         html: v.modifiedHtml || v.html,
@@ -431,6 +433,7 @@ export function projectFileToState(file: DDProjectFile): {
     status: v.status || "draft",
     createdAt: new Date(v.createdAt).getTime(),
     sourceViewportWidth: v.sourceViewportWidth,
+    sourceContentHeight: v.sourceContentHeight,
   }));
 
   const feedbackItems: FeedbackItem[] = file.variants.flatMap((v) =>

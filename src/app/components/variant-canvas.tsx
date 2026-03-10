@@ -60,6 +60,7 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
       status: "draft",
       createdAt: Date.now(),
       sourceViewportWidth: viewportWidth,
+      sourceContentHeight: snapshot.sourceContentHeight,
     };
 
     dispatch({ type: "ADD_VARIANT", variant });
@@ -83,6 +84,7 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
       status: "draft",
       createdAt: Date.now(),
       sourceViewportWidth: viewportWidth,
+      sourceContentHeight: snapshot.sourceContentHeight,
     };
 
     dispatch({ type: "ADD_VARIANT", variant });
@@ -107,6 +109,8 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
       parentId: sourceVariantId,
       status: "draft",
       createdAt: Date.now(),
+      sourceViewportWidth: source.sourceViewportWidth,
+      sourceContentHeight: source.sourceContentHeight,
     };
 
     dispatch({ type: "ADD_VARIANT", variant });
@@ -199,7 +203,11 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
 
     function layoutVariant(variant: VariantData, depth: number, parentNodeId: string) {
       const nodeW = variant.sourceViewportWidth || DEFAULT_VARIANT_W;
-      const nodeH = Math.round(nodeW * (DEFAULT_VARIANT_H / DEFAULT_VARIANT_W));
+      const rawH = variant.sourceContentHeight || Math.round(nodeW * (DEFAULT_VARIANT_H / DEFAULT_VARIANT_W));
+      // Add space for floating chrome bar (34px) + gap (8px), and ensure minimum useful height
+      const FLOATING_HEADER_H = 42; // chrome bar + gap
+      const minContentH = variant.sourceType === "component" ? 200 : DEFAULT_VARIANT_H;
+      const nodeH = Math.max(rawH, minContentH) + FLOATING_HEADER_H;
       const x = VARIANT_COL_OFFSET + depth * (Math.max(nodeW, DEFAULT_VARIANT_W) + VARIANT_GAP_X);
       const y = yOffset;
       yOffset += nodeH + VARIANT_GAP_Y;
@@ -277,24 +285,38 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
   const handleNodeDragStart = useCallback(() => setCanvasInteracting(true), []);
   const handleNodeDragStop = useCallback(() => setCanvasInteracting(false), []);
 
-  // Auto-scan variant DOM into layers/styles when clicking on a variant node
+  // Auto-scan variant/source DOM into layers/styles when clicking on a node
   const handleNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
-    if (node.type !== "variant") return;
-    const variantData = (node.data as VariantNodeData).variant;
+    if (node.type === "variant") {
+      const variantData = (node.data as VariantNodeData).variant;
+      dispatch({ type: "SET_ACTIVE_VARIANT", id: variantData.id });
 
-    dispatch({ type: "SET_ACTIVE_VARIANT", id: variantData.id });
+      // Find the variant's iframe and scan its DOM
+      setTimeout(() => {
+        const variantContainer = document.querySelector(`[data-variant-id="${variantData.id}"]`);
+        const iframe = variantContainer?.querySelector("iframe") as HTMLIFrameElement | null;
+        if (!iframe?.contentDocument?.body) return;
 
-    // Find the variant's iframe and scan its DOM
-    setTimeout(() => {
-      const variantContainer = document.querySelector(`[data-variant-id="${variantData.id}"]`);
-      const iframe = variantContainer?.querySelector("iframe") as HTMLIFrameElement | null;
-      if (!iframe?.contentDocument?.body) return;
+        setInspectionTarget(iframe.contentDocument, iframe);
+        const tree = buildElementTree();
+        rebuildElementMap();
+        dispatch({ type: "SET_ELEMENTS", elements: tree });
+      }, 100);
+    } else if (node.type === "source") {
+      dispatch({ type: "SET_ACTIVE_VARIANT", id: null });
 
-      setInspectionTarget(iframe.contentDocument, iframe);
-      const tree = buildElementTree();
-      rebuildElementMap();
-      dispatch({ type: "SET_ELEMENTS", elements: tree });
-    }, 100);
+      // Find the source node's iframe and scan its DOM
+      setTimeout(() => {
+        const sourceContainer = document.querySelector(`[data-designdead="source-node"]`);
+        const iframe = sourceContainer?.querySelector("iframe[name='designdead-preview']") as HTMLIFrameElement | null;
+        if (!iframe?.contentDocument?.body) return;
+
+        setInspectionTarget(iframe.contentDocument, iframe);
+        const tree = buildElementTree();
+        rebuildElementMap();
+        dispatch({ type: "SET_ELEMENTS", elements: tree });
+      }, 100);
+    }
   }, [dispatch]);
 
   return (

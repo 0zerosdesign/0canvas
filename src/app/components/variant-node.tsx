@@ -53,9 +53,9 @@ const VARIANT_PRESETS = [
 ];
 
 const MIN_W = 280;
-const MIN_H = 240;
+const MIN_H = 160;
 const MAX_W = 1440;
-const MAX_H = 1200;
+const MAX_H = 4000;
 const CHROME_H = 34;
 
 export function VariantNode({ id, data, selected }: NodeProps) {
@@ -69,7 +69,10 @@ export function VariantNode({ id, data, selected }: NodeProps) {
   const [copied, setCopied] = useState(false);
   const [inspecting, setInspectingState] = useState(false);
   const initW = variant.sourceViewportWidth || 560;
-  const initH = Math.round(initW * (420 / 560));
+  const FLOATING_HEADER_H = 42;
+  const rawH = variant.sourceContentHeight || Math.round(initW * (420 / 560));
+  const minH = variant.sourceType === "component" ? 200 : 420;
+  const initH = Math.max(rawH, minH) + FLOATING_HEADER_H;
   const [dims, setDims] = useState({ w: initW, h: initH });
   const [isResizing, setIsResizing] = useState(false);
 
@@ -99,7 +102,7 @@ export function VariantNode({ id, data, selected }: NodeProps) {
 <head>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>${importLines.join("\n")}</style>
-<style>*,*::before,*::after{box-sizing:border-box;}body{margin:0;overflow:auto;width:100%;min-height:100%;}
+<style>*,*::before,*::after{box-sizing:border-box;}body{margin:0;overflow:auto;width:100%;min-height:100%;height:fit-content;}
 ${ruleLines.join("\n")}</style>
 </head>
 <body>${htmlContent}</body>
@@ -194,6 +197,8 @@ ${ruleLines.join("\n")}</style>
   const hasActiveSelection = !!state.selectedElementId && state.selectionSource === "inspect" && state.activeVariantId === variant.id;
   const iframeInteractive = inspecting || hasActiveSelection;
 
+  const borderColor = selected ? "#0070f3" : variant.status === "finalized" ? "#50e3c2" + "40" : "#1a1a1a";
+
   return (
     <div
       data-designdead="variant-node"
@@ -201,17 +206,10 @@ ${ruleLines.join("\n")}</style>
       style={{
         width: "100%",
         height: "100%",
-        background: "#0a0a0a",
-        border: `1px solid ${selected ? "#0070f3" : variant.status === "finalized" ? "#50e3c2" + "40" : "#1a1a1a"}`,
-        borderRadius: 10,
-        overflow: "hidden",
         display: "flex",
         flexDirection: "column",
+        gap: 8,
         fontFamily: "'Geist Sans', 'Inter', system-ui, sans-serif",
-        boxShadow: selected
-          ? "0 0 0 1px #0070f3, 0 4px 20px rgba(0,112,243,0.1)"
-          : "0 4px 20px rgba(0,0,0,0.25)",
-        transition: "border-color 0.15s, box-shadow 0.15s",
       }}
     >
       {/* ── NodeResizer ── */}
@@ -237,7 +235,7 @@ ${ruleLines.join("\n")}</style>
       <Handle type="target" position={Position.Left} style={{ background: "#0070f3", width: 8, height: 8 }} />
       <Handle type="source" position={Position.Right} style={{ background: "#0070f3", width: 8, height: 8 }} />
 
-      {/* ── Chrome bar ── */}
+      {/* ── Floating Chrome bar ── */}
       <div
         style={{
           height: CHROME_H,
@@ -245,10 +243,12 @@ ${ruleLines.join("\n")}</style>
           alignItems: "center",
           justifyContent: "space-between",
           padding: "0 8px",
-          borderBottom: "1px solid #1a1a1a",
           background: "#0a0a0a",
+          border: `1px solid ${borderColor}`,
+          borderRadius: 8,
           flexShrink: 0,
           gap: 4,
+          boxShadow: "0 2px 12px rgba(0,0,0,0.4)",
         }}
       >
         {/* Left: name + status */}
@@ -372,7 +372,17 @@ ${ruleLines.join("\n")}</style>
       </div>
 
       {/* ── Preview ── */}
-      <div style={{ flex: 1, position: "relative", overflow: "hidden", background: "#fff" }}>
+      <div style={{
+        flex: 1,
+        position: "relative",
+        overflow: "hidden",
+        background: "#fff",
+        border: `1px solid ${borderColor}`,
+        borderRadius: 10,
+        boxShadow: selected
+          ? "0 0 0 1px #0070f3, 0 4px 20px rgba(0,112,243,0.1)"
+          : "0 4px 20px rgba(0,0,0,0.25)",
+      }}>
         <iframe
           key={`${variant.id}-${contentHash}`}
           ref={iframeRef}

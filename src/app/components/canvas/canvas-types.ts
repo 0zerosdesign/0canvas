@@ -14,6 +14,7 @@ export type CanvasVariantData = {
   sourceElementId?: string | null;
   sourcePageRoute?: string;
   sourceViewportWidth?: number;
+  sourceContentHeight?: number;
   parentId: string | null;
   status: "draft" | "finalized" | "sent" | "pushed";
   createdAt: number | string;

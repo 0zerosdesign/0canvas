@@ -59,9 +59,9 @@ const VARIANT_PRESETS = [
 ];
 
 const MIN_W = 280;
-const MIN_H = 240;
+const MIN_H = 160;
 const MAX_W = 1440;
-const MAX_H = 1200;
+const MAX_H = 4000;
 
 export function SharedVariantNode({ id, data, selected }: NodeProps) {
   const {
@@ -75,7 +75,10 @@ export function SharedVariantNode({ id, data, selected }: NodeProps) {
   const [showFeedback, setShowFeedback] = useState(false);
   const [showCode, setShowCode] = useState(false);
   const initW = variant.canvasSize?.width || variant.sourceViewportWidth || 560;
-  const initH = variant.canvasSize?.height || Math.round(initW * (420 / 560));
+  const FLOATING_HEADER_H = 42;
+  const rawH = variant.canvasSize?.height || variant.sourceContentHeight || Math.round(initW * (420 / 560));
+  const minH = variant.sourceType === "component" ? 200 : 420;
+  const initH = Math.max(rawH, minH) + FLOATING_HEADER_H;
   const [dims, setDims] = useState({ w: initW, h: initH });
   const [isResizing, setIsResizing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -120,23 +123,18 @@ export function SharedVariantNode({ id, data, selected }: NodeProps) {
   const canPushToMain = status === "finalized" && !!variant.sourceElementId;
   const iframeInteractive = (isInspecting || hasActiveSelection) && !isResizing;
 
+  const borderColor = selected ? "#0070f3" : status === "finalized" ? "#50e3c240" : "#1a1a1a";
+
   return (
     <div
       data-variant-id={variant.id}
       style={{
         width: "100%",
         height: "100%",
-        background: "#0a0a0a",
-        border: `1px solid ${selected ? "#0070f3" : status === "finalized" ? "#50e3c240" : "#1a1a1a"}`,
-        borderRadius: 10,
-        overflow: "hidden",
         display: "flex",
         flexDirection: "column",
+        gap: 8,
         fontFamily: "'Inter', -apple-system, sans-serif",
-        boxShadow: selected
-          ? "0 0 0 1px #0070f3, 0 4px 20px rgba(0,112,243,0.1)"
-          : "0 4px 20px rgba(0,0,0,0.25)",
-        transition: "border-color 0.15s, box-shadow 0.15s",
       }}
     >
       <NodeResizer
@@ -158,11 +156,13 @@ export function SharedVariantNode({ id, data, selected }: NodeProps) {
       <Handle type="target" position={Position.Left} style={{ background: "#0070f3", width: 8, height: 8, border: "2px solid #0a0a0a" }} />
       <Handle type="source" position={Position.Right} style={{ background: "#0070f3", width: 8, height: 8, border: "2px solid #0a0a0a" }} />
 
-      {/* Chrome bar */}
+      {/* Floating Chrome bar */}
       <div style={{
         height: 34, display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "0 8px", borderBottom: "1px solid #1a1a1a", background: "#0a0a0a",
+        padding: "0 8px", background: "#0a0a0a",
+        border: `1px solid ${borderColor}`, borderRadius: 8,
         flexShrink: 0, gap: 4,
+        boxShadow: "0 2px 12px rgba(0,0,0,0.4)",
       }}>
         {/* Left: name + status */}
         <div style={{ display: "flex", alignItems: "center", gap: 5, flex: 1, minWidth: 0 }}>
@@ -285,109 +285,125 @@ export function SharedVariantNode({ id, data, selected }: NodeProps) {
         </div>
       </div>
 
-      {/* Preview */}
+      {/* Content frame */}
       <div style={{
-        flex: 1, position: "relative", overflow: "hidden", background: "#fff",
-        minHeight: showFeedback || showCode ? 120 : undefined,
+        flex: 1,
+        display: "flex",
+        flexDirection: "column" as const,
+        overflow: "hidden",
+        background: "#0a0a0a",
+        border: `1px solid ${borderColor}`,
+        borderRadius: 10,
+        boxShadow: selected
+          ? "0 0 0 1px #0070f3, 0 4px 20px rgba(0,112,243,0.1)"
+          : "0 4px 20px rgba(0,0,0,0.25)",
       }}>
-        <iframe
-          ref={iframeRef}
-          srcDoc={srcDoc}
-          sandbox="allow-same-origin"
-          title={`Variant: ${variant.name}`}
-          style={{
-            width: "100%", height: "100%", border: "none", display: "block",
-            pointerEvents: iframeInteractive ? "auto" : "none",
-          }}
-        />
-        {isInspecting && (
-          <div style={{ position: "absolute", top: 6, left: "50%", transform: "translateX(-50%)", zIndex: 10, pointerEvents: "none" }}>
-            <div style={{
-              display: "flex", alignItems: "center", gap: 4, padding: "3px 8px",
-              borderRadius: 5, background: "#0070f3", color: "#fff", fontSize: 9,
-              boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
-            }}>
-              <Crosshair style={{ width: 10, height: 10 }} />
-              Click to inspect
-            </div>
-          </div>
-        )}
-        {isResizing && (
-          <div style={{
-            position: "absolute", inset: 0, display: "flex", alignItems: "center",
-            justifyContent: "center", zIndex: 20, pointerEvents: "none",
-            background: "rgba(0,0,0,0.15)",
-          }}>
-            <div style={{
-              padding: "6px 12px", borderRadius: 6, background: "#0a0a0a",
-              border: "1px solid #222", boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
-            }}>
-              <span style={{
-                fontSize: 12, fontWeight: 600, color: "#0070f3",
-                fontFamily: "'Geist Mono', 'JetBrains Mono', monospace",
-                fontVariantNumeric: "tabular-nums",
+        {/* Preview */}
+        <div style={{
+          flex: 1, position: "relative", overflow: "hidden", background: "#fff",
+          minHeight: showFeedback || showCode ? 120 : undefined,
+          borderRadius: showFeedback || showCode ? "10px 10px 0 0" : 10,
+        }}>
+          <iframe
+            ref={iframeRef}
+            srcDoc={srcDoc}
+            sandbox="allow-same-origin"
+            title={`Variant: ${variant.name}`}
+            style={{
+              width: "100%", height: "100%", border: "none", display: "block",
+              pointerEvents: iframeInteractive ? "auto" : "none",
+            }}
+          />
+          {isInspecting && (
+            <div style={{ position: "absolute", top: 6, left: "50%", transform: "translateX(-50%)", zIndex: 10, pointerEvents: "none" }}>
+              <div style={{
+                display: "flex", alignItems: "center", gap: 4, padding: "3px 8px",
+                borderRadius: 5, background: "#0070f3", color: "#fff", fontSize: 9,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
               }}>
-                {dims.w} × {dims.h}
-              </span>
+                <Crosshair style={{ width: 10, height: 10 }} />
+                Click to inspect
+              </div>
             </div>
-          </div>
-        )}
-      </div>
-
-      {/* Bottom info */}
-      <div style={{
-        height: 22, borderTop: "1px solid #1a1a1a", display: "flex",
-        alignItems: "center", justifyContent: "space-between", padding: "0 8px",
-        background: "#0a0a0a", flexShrink: 0,
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          {routeLabel && <span style={{ fontSize: 9, color: "#555" }}>{routeLabel}</span>}
-          {variant.sourceElementId && (
-            <span style={{
-              fontSize: 8, color: "#50e3c2", background: "#50e3c215",
-              padding: "0 4px", borderRadius: 2,
+          )}
+          {isResizing && (
+            <div style={{
+              position: "absolute", inset: 0, display: "flex", alignItems: "center",
+              justifyContent: "center", zIndex: 20, pointerEvents: "none",
+              background: "rgba(0,0,0,0.15)",
             }}>
-              component
-            </span>
+              <div style={{
+                padding: "6px 12px", borderRadius: 6, background: "#0a0a0a",
+                border: "1px solid #222", boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+              }}>
+                <span style={{
+                  fontSize: 12, fontWeight: 600, color: "#0070f3",
+                  fontFamily: "'Geist Mono', 'JetBrains Mono', monospace",
+                  fontVariantNumeric: "tabular-nums",
+                }}>
+                  {dims.w} × {dims.h}
+                </span>
+              </div>
+            </div>
           )}
         </div>
-        <span style={{ fontSize: 8, color: "#444" }}>
-          {new Date(variant.createdAt).toLocaleDateString()}
-        </span>
-      </div>
 
-      {/* Expandable feedback */}
-      {showFeedback && feedbackCount > 0 && (
+        {/* Bottom info */}
         <div style={{
-          borderTop: "1px solid #1a1a1a", maxHeight: 180, overflowY: "auto",
-          background: "#0a0a0a",
+          height: 22, borderTop: "1px solid #1a1a1a", display: "flex",
+          alignItems: "center", justifyContent: "space-between", padding: "0 8px",
+          background: "#0a0a0a", flexShrink: 0,
         }}>
-          <SharedFeedbackList
-            feedback={feedbackItems}
-            variantId={variant.id}
-            onResolve={callbacks.onResolveFeedback}
-            onDelete={callbacks.onDeleteFeedback}
-          />
-        </div>
-      )}
-
-      {/* Expandable code */}
-      {showCode && (
-        <div style={{
-          borderTop: "1px solid #1a1a1a", maxHeight: 200, overflowY: "auto",
-          padding: "6px 8px", background: "#111",
-        }}>
-          <div style={{ marginBottom: 4 }}>
-            <span style={{ fontSize: 9, fontWeight: 600, color: "#555", textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>HTML</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            {routeLabel && <span style={{ fontSize: 9, color: "#555" }}>{routeLabel}</span>}
+            {variant.sourceElementId && (
+              <span style={{
+                fontSize: 8, color: "#50e3c2", background: "#50e3c215",
+                padding: "0 4px", borderRadius: 2,
+              }}>
+                component
+              </span>
+            )}
           </div>
-          <pre style={{
-            fontSize: 10, lineHeight: 1.4, color: "#ccc", fontFamily: "monospace",
-            whiteSpace: "pre-wrap", wordBreak: "break-all" as const, margin: 0,
-          }}>
-            {variant.html.slice(0, 2000)}{variant.html.length > 2000 ? "\n..." : ""}
-          </pre>
+          <span style={{ fontSize: 8, color: "#444" }}>
+            {new Date(variant.createdAt).toLocaleDateString()}
+          </span>
         </div>
-      )}
+
+        {/* Expandable feedback */}
+        {showFeedback && feedbackCount > 0 && (
+          <div style={{
+            borderTop: "1px solid #1a1a1a", maxHeight: 180, overflowY: "auto",
+            background: "#0a0a0a",
+          }}>
+            <SharedFeedbackList
+              feedback={feedbackItems}
+              variantId={variant.id}
+              onResolve={callbacks.onResolveFeedback}
+              onDelete={callbacks.onDeleteFeedback}
+            />
+          </div>
+        )}
+
+        {/* Expandable code */}
+        {showCode && (
+          <div style={{
+            borderTop: "1px solid #1a1a1a", maxHeight: 200, overflowY: "auto",
+            padding: "6px 8px", background: "#111",
+            borderRadius: "0 0 10px 10px",
+          }}>
+            <div style={{ marginBottom: 4 }}>
+              <span style={{ fontSize: 9, fontWeight: 600, color: "#555", textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>HTML</span>
+            </div>
+            <pre style={{
+              fontSize: 10, lineHeight: 1.4, color: "#ccc", fontFamily: "monospace",
+              whiteSpace: "pre-wrap", wordBreak: "break-all" as const, margin: 0,
+            }}>
+              {variant.html.slice(0, 2000)}{variant.html.length > 2000 ? "\n..." : ""}
+            </pre>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

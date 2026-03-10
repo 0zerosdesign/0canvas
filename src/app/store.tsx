@@ -148,6 +148,7 @@ export type VariantData = {
   modifiedHtml?: string;
   modifiedCss?: string;
   sourceViewportWidth?: number;
+  sourceContentHeight?: number;
 };
 
 // ── WebSocket / MCP types ──

@@ -257,17 +257,10 @@ export function SourceNode({ id, data, selected }: NodeProps) {
       style={{
         width: "100%",
         height: "100%",
-        background: "#0a0a0a",
-        border: `1px solid ${selected ? "#0070f3" : "#222"}`,
-        borderRadius: 12,
-        overflow: "hidden",
         display: "flex",
         flexDirection: "column",
+        gap: 8,
         fontFamily: "'Geist Sans', 'Inter', system-ui, sans-serif",
-        boxShadow: selected
-          ? "0 0 0 1px #0070f3, 0 8px 32px rgba(0,112,243,0.12)"
-          : "0 4px 24px rgba(0,0,0,0.4)",
-        transition: "border-color 0.15s, box-shadow 0.15s",
       }}
     >
       {/* ── NodeResizer ── */}
@@ -293,18 +286,20 @@ export function SourceNode({ id, data, selected }: NodeProps) {
         onResizeEnd={onResizeEnd}
       />
 
-      {/* ── Viewport Chrome Bar ── */}
+      {/* ── Floating Chrome Bar ── */}
       <div
         style={{
           height: CHROME_HEIGHT,
-          borderBottom: "1px solid #1a1a1a",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           padding: "0 12px",
           background: "#0a0a0a",
+          border: `1px solid ${selected ? "#0070f3" : "#222"}`,
+          borderRadius: 10,
           flexShrink: 0,
           gap: 8,
+          boxShadow: "0 2px 12px rgba(0,0,0,0.4)",
         }}
       >
         {/* Left: traffic dots + status */}
@@ -441,7 +436,21 @@ export function SourceNode({ id, data, selected }: NodeProps) {
       </div>
 
       {/* ── Viewport / iframe ── */}
-      <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+      <div style={{
+        flex: 1,
+        position: "relative",
+        overflow: "hidden",
+        background: "#0a0a0a",
+        border: `1px solid ${selected ? "#0070f3" : "#222"}`,
+        borderRadius: 10,
+        boxShadow: selected
+          ? "0 0 0 1px #0070f3, 0 8px 32px rgba(0,112,243,0.12)"
+          : "0 4px 24px rgba(0,0,0,0.4)",
+        display: "flex",
+        flexDirection: "column" as const,
+      }}>
+        {/* The iframe */}
+        <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
         {/* Loading */}
         {!iframeLoaded && !iframeError && (
           <div
@@ -488,7 +497,6 @@ export function SourceNode({ id, data, selected }: NodeProps) {
           </div>
         )}
 
-        {/* The iframe */}
         <iframe
           ref={iframeRef}
           name="designdead-preview"
@@ -575,37 +583,39 @@ export function SourceNode({ id, data, selected }: NodeProps) {
             </div>
           </div>
         )}
-      </div>
+        </div>
 
-      {/* ── Bottom status bar ── */}
-      <div
-        style={{
-          height: 24,
-          borderTop: "1px solid #1a1a1a",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 12px",
-          background: "#0a0a0a",
-          flexShrink: 0,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <div
-            style={{
-              width: 5,
-              height: 5,
-              borderRadius: "50%",
-              background: iframeLoaded ? "#28c840" : "#555",
-            }}
-          />
-          <span style={{ fontSize: 9, color: "#555" }}>
-            {iframeLoaded ? `${elementCount} elements` : "Loading..."}
+        {/* ── Bottom status bar ── */}
+        <div
+          style={{
+            height: 24,
+            borderTop: "1px solid #1a1a1a",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "0 12px",
+            background: "#0a0a0a",
+            flexShrink: 0,
+            borderRadius: "0 0 10px 10px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div
+              style={{
+                width: 5,
+                height: 5,
+                borderRadius: "50%",
+                background: iframeLoaded ? "#28c840" : "#555",
+              }}
+            />
+            <span style={{ fontSize: 9, color: "#555" }}>
+              {iframeLoaded ? `${elementCount} elements` : "Loading..."}
+            </span>
+          </div>
+          <span style={{ fontSize: 9, color: "#444" }}>
+            {activePreset || "Custom"}
           </span>
         </div>
-        <span style={{ fontSize: 9, color: "#444" }}>
-          {activePreset || "Custom"}
-        </span>
       </div>
 
       <Handle

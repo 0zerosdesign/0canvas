@@ -316,6 +316,7 @@ let highlightOverlay: HTMLDivElement | null = null;
 let selectOverlay: HTMLDivElement | null = null;
 let _selectedEl: Element | null = null;
 let _scrollHandler: (() => void) | null = null;
+let _rafId: number | null = null;
 let _feedbackCallback: (() => void) | null = null;
 let _forkElementCallback: ((elementId: string) => void) | null = null;
 
@@ -376,7 +377,6 @@ function ensureOverlay(type: "hover" | "select"): HTMLDivElement {
         border: 2px solid rgba(0, 112, 243, 0.9);
         background: rgba(0, 112, 243, 0.06);
         border-radius: 2px;
-        transition: all 0.12s ease-out;
         display: none;
       `;
 
@@ -530,6 +530,10 @@ export function highlightElement(
         try { targetDoc.removeEventListener("scroll", _scrollHandler, true); } catch { /* noop */ }
         _scrollHandler = null;
       }
+      if (_rafId) {
+        cancelAnimationFrame(_rafId);
+        _rafId = null;
+      }
     }
     return;
   }
@@ -565,17 +569,39 @@ export function highlightElement(
     if (_scrollHandler) {
       try { targetDoc.removeEventListener("scroll", _scrollHandler, true); } catch { /* noop */ }
     }
+    if (_rafId) {
+      cancelAnimationFrame(_rafId);
+      _rafId = null;
+    }
     _scrollHandler = () => {
-      if (!_selectedEl || !selectOverlay) return;
-      const r = _selectedEl.getBoundingClientRect();
-      selectOverlay.style.top = `${r.top}px`;
-      selectOverlay.style.left = `${r.left}px`;
-      selectOverlay.style.width = `${r.width}px`;
-      selectOverlay.style.height = `${r.height}px`;
-      const sl = selectOverlay.querySelector("[data-dd-role='size-label']") as HTMLElement;
-      if (sl) sl.textContent = `${Math.round(r.width)} \u00d7 ${Math.round(r.height)}`;
+      if (_rafId) return;
+      _rafId = requestAnimationFrame(() => {
+        _rafId = null;
+        if (!_selectedEl || !selectOverlay) return;
+        const r = _selectedEl.getBoundingClientRect();
+        selectOverlay.style.top = `${r.top}px`;
+        selectOverlay.style.left = `${r.left}px`;
+        selectOverlay.style.width = `${r.width}px`;
+        selectOverlay.style.height = `${r.height}px`;
+        const sl = selectOverlay.querySelector("[data-dd-role='size-label']") as HTMLElement;
+        if (sl) sl.textContent = `${Math.round(r.width)} \u00d7 ${Math.round(r.height)}`;
+      });
     };
     targetDoc.addEventListener("scroll", _scrollHandler, true);
+
+    // Also observe window resize in target doc to keep overlay in sync
+    const targetWin = targetDoc.defaultView;
+    if (targetWin) {
+      const resizeHandler = () => {
+        if (!_selectedEl || !selectOverlay) return;
+        const r = _selectedEl.getBoundingClientRect();
+        selectOverlay.style.top = `${r.top}px`;
+        selectOverlay.style.left = `${r.left}px`;
+        selectOverlay.style.width = `${r.width}px`;
+        selectOverlay.style.height = `${r.height}px`;
+      };
+      targetWin.addEventListener("resize", resizeHandler);
+    }
   }
 }
 
@@ -591,6 +617,10 @@ export function cleanup(): void {
   if (_scrollHandler) {
     try { targetDoc.removeEventListener("scroll", _scrollHandler, true); } catch { /* noop */ }
     _scrollHandler = null;
+  }
+  if (_rafId) {
+    cancelAnimationFrame(_rafId);
+    _rafId = null;
   }
   idToElement.clear();
   resetInspectionTarget();
@@ -880,7 +910,9 @@ export function capturePageSnapshot(): Omit<VariantData, "id" | "name" | "parent
   const linkTags = externalLinks.map((href) => `@import url("${href}");`).join("\n");
   const css = linkTags ? linkTags + "\n" + cssRules : cssRules;
 
-  return { html, css, mockData, sourceType: "page" };
+  const contentHeight = body.scrollHeight || body.offsetHeight || 0;
+
+  return { html, css, mockData, sourceType: "page", sourceContentHeight: contentHeight };
 }
 
 /**
@@ -907,7 +939,9 @@ export function captureComponentSnapshot(
   const css = linkTags ? linkTags + "\n" + cssRules : cssRules;
   const selector = getSelector(el);
 
-  return { html, css, mockData, sourceType: "component", sourceSelector: selector };
+  const contentHeight = (el as HTMLElement).offsetHeight || (el as HTMLElement).scrollHeight || 0;
+
+  return { html, css, mockData, sourceType: "component", sourceSelector: selector, sourceContentHeight: contentHeight };
 }
 
 /**
