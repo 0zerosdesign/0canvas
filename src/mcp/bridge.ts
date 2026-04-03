@@ -1,17 +1,17 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "http";
 import { writeFileSync, mkdirSync, readFileSync, existsSync } from "fs";
 import { dirname, resolve as resolvePath } from "path";
-import type { VariantData, FeedbackItem, DDProject } from "../app/store";
-import type { DDProjectFile } from "../app/components/dd-project";
+import type { VariantData, FeedbackItem, OCProject } from "../0canvas/store/store";
+import type { OCProjectFile } from "../0canvas/format/oc-project";
 
 export type BridgeState = {
-  project: DDProject | null;
+  project: OCProject | null;
   variants: VariantData[];
   feedbackItems: FeedbackItem[];
   resolvedIds: Set<string>;
   pushedChanges: { variantId: string; html: string; css?: string; timestamp: number }[];
   listeners: Set<(event: BridgeEvent) => void>;
-  _projectFile: DDProjectFile | null;
+  _projectFile: OCProjectFile | null;
   _pendingFileWrite: { path: string; content: string } | null;
   _workspaceRoot: string | null;
 };
@@ -21,7 +21,7 @@ export type BridgeEvent =
   | { type: "feedback_resolved"; ids: string[] }
   | { type: "variant_updated"; variant: VariantData }
   | { type: "changes_pushed"; variantId: string; html: string; css?: string }
-  | { type: "project_file_updated"; file: DDProjectFile };
+  | { type: "project_file_updated"; file: OCProjectFile };
 
 const state: BridgeState = {
   project: null,
@@ -41,11 +41,11 @@ export function getBridgeState(): BridgeState {
 
 // ── Project file accessors ─────────────────────────────────
 
-export function getProjectFile(): DDProjectFile | null {
+export function getProjectFile(): OCProjectFile | null {
   return state._projectFile;
 }
 
-export function setProjectFile(file: DDProjectFile): void {
+export function setProjectFile(file: OCProjectFile): void {
   state._projectFile = file;
   emit({ type: "project_file_updated", file });
 
@@ -57,7 +57,7 @@ export function setProjectFile(file: DDProjectFile): void {
       writeFileSync(absPath, state._pendingFileWrite.content, "utf-8");
       state._pendingFileWrite = null;
     } catch (err) {
-      console.error("[DesignDead Bridge] Failed to write .dd file:", err);
+      console.error("[ZeroCanvas Bridge] Failed to write .0c file:", err);
     }
   }
 }
@@ -185,9 +185,9 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse) {
     return;
   }
 
-  // ── .dd Project File endpoints ──
+  // ── .0c Project File endpoints ──
 
-  if (path === "/api/dd-project" && req.method === "POST") {
+  if (path === "/api/oc-project" && req.method === "POST") {
     const body = JSON.parse(await readBody(req));
     state._projectFile = body;
     emit({ type: "project_file_updated", file: body });
@@ -195,7 +195,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse) {
     return;
   }
 
-  if (path === "/api/dd-project" && req.method === "GET") {
+  if (path === "/api/oc-project" && req.method === "GET") {
     if (!state._projectFile) {
       jsonResponse(res, { error: "No project file" }, 404);
     } else {
@@ -204,9 +204,9 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse) {
     return;
   }
 
-  if (path === "/api/dd-project/write" && req.method === "POST") {
+  if (path === "/api/oc-project/write" && req.method === "POST") {
     const body = JSON.parse(await readBody(req));
-    const filePath = body.filePath || "design/project.dd";
+    const filePath = body.filePath || "design/project.0c";
     const content = body.content || JSON.stringify(state._projectFile, null, 2);
 
     if (!state._workspaceRoot) {
@@ -225,8 +225,8 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse) {
     return;
   }
 
-  if (path === "/api/dd-project/read" && req.method === "GET") {
-    const filePath = url.searchParams.get("path") || "design/project.dd";
+  if (path === "/api/oc-project/read" && req.method === "GET") {
+    const filePath = url.searchParams.get("path") || "design/project.0c";
 
     if (!state._workspaceRoot) {
       jsonResponse(res, { error: "Workspace root not set" }, 400);
@@ -268,16 +268,16 @@ export function startBridge(port: number): Promise<number> {
     server.listen(port, "127.0.0.1", () => {
       const addr = server.address();
       const actualPort = typeof addr === "object" && addr ? addr.port : port;
-      console.error(`[DesignDead Bridge] HTTP server on http://127.0.0.1:${actualPort}`);
+      console.error(`[ZeroCanvas Bridge] HTTP server on http://127.0.0.1:${actualPort}`);
       resolve(actualPort);
     });
     server.on("error", (err: NodeJS.ErrnoException) => {
-      if (err.code === "EADDRINUSE") {
+      if (err.code === "EAOCRINUSE") {
         const retryServer = createServer(handleRequest);
         retryServer.listen(0, "127.0.0.1", () => {
           const addr = retryServer.address();
           const actualPort = typeof addr === "object" && addr ? addr.port : 0;
-          console.error(`[DesignDead Bridge] Port ${port} in use, using ${actualPort}`);
+          console.error(`[ZeroCanvas Bridge] Port ${port} in use, using ${actualPort}`);
           resolve(actualPort);
         });
       } else {

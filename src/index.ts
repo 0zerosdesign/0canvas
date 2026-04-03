@@ -1,15 +1,15 @@
-// DesignDead — Visual feedback engine for AI-powered dev
+// ZeroCanvas — Visual feedback engine for AI-powered dev
 //
 // Usage:
-//   import { DesignDead } from "designdead";
-//   <DesignDead />
+//   import { ZeroCanvas } from "0canvas";
+//   <ZeroCanvas />
 
 // Main component
-export { DesignDead } from "./app/components/designdead-engine";
-export type { DesignDeadProps } from "./app/components/designdead-engine";
+export { ZeroCanvas } from "./0canvas/engine/0canvas-engine";
+export type { ZeroCanvasProps } from "./0canvas/engine/0canvas-engine";
 
 // Default export for convenience
-export { DesignDead as default } from "./app/components/designdead-engine";
+export { ZeroCanvas as default } from "./0canvas/engine/0canvas-engine";
 
 // DOM Inspector utilities (for building custom UIs)
 export {
@@ -29,50 +29,49 @@ export {
   captureComponentSnapshot,
   pushVariantToMain,
   getElementOuterHTML,
-} from "./app/components/dom-inspector";
+} from "./0canvas/inspector/dom-inspector";
 
 // Runtime CSS injection (for advanced consumers)
-export { injectStyles, removeStyles } from "./app/components/designdead-styles";
+export { injectStyles, removeStyles } from "./0canvas/engine/0canvas-styles";
 
 // Store types (for TypeScript consumers)
 export type {
   ElementNode,
-  StyleChange,
   FeedbackItem,
   FeedbackIntent,
   FeedbackSeverity,
   VariantData,
-  DDProject,
-} from "./app/store";
+  OCProject,
+} from "./0canvas/store/store";
 
-// .dd format — design-as-code variant format
+// .0c format — design-as-code variant format
 export {
-  DD_FORMAT_VERSION,
+  OC_FORMAT_VERSION,
   DEFAULT_BREAKPOINTS,
-  createDDDocument,
+  createOCDocument,
   findNodeById,
   updateNodeById,
   deleteNodeById,
   insertNode,
-  countDDNodes,
-} from "./app/components/dd-format";
+  countOCNodes,
+} from "./0canvas/format/oc-format";
 export type {
-  DDDocument,
-  DDNode,
-  DDStyles,
-  DDVariable,
-  DDBreakpoints,
-  DDBreakpoint,
-  DDResponsive,
-} from "./app/components/dd-format";
-export { htmlToDDDocument, ddDocumentToHtml } from "./app/components/dd-parser";
+  OCDocument,
+  OCNode,
+  OCStyles,
+  OCVariable,
+  OCBreakpoints,
+  OCBreakpoint,
+  OCResponsive,
+} from "./0canvas/format/oc-format";
+export { htmlToOCDocument, ocDocumentToHtml } from "./0canvas/format/oc-parser";
 
-// .dd project file — whole-project format
+// .0c project file — whole-project format
 export {
-  DD_PROJECT_SCHEMA_VERSION,
-  DDProjectFileSchema,
+  OC_PROJECT_SCHEMA_VERSION,
+  OCProjectFileSchema,
   DEFAULT_PROJECT_BREAKPOINTS,
-  validateDDProjectFile,
+  validateOCProjectFile,
   migrateProjectFile,
   computeProjectHash,
   createEmptyProjectFile,
@@ -80,24 +79,24 @@ export {
   projectFileToState,
   serializeProjectFile,
   parseProjectFile,
-} from "./app/components/dd-project";
+} from "./0canvas/format/oc-project";
 export type {
-  DDProjectFile,
-  DDProjectMeta,
-  DDWorkspaceMeta,
-  DDBreakpointsConfig,
-  DDPage,
-  DDVariant,
-  DDAnnotation,
-  DDFeedback,
-  DDCheckpoint,
-  DDIntegrity,
-  DDFileMapEntry,
-  DDLayerNode,
-  DDValidationResult,
-} from "./app/components/dd-project";
+  OCProjectFile,
+  OCProjectMeta,
+  OCWorkspaceMeta,
+  OCBreakpointsConfig,
+  OCPage,
+  OCVariant,
+  OCAnnotation,
+  OCFeedback,
+  OCCheckpoint,
+  OCIntegrity,
+  OCFileMapEntry,
+  OCLayerNode,
+  OCValidationResult,
+} from "./0canvas/format/oc-project";
 
-// .dd project store — IndexedDB persistence + import/export
+// .0c project store — IndexedDB persistence + import/export
 export {
   saveProjectFile,
   loadProjectFile,
@@ -109,5 +108,5 @@ export {
   buildCurrentProjectFile,
   pushProjectToIDE,
   pullProjectFromIDE,
-} from "./app/components/dd-project-store";
-export type { DDSyncMeta } from "./app/components/dd-project-store";
+} from "./0canvas/format/oc-project-store";
+export type { OCSyncMeta } from "./0canvas/format/oc-project-store";

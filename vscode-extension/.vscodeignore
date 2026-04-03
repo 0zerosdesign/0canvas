@@ -1,8 +1,0 @@
-.vscode/**
-src/**
-node_modules/**
-tsconfig.json
-tsup.config.ts
-vite.webview.config.ts
-pnpm-lock.yaml
-.gitignore

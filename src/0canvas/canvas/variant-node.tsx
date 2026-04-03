@@ -1,0 +1,450 @@
+// ──────────────────────────────────────────────────────────
+// Variant Node — Resizable variant card with breakpoint presets
+// ──────────────────────────────────────────────────────────
+
+import React, { useRef, useState, useCallback, useEffect } from "react";
+import {
+  Handle,
+  Position,
+  NodeResizer,
+  useReactFlow,
+  type NodeProps,
+} from "@xyflow/react";
+import {
+  GitFork,
+  Check,
+  Send,
+  Trash2,
+  CheckCircle2,
+  Copy,
+  ArrowUpToLine,
+  Crosshair,
+  Monitor,
+  Laptop,
+  Tablet,
+  Smartphone,
+} from "lucide-react";
+import { useWorkspace, VariantData } from "../store/store";
+import { copyToClipboard } from "../utils/clipboard";
+import {
+  setInspectionTarget,
+  rebuildElementMap,
+  buildElementTree,
+  startInspect,
+  stopInspect,
+  isInspecting,
+  highlightElement,
+  onFeedbackRequest,
+} from "../inspector/dom-inspector";
+
+export type VariantNodeData = {
+  variant: VariantData;
+  onFork: (variantId: string) => void;
+  onDelete: (variantId: string) => void;
+  onFinalize: (variantId: string) => void;
+  onSendToAgent: (variantId: string) => void;
+  onPushToMain: (variantId: string) => void;
+};
+
+const VARIANT_PRESETS = [
+  { label: "Wide", width: 768, icon: Laptop },
+  { label: "Tablet", width: 560, icon: Tablet },
+  { label: "Mobile", width: 375, icon: Smartphone },
+];
+
+const MIN_W = 280;
+const MIN_H = 160;
+const MAX_W = 1440;
+const MAX_H = 4000;
+const CHROME_H = 34;
+
+export function VariantNode({ id, data, selected }: NodeProps) {
+  const { variant, onFork, onDelete, onFinalize, onSendToAgent, onPushToMain } = data as VariantNodeData;
+  const { state, dispatch } = useWorkspace();
+  const { updateNode } = useReactFlow();
+
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(variant.name);
+  const [copied, setCopied] = useState(false);
+  const [inspecting, setInspectingState] = useState(false);
+  const initW = variant.sourceViewportWidth || 560;
+  const FLOATING_HEADER_H = 42;
+  const rawH = variant.sourceContentHeight || Math.round(initW * (420 / 560));
+  const minH = variant.sourceType === "component" ? 200 : 420;
+  const initH = Math.max(rawH, minH) + FLOATING_HEADER_H;
+  const [dims, setDims] = useState({ w: initW, h: initH });
+  const [isResizing, setIsResizing] = useState(false);
+
+  const htmlContent = variant.modifiedHtml || variant.html;
+  const cssContent = variant.modifiedCss || variant.css;
+
+  // Split @import rules (must be first in <style>) from regular CSS rules
+  // Also filter out ZeroCanvas internal and ReactFlow styles
+  const cssLines = (cssContent || "").split("\n");
+  const importLines: string[] = [];
+  const ruleLines: string[] = [];
+  for (const line of cssLines) {
+    if (line.startsWith("@import ")) {
+      importLines.push(line);
+    } else if (
+      !line.includes("[data-0canvas") &&
+      !line.includes(".react-flow") &&
+      !line.includes("--xy-") &&
+      !line.includes("--oc-")
+    ) {
+      ruleLines.push(line);
+    }
+  }
+
+  const srcdoc = `<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>${importLines.join("\n")}</style>
+<style>*,*::before,*::after{box-sizing:border-box;}body{margin:0;overflow:auto;width:100%;min-height:100%;height:fit-content;}
+${ruleLines.join("\n")}</style>
+</head>
+<body>${htmlContent}</body>
+</html>`;
+
+  const contentHash = (htmlContent + (cssContent || "")).length;
+  const isActiveVariant = state.activeVariantId === variant.id;
+
+  // Auto-scan this variant's DOM into layers/styles when it becomes the active variant
+  useEffect(() => {
+    if (!isActiveVariant) return;
+    const iframe = iframeRef.current;
+    if (!iframe?.contentDocument?.body) return;
+
+    setInspectionTarget(iframe.contentDocument, iframe);
+    const tree = buildElementTree();
+    rebuildElementMap();
+    dispatch({ type: "SET_ELEMENTS", elements: tree });
+  }, [isActiveVariant, dispatch, contentHash]);
+
+  const handleRename = () => {
+    if (name.trim() && name !== variant.name) {
+      dispatch({ type: "UPDATE_VARIANT", id: variant.id, updates: { name: name.trim() } });
+    }
+    setEditing(false);
+  };
+
+  const handleCopyHtml = useCallback(() => {
+    copyToClipboard(htmlContent);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }, [htmlContent]);
+
+  const toggleVariantInspect = useCallback(() => {
+    if (inspecting) {
+      stopInspect();
+      setInspectingState(false);
+      return;
+    }
+
+    const iframe = iframeRef.current;
+    if (!iframe?.contentDocument) return;
+
+    setInspectionTarget(iframe.contentDocument, iframe);
+    rebuildElementMap();
+    dispatch({ type: "SET_ACTIVE_VARIANT", id: variant.id });
+
+    onFeedbackRequest(() => {
+      dispatch({ type: "SET_FEEDBACK_PANEL_OPEN", open: true });
+    });
+
+    startInspect((elId, el) => {
+      dispatch({ type: "SELECT_ELEMENT", id: elId, source: "inspect" });
+      const doc = iframe.contentDocument || document;
+      const win = doc.defaultView || window;
+      const computed = win.getComputedStyle(el);
+      const styles: Record<string, string> = {};
+      const props = [
+        "color", "backgroundColor", "fontSize", "fontFamily", "fontWeight",
+        "lineHeight", "padding", "margin", "width", "height", "display",
+        "flexDirection", "alignItems", "justifyContent", "gap", "position",
+        "borderRadius", "border", "boxShadow", "opacity", "transform",
+      ];
+      for (const prop of props) {
+        const cssProp = prop.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
+        const val = computed.getPropertyValue(cssProp);
+        if (val && val !== "none" && val !== "normal" && val !== "auto") styles[prop] = val;
+      }
+      dispatch({ type: "SET_ELEMENT_STYLES", id: elId, styles });
+      stopInspect();
+      setInspectingState(false);
+    });
+    setInspectingState(true);
+  }, [inspecting, variant.id, dispatch]);
+
+  const applyPreset = useCallback((preset: typeof VARIANT_PRESETS[number]) => {
+    setDims((d) => ({ ...d, w: preset.width }));
+    updateNode(id, { style: { width: preset.width, height: dims.h } });
+  }, [id, dims.h, updateNode]);
+
+  const statusColor =
+    variant.status === "pushed" ? "var(--blue-600)" :
+    variant.status === "finalized" ? "var(--green-500)" :
+    variant.status === "sent" ? "var(--purple-500)" : "var(--grey-700)";
+
+  const statusLabel =
+    variant.status === "pushed" ? "Pushed" :
+    variant.status === "finalized" ? "Finalized" :
+    variant.status === "sent" ? "Sent" : "Draft";
+
+  const canPushToMain = variant.status === "finalized" && !!variant.sourceElementId;
+  const hasActiveSelection = !!state.selectedElementId && state.selectionSource === "inspect" && state.activeVariantId === variant.id;
+  const iframeInteractive = inspecting || hasActiveSelection;
+
+  const borderColor = selected ? "var(--blue-600)" : variant.status === "finalized" ? "var(--green-500)" : undefined;
+
+  return (
+    <div
+      data-0canvas="variant-node"
+      data-variant-id={variant.id}
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+      }}
+    >
+      {/* ── NodeResizer ── */}
+      <NodeResizer
+        minWidth={MIN_W}
+        minHeight={MIN_H}
+        maxWidth={MAX_W}
+        maxHeight={MAX_H}
+        isVisible={selected || false}
+        lineStyle={{ borderWidth: 1, borderColor: "var(--blue-600)" }}
+        handleStyle={{
+          width: 7,
+          height: 7,
+          borderRadius: "50%",
+          background: "var(--blue-600)",
+          border: "2px solid var(--grey-900)",
+        }}
+        onResizeStart={() => setIsResizing(true)}
+        onResize={(_, p) => setDims({ w: Math.round(p.width), h: Math.round(p.height) })}
+        onResizeEnd={() => setIsResizing(false)}
+      />
+
+      <Handle type="target" position={Position.Left} style={{ background: "var(--blue-600)", width: 8, height: 8 }} />
+      <Handle type="source" position={Position.Right} style={{ background: "var(--blue-600)", width: 8, height: 8 }} />
+
+      {/* ── Floating Chrome bar ── */}
+      <div
+        className="oc-variant-header"
+        style={{
+          height: CHROME_H,
+          ...(borderColor ? { borderColor } : {}),
+        }}
+      >
+        {/* Left: name + status */}
+        <div style={{ display: "flex", alignItems: "center", gap: 5, flex: 1, minWidth: 0 }}>
+          {editing ? (
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onBlur={handleRename}
+              onKeyDown={(e) => e.key === "Enter" && handleRename()}
+              autoFocus
+              style={{
+                flex: 1,
+                padding: "2px 6px",
+                background: "var(--grey-900)",
+                border: "1px solid var(--grey-700)",
+                borderRadius: 4,
+                color: "var(--grey-200)",
+                fontSize: 10,
+                fontFamily: "inherit",
+                outline: "none",
+              }}
+            />
+          ) : (
+            <span
+              className="oc-variant-name"
+              onDoubleClick={() => setEditing(true)}
+              style={{ fontSize: 10, cursor: "text" }}
+              title="Double-click to rename"
+            >
+              {variant.name}
+            </span>
+          )}
+          <span
+            className="oc-variant-status"
+            style={{
+              padding: "1px 5px",
+              borderRadius: 4,
+              background: `color-mix(in srgb, ${statusColor} 10%, transparent)`,
+              color: statusColor,
+              fontSize: 8,
+              fontWeight: 500,
+              width: "auto",
+              height: "auto",
+            }}
+          >
+            {statusLabel}
+          </span>
+        </div>
+
+        {/* Center: breakpoint presets + dims */}
+        <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+          {VARIANT_PRESETS.map((p) => {
+            const Icon = p.icon;
+            const isActive = Math.abs(dims.w - p.width) < 20;
+            return (
+              <button
+                key={p.label}
+                className={`oc-source-preset ${isActive ? "is-active" : ""}`}
+                onClick={(e) => { e.stopPropagation(); applyPreset(p); }}
+                title={`${p.label} (${p.width}px)`}
+                style={{ width: 22, height: 22, padding: 0 }}
+              >
+                <Icon style={{ width: 11, height: 11 }} />
+              </button>
+            );
+          })}
+          <span
+            style={{
+              fontSize: 9,
+              color: isResizing ? "var(--blue-600)" : "var(--grey-600)",
+              fontFamily: "var(--font-mono)",
+              fontVariantNumeric: "tabular-nums",
+              padding: "1px 4px",
+              background: isResizing ? "color-mix(in srgb, var(--blue-600) 10%, transparent)" : "transparent",
+              borderRadius: 3,
+              transition: "all 0.15s",
+            }}
+          >
+            {dims.w}&times;{dims.h}
+          </span>
+        </div>
+
+        {/* Right: actions */}
+        <div className="oc-variant-actions">
+          <VBtn onClick={toggleVariantInspect} active={inspecting} title="Inspect">
+            <Crosshair style={{ width: 10, height: 10 }} />
+          </VBtn>
+          <VBtn onClick={() => onFork(variant.id)} title="Fork">
+            <GitFork style={{ width: 10, height: 10 }} />
+          </VBtn>
+          <VBtn onClick={handleCopyHtml} title="Copy HTML">
+            {copied ? <Check style={{ width: 10, height: 10, color: "var(--green-500)" }} /> : <Copy style={{ width: 10, height: 10 }} />}
+          </VBtn>
+          {variant.status === "draft" && (
+            <VBtn onClick={() => onFinalize(variant.id)} accent title="Finalize">
+              <CheckCircle2 style={{ width: 10, height: 10 }} />
+            </VBtn>
+          )}
+          {variant.status === "finalized" && (
+            <VBtn onClick={() => onSendToAgent(variant.id)} accent title="Send to Agent">
+              <Send style={{ width: 10, height: 10 }} />
+            </VBtn>
+          )}
+          {canPushToMain && (
+            <VBtn onClick={() => onPushToMain(variant.id)} title="Push to Main">
+              <ArrowUpToLine style={{ width: 10, height: 10, color: "var(--blue-600)" }} />
+            </VBtn>
+          )}
+          <VBtn onClick={() => onDelete(variant.id)} danger title="Delete">
+            <Trash2 style={{ width: 10, height: 10 }} />
+          </VBtn>
+        </div>
+      </div>
+
+      {/* ── Preview ── */}
+      <div
+        className={`oc-variant-card ${selected ? "is-selected" : ""}`}
+        style={{
+          flex: 1,
+          position: "relative",
+          overflow: "hidden",
+          background: "#fff",
+          ...(borderColor ? { borderColor } : {}),
+          boxShadow: selected
+            ? "0 0 0 1px var(--blue-600), 0 4px 20px rgba(37,99,235,0.1)"
+            : "0 4px 20px rgba(0,0,0,0.25)",
+        }}
+      >
+        <iframe
+          key={`${variant.id}-${contentHash}`}
+          ref={iframeRef}
+          srcDoc={srcdoc}
+          sandbox="allow-same-origin"
+          title={`Variant: ${variant.name}`}
+          style={{
+            width: "100%",
+            height: "100%",
+            border: "none",
+            display: "block",
+            pointerEvents: iframeInteractive && !isResizing ? "auto" : "none",
+          }}
+        />
+        {inspecting && (
+          <div style={{ position: "absolute", top: 6, left: "50%", transform: "translateX(-50%)", zIndex: 10, pointerEvents: "none" }}>
+            <div style={{
+              display: "flex", alignItems: "center", gap: 4, padding: "3px 8px",
+              borderRadius: 5, background: "var(--blue-600)", color: "#fff", fontSize: 9,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+            }}>
+              <Crosshair style={{ width: 10, height: 10 }} />
+              Click to inspect
+            </div>
+          </div>
+        )}
+        {isResizing && (
+          <div style={{
+            position: "absolute", inset: 0, display: "flex", alignItems: "center",
+            justifyContent: "center", zIndex: 20, pointerEvents: "none",
+            background: "rgba(0,0,0,0.15)",
+          }}>
+            <div style={{
+              padding: "6px 12px", borderRadius: 6, background: "var(--grey-900)",
+              border: "1px solid var(--grey-800)", boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+            }}>
+              <span style={{
+                fontSize: 12, fontWeight: 600, color: "var(--blue-600)",
+                fontFamily: "var(--font-mono)",
+                fontVariantNumeric: "tabular-nums",
+              }}>
+                {dims.w} &times; {dims.h}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function VBtn({ children, onClick, active, accent, danger, title }: {
+  children: React.ReactNode;
+  onClick: () => void;
+  active?: boolean;
+  accent?: boolean;
+  danger?: boolean;
+  title?: string;
+}) {
+  const cls = [
+    "oc-variant-action-btn",
+    active ? "is-active" : "",
+  ].filter(Boolean).join(" ");
+
+  return (
+    <button
+      className={cls}
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      title={title}
+      style={{
+        ...(active ? { background: "var(--blue-600)", color: "#fff", border: "1px solid var(--blue-600)" } : {}),
+        ...(danger && !active ? { color: "var(--red-500)" } : {}),
+        ...(accent && !active ? { color: "var(--green-500)" } : {}),
+      }}
+    >
+      {children}
+    </button>
+  );
+}
