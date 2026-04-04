@@ -6,7 +6,6 @@ import React, { useCallback, useMemo, useRef, useEffect, useState } from "react"
 import {
   ReactFlow,
   ReactFlowProvider,
-  MiniMap,
   Controls,
   Background,
   BackgroundVariant,
@@ -354,11 +353,6 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
         <Controls
           showInteractive={false}
           className="oc-vc-controls"
-        />
-        <MiniMap
-          nodeColor={(node) => node.type === "source" ? "var(--color--base--primary)" : "var(--color--surface--2)"}
-          maskColor="rgba(0,0,0,0.7)"
-          className="oc-vc-minimap"
         />
       </ReactFlow>
     </div>

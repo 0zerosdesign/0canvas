@@ -710,27 +710,6 @@ ${S} .oc-toolbar-conn-dot {
   width: 5px; height: 5px; border-radius: 50%;
   background: var(--color--status--success);
 }
-${S} .oc-toolbar-cmdk {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 4px 10px; border-radius: 6px;
-  border: 1px solid var(--color--border--on-surface-0); background: transparent;
-  cursor: pointer; color: var(--color--text--muted);
-  font-size: 12px; transition: all 0.15s ease;
-}
-${S} .oc-toolbar-cmdk:hover { border-color: var(--color--border--on-surface-1); }
-${S} .oc-toolbar-cmdk-key { font-size: 11px; font-weight: 500; }
-${S} .oc-toolbar-route-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 4px 10px; border-radius: 6px; font-size: 12px;
-  background: var(--color--surface--0);
-  border: 1px solid var(--color--border--on-surface-0); color: var(--color--text--muted);
-  cursor: pointer; transition: all 0.15s ease;
-}
-${S} .oc-toolbar-route-btn:hover { border-color: var(--color--border--on-surface-1); }
-${S} .oc-toolbar-route-text {
-  max-width: 100px; overflow: hidden;
-  text-overflow: ellipsis; white-space: nowrap;
-}
 ${S} .oc-toolbar-dropdown {
   position: absolute; top: 100%; left: 0; margin-top: 6px;
   background: var(--color--surface--floor); border: 1px solid var(--color--border--on-surface-0);
@@ -759,19 +738,6 @@ ${S} .oc-toolbar-dropdown-list { max-height: 180px; overflow-y: auto; }
 ${S} .oc-toolbar-dropdown-list.is-tall { max-height: 200px; }
 ${S} .oc-toolbar-dropdown-empty {
   padding: 16px; text-align: center; color: var(--color--text--disabled); font-size: 11px;
-}
-${S} .oc-toolbar-route-item {
-  display: block; width: 100%; padding: 8px 14px;
-  background: transparent; border: none;
-  border-left: 2px solid transparent;
-  color: var(--color--text--muted); font-size: 12px;
-  text-align: left; cursor: pointer;
-  font-family: var(--font-mono); transition: all 0.1s ease;
-}
-${S} .oc-toolbar-route-item:hover { background: rgba(255,255,255,0.03); color: var(--color--text--on-surface); }
-${S} .oc-toolbar-route-item.is-active {
-  background: rgba(37,99,235,0.07);
-  border-left-color: var(--color--outline--on-background); color: var(--color--text--primary);
 }
 ${S} .oc-toolbar-project-trigger {
   display: flex; align-items: center; gap: 6px;
@@ -1235,179 +1201,6 @@ ${S} .oc-agent-log-summary.is-received { color: var(--color--status--success); }
 ${S} .oc-agent-log-summary.is-default { color: var(--color--text--muted); }
 ${S} .oc-agent-log-method { font-size: 9px; color: var(--color--text--disabled); }
 
-/* ── Element Chat ──────────────────────────────────────────── */
-${S} .oc-chat-panel {
-  position: absolute; z-index: 40;
-  width: 320px; border-radius: 12px;
-  border: 1px solid var(--color--border--on-surface-0); background: var(--color--surface--floor);
-  box-shadow: var(--shadow-xl); overflow: hidden;
-  animation: oc-slide-up 0.2s ease;
-}
-@keyframes oc-slide-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-${S} .oc-chat-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 14px; border-bottom: 1px solid var(--color--border--on-surface-0);
-}
-${S} .oc-chat-intent-btn {
-  padding: 4px 10px; border-radius: 6px; font-size: 11px;
-  background: transparent; border: 1px solid var(--color--border--on-surface-0);
-  color: var(--color--text--on-surface-variant); cursor: pointer; transition: all 0.15s ease;
-}
-${S} .oc-chat-intent-btn:hover { border-color: var(--color--border--on-surface-1); color: var(--color--text--on-surface); }
-${S} .oc-chat-intent-btn.is-active { border-color: var(--color--outline--on-background); color: var(--color--text--primary-light); background: rgba(37,99,235,0.1); }
-${S} .oc-chat-textarea {
-  width: 100%; min-height: 60px; padding: 10px 14px;
-  background: transparent; border: none; color: var(--color--text--on-surface);
-  font-size: 13px; font-family: var(--font-sans); resize: none; outline: none;
-}
-${S} .oc-chat-textarea::placeholder { color: var(--color--text--disabled); }
-${S} .oc-chat-submit {
-  padding: 6px 14px; border-radius: 6px;
-  background: var(--color--base--primary); color: var(--color--text--on-primary);
-  font-size: 12px; font-weight: 500; border: none; cursor: pointer;
-  transition: background 0.15s ease;
-}
-${S} .oc-chat-submit:hover { background: var(--color--base--primary-hover); }
-${S} .oc-chat-submit:disabled { background: var(--color--surface--1); color: var(--color--text--disabled); cursor: default; }
-${S} .oc-chat-submit:disabled:hover { background: var(--color--surface--1); }
-${S} .oc-chat-intent-btn.is-active.intent-fix { border-color: var(--color--status--critical); color: var(--color--text--critical-light); background: rgba(239,68,68,0.1); }
-${S} .oc-chat-intent-btn.is-active.intent-change { border-color: var(--color--status--warning); color: var(--yellow-400); background: rgba(245,158,11,0.1); }
-${S} .oc-chat-intent-btn.is-active.intent-question { border-color: var(--color--outline--on-background); color: var(--color--text--primary-light); background: rgba(37,99,235,0.1); }
-${S} .oc-chat-intent-btn.is-active.intent-approve { border-color: var(--color--status--success); color: var(--green-400); background: rgba(16,185,129,0.1); }
-${S} .oc-chat-severity-btn {
-  padding: 3px 10px; border-radius: 6px; font-size: 11px;
-  background: transparent; border: 1px solid var(--color--border--on-surface-0);
-  color: var(--color--text--muted); cursor: pointer; transition: all 0.15s ease;
-  font-family: inherit;
-}
-${S} .oc-chat-severity-btn:hover { border-color: var(--color--border--on-surface-1); color: var(--color--text--on-surface); }
-${S} .oc-chat-severity-btn.is-active.severity-blocking { border-color: var(--color--status--critical); color: var(--color--text--critical-light); background: rgba(239,68,68,0.08); }
-${S} .oc-chat-severity-btn.is-active.severity-important { border-color: var(--color--status--warning); color: var(--yellow-400); background: rgba(245,158,11,0.08); }
-${S} .oc-chat-severity-btn.is-active.severity-suggestion { border-color: var(--color--outline--on-background); color: var(--color--text--primary-light); background: rgba(37,99,235,0.08); }
-${S} .oc-chat-context {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 3px 8px; border-radius: 4px;
-  background: var(--color--surface--1); border: 1px solid var(--color--border--on-surface-0);
-  font-size: 10px; color: var(--color--text--muted);
-  font-family: var(--font-mono);
-}
-${S} .oc-chat-context-tag { color: var(--color--text--primary); }
-${S} .oc-chat-context-class { color: var(--color--text--disabled); }
-${S} .oc-chat-context-variant { color: var(--color--text--info); margin-left: 4px; }
-${S} .oc-chat-badge {
-  background: var(--color--base--primary); color: var(--color--text--on-primary);
-  border-radius: 10px; padding: 1px 7px;
-  font-size: 10px; font-weight: 600;
-}
-${S} .oc-chat-footer {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 14px 12px;
-}
-${S} .oc-chat-hint { font-size: 10px; color: var(--color--text--hint); }
-${S} .oc-chat-row { display: flex; gap: 4px; padding: 8px 14px 4px; }
-${S} .oc-chat-row-severity { display: flex; gap: 4px; padding: 4px 14px 8px; }
-${S} .oc-chat-body { padding: 0 14px 10px; }
-${S} .oc-chat-context-row { padding: 8px 14px 4px; }
-${S} .oc-chat-header-left { display: flex; align-items: center; gap: 8px; }
-${S} .oc-chat-header-title { color: var(--color--text--on-surface); font-size: 12px; font-weight: 500; }
-${S} .oc-chat-header-icon { width: 14px; height: 14px; color: var(--color--text--primary); }
-
-/* ── Waitlist / Feedback Queue ─────────────────────────────── */
-${S} .oc-waitlist {
-  position: absolute; bottom: 0; left: 0; right: 0; z-index: 50;
-  font-family: 'Geist Sans', 'Inter', system-ui, sans-serif;
-}
-${S} .oc-waitlist-inner {
-  background: var(--color--surface--floor); border-top: 1px solid var(--color--border--on-surface-0);
-  transition: max-height 0.2s ease; overflow: hidden;
-  display: flex; flex-direction: column;
-}
-${S} .oc-waitlist-inner.is-collapsed { max-height: 36px; }
-${S} .oc-waitlist-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 12px; height: 36px; flex-shrink: 0; cursor: pointer;
-}
-${S} .oc-waitlist-header.is-expanded { border-bottom: 1px solid var(--color--border--on-surface-0); }
-${S} .oc-waitlist-header-left { display: flex; align-items: center; gap: 8px; }
-${S} .oc-waitlist-title { font-size: 11px; color: var(--color--text--on-surface); font-weight: 500; }
-${S} .oc-waitlist-badge {
-  background: var(--color--base--primary); color: #fff; border-radius: 8px;
-  padding: 0 6px; font-size: 9px; font-weight: 600;
-}
-${S} .oc-waitlist-header-right { display: flex; align-items: center; gap: 6px; }
-${S} .oc-waitlist-btn {
-  display: flex; align-items: center; gap: 4px;
-  padding: 3px 8px; border-radius: 5px;
-  border: 1px solid var(--color--border--on-surface-0); background: var(--color--surface--1);
-  color: var(--color--text--muted); cursor: pointer;
-  font-size: 10px; font-family: inherit;
-}
-${S} .oc-waitlist-btn:hover { color: var(--color--text--on-surface); }
-${S} .oc-waitlist-btn.is-send {
-  background: var(--color--base--primary); color: #fff; border-color: var(--color--outline--on-background);
-}
-${S} .oc-waitlist-btn.is-sending {
-  background: var(--color--surface--2); color: #fff; border-color: var(--color--surface--2); cursor: wait;
-}
-${S} .oc-waitlist-toast {
-  padding: 8px 12px; display: flex; align-items: center; gap: 8px;
-}
-${S} .oc-waitlist-toast.is-bridge {
-  background: rgba(16,185,129,0.08); border-bottom: 1px solid rgba(16,185,129,0.19);
-}
-${S} .oc-waitlist-toast.is-clipboard {
-  background: rgba(245,158,11,0.08); border-bottom: 1px solid rgba(245,158,11,0.19);
-}
-${S} .oc-waitlist-toast-text { font-size: 10px; }
-${S} .oc-waitlist-toast-code {
-  font-family: 'SF Mono', monospace; background: var(--color--surface--1);
-  padding: 1px 4px; border-radius: 3px;
-}
-${S} .oc-waitlist-list { flex: 1; overflow-y: auto; padding: 6px 0; }
-${S} .oc-waitlist-empty {
-  padding: 24px 16px; text-align: center;
-  color: var(--color--text--hint); font-size: 11px;
-}
-${S} .oc-waitlist-group { margin-bottom: 2px; }
-${S} .oc-waitlist-group-label {
-  padding: 4px 12px; font-size: 9px; color: var(--color--text--disabled);
-  text-transform: uppercase; letter-spacing: 0.05em;
-}
-${S} .oc-waitlist-item {
-  display: flex; align-items: flex-start; gap: 8px;
-  padding: 6px 12px; border-left: 2px solid transparent;
-  transition: background 0.1s ease;
-}
-${S} .oc-waitlist-item:hover { background: rgba(255,255,255,0.02); }
-${S} .oc-waitlist-item.is-selected {
-  background: rgba(37,99,235,0.03); border-left-color: var(--color--outline--on-background);
-}
-${S} .oc-waitlist-item-check {
-  background: none; border: none; cursor: pointer;
-  padding: 0; margin-top: 2px; color: var(--color--text--hint); flex-shrink: 0;
-}
-${S} .oc-waitlist-item-check.is-selected { color: var(--color--text--primary); }
-${S} .oc-waitlist-item-body { flex: 1; min-width: 0; }
-${S} .oc-waitlist-item-meta { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
-${S} .oc-waitlist-intent {
-  display: inline-flex; align-items: center; gap: 3px;
-  padding: 1px 6px; border-radius: 4px;
-  font-size: 9px; font-weight: 500;
-}
-${S} .oc-waitlist-severity {
-  padding: 1px 5px; border-radius: 4px; font-size: 9px;
-}
-${S} .oc-waitlist-comment {
-  color: var(--grey-300); font-size: 11px;
-  line-height: 1.4; margin: 0; word-break: break-word;
-}
-${S} .oc-waitlist-item-delete {
-  background: none; border: none; cursor: pointer;
-  padding: 2px; color: var(--color--text--hint); flex-shrink: 0; margin-top: 2px;
-}
-${S} .oc-waitlist-item-delete:hover { color: var(--color--text--critical-light); }
-${S} .oc-waitlist-chevron { color: var(--color--text--disabled); }
-
 /* ── File Map Panel ────────────────────────────────────────── */
 ${S} .oc-filemap-item {
   display: flex; align-items: center; gap: 6px;
@@ -1760,11 +1553,6 @@ ${S} .oc-vc-flow {
   background: var(--color--surface--0);
 }
 ${S} .oc-vc-controls {
-  background: var(--color--surface--0);
-  border: 1px solid var(--color--surface--0);
-  border-radius: 8px;
-}
-${S} .oc-vc-minimap {
   background: var(--color--surface--0);
   border: 1px solid var(--color--surface--0);
   border-radius: 8px;

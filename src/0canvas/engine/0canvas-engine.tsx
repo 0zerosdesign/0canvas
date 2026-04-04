@@ -30,11 +30,7 @@ import { LayersPanel } from "../panels/layers-panel";
 import { StylePanel } from "../panels/style-panel";
 import { VariantCanvas } from "../canvas/variant-canvas";
 import { AgentPanel } from "../panels/agent-panel";
-import { CommandPalette } from "../panels/command-palette";
 import { FileMapPanel } from "../panels/file-map-panel";
-import { AnnotationOverlay } from "../panels/annotation-overlay";
-import { ElementChat } from "../panels/element-chat";
-import { AgentWaitlist } from "../panels/agent-waitlist";
 import { projectFileToState } from "../format/oc-project";
 import {
   scheduleAutoSave,
@@ -457,20 +453,6 @@ function EngineWorkspace() {
     };
   }, [state.wsPort, dispatch]);
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey) {
-        if (e.key === "k") {
-          e.preventDefault();
-          dispatch({ type: "TOGGLE_COMMAND_PALETTE" });
-        }
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [dispatch]);
-
   const handleNavigate = useCallback((route: string) => {
     iframeNavRef.current?.(route);
   }, []);
@@ -497,8 +479,6 @@ function EngineWorkspace() {
         {/* Center: Variant Canvas */}
         <div className="oc-workspace-center">
           <VariantCanvas onNavigateRef={iframeNavRef} />
-          <AnnotationOverlay />
-          <AgentWaitlist />
         </div>
 
         {/* Right: Style Panel */}
@@ -538,11 +518,6 @@ function EngineWorkspace() {
         )}
       </div>
 
-      {/* Command palette overlay */}
-      {state.commandPaletteOpen && <CommandPalette />}
-
-      {/* Element feedback chat (floating, positioned near selected element) */}
-      <ElementChat />
     </div>
   );
 }

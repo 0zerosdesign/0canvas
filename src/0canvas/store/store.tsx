@@ -50,25 +50,6 @@ export type BrainstormNote = {
   category?: "feedback" | "idea" | "bug" | "improvement";
 };
 
-// ── Annotation types ──
-export type AnnotationTool = "select" | "rect" | "arrow" | "text" | "freehand" | "circle";
-
-export type Annotation = {
-  id: string;
-  tool: AnnotationTool;
-  x: number;
-  y: number;
-  width?: number;
-  height?: number;
-  points?: { x: number; y: number }[];
-  endX?: number;
-  endY?: number;
-  text?: string;
-  color: string;
-  timestamp: number;
-  author?: string;
-};
-
 // ── File mapping types ──
 export type FileMapping = {
   elementId: string;
@@ -159,12 +140,6 @@ export type WorkspaceState = {
   // IDE connections
   ides: IDEConnection[];
 
-  // Annotations
-  annotations: Annotation[];
-  annotationMode: boolean;
-  annotationTool: AnnotationTool;
-  annotationColor: string;
-
   // File mappings
   fileMappings: FileMapping[];
   fileMapPanelOpen: boolean;
@@ -174,10 +149,8 @@ export type WorkspaceState = {
   wsLogs: WSLogEntry[];
   wsPort: number;
 
-  // Feedback / Agent Waitlist
+  // Feedback (used by project format and MCP bridge)
   feedbackItems: FeedbackItem[];
-  waitlistOpen: boolean;
-  feedbackPanelOpen: boolean;
 
   // Selection source tracking
   selectionSource: "inspect" | "panel" | null;
@@ -199,7 +172,6 @@ export type WorkspaceState = {
   layersPanelOpen: boolean;
   stylePanelOpen: boolean;
   idePanelOpen: boolean;
-  commandPaletteOpen: boolean;
   isLoading: boolean;
 };
 
@@ -213,7 +185,6 @@ type Action =
   | { type: "TOGGLE_LAYERS_PANEL" }
   | { type: "TOGGLE_STYLE_PANEL" }
   | { type: "TOGGLE_IDE_PANEL" }
-  | { type: "TOGGLE_COMMAND_PALETTE" }
   | { type: "TOGGLE_ELEMENT_VISIBILITY"; id: string }
   | { type: "TOGGLE_ELEMENT_LOCK"; id: string }
   | { type: "SET_ELEMENTS"; elements: ElementNode[] }
@@ -223,14 +194,6 @@ type Action =
   | { type: "CONNECT_PROJECT"; project: ProjectConnection }
   | { type: "UPDATE_PROJECT_STATUS"; status: ProjectConnection["status"]; errorMessage?: string }
   | { type: "DISCONNECT_PROJECT" }
-  // Annotation actions
-  | { type: "ADD_ANNOTATION"; annotation: Annotation }
-  | { type: "UPDATE_ANNOTATION"; id: string; updates: Partial<Annotation> }
-  | { type: "DELETE_ANNOTATION"; id: string }
-  | { type: "CLEAR_ANNOTATIONS" }
-  | { type: "TOGGLE_ANNOTATION_MODE" }
-  | { type: "SET_ANNOTATION_TOOL"; tool: AnnotationTool }
-  | { type: "SET_ANNOTATION_COLOR"; color: string }
   // File mapping actions
   | { type: "SET_FILE_MAPPINGS"; mappings: FileMapping[] }
   | { type: "TOGGLE_FILE_MAP_PANEL" }
@@ -240,8 +203,6 @@ type Action =
   | { type: "REMOVE_FEEDBACK"; id: string }
   | { type: "CLEAR_FEEDBACK" }
   | { type: "MARK_FEEDBACK_SENT"; ids: string[] }
-  | { type: "SET_WAITLIST_OPEN"; open: boolean }
-  | { type: "SET_FEEDBACK_PANEL_OPEN"; open: boolean }
   // Variant actions
   | { type: "ADD_VARIANT"; variant: VariantData }
   | { type: "UPDATE_VARIANT"; id: string; updates: Partial<VariantData> }
@@ -330,18 +291,12 @@ const initialState: WorkspaceState = {
   selectedElementId: null,
   hoveredElementId: null,
   ides: defaultIDEs,
-  annotations: [],
-  annotationMode: false,
-  annotationTool: "select",
-  annotationColor: "#2563EB",
   fileMappings: [],
   fileMapPanelOpen: false,
   wsStatus: "disconnected",
   wsLogs: [],
   wsPort: 0,
   feedbackItems: [],
-  waitlistOpen: false,
-  feedbackPanelOpen: false,
   selectionSource: null,
   variants: [],
   activeVariantId: null,
@@ -360,7 +315,6 @@ const initialState: WorkspaceState = {
   layersPanelOpen: true,
   stylePanelOpen: true,
   idePanelOpen: false,
-  commandPaletteOpen: false,
   isLoading: false,
 };
 
@@ -393,7 +347,7 @@ function updateElementInTree(
 function reducer(state: WorkspaceState, action: Action): WorkspaceState {
   switch (action.type) {
     case "SELECT_ELEMENT":
-      return { ...state, selectedElementId: action.id, selectionSource: action.source || "panel", feedbackPanelOpen: false };
+      return { ...state, selectedElementId: action.id, selectionSource: action.source || "panel" };
     case "HOVER_ELEMENT":
       return { ...state, hoveredElementId: action.id };
     case "UPDATE_STYLE": {
@@ -439,8 +393,6 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
       };
     case "TOGGLE_IDE_PANEL":
       return { ...state, idePanelOpen: !state.idePanelOpen };
-    case "TOGGLE_COMMAND_PALETTE":
-      return { ...state, commandPaletteOpen: !state.commandPaletteOpen };
     case "TOGGLE_ELEMENT_VISIBILITY":
       return {
         ...state,
@@ -497,29 +449,6 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
         selectedElementId: null,
         hoveredElementId: null,
       };
-    // Annotation actions
-    case "ADD_ANNOTATION":
-      return { ...state, annotations: [...state.annotations, action.annotation] };
-    case "UPDATE_ANNOTATION":
-      return {
-        ...state,
-        annotations: state.annotations.map((a) =>
-          a.id === action.id ? { ...a, ...action.updates } : a
-        ),
-      };
-    case "DELETE_ANNOTATION":
-      return {
-        ...state,
-        annotations: state.annotations.filter((a) => a.id !== action.id),
-      };
-    case "CLEAR_ANNOTATIONS":
-      return { ...state, annotations: [] };
-    case "TOGGLE_ANNOTATION_MODE":
-      return { ...state, annotationMode: !state.annotationMode };
-    case "SET_ANNOTATION_TOOL":
-      return { ...state, annotationTool: action.tool };
-    case "SET_ANNOTATION_COLOR":
-      return { ...state, annotationColor: action.color };
     // File mapping actions
     case "SET_FILE_MAPPINGS":
       return { ...state, fileMappings: action.mappings };
@@ -554,10 +483,6 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
           action.ids.includes(f.id) ? { ...f, status: "sent" as const } : f
         ),
       };
-    case "SET_WAITLIST_OPEN":
-      return { ...state, waitlistOpen: action.open };
-    case "SET_FEEDBACK_PANEL_OPEN":
-      return { ...state, feedbackPanelOpen: action.open };
     // Variant actions
     case "ADD_VARIANT":
       return { ...state, variants: [...state.variants, action.variant] };

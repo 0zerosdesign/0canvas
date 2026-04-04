@@ -35,7 +35,6 @@ import {
   captureComponentSnapshot,
   generateAgentOutput,
   highlightElement,
-  onFeedbackRequest,
   onForkElementRequest,
 } from "../inspector/dom-inspector";
 import { copyToClipboard } from "../utils/clipboard";
@@ -183,20 +182,16 @@ export function SourceNode({ id, data, selected }: NodeProps) {
     updateNode(id, { style: { width: preset.width, height: dims.h } });
   }, [id, dims.h, updateNode]);
 
-  // ── Feedback & highlight sync ────────────────────────────
+  // ── Fork element & highlight sync ────────────────────────
 
   useEffect(() => {
-    onFeedbackRequest(() => {
-      dispatch({ type: "SET_FEEDBACK_PANEL_OPEN", open: true });
-    });
     onForkElementRequest((elementId: string) => {
       onForkComponent(elementId, dims.w);
     });
     return () => {
-      onFeedbackRequest(null);
       onForkElementRequest(null);
     };
-  }, [dispatch, onForkComponent, dims.w]);
+  }, [onForkComponent, dims.w]);
 
   useEffect(() => {
     if (state.hoveredElementId) highlightElement(state.hoveredElementId, "hover");
@@ -211,9 +206,7 @@ export function SourceNode({ id, data, selected }: NodeProps) {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (state.feedbackPanelOpen) {
-          dispatch({ type: "SET_FEEDBACK_PANEL_OPEN", open: false });
-        } else if (state.selectedElementId) {
+        if (state.selectedElementId) {
           dispatch({ type: "SELECT_ELEMENT", id: null });
           highlightElement(null, "select");
         }
@@ -225,7 +218,7 @@ export function SourceNode({ id, data, selected }: NodeProps) {
     };
     window.addEventListener("keydown", handleEscape);
     return () => window.removeEventListener("keydown", handleEscape);
-  }, [state.feedbackPanelOpen, state.selectedElementId, dispatch]);
+  }, [state.selectedElementId, dispatch]);
 
   useEffect(() => {
     return () => { stopInspect(); };

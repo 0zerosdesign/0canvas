@@ -3,16 +3,8 @@ import {
   Layers,
   Palette,
   Zap,
-  MousePointer2,
-  Command,
-  Monitor,
-  Tablet,
-  Smartphone,
   FileCode,
-  PenTool,
   Wifi,
-  ListChecks,
-  Globe,
   ChevronDown,
   Save,
   Trash2,
@@ -38,8 +30,6 @@ export function WorkspaceToolbar({ onNavigate }: WorkspaceToolbarProps = {}) {
   const { state, dispatch } = useWorkspace();
 
   const connectedIDEs = state.ides.filter((i) => i.status === "connected").length;
-  const annotationCount = state.annotations.length;
-  const pendingFeedback = state.feedbackItems.filter((f) => f.status === "pending").length;
 
   const handleSaveProject = useCallback(async () => {
     dispatch({ type: "SAVE_OC_PROJECT" });
@@ -140,15 +130,6 @@ export function WorkspaceToolbar({ onNavigate }: WorkspaceToolbarProps = {}) {
           </span>
         )}
 
-        <RouteSwitcher
-          currentRoute={state.currentRoute}
-          routeHistory={state.routeHistory}
-          onNavigate={(route) => {
-            dispatch({ type: "SET_CURRENT_ROUTE", route });
-            dispatch({ type: "ADD_ROUTE_HISTORY", route });
-            onNavigate?.(route);
-          }}
-        />
       </div>
 
       {/* Center: Panel toggles */}
@@ -158,12 +139,6 @@ export function WorkspaceToolbar({ onNavigate }: WorkspaceToolbarProps = {}) {
           label="Layers"
           active={state.layersPanelOpen}
           onClick={() => dispatch({ type: "TOGGLE_LAYERS_PANEL" })}
-        />
-        <ToolbarBtn
-          icon={<MousePointer2 size={14} />}
-          label="Inspect"
-          active={state.inspectorMode}
-          onClick={() => dispatch({ type: "TOGGLE_INSPECTOR" })}
         />
         <ToolbarBtn
           icon={<Palette size={14} />}
@@ -178,25 +153,11 @@ export function WorkspaceToolbar({ onNavigate }: WorkspaceToolbarProps = {}) {
           onClick={() => dispatch({ type: "TOGGLE_FILE_MAP_PANEL" })}
         />
         <ToolbarBtn
-          icon={<PenTool size={14} />}
-          label="Annotate"
-          active={state.annotationMode}
-          badge={annotationCount > 0 ? annotationCount : undefined}
-          onClick={() => dispatch({ type: "TOGGLE_ANNOTATION_MODE" })}
-        />
-        <ToolbarBtn
           icon={<Zap size={14} />}
           label="IDE"
           active={state.idePanelOpen}
           dot={connectedIDEs > 0}
           onClick={() => dispatch({ type: "TOGGLE_IDE_PANEL" })}
-        />
-        <ToolbarBtn
-          icon={<ListChecks size={14} />}
-          label="Waitlist"
-          active={state.waitlistOpen}
-          badge={pendingFeedback > 0 ? pendingFeedback : undefined}
-          onClick={() => dispatch({ type: "SET_WAITLIST_OPEN", open: !state.waitlistOpen })}
         />
       </div>
 
@@ -223,18 +184,6 @@ export function WorkspaceToolbar({ onNavigate }: WorkspaceToolbarProps = {}) {
             onClick={handleSyncToIDE}
           />
         </div>
-
-        <div className="oc-toolbar-divider" />
-
-        <div className="oc-toolbar-group is-pill-sm">
-          <ViewportBtn icon={<Monitor size={14} />} active />
-          <ViewportBtn icon={<Tablet size={14} />} />
-          <ViewportBtn icon={<Smartphone size={14} />} />
-        </div>
-
-        <div className="oc-toolbar-divider" />
-
-        <CmdKButton onClick={() => dispatch({ type: "TOGGLE_COMMAND_PALETTE" })} />
       </div>
     </div>
   );
@@ -270,111 +219,6 @@ function ToolbarBtn({
   );
 }
 
-function ViewportBtn({ icon, active }: { icon: React.ReactNode; active?: boolean }) {
-  return (
-    <button className={`oc-toolbar-btn ${active ? "is-active" : ""}`}>
-      {icon}
-    </button>
-  );
-}
-
-function CmdKButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button onClick={onClick} className="oc-toolbar-cmdk">
-      <Command size={12} />
-      <span className="oc-toolbar-cmdk-key">K</span>
-    </button>
-  );
-}
-
-function RouteSwitcher({
-  currentRoute,
-  routeHistory,
-  onNavigate,
-}: {
-  currentRoute: string;
-  routeHistory: string[];
-  onNavigate: (route: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [customRoute, setCustomRoute] = useState("");
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
-  const handleGo = () => {
-    const route = customRoute.trim();
-    if (!route) return;
-    onNavigate(route.startsWith("/") ? route : `/${route}`);
-    setCustomRoute("");
-    setOpen(false);
-  };
-
-  return (
-    <div ref={dropdownRef} className="relative">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="oc-toolbar-route-btn"
-      >
-        <Globe size={12} />
-        <span className="oc-toolbar-route-text">
-          {currentRoute}
-        </span>
-        <ChevronDown size={10} style={{ opacity: 0.5 }} />
-      </button>
-
-      {open && (
-        <div data-0canvas="route-dropdown" className="oc-toolbar-dropdown" style={{ width: 240 }}>
-          <div className="oc-toolbar-dropdown-inputrow">
-            <input
-              value={customRoute}
-              onChange={(e) => setCustomRoute(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleGo()}
-              placeholder="/path..."
-              className="oc-toolbar-dropdown-input"
-            />
-            <button onClick={handleGo} className="oc-toolbar-dropdown-action">
-              Go
-            </button>
-          </div>
-          <div className="oc-toolbar-dropdown-list">
-            {routeHistory.map((route) => (
-              <RouteItem
-                key={route}
-                route={route}
-                active={route === currentRoute}
-                onClick={() => {
-                  onNavigate(route);
-                  setOpen(false);
-                }}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function RouteItem({ route, active, onClick }: { route: string; active: boolean; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`oc-toolbar-route-item ${active ? "is-active" : ""}`}
-    >
-      {route}
-    </button>
-  );
-}
 
 function ProjectSwitcher({
   currentProject,

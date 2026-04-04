@@ -34,7 +34,6 @@ import {
   stopInspect,
   isInspecting,
   highlightElement,
-  onFeedbackRequest,
 } from "../inspector/dom-inspector";
 
 export type VariantNodeData = {
@@ -79,21 +78,33 @@ export function VariantNode({ id, data, selected }: NodeProps) {
   const htmlContent = variant.modifiedHtml || variant.html;
   const cssContent = variant.modifiedCss || variant.css;
 
-  // Split @import rules (must be first in <style>) from regular CSS rules
-  // Also filter out ZeroCanvas internal and ReactFlow styles
-  const cssLines = (cssContent || "").split("\n");
+  // Split CSS into @import rules (must be first in <style>) and regular rules.
+  // Filter out ZeroCanvas internal and ReactFlow rules at the rule boundary
+  // instead of per-line, so multi-line rules aren't partially stripped.
   const importLines: string[] = [];
   const ruleLines: string[] = [];
-  for (const line of cssLines) {
-    if (line.startsWith("@import ")) {
-      importLines.push(line);
+
+  // Split on rule boundaries: each cssText rule from CSSOM is joined with \n,
+  // but we need to handle both single-line (CSSOM) and multi-line (raw textContent) CSS.
+  const rawCss = cssContent || "";
+
+  // Quick regex split: each top-level rule ends with } (or is @import ending with ;)
+  // For CSSOM-collected CSS (one rule per line), simple \n split works.
+  // For raw CSS, we split on closing brace at the start of a line or use the raw blocks.
+  const rules = rawCss.split(/\n(?=[@.#\[:*a-zA-Z])/);
+
+  for (const rule of rules) {
+    const trimmed = rule.trim();
+    if (!trimmed) continue;
+    if (trimmed.startsWith("@import ")) {
+      importLines.push(trimmed);
     } else if (
-      !line.includes("[data-0canvas") &&
-      !line.includes(".react-flow") &&
-      !line.includes("--xy-") &&
-      !line.includes("--oc-")
+      !trimmed.includes("[data-0canvas") &&
+      !trimmed.includes(".react-flow") &&
+      !trimmed.includes("--xy-") &&
+      !trimmed.includes("--oc-")
     ) {
-      ruleLines.push(line);
+      ruleLines.push(trimmed);
     }
   }
 
@@ -149,10 +160,6 @@ ${ruleLines.join("\n")}</style>
     setInspectionTarget(iframe.contentDocument, iframe);
     rebuildElementMap();
     dispatch({ type: "SET_ACTIVE_VARIANT", id: variant.id });
-
-    onFeedbackRequest(() => {
-      dispatch({ type: "SET_FEEDBACK_PANEL_OPEN", open: true });
-    });
 
     startInspect((elId, el) => {
       dispatch({ type: "SELECT_ELEMENT", id: elId, source: "inspect" });

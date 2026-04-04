@@ -868,13 +868,37 @@ function sanitizeSnapshot(html: string): string {
 
 function collectCssRules(doc: Document): string {
   const cssRules: string[] = [];
+
+  // 1. Traditional <style> and <link> stylesheets via CSSOM
   for (const sheet of doc.styleSheets) {
     try {
       for (const rule of sheet.cssRules) cssRules.push(rule.cssText);
     } catch {
-      // Cross-origin stylesheet — skip
+      // Cross-origin stylesheet — skip (handled by collectExternalStylesheetLinks)
     }
   }
+
+  // 2. Adopted stylesheets (used by Vite HMR, web components, etc.)
+  if (doc.adoptedStyleSheets && doc.adoptedStyleSheets.length > 0) {
+    for (const sheet of doc.adoptedStyleSheets) {
+      try {
+        for (const rule of sheet.cssRules) cssRules.push(rule.cssText);
+      } catch { /* skip */ }
+    }
+  }
+
+  // 3. Fallback: if CSSOM yielded nothing, scrape <style> textContent directly.
+  //    This handles edge cases where stylesheets are not yet parsed by the CSSOM
+  //    (e.g., Vite dev HMR injecting styles after DOMContentLoaded).
+  if (cssRules.length === 0) {
+    doc.querySelectorAll("style").forEach((styleEl) => {
+      const text = styleEl.textContent;
+      if (text && !styleEl.hasAttribute("data-0canvas-variant-css")) {
+        cssRules.push(text);
+      }
+    });
+  }
+
   return cssRules.join("\n");
 }
 
