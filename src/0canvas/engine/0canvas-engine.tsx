@@ -20,7 +20,7 @@
 //
 // ──────────────────────────────────────────────────────────
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, type MouseEvent as ReactMouseEvent } from "react";
 import ReactDOM from "react-dom";
 import { WorkspaceProvider, useWorkspace } from "../store/store";
 import { injectStyles, removeStyles } from "./0canvas-styles";
@@ -285,6 +285,43 @@ export function ZeroCanvas({
 // ── Default export for convenience ─────────────────────────
 export default ZeroCanvas;
 
+// ── Resizable panel hook ──────────────────────────────────
+
+function useResizable(initial: number, min: number, max: number) {
+  const [width, setWidth] = useState(initial);
+  const dragging = useRef(false);
+  const startX = useRef(0);
+  const startW = useRef(initial);
+
+  const onMouseDown = useCallback((e: ReactMouseEvent, direction: 1 | -1) => {
+    e.preventDefault();
+    dragging.current = true;
+    startX.current = e.clientX;
+    startW.current = width;
+
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!dragging.current) return;
+      const delta = (ev.clientX - startX.current) * direction;
+      setWidth(Math.min(max, Math.max(min, startW.current + delta)));
+    };
+
+    const onMouseUp = () => {
+      dragging.current = false;
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+    document.body.style.cursor = "ew-resize";
+    document.body.style.userSelect = "none";
+  }, [width, min, max]);
+
+  return { width, onMouseDown };
+}
+
 // ── Engine Workspace Layout ────────────────────────────────
 // Self-contained workspace layout (no react-router dependency).
 // Mirrors the same panel arrangement as the docs site workspace
@@ -294,6 +331,11 @@ function EngineWorkspace() {
   const { state, dispatch } = useWorkspace();
   const iframeNavRef = React.useRef<((route: string) => void) | null>(null);
   const lastPollRef = useRef<number>(0);
+
+  const layers = useResizable(260, 180, 480);
+  const style = useResizable(280, 200, 500);
+  const fileMap = useResizable(280, 200, 500);
+  const ide = useResizable(300, 220, 520);
 
   // ── Load .0c project file from IndexedDB on mount ──
   useEffect(() => {
@@ -440,37 +482,59 @@ function EngineWorkspace() {
 
       {/* Main workspace */}
       <div className="oc-workspace-main">
-        {/* Left: Layers Panel */}
+        {/* Left: Layers Panel + resize handle */}
         {state.layersPanelOpen && (
-          <div className="oc-panel-slot" style={{ width: 260 }}>
-            <LayersPanel />
-          </div>
+          <>
+            <div className="oc-panel-slot" style={{ width: layers.width }}>
+              <LayersPanel />
+            </div>
+            <div className="oc-resize-handle" onMouseDown={(e) => layers.onMouseDown(e, 1)}>
+              <span className="oc-resize-line" />
+            </div>
+          </>
         )}
 
-        {/* Center: Variant Canvas (contains source preview + variant cards) */}
+        {/* Center: Variant Canvas */}
         <div className="oc-workspace-center">
           <VariantCanvas onNavigateRef={iframeNavRef} />
           <AnnotationOverlay />
           <AgentWaitlist />
         </div>
 
-        {/* Right panels */}
+        {/* Right: Style Panel */}
         {state.stylePanelOpen && (
-          <div className="oc-panel-slot" style={{ width: 280 }}>
-            <StylePanel />
-          </div>
+          <>
+            <div className="oc-resize-handle" onMouseDown={(e) => style.onMouseDown(e, -1)}>
+              <span className="oc-resize-line" />
+            </div>
+            <div className="oc-panel-slot" style={{ width: style.width }}>
+              <StylePanel />
+            </div>
+          </>
         )}
 
+        {/* Right: File Map Panel */}
         {state.fileMapPanelOpen && (
-          <div className="oc-panel-slot-bordered oc-panel-slot" style={{ width: 280 }}>
-            <FileMapPanel />
-          </div>
+          <>
+            <div className="oc-resize-handle" onMouseDown={(e) => fileMap.onMouseDown(e, -1)}>
+              <span className="oc-resize-line" />
+            </div>
+            <div className="oc-panel-slot" style={{ width: fileMap.width }}>
+              <FileMapPanel />
+            </div>
+          </>
         )}
 
+        {/* Right: IDE / Agent Panel */}
         {state.idePanelOpen && (
-          <div className="oc-panel-slot-bordered" style={{ width: 300 }}>
-            <AgentPanel />
-          </div>
+          <>
+            <div className="oc-resize-handle" onMouseDown={(e) => ide.onMouseDown(e, -1)}>
+              <span className="oc-resize-line" />
+            </div>
+            <div className="oc-panel-slot" style={{ width: ide.width }}>
+              <AgentPanel />
+            </div>
+          </>
         )}
       </div>
 

@@ -388,7 +388,7 @@ function ensureOverlay(type: "hover" | "select"): HTMLDivElement {
         left: -2px;
         padding: 2px 8px;
         border-radius: 4px 4px 0 0;
-        background: var(--blue-600);
+        background: var(--color--base--primary);
         color: #fff;
         font-size: 10px;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -407,7 +407,7 @@ function ensureOverlay(type: "hover" | "select"): HTMLDivElement {
         left: -2px;
         padding: 1px 6px;
         border-radius: 3px;
-        background: var(--blue-600);
+        background: var(--color--base--primary);
         color: rgba(255,255,255,0.85);
         font-size: 9px;
         font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
@@ -455,7 +455,7 @@ function ensureOverlay(type: "hover" | "select"): HTMLDivElement {
       forkBtn.setAttribute(OC_ATTR, "fork-btn");
       forkBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9"/><path d="M12 12v3"/></svg> Fork`;
       forkBtn.style.cssText = overlayBtnStyle + `
-        background: var(--green-500);
+        background: var(--color--status--success);
         box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
       `;
       forkBtn.addEventListener("mouseenter", () => {
@@ -463,7 +463,7 @@ function ensureOverlay(type: "hover" | "select"): HTMLDivElement {
         forkBtn.style.transform = "scale(1.03)";
       });
       forkBtn.addEventListener("mouseleave", () => {
-        forkBtn.style.background = "var(--green-500)";
+        forkBtn.style.background = "var(--color--status--success)";
         forkBtn.style.transform = "scale(1)";
       });
       forkBtn.addEventListener("click", (e) => {
@@ -482,15 +482,15 @@ function ensureOverlay(type: "hover" | "select"): HTMLDivElement {
       feedbackBtn.setAttribute(OC_ATTR, "feedback-btn");
       feedbackBtn.textContent = "+ Feedback";
       feedbackBtn.style.cssText = overlayBtnStyle + `
-        background: var(--blue-600);
+        background: var(--color--base--primary);
         box-shadow: 0 2px 8px rgba(0, 112, 243, 0.4);
       `;
       feedbackBtn.addEventListener("mouseenter", () => {
-        feedbackBtn.style.background = "var(--blue-700)";
+        feedbackBtn.style.background = "var(--color--base--primary-hover)";
         feedbackBtn.style.transform = "scale(1.03)";
       });
       feedbackBtn.addEventListener("mouseleave", () => {
-        feedbackBtn.style.background = "var(--blue-600)";
+        feedbackBtn.style.background = "var(--color--base--primary)";
         feedbackBtn.style.transform = "scale(1)";
       });
       feedbackBtn.addEventListener("click", (e) => {

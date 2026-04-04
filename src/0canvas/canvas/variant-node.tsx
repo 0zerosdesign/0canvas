@@ -184,9 +184,9 @@ ${ruleLines.join("\n")}</style>
   }, [id, dims.h, updateNode]);
 
   const statusColor =
-    variant.status === "pushed" ? "var(--blue-600)" :
-    variant.status === "finalized" ? "var(--green-500)" :
-    variant.status === "sent" ? "var(--purple-500)" : "var(--grey-700)";
+    variant.status === "pushed" ? "var(--color--base--primary)" :
+    variant.status === "finalized" ? "var(--color--status--success)" :
+    variant.status === "sent" ? "var(--color--text--primary-light)" : "var(--color--surface--2)";
 
   const statusLabel =
     variant.status === "pushed" ? "Pushed" :
@@ -197,7 +197,7 @@ ${ruleLines.join("\n")}</style>
   const hasActiveSelection = !!state.selectedElementId && state.selectionSource === "inspect" && state.activeVariantId === variant.id;
   const iframeInteractive = inspecting || hasActiveSelection;
 
-  const borderColor = selected ? "var(--blue-600)" : variant.status === "finalized" ? "var(--green-500)" : undefined;
+  const borderColor = selected ? "var(--color--outline--on-background)" : variant.status === "finalized" ? "var(--color--status--success)" : undefined;
 
   return (
     <div
@@ -206,38 +206,41 @@ ${ruleLines.join("\n")}</style>
       style={{
         width: "100%",
         height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        gap: 8,
+        position: "relative",
       }}
     >
-      {/* ── NodeResizer ── */}
+      {/* ── NodeResizer — wraps only the preview area ── */}
       <NodeResizer
         minWidth={MIN_W}
         minHeight={MIN_H}
         maxWidth={MAX_W}
         maxHeight={MAX_H}
         isVisible={selected || false}
-        lineStyle={{ borderWidth: 1, borderColor: "var(--blue-600)" }}
+        lineStyle={{ borderWidth: 1, borderColor: "var(--color--outline--on-background)" }}
         handleStyle={{
           width: 7,
           height: 7,
           borderRadius: "50%",
-          background: "var(--blue-600)",
-          border: "2px solid var(--grey-900)",
+          background: "var(--color--base--primary)",
+          border: "2px solid var(--color--surface--0)",
         }}
         onResizeStart={() => setIsResizing(true)}
         onResize={(_, p) => setDims({ w: Math.round(p.width), h: Math.round(p.height) })}
         onResizeEnd={() => setIsResizing(false)}
       />
 
-      <Handle type="target" position={Position.Left} style={{ background: "var(--blue-600)", width: 8, height: 8 }} />
-      <Handle type="source" position={Position.Right} style={{ background: "var(--blue-600)", width: 8, height: 8 }} />
+      <Handle type="target" position={Position.Left} style={{ background: "var(--color--base--primary)", width: 8, height: 8 }} />
+      <Handle type="source" position={Position.Right} style={{ background: "var(--color--base--primary)", width: 8, height: 8 }} />
 
-      {/* ── Floating Chrome bar ── */}
+      {/* ── Chrome bar — floats above the node bounds ── */}
       <div
         className="oc-variant-header"
         style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: "100%",
+          marginBottom: 8,
           height: CHROME_H,
           ...(borderColor ? { borderColor } : {}),
         }}
@@ -254,10 +257,10 @@ ${ruleLines.join("\n")}</style>
               style={{
                 flex: 1,
                 padding: "2px 6px",
-                background: "var(--grey-900)",
-                border: "1px solid var(--grey-700)",
+                background: "var(--color--surface--0)",
+                border: "1px solid var(--color--border--on-surface-1)",
                 borderRadius: 4,
-                color: "var(--grey-200)",
+                color: "var(--color--text--on-surface)",
                 fontSize: 10,
                 fontFamily: "inherit",
                 outline: "none",
@@ -310,11 +313,11 @@ ${ruleLines.join("\n")}</style>
           <span
             style={{
               fontSize: 9,
-              color: isResizing ? "var(--blue-600)" : "var(--grey-600)",
+              color: isResizing ? "var(--color--text--primary)" : "var(--color--text--muted)",
               fontFamily: "var(--font-mono)",
               fontVariantNumeric: "tabular-nums",
               padding: "1px 4px",
-              background: isResizing ? "color-mix(in srgb, var(--blue-600) 10%, transparent)" : "transparent",
+              background: isResizing ? "color-mix(in srgb, var(--color--base--primary) 10%, transparent)" : "transparent",
               borderRadius: 3,
               transition: "all 0.15s",
             }}
@@ -332,7 +335,7 @@ ${ruleLines.join("\n")}</style>
             <GitFork style={{ width: 10, height: 10 }} />
           </VBtn>
           <VBtn onClick={handleCopyHtml} title="Copy HTML">
-            {copied ? <Check style={{ width: 10, height: 10, color: "var(--green-500)" }} /> : <Copy style={{ width: 10, height: 10 }} />}
+            {copied ? <Check style={{ width: 10, height: 10, color: "var(--color--status--success)" }} /> : <Copy style={{ width: 10, height: 10 }} />}
           </VBtn>
           {variant.status === "draft" && (
             <VBtn onClick={() => onFinalize(variant.id)} accent title="Finalize">
@@ -346,7 +349,7 @@ ${ruleLines.join("\n")}</style>
           )}
           {canPushToMain && (
             <VBtn onClick={() => onPushToMain(variant.id)} title="Push to Main">
-              <ArrowUpToLine style={{ width: 10, height: 10, color: "var(--blue-600)" }} />
+              <ArrowUpToLine style={{ width: 10, height: 10, color: "var(--color--text--primary)" }} />
             </VBtn>
           )}
           <VBtn onClick={() => onDelete(variant.id)} danger title="Delete">
@@ -355,17 +358,18 @@ ${ruleLines.join("\n")}</style>
         </div>
       </div>
 
-      {/* ── Preview ── */}
+      {/* ── Preview — fills the entire node area ── */}
       <div
         className={`oc-variant-card ${selected ? "is-selected" : ""}`}
         style={{
-          flex: 1,
+          width: "100%",
+          height: "100%",
           position: "relative",
           overflow: "hidden",
           background: "#fff",
           ...(borderColor ? { borderColor } : {}),
           boxShadow: selected
-            ? "0 0 0 1px var(--blue-600), 0 4px 20px rgba(37,99,235,0.1)"
+            ? "0 0 0 1px var(--color--outline--on-background), 0 4px 20px rgba(37,99,235,0.1)"
             : "0 4px 20px rgba(0,0,0,0.25)",
         }}
       >
@@ -387,7 +391,7 @@ ${ruleLines.join("\n")}</style>
           <div style={{ position: "absolute", top: 6, left: "50%", transform: "translateX(-50%)", zIndex: 10, pointerEvents: "none" }}>
             <div style={{
               display: "flex", alignItems: "center", gap: 4, padding: "3px 8px",
-              borderRadius: 5, background: "var(--blue-600)", color: "#fff", fontSize: 9,
+              borderRadius: 5, background: "var(--color--base--primary)", color: "var(--color--text--on-primary)", fontSize: 9,
               boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
             }}>
               <Crosshair style={{ width: 10, height: 10 }} />
@@ -402,11 +406,11 @@ ${ruleLines.join("\n")}</style>
             background: "rgba(0,0,0,0.15)",
           }}>
             <div style={{
-              padding: "6px 12px", borderRadius: 6, background: "var(--grey-900)",
-              border: "1px solid var(--grey-800)", boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+              padding: "6px 12px", borderRadius: 6, background: "var(--color--surface--0)",
+              border: "1px solid var(--color--border--on-surface-0)", boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
             }}>
               <span style={{
-                fontSize: 12, fontWeight: 600, color: "var(--blue-600)",
+                fontSize: 12, fontWeight: 600, color: "var(--color--text--primary)",
                 fontFamily: "var(--font-mono)",
                 fontVariantNumeric: "tabular-nums",
               }}>
@@ -439,9 +443,9 @@ function VBtn({ children, onClick, active, accent, danger, title }: {
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       title={title}
       style={{
-        ...(active ? { background: "var(--blue-600)", color: "#fff", border: "1px solid var(--blue-600)" } : {}),
-        ...(danger && !active ? { color: "var(--red-500)" } : {}),
-        ...(accent && !active ? { color: "var(--green-500)" } : {}),
+        ...(active ? { background: "var(--color--base--primary)", color: "var(--color--text--on-primary)", border: "1px solid var(--color--base--primary)" } : {}),
+        ...(danger && !active ? { color: "var(--color--status--critical)" } : {}),
+        ...(accent && !active ? { color: "var(--color--status--success)" } : {}),
       }}
     >
       {children}

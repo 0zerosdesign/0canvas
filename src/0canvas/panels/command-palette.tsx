@@ -181,11 +181,11 @@ export function CommandPalette() {
       onClick={() => dispatch({ type: "TOGGLE_COMMAND_PALETTE" })}
     >
       <div
-        className="w-[520px] bg-[var(--grey-900)] border border-[var(--grey-800)] rounded-xl shadow-2xl overflow-hidden"
+        className="w-[520px] bg-[var(--color--surface--floor)] border border-[var(--color--border--on-surface-0)] rounded-xl shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search */}
-        <div className="flex items-center px-4 py-3 border-b border-[var(--grey-800)]">
+        <div className="flex items-center px-4 py-3 border-b border-[var(--color--border--on-surface-0)]">
           <Search className="w-4 h-4 text-muted-foreground mr-3 shrink-0" />
           <input
             ref={inputRef}
@@ -195,7 +195,7 @@ export function CommandPalette() {
             onChange={(e) => setSearch(e.target.value)}
             className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
           />
-          <kbd className="text-[10px] text-muted-foreground bg-[var(--grey-800)] px-1.5 py-0.5 rounded border border-[var(--grey-800)]">
+          <kbd className="text-[10px] text-muted-foreground bg-[var(--color--surface--1)] px-1.5 py-0.5 rounded border border-[var(--color--border--on-surface-0)]">
             ESC
           </kbd>
         </div>
@@ -212,7 +212,7 @@ export function CommandPalette() {
               {cmds.map((cmd) => (
                 <button
                   key={cmd.id}
-                  className="w-full flex items-center gap-3 px-4 py-2 hover:bg-[var(--grey-800)] transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-2 hover:bg-[var(--color--surface--1)] transition-colors"
                   onClick={cmd.action}
                 >
                   <span className="text-muted-foreground">{cmd.icon}</span>
@@ -225,7 +225,7 @@ export function CommandPalette() {
                     </span>
                   </div>
                   {cmd.shortcut && (
-                    <kbd className="text-[10px] text-muted-foreground bg-[var(--grey-800)] px-1.5 py-0.5 rounded border border-[var(--grey-800)]">
+                    <kbd className="text-[10px] text-muted-foreground bg-[var(--color--surface--1)] px-1.5 py-0.5 rounded border border-[var(--color--border--on-surface-0)]">
                       {cmd.shortcut}
                     </kbd>
                   )}

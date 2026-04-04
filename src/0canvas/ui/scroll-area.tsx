@@ -24,7 +24,7 @@ function ScrollArea({
           width: "100%",
           height: "100%",
           borderRadius: "inherit",
-          overflowY: "scroll" as const,
+          overflow: "auto" as const,
           outline: "none",
         }}
       >
@@ -64,7 +64,7 @@ function ScrollBar({
       <ScrollAreaPrimitive.ScrollAreaThumb
         data-slot="scroll-area-thumb"
         style={{
-          background: "var(--grey-800)",
+          background: "var(--color--surface--1)",
           position: "relative",
           flex: "1 1 0%",
           borderRadius: "9999px",

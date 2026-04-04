@@ -234,7 +234,7 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
         target: variant.id,
         type: "smoothstep",
         animated: variant.status === "draft",
-        style: { stroke: "var(--grey-700)", strokeWidth: 1.5 },
+        style: { stroke: "var(--color--border--on-surface-1)", strokeWidth: 1.5 },
       });
 
       const children = childMap.get(variant.id) || [];
@@ -350,13 +350,13 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
         proOptions={{ hideAttribution: true }}
         className="oc-vc-flow"
       >
-        <Background variant={BackgroundVariant.Dots} color="var(--grey-900)" gap={20} size={1} />
+        <Background variant={BackgroundVariant.Dots} color="var(--color--surface--0)" gap={20} size={1} />
         <Controls
           showInteractive={false}
           className="oc-vc-controls"
         />
         <MiniMap
-          nodeColor={(node) => node.type === "source" ? "var(--blue-600)" : "var(--grey-700)"}
+          nodeColor={(node) => node.type === "source" ? "var(--color--base--primary)" : "var(--color--surface--2)"}
           maskColor="rgba(0,0,0,0.7)"
           className="oc-vc-minimap"
         />

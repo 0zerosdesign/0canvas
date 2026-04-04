@@ -158,7 +158,7 @@ function LayerItem({
               dispatch({ type: "TOGGLE_ELEMENT_LOCK", id: element.id });
             }}
           >
-            {element.locked ? <Lock size={12} style={{ color: "var(--yellow-500)" }} /> : <Unlock size={12} />}
+            {element.locked ? <Lock size={12} style={{ color: "var(--color--status--warning)" }} /> : <Unlock size={12} />}
           </button>
         </div>
       </div>

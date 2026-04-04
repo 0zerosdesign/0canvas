@@ -13,12 +13,12 @@ import { useWorkspace, BrainstormNote } from "../store/store";
 import { ScrollArea } from "../ui/scroll-area";
 
 const NOTE_COLORS = [
-  "#0070f3",
-  "#7928ca",
-  "#ff0080",
-  "#f5a623",
-  "#50e3c2",
-  "#ff4444",
+  "#2563EB",
+  "#1D4ED8",
+  "#3B82F6",
+  "#60A5FA",
+  "#1E40AF",
+  "#93C5FD",
 ];
 
 export function BrainstormPanel() {
@@ -49,10 +49,10 @@ export function BrainstormPanel() {
   ];
 
   return (
-    <div className="h-full flex flex-col bg-[var(--grey-900)]">
+    <div className="h-full flex flex-col bg-[var(--grey-950)]">
       {/* Header */}
       <div className="px-4 py-3 border-b border-border flex items-center gap-2">
-        <Lightbulb className="w-4 h-4 text-[var(--yellow-500)]" />
+        <Lightbulb className="w-4 h-4 text-[var(--blue-400)]" />
         <span className="text-[13px] text-foreground">Brainstorm</span>
         <Sparkles className="w-3 h-3 text-[var(--blue-700)]" />
       </div>
@@ -102,7 +102,8 @@ export function BrainstormPanel() {
                 ))}
               </div>
               <button
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-foreground text-background rounded text-[11px] hover:opacity-90 transition-opacity disabled:opacity-30"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded text-[11px] hover:opacity-90 transition-opacity disabled:opacity-30"
+                style={{ background: "var(--color--base--primary)", color: "var(--color--text--on-primary)" }}
                 disabled={!newNote.trim()}
                 onClick={addNote}
               >

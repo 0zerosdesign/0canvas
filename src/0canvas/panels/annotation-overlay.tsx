@@ -20,13 +20,13 @@ import { copyToClipboard } from "../utils/clipboard";
 // Annotation colors
 // ──────────────────────────────────────────────────────────
 const ANNOTATION_COLORS = [
-  "#ff0000",
-  "#ff6b35",
-  "#f5a623",
-  "#50e3c2",
-  "#0070f3",
-  "#7928ca",
-  "#ff0080",
+  "#2563EB",
+  "#1D4ED8",
+  "#3B82F6",
+  "#60A5FA",
+  "#1E40AF",
+  "#93C5FD",
+  "#1E3A8A",
   "#ffffff",
 ];
 

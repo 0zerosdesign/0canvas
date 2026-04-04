@@ -115,7 +115,7 @@ export function WorkspaceToolbar({ onNavigate }: WorkspaceToolbarProps = {}) {
       <div className="oc-toolbar-section">
         <div className="oc-toolbar-logo">
           <div className="oc-toolbar-logo-icon">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--grey-900)" strokeWidth="2.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color--surface--0)" strokeWidth="2.5">
               <path d="M12 2L2 7l10 5 10-5-10-5z" />
               <path d="M2 17l10 5 10-5" />
               <path d="M2 12l10 5 10-5" />
@@ -451,7 +451,7 @@ function ProjectSwitcher({
         {!currentProject.saved && (
           <span className="oc-toolbar-project-unsaved">unsaved</span>
         )}
-        <ChevronDown size={10} style={{ opacity: 0.5, color: "var(--grey-500)" }} />
+        <ChevronDown size={10} style={{ opacity: 0.5, color: "var(--color--text--muted)" }} />
       </div>
 
       {open && (

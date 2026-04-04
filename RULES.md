@@ -89,50 +89,175 @@ NEVER put styling logic inside utility files.
 
 ## Rule 4: CSS and Styling Rules
 
-### Token System
+### Token Architecture
 
-- The ONLY design token file is `/src/styles/variables.css`
-- ALL UI across the entire application MUST use only these tokens
+The design token system has two layers — **primitives** and **semantics**:
+
+```
+Primitive tokens      →   Semantic tokens       →   Component styles
+--grey-800: #262626       --color--surface--1        background: var(--color--surface--1)
+--blue-600: #2563EB       --color--base--primary     background: var(--color--base--primary)
+```
+
+- The ONLY token definition file is `/src/styles/variables.css`
+- ALL UI across the entire application MUST use **semantic tokens**, not primitives
 - NO hardcoded hex color values allowed anywhere in component code
-- NO semantic color aliases (no `--oc-bg`, `--oc-surface`, etc.)
-- Use raw token names directly: `var(--grey-800)`, `var(--blue-500)`
+- Primitive tokens (`--grey-800`, `--blue-600`, etc.) are the low-level palette — they exist ONLY to be referenced by semantic tokens
+- Component code MUST use semantic tokens (`--color--surface--1`, `--color--text--muted`, etc.)
 
-### Color Usage
+### Semantic Token System
 
-| Color | Purpose | Example |
-|-------|---------|---------|
-| `--grey-*` (50-900) | ALL neutrals — backgrounds, text, borders, icons | `var(--grey-900)` for dark bg |
-| `--blue-*` | Primary — actions, links, selected states, accents | `var(--blue-500)` for links |
-| `--green-*` | Success states only | `var(--green-500)` for success |
-| `--yellow-*` | Warning states only | `var(--yellow-500)` for warning |
-| `--red-*` | Error/danger states only | `var(--red-500)` for error |
+The naming follows **surface / on-surface** convention:
+- **Surface** tokens are for backgrounds (where content sits)
+- **On-surface** tokens are for foreground (text, borders, icons that sit ON a surface)
 
-Other palettes (purple, pink, teal, orange, cyan, etc.) are reserved for:
+Each surface level has paired foreground tokens. If a panel uses `surface--0` as its background, its borders use `border--on-surface-0` and its text uses `text--on-surface`.
+
+### Surface Tokens (Backgrounds)
+
+Use these for all `background`, `background-color` properties:
+
+| Token | Resolves To | When To Use |
+|-------|------------|-------------|
+| `--color--surface--floor` | `--grey-950` | Deepest surfaces — toolbar, overlay backdrops, command palette |
+| `--color--surface--0` | `--grey-900` | Main app background, canvas, cards, panels |
+| `--color--surface--1` | `--grey-800` | Elevated surfaces — inputs, hover states, badges, code blocks |
+| `--color--surface--2` | `--grey-700` | Secondary elevated — active states, scrollbar thumbs |
+| `--color--surface--absolute` | `black` | Pure black (rare) |
+| `--color--surface--inverted` | `--grey-200` | Light background for inverted elements (logos on dark) |
+
+```
+Depth order (darkest → lightest):
+  floor → 0 → 1 → 2
+```
+
+### Text Tokens (Foreground — text, icons)
+
+Use these for all `color` properties on text and icons:
+
+| Token | Resolves To | When To Use |
+|-------|------------|-------------|
+| `--color--text--on-surface` | `--grey-200` | Primary text, headings, active labels |
+| `--color--text--on-surface-variant` | `--grey-400` | Secondary text, panel titles, labels |
+| `--color--text--muted` | `--grey-500` | Muted text, placeholders, inactive items |
+| `--color--text--disabled` | `--grey-600` | Disabled text, very dim metadata |
+| `--color--text--hint` | `--grey-700` | Hint text, barely visible labels |
+| `--color--text--on-primary` | `--grey-50` | Text on blue/colored backgrounds (buttons) |
+| `--color--text--primary` | `--blue-600` | Accent text — links, active tabs, tag names |
+| `--color--text--primary-light` | `--blue-400` | Lighter primary accent text |
+
+```
+Brightness order (brightest → dimmest):
+  on-primary → on-surface → on-surface-variant → muted → disabled → hint
+```
+
+### Border Tokens (Foreground — borders, dividers)
+
+Use these for all `border-color`, `border` shorthand, and divider backgrounds:
+
+| Token | Resolves To | When To Use |
+|-------|------------|-------------|
+| `--color--border--on-surface-0` | `--grey-800` | Subtle borders — panel edges, card outlines, dividers |
+| `--color--border--on-surface-1` | `--grey-700` | Visible borders — hover states, input focus, resize lines |
+| `--color--border--on-surface-2` | `--grey-600` | Emphasized borders — active inputs, strong separators |
+
+**Pairing rule:** Match border number to the surface it sits on:
+- Element on `surface--0` → border `on-surface-0`
+- Element on `surface--1` → border `on-surface-1`
+
+### Primary / Action Tokens
+
+Use these for interactive elements with brand color:
+
+| Token | Resolves To | When To Use |
+|-------|------------|-------------|
+| `--color--base--primary` | `--blue-600` | Primary button background, active indicators |
+| `--color--base--primary-hover` | `--blue-700` | Primary button hover |
+| `--color--base--primary-light` | `--blue-500` | Lighter primary (secondary actions) |
+| `--color--outline--focus` | `--blue-500` | Focus rings, focus-visible outlines |
+| `--color--outline--on-background` | `--blue-600` | Selected borders, active tab underlines |
+
+### Status Tokens
+
+Use these for status indicators, badges, and alert states:
+
+| Token | Resolves To | When To Use |
+|-------|------------|-------------|
+| `--color--status--success` | `--green-500` | Success dots, connected badges, copy confirmation |
+| `--color--status--warning` | `--yellow-500` | Warning badges, unsaved indicators |
+| `--color--status--critical` | `--red-500` | Error badges, delete buttons, blocking severity |
+| `--color--status--info` | `--blue-500` | Info indicators |
+| `--color--status--connecting` | `--orange-500` | Connecting/pending states |
+| `--color--text--critical-light` | `--red-400` | Lighter error text (hover delete) |
+
+### Syntax Highlighting Tokens
+
+Use these for code display and CSS property rendering:
+
+| Token | Resolves To | When To Use |
+|-------|------------|-------------|
+| `--color--syntax--comment` | `--grey-400` | Code comments |
+| `--color--syntax--selector` | `--green-500` | CSS selectors |
+| `--color--syntax--property` | `--blue-300` | CSS property names |
+| `--color--syntax--value` | `--orange-400` | CSS values |
+
+### Primitive Palettes (reserved)
+
+Primitive tokens (`--grey-*`, `--blue-*`, etc.) are ONLY used inside semantic token definitions in `variables.css`. Component code must NEVER reference them directly.
+
+Other palettes (purple, pink, teal, orange, cyan, indigo, fuchsia, lime) are reserved for:
 - Annotation color differentiation
 - Tag/element type colors in layers panel
 - Data visualization
-- NOT for general UI elements
+- Syntax highlighting (via semantic tokens)
+- NOT for general UI backgrounds, text, or borders
 
-### Grey Hierarchy (dark theme)
+### How To Apply — Quick Decision Guide
 
 ```
-Backgrounds (darkest → lightest):
-  var(--grey-900)  → app/page background
-  var(--grey-800)  → panel/card background
-  var(--grey-700)  → hover state, elevated surface
-  var(--grey-600)  → active state
+Need a background?     → --color--surface--{floor|0|1|2}
+Need text color?       → --color--text--{on-surface|muted|disabled|primary}
+Need a border?         → --color--border--on-surface-{0|1|2}
+Need a blue button?    → bg: --color--base--primary, text: --color--text--on-primary
+Need a status dot?     → --color--status--{success|warning|critical}
+Need focus ring?       → --color--outline--focus
+Need selected border?  → --color--outline--on-background
+```
 
-Text (brightest → dimmest):
-  var(--grey-50)   → primary text, headings
-  var(--grey-200)  → secondary text
-  var(--grey-400)  → muted text, labels
-  var(--grey-500)  → dim text, metadata
-  var(--grey-600)  → placeholder, disabled
+### Example: Building a Panel
 
-Borders:
-  var(--grey-800)  → subtle border
-  var(--grey-700)  → visible border
-  var(--grey-600)  → emphasized border
+```css
+.oc-panel {
+  background: var(--color--surface--floor);       /* deepest surface */
+}
+.oc-panel-header {
+  border-bottom: 1px solid var(--color--border--on-surface-0);
+  color: var(--color--text--on-surface);          /* primary text */
+}
+.oc-panel-title {
+  color: var(--color--text--on-surface-variant);  /* secondary text */
+}
+.oc-panel-input {
+  background: var(--color--surface--1);           /* elevated input */
+  border: 1px solid var(--color--border--on-surface-0);
+  color: var(--color--text--on-surface);
+}
+.oc-panel-input:focus {
+  border-color: var(--color--outline--on-background); /* blue focus */
+}
+.oc-panel-btn-primary {
+  background: var(--color--base--primary);        /* blue button */
+  color: var(--color--text--on-primary);          /* white text */
+}
+.oc-panel-btn-primary:hover {
+  background: var(--color--base--primary-hover);
+}
+.oc-panel-muted {
+  color: var(--color--text--muted);               /* dim label */
+}
+.oc-panel-status.is-connected {
+  color: var(--color--status--success);           /* green dot */
+}
 ```
 
 ### Styling Method
@@ -274,14 +399,20 @@ The 0canvas app is an npm package. CSS is delivered via runtime injection:
 
 ## Quick Reference: Token → Code Mapping
 
-| Design Token | CSS Usage |
-|-------------|-----------|
-| `--grey-900` | `background: var(--grey-900)` |
-| `--blue-500` | `color: var(--blue-500)` |
-| `--font-sans` | `font-family: var(--font-sans)` |
-| `--font-size-sm` | `font-size: var(--font-size-sm)` |
-| `--font-weight-regular` | `font-weight: var(--font-weight-regular)` |
-| `--shadow-md` | `box-shadow: var(--shadow-md)` |
+| Purpose | Semantic Token | CSS Usage |
+|---------|---------------|-----------|
+| App background | `--color--surface--0` | `background: var(--color--surface--0)` |
+| Card/input bg | `--color--surface--1` | `background: var(--color--surface--1)` |
+| Primary text | `--color--text--on-surface` | `color: var(--color--text--on-surface)` |
+| Muted text | `--color--text--muted` | `color: var(--color--text--muted)` |
+| Subtle border | `--color--border--on-surface-0` | `border: 1px solid var(--color--border--on-surface-0)` |
+| Blue button | `--color--base--primary` | `background: var(--color--base--primary)` |
+| Button text | `--color--text--on-primary` | `color: var(--color--text--on-primary)` |
+| Focus ring | `--color--outline--focus` | `outline: 2px solid var(--color--outline--focus)` |
+| Success dot | `--color--status--success` | `color: var(--color--status--success)` |
+| Font family | `--font-sans` | `font-family: var(--font-sans)` |
+| Font size | `--font-size-sm` | `font-size: var(--font-size-sm)` |
+| Shadow | `--shadow-md` | `box-shadow: var(--shadow-md)` |
 
 | Visual Concept | React Code |
 |---------------|------------|

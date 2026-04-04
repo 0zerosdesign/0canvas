@@ -257,12 +257,10 @@ export function SourceNode({ id, data, selected }: NodeProps) {
       style={{
         width: "100%",
         height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        gap: 8,
+        position: "relative",
       }}
     >
-      {/* ── NodeResizer ── */}
+      {/* ── NodeResizer — wraps only the viewport area ── */}
       <NodeResizer
         minWidth={MIN_WIDTH}
         minHeight={MIN_HEIGHT}
@@ -271,29 +269,33 @@ export function SourceNode({ id, data, selected }: NodeProps) {
         isVisible={selected || false}
         lineStyle={{
           borderWidth: 1,
-          borderColor: "#2563EB",
+          borderColor: "var(--color--outline--on-background)",
         }}
         handleStyle={{
           width: 8,
           height: 8,
           borderRadius: "50%",
-          background: "#2563EB",
-          border: "2px solid #171717",
+          background: "var(--color--base--primary)",
+          border: "2px solid var(--color--surface--0)",
         }}
         onResizeStart={onResizeStart}
         onResize={onResize}
         onResizeEnd={onResizeEnd}
       />
 
-      {/* ── Floating Chrome Bar ── */}
+      {/* ── Chrome Bar — floats above the node bounds ── */}
       <div
         className="oc-source-chrome"
         style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: "100%",
+          marginBottom: 8,
           height: CHROME_HEIGHT,
           justifyContent: "space-between",
-          border: `1px solid ${selected ? "#2563EB" : "#262626"}`,
+          border: "1px solid var(--color--border--on-surface-0)",
           borderRadius: 10,
-          flexShrink: 0,
           boxShadow: "0 2px 12px rgba(0,0,0,0.4)",
         }}
       >
@@ -308,7 +310,7 @@ export function SourceNode({ id, data, selected }: NodeProps) {
 
           {/* URL / route pill */}
           <div className="oc-source-url">
-            <span style={{ fontSize: 9, color: "#404040", flexShrink: 0 }}>localhost</span>
+            <span style={{ fontSize: 9, color: "var(--color--text--muted)", flexShrink: 0 }}>localhost</span>
             <span style={{ fontSize: 10 }}>
               {state.currentRoute || "/"}
             </span>
@@ -356,7 +358,7 @@ export function SourceNode({ id, data, selected }: NodeProps) {
               style={{
                 fontSize: 10,
                 fontWeight: 500,
-                color: isResizing ? "#2563EB" : undefined,
+                color: isResizing ? "var(--color--text--primary)" : undefined,
                 fontVariantNumeric: "tabular-nums",
                 letterSpacing: "-0.3px",
                 transition: "color 0.15s",
@@ -389,15 +391,15 @@ export function SourceNode({ id, data, selected }: NodeProps) {
               onClick={(e) => { e.stopPropagation(); handleCopy(); }}
               title="Copy for Agent"
             >
-              {copied ? <Check style={{ width: 12, height: 12, color: "#50e3c2" }} /> : <Copy style={{ width: 12, height: 12 }} />}
+              {copied ? <Check style={{ width: 12, height: 12, color: "var(--color--text--primary-light)" }} /> : <Copy style={{ width: 12, height: 12 }} />}
             </button>
           )}
-          <div style={{ width: 1, height: 16, background: "#262626" }} />
+          <div style={{ width: 1, height: 16, background: "var(--color--border--on-surface-0)" }} />
           <button
             className="oc-source-btn"
             onClick={(e) => { e.stopPropagation(); onForkPage(dims.w); }}
             title="Fork Page"
-            style={{ color: "#2563EB" }}
+            style={{ color: "var(--color--text--primary)" }}
           >
             <GitFork style={{ width: 12, height: 12 }} />
           </button>
@@ -406,7 +408,7 @@ export function SourceNode({ id, data, selected }: NodeProps) {
               className="oc-source-btn"
               onClick={(e) => { e.stopPropagation(); onForkComponent(state.selectedElementId!, dims.w); }}
               title="Fork Element"
-              style={{ color: "#2563EB" }}
+              style={{ color: "var(--color--text--primary)" }}
             >
               <Maximize2 style={{ width: 12, height: 12 }} />
             </button>
@@ -414,17 +416,18 @@ export function SourceNode({ id, data, selected }: NodeProps) {
         </div>
       </div>
 
-      {/* ── Viewport / iframe ── */}
+      {/* ── Viewport / iframe — fills the entire node area ── */}
       <div
         className="oc-variant-card"
         style={{
-          flex: 1,
+          width: "100%",
+          height: "100%",
           position: "relative",
           display: "flex",
           flexDirection: "column",
-          border: `1px solid ${selected ? "#2563EB" : "#262626"}`,
+          border: `1px solid ${selected ? "var(--color--outline--on-background)" : "var(--color--border--on-surface-0)"}`,
           boxShadow: selected
-            ? "0 0 0 1px #2563EB, 0 8px 32px rgba(37,99,235,0.12)"
+            ? "0 0 0 1px var(--color--outline--on-background), 0 8px 32px rgba(37,99,235,0.12)"
             : "0 4px 24px rgba(0,0,0,0.4)",
         }}
       >
@@ -440,7 +443,7 @@ export function SourceNode({ id, data, selected }: NodeProps) {
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
-              background: "#171717",
+              background: "var(--color--surface--0)",
               zIndex: 2,
             }}
           >
@@ -448,12 +451,12 @@ export function SourceNode({ id, data, selected }: NodeProps) {
               style={{
                 width: 28,
                 height: 28,
-                color: "#2563EB",
+                color: "var(--color--text--primary)",
                 animation: "spin 1s linear infinite",
                 marginBottom: 12,
               }}
             />
-            <p style={{ color: "#737373", fontSize: 12, margin: 0 }}>Loading preview...</p>
+            <p style={{ color: "var(--color--text--muted)", fontSize: 12, margin: 0 }}>Loading preview...</p>
           </div>
         )}
 
@@ -467,12 +470,12 @@ export function SourceNode({ id, data, selected }: NodeProps) {
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
-              background: "#171717",
+              background: "var(--color--surface--0)",
               zIndex: 2,
             }}
           >
-            <Monitor style={{ width: 24, height: 24, color: "#ff4444", marginBottom: 8 }} />
-            <p style={{ color: "#737373", fontSize: 11, margin: 0 }}>Preview unavailable</p>
+            <Monitor style={{ width: 24, height: 24, color: "var(--color--status--critical)", marginBottom: 8 }} />
+            <p style={{ color: "var(--color--text--muted)", fontSize: 11, margin: 0 }}>Preview unavailable</p>
           </div>
         )}
 
@@ -512,8 +515,8 @@ export function SourceNode({ id, data, selected }: NodeProps) {
                 gap: 5,
                 padding: "5px 12px",
                 borderRadius: 8,
-                background: "#2563EB",
-                color: "#fff",
+                background: "var(--color--base--primary)",
+                color: "var(--color--text--on-primary)",
                 fontSize: 11,
                 fontWeight: 500,
                 boxShadow: "0 2px 12px rgba(37,99,235,0.3)",
@@ -543,8 +546,8 @@ export function SourceNode({ id, data, selected }: NodeProps) {
               style={{
                 padding: "8px 16px",
                 borderRadius: 8,
-                background: "#171717",
-                border: "1px solid #262626",
+                background: "var(--color--surface--0)",
+                border: "1px solid var(--color--border--on-surface-0)",
                 boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
               }}
             >
@@ -552,7 +555,7 @@ export function SourceNode({ id, data, selected }: NodeProps) {
                 style={{
                   fontSize: 14,
                   fontWeight: 600,
-                  color: "#2563EB",
+                  color: "var(--color--text--primary)",
                   fontVariantNumeric: "tabular-nums",
                 }}
               >
@@ -567,12 +570,12 @@ export function SourceNode({ id, data, selected }: NodeProps) {
         <div
           style={{
             height: 24,
-            borderTop: "1px solid #262626",
+            borderTop: "1px solid var(--color--border--on-surface-0)",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             padding: "0 12px",
-            background: "#171717",
+            background: "var(--color--surface--0)",
             flexShrink: 0,
             borderRadius: "0 0 10px 10px",
           }}
@@ -583,14 +586,14 @@ export function SourceNode({ id, data, selected }: NodeProps) {
                 width: 5,
                 height: 5,
                 borderRadius: "50%",
-                background: iframeLoaded ? "#28c840" : "#525252",
+                background: iframeLoaded ? "var(--color--status--success)" : "var(--color--text--muted)",
               }}
             />
-            <span style={{ fontSize: 9, color: "#525252" }}>
+            <span style={{ fontSize: 9, color: "var(--color--text--muted)" }}>
               {iframeLoaded ? `${elementCount} elements` : "Loading..."}
             </span>
           </div>
-          <span style={{ fontSize: 9, color: "#404040" }}>
+          <span style={{ fontSize: 9, color: "var(--color--text--muted)" }}>
             {activePreset || "Custom"}
           </span>
         </div>
@@ -600,10 +603,10 @@ export function SourceNode({ id, data, selected }: NodeProps) {
         type="source"
         position={Position.Right}
         style={{
-          background: "#2563EB",
+          background: "var(--color--base--primary)",
           width: 8,
           height: 8,
-          border: "2px solid #171717",
+          border: "2px solid var(--color--surface--0)",
         }}
       />
     </div>

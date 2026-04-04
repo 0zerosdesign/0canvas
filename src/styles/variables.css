@@ -78,6 +78,7 @@
   --grey-700: #404040;
   --grey-800: #262626;
   --grey-900: #171717;
+  --grey-950: #0a0a0a;
 
   /* ── Color: Lime ──────────────────────────── */
   --lime-50: #F7FEE7;
@@ -191,12 +192,99 @@
   --default-text-color: #fafafa;
   --default-bg-color: #171717;
   --default-link-color: #2463ebff;
-  --markdown-block-font-color: var(--grey-200, #E5E5E5);
+  --markdown-block-font-color: var(--color--text--on-surface, #E5E5E5);
   --red: #c50d0d;
   --light-blue: #9DFAFF;
   --light-green: #C4EAB9;
   --dark-blue: #0A3957;
   --dark-green: #112D25;
+
+  /* ============================================
+     Semantic Tokens
+     ============================================
+     Surface (background) tokens use grey scale.
+     Foreground (text, border, icon) tokens use
+     "on-surface" naming to pair with surfaces.
+
+     Surface 0 = darkest regular bg
+     Surface 1 = elevated (cards, inputs)
+     Surface 2 = secondary elevated
+     Floor     = deepest (toolbars, overlays)
+     ============================================ */
+
+  /* ── Surface (Background) ────────────────── */
+  --color--surface--floor: var(--grey-950);
+  --color--surface--0: var(--grey-900);
+  --color--surface--1: var(--grey-800);
+  --color--surface--2: var(--grey-700);
+  --color--surface--absolute: black;
+  --color--surface--inverted: var(--grey-200);
+
+  /* ── Text (Foreground) ───────────────────── */
+  --color--text--on-surface: var(--grey-200);
+  --color--text--on-surface-variant: var(--grey-400);
+  --color--text--muted: var(--grey-500);
+  --color--text--disabled: var(--grey-600);
+  --color--text--hint: var(--grey-700);
+  --color--text--on-primary: var(--grey-50);
+  --color--text--on-success: var(--green-50);
+  --color--text--on-critical: var(--red-50);
+  --color--text--on-warning: var(--yellow-50);
+  --color--text--primary: var(--blue-600);
+  --color--text--primary-light: var(--blue-400);
+  --color--text--link: var(--blue-600);
+  --color--text--link-hover: var(--blue-500);
+  --color--text--info: var(--blue-500);
+  --color--text--success: var(--green-500);
+  --color--text--warning: var(--yellow-500);
+  --color--text--critical: var(--red-500);
+  --color--text--critical-light: var(--red-400);
+
+  /* ── Border (Foreground) ─────────────────── */
+  --color--border--on-surface-0: var(--grey-800);
+  --color--border--on-surface-1: var(--grey-700);
+  --color--border--on-surface-2: var(--grey-600);
+
+  /* ── Base (Primary Action) ───────────────── */
+  --color--base--primary: var(--blue-600);
+  --color--base--primary-hover: var(--blue-700);
+  --color--base--primary-light: var(--blue-500);
+
+  /* ── Status ──────────────────────────────── */
+  --color--status--info: var(--blue-500);
+  --color--status--success: var(--green-500);
+  --color--status--warning: var(--yellow-500);
+  --color--status--critical: var(--red-500);
+  --color--status--connecting: var(--orange-500);
+
+  /* ── Background (Colored) ────────────────── */
+  --color--background--primary: var(--blue-600);
+  --color--background--primary-hover: var(--blue-700);
+  --color--background--success: var(--green-500);
+  --color--background--warning: var(--yellow-500);
+  --color--background--critical: var(--red-500);
+  --color--background--info: var(--blue-500);
+
+  /* ── Outline / Focus ─────────────────────── */
+  --color--outline--focus: var(--blue-500);
+  --color--outline--on-background: var(--blue-600);
+
+  /* ── Shadow ──────────────────────────────── */
+  --color--shadow--surface: rgba(0, 0, 0, 0.25);
+  --color--shadow--overlay: rgba(0, 0, 0, 0.6);
+  --color--shadow--canvas: rgba(0, 0, 0, 0.2);
+
+  /* ── Syntax Highlighting ─────────────────── */
+  --color--syntax--comment: var(--grey-400);
+  --color--syntax--selector: var(--green-500);
+  --color--syntax--property: var(--blue-300);
+  --color--syntax--value: var(--orange-400);
+
+  /* ── 0canvas Brand ───────────────────────── */
+  --0canvas--base--primary: var(--blue-600);
+  --0canvas--text--primary: var(--0canvas--base--primary);
+  --0canvas--background--primary: var(--0canvas--base--primary);
+  --0canvas--outline--on-background: var(--0canvas--base--primary);
 
   /* ── Fonts ────────────────────────────────── */
   --font-sans: 'Inter', sans-serif;

@@ -2,12 +2,11 @@
 // ZeroCanvas — Dev / Documentation Site
 // ──────────────────────────────────────────────────────────
 //
-// Two pages:
-//   /           → Documentation (how to install, API, features)
-//   /workspace  → Live workspace for testing UI & functionality
+// Single page:
+//   /  → Documentation (how to install, API, features)
 //
-// This is the development preview. The actual npm package
-// exports <ZeroCanvas /> from 0canvas-engine.tsx.
+// The actual 0canvas overlay is included via <ZeroCanvas />
+// and toggled with Ctrl+Shift+D on any page.
 // ──────────────────────────────────────────────────────────
 
 import React from "react";
