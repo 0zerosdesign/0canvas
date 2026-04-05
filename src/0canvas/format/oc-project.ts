@@ -13,7 +13,7 @@
 // ──────────────────────────────────────────────────────────
 
 import { z } from "zod";
-import type { VariantData, FeedbackItem, OCProject, FileMapping } from "../store/store";
+import type { VariantData, FeedbackItem, OCProject } from "../store/store";
 
 export const OC_PROJECT_SCHEMA_VERSION = 1;
 
@@ -70,22 +70,12 @@ const LayerNodeSchema: z.ZodType<OCLayerNode> = z.lazy(() =>
   }),
 );
 
-const FileMapEntrySchema = z.object({
-  elementId: idString,
-  filePath: nonEmptyString,
-  componentName: z.string().optional(),
-  framework: z.string().optional(),
-  confidence: z.number().min(0).max(1),
-  reasons: z.array(z.string()).optional(),
-});
-
 const PageSchema = z.object({
   id: idString,
   name: nonEmptyString,
   route: nonEmptyString,
   source: PageSourceSchema,
   layers: z.array(LayerNodeSchema),
-  fileMap: z.array(FileMapEntrySchema),
 });
 
 const ViewportSchema = z.object({
@@ -176,8 +166,6 @@ export type OCAnnotation = z.infer<typeof AnnotationSchema>;
 export type OCFeedback = z.infer<typeof FeedbackSchema>;
 export type OCCheckpoint = z.infer<typeof CheckpointSchema>;
 export type OCIntegrity = z.infer<typeof IntegritySchema>;
-export type OCFileMapEntry = z.infer<typeof FileMapEntrySchema>;
-
 export type OCLayerNode = {
   id: string;
   tag: string;
@@ -296,7 +284,6 @@ export function createEmptyProjectFile(
         route: "/",
         source: { html: "", styles: "", assets: [] },
         layers: [],
-        fileMap: [],
       },
     ],
     variants: [],
@@ -317,7 +304,6 @@ export function stateToProjectFile(
   project: OCProject,
   variants: VariantData[],
   feedbackItems: FeedbackItem[],
-  fileMappings: FileMapping[],
   currentRoute: string,
   existingFile?: OCProjectFile | null,
 ): OCProjectFile {
@@ -325,14 +311,6 @@ export function stateToProjectFile(
   const base = existingFile || createEmptyProjectFile(project);
 
   const revision = (base.project.revision || 0) + 1;
-
-  // Build file map entries from runtime FileMapping[]
-  const fileMapEntries: OCFileMapEntry[] = fileMappings.map((fm) => ({
-    elementId: fm.elementId,
-    filePath: fm.filePath,
-    componentName: fm.componentName || undefined,
-    confidence: fm.confidence === "high" ? 0.9 : fm.confidence === "medium" ? 0.6 : 0.3,
-  }));
 
   // Convert runtime variants to .0c variants
   const ocVariants: OCVariant[] = variants.map((v) => {
@@ -378,7 +356,6 @@ export function stateToProjectFile(
     route: currentRoute || "/",
     source: base.pages[0]?.source || { html: "", styles: "", assets: [] },
     layers: base.pages[0]?.layers || [],
-    fileMap: fileMapEntries,
   };
 
   return {

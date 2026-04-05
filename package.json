@@ -17,6 +17,17 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       }
+    },
+    "./vite": {
+      "types": "./dist/vite-plugin.d.ts",
+      "import": {
+        "types": "./dist/vite-plugin.d.mts",
+        "default": "./dist/vite-plugin.mjs"
+      },
+      "require": {
+        "types": "./dist/vite-plugin.d.ts",
+        "default": "./dist/vite-plugin.js"
+      }
     }
   },
   "bin": {
@@ -29,7 +40,7 @@
     "build": "tsup",
     "watch": "tsup --watch",
     "dev": "pnpm build && pnpm watch",
-    "test:ui": "vite --config testing/vite.config.ts",
+    "test:ui": "vite",
     "prepublishOnly": "pnpm build"
   },
   "peerDependencies": {

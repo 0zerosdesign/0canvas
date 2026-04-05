@@ -3,13 +3,12 @@ import {
   Search,
   Layers,
   Palette,
-  Zap,
+  Settings,
   Lightbulb,
   GitBranch,
   MousePointer2,
   Send,
   Copy,
-  FileCode,
   PenTool,
 } from "lucide-react";
 import { useWorkspace } from "../store/store";
@@ -69,13 +68,13 @@ export function CommandPalette() {
       category: "Panels",
     },
     {
-      id: "toggle-agents",
-      label: "Toggle IDE Panel",
-      description: "Show or hide the IDE & agents panel",
-      icon: <Zap className="w-4 h-4" />,
+      id: "open-settings",
+      label: "Open Settings",
+      description: "IDE & Agents configuration",
+      icon: <Settings className="w-4 h-4" />,
       shortcut: "A",
       action: () => {
-        dispatch({ type: "TOGGLE_IDE_PANEL" });
+        dispatch({ type: "SET_ACTIVE_PAGE", page: "settings" });
         dispatch({ type: "TOGGLE_COMMAND_PALETTE" });
       },
       category: "Panels",
@@ -91,18 +90,6 @@ export function CommandPalette() {
         dispatch({ type: "TOGGLE_COMMAND_PALETTE" });
       },
       category: "Tools",
-    },
-    {
-      id: "toggle-file-map",
-      label: "Toggle File Map",
-      description: "Show or hide file-to-element mappings",
-      icon: <FileCode className="w-4 h-4" />,
-      shortcut: "F",
-      action: () => {
-        dispatch({ type: "TOGGLE_FILE_MAP_PANEL" });
-        dispatch({ type: "TOGGLE_COMMAND_PALETTE" });
-      },
-      category: "Panels",
     },
     {
       id: "toggle-annotations",

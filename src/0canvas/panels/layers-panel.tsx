@@ -67,6 +67,7 @@ function matchesSearch(element: ElementNode, search: string): boolean {
   const s = search.toLowerCase();
   if (element.tag.toLowerCase().includes(s)) return true;
   if (element.text?.toLowerCase().includes(s)) return true;
+  if (element.componentName?.toLowerCase().includes(s)) return true;
   if (element.classes.some((c) => c.toLowerCase().includes(s))) return true;
   if (element.selector.toLowerCase().includes(s)) return true;
   return element.children.some((child) => matchesSearch(child, s));
@@ -91,13 +92,17 @@ function LayerItem({
   const shouldShow = !isSearching || matchesSearch(element, search);
   if (!shouldShow) return null;
 
-  const displayName = element.text
-    ? `${element.tag} "${element.text.slice(0, 20)}${element.text.length > 20 ? "..." : ""}"`
-    : element.tag;
+  const displayName = element.componentName
+    ? element.componentName
+    : element.text
+      ? `${element.tag} "${element.text.slice(0, 20)}${element.text.length > 20 ? "..." : ""}"`
+      : element.tag;
 
-  const classPreview = element.classes.length > 0
-    ? `.${element.classes.slice(0, 2).join(".")}`
-    : "";
+  const classPreview = element.componentName
+    ? `<${element.tag}>`
+    : element.classes.length > 0
+      ? `.${element.classes.slice(0, 2).join(".")}`
+      : "";
 
   return (
     <div>

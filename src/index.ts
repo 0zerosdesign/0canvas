@@ -29,7 +29,16 @@ export {
   captureComponentSnapshot,
   pushVariantToMain,
   getElementOuterHTML,
+  onForkElementRequest,
+  onChangeRequest,
+  renderFeedbackMarkers,
+  clearFeedbackMarkers,
+  onEditFeedbackRequest,
 } from "./0canvas/inspector/dom-inspector";
+
+// Component detection (for building custom UIs)
+export { identifyElement } from "./0canvas/inspector/component-detection";
+export type { ComponentInfo } from "./0canvas/inspector/component-detection";
 
 // Runtime CSS injection (for advanced consumers)
 export { injectStyles, removeStyles } from "./0canvas/engine/0canvas-styles";
@@ -91,7 +100,6 @@ export type {
   OCFeedback,
   OCCheckpoint,
   OCIntegrity,
-  OCFileMapEntry,
   OCLayerNode,
   OCValidationResult,
 } from "./0canvas/format/oc-project";

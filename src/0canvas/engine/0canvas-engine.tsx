@@ -29,8 +29,8 @@ import { WorkspaceToolbar } from "../panels/workspace-toolbar";
 import { LayersPanel } from "../panels/layers-panel";
 import { StylePanel } from "../panels/style-panel";
 import { VariantCanvas } from "../canvas/variant-canvas";
-import { AgentPanel } from "../panels/agent-panel";
-import { FileMapPanel } from "../panels/file-map-panel";
+import { AppSidebar } from "../panels/app-sidebar";
+import { SettingsPage } from "../panels/settings-page";
 import { projectFileToState } from "../format/oc-project";
 import {
   scheduleAutoSave,
@@ -248,29 +248,7 @@ export function ZeroCanvas({
     >
       <WorkspaceProvider>
         <AutoConnect>
-          <button
-            onClick={toggle}
-            data-0canvas="close"
-            title={`Close ZeroCanvas (Ctrl+Shift+${shortcut.toUpperCase()})`}
-            className="oc-close-btn"
-            style={{ zIndex: zIndex + 1 }}
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
-
-          <EngineWorkspace />
+          <EngineWorkspace onClose={toggle} />
         </AutoConnect>
       </WorkspaceProvider>
     </div>,
@@ -323,15 +301,13 @@ function useResizable(initial: number, min: number, max: number) {
 // Mirrors the same panel arrangement as the docs site workspace
 // but without any navigation links.
 
-function EngineWorkspace() {
+function EngineWorkspace({ onClose }: { onClose: () => void }) {
   const { state, dispatch } = useWorkspace();
   const iframeNavRef = React.useRef<((route: string) => void) | null>(null);
   const lastPollRef = useRef<number>(0);
 
   const layers = useResizable(260, 180, 480);
   const style = useResizable(280, 200, 500);
-  const fileMap = useResizable(280, 200, 500);
-  const ide = useResizable(300, 220, 520);
 
   // ── Load .0c project file from IndexedDB on mount ──
   useEffect(() => {
@@ -352,7 +328,6 @@ function EngineWorkspace() {
       state.ocProject,
       state.variants,
       state.feedbackItems,
-      state.fileMappings,
       state.currentRoute,
       state.ocProjectFile,
     );
@@ -360,7 +335,6 @@ function EngineWorkspace() {
     state.ocProject,
     state.variants,
     state.feedbackItems,
-    state.fileMappings,
     state.currentRoute,
     state.ocProjectFile,
   ]);
@@ -372,14 +346,13 @@ function EngineWorkspace() {
         state.ocProject,
         state.variants,
         state.feedbackItems,
-        state.fileMappings,
         state.currentRoute,
       );
       downloadProjectFile(file);
     } catch (err) {
       console.warn("[DD] Export failed:", err);
     }
-  }, [state.ocProject, state.variants, state.feedbackItems, state.fileMappings, state.currentRoute]);
+  }, [state.ocProject, state.variants, state.feedbackItems, state.currentRoute]);
 
   // ── Import .0c file ──
   const handleImportDD = useCallback(async () => {
@@ -397,14 +370,49 @@ function EngineWorkspace() {
       state.ocProject,
       state.variants,
       state.feedbackItems,
-      state.fileMappings,
       state.currentRoute,
     );
     const ok = await pushProjectToIDE(file, port);
     if (ok) {
       dispatch({ type: "SET_OC_PROJECT_FILE", file });
     }
-  }, [state.ocProject, state.variants, state.feedbackItems, state.fileMappings, state.currentRoute, state.wsPort, dispatch]);
+  }, [state.ocProject, state.variants, state.feedbackItems, state.currentRoute, state.wsPort, dispatch]);
+
+  // ── Auto-connect IDE + MCP bridge on mount ──
+  // Reads globals injected by the Vite plugin for instant connection,
+  // then validates with a health check. Falls back to health-check-only
+  // if no Vite plugin is installed.
+  useEffect(() => {
+    const w = window as unknown as Record<string, unknown>;
+    const injectedPort = typeof w.__ZEROCANVAS_MCP_PORT__ === "number" ? w.__ZEROCANVAS_MCP_PORT__ as number : null;
+    const injectedIDE = typeof w.__ZEROCANVAS_IDE__ === "string" ? w.__ZEROCANVAS_IDE__ as string : null;
+    const port = injectedPort || 24192;
+
+    // If the Vite plugin injected IDE info, connect immediately (no network wait)
+    if (injectedIDE) {
+      dispatch({ type: "UPDATE_IDE_STATUS", id: injectedIDE, status: "connected" });
+    }
+    if (injectedPort) {
+      dispatch({ type: "WS_SET_PORT", port: injectedPort });
+    }
+
+    // Verify bridge is actually reachable, and pick up IDE from server if not injected
+    const detect = async () => {
+      try {
+        const res = await fetch(`http://127.0.0.1:${port}/api/health`, { signal: AbortSignal.timeout(3000) });
+        if (res.ok) {
+          const data = await res.json();
+          dispatch({ type: "WS_STATUS_UPDATE", status: "connected" });
+          dispatch({ type: "WS_SET_PORT", port });
+          // Server-side IDE detection (fallback if Vite plugin didn't inject)
+          if (data.ide && !injectedIDE) {
+            dispatch({ type: "UPDATE_IDE_STATUS", id: data.ide, status: "connected" });
+          }
+        }
+      } catch { /* bridge offline — IDE may still be correct from injected globals */ }
+    };
+    detect();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── MCP Bridge Polling ──
   // Listens for events from AI agents (like pushed changes)
@@ -458,66 +466,51 @@ function EngineWorkspace() {
   }, []);
 
   return (
-    <div className="oc-workspace" data-0canvas="workspace">
-      {/* Top toolbar */}
-      <WorkspaceToolbar onNavigate={handleNavigate} />
+    <div className="oc-app-shell" data-0canvas="workspace">
+      {/* Far-left sidebar */}
+      <AppSidebar onClose={onClose} />
 
-      {/* Main workspace */}
-      <div className="oc-workspace-main">
-        {/* Left: Layers Panel + resize handle */}
-        {state.layersPanelOpen && (
-          <>
-            <div className="oc-panel-slot" style={{ width: layers.width }}>
-              <LayersPanel />
-            </div>
-            <div className="oc-resize-handle" onMouseDown={(e) => layers.onMouseDown(e, 1)}>
-              <span className="oc-resize-line" />
-            </div>
-          </>
-        )}
+      {/* Page content */}
+      {state.activePage === "design" ? (
+        <div className="oc-workspace">
+          {/* Top toolbar */}
+          <WorkspaceToolbar onNavigate={handleNavigate} />
 
-        {/* Center: Variant Canvas */}
-        <div className="oc-workspace-center">
-          <VariantCanvas onNavigateRef={iframeNavRef} />
+          {/* Main workspace */}
+          <div className="oc-workspace-main">
+            {/* Left: Layers Panel + resize handle */}
+            {state.layersPanelOpen && (
+              <>
+                <div className="oc-panel-slot" style={{ width: layers.width }}>
+                  <LayersPanel />
+                </div>
+                <div className="oc-resize-handle" onMouseDown={(e) => layers.onMouseDown(e, 1)}>
+                  <span className="oc-resize-line" />
+                </div>
+              </>
+            )}
+
+            {/* Center: Variant Canvas */}
+            <div className="oc-workspace-center">
+              <VariantCanvas onNavigateRef={iframeNavRef} />
+            </div>
+
+            {/* Right: Style Panel */}
+            {state.stylePanelOpen && (
+              <>
+                <div className="oc-resize-handle" onMouseDown={(e) => style.onMouseDown(e, -1)}>
+                  <span className="oc-resize-line" />
+                </div>
+                <div className="oc-panel-slot" style={{ width: style.width }}>
+                  <StylePanel />
+                </div>
+              </>
+            )}
+          </div>
         </div>
-
-        {/* Right: Style Panel */}
-        {state.stylePanelOpen && (
-          <>
-            <div className="oc-resize-handle" onMouseDown={(e) => style.onMouseDown(e, -1)}>
-              <span className="oc-resize-line" />
-            </div>
-            <div className="oc-panel-slot" style={{ width: style.width }}>
-              <StylePanel />
-            </div>
-          </>
-        )}
-
-        {/* Right: File Map Panel */}
-        {state.fileMapPanelOpen && (
-          <>
-            <div className="oc-resize-handle" onMouseDown={(e) => fileMap.onMouseDown(e, -1)}>
-              <span className="oc-resize-line" />
-            </div>
-            <div className="oc-panel-slot" style={{ width: fileMap.width }}>
-              <FileMapPanel />
-            </div>
-          </>
-        )}
-
-        {/* Right: IDE / Agent Panel */}
-        {state.idePanelOpen && (
-          <>
-            <div className="oc-resize-handle" onMouseDown={(e) => ide.onMouseDown(e, -1)}>
-              <span className="oc-resize-line" />
-            </div>
-            <div className="oc-panel-slot" style={{ width: ide.width }}>
-              <AgentPanel />
-            </div>
-          </>
-        )}
-      </div>
-
+      ) : (
+        <SettingsPage />
+      )}
     </div>
   );
 }

@@ -4,8 +4,6 @@
 
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import {
-  Handle,
-  Position,
   NodeResizer,
   useReactFlow,
   type NodeProps,
@@ -179,8 +177,7 @@ ${ruleLines.join("\n")}</style>
         if (val && val !== "none" && val !== "normal" && val !== "auto") styles[prop] = val;
       }
       dispatch({ type: "SET_ELEMENT_STYLES", id: elId, styles });
-      stopInspect();
-      setInspectingState(false);
+      // Do NOT stop inspect here — keep inspect mode active
     });
     setInspectingState(true);
   }, [inspecting, variant.id, dispatch]);
@@ -216,28 +213,19 @@ ${ruleLines.join("\n")}</style>
         position: "relative",
       }}
     >
-      {/* ── NodeResizer — wraps only the preview area ── */}
+      {/* ── NodeResizer — invisible handles, edge-drag only ── */}
       <NodeResizer
         minWidth={MIN_W}
         minHeight={MIN_H}
         maxWidth={MAX_W}
         maxHeight={MAX_H}
-        isVisible={selected || false}
-        lineStyle={{ borderWidth: 1, borderColor: "var(--color--outline--on-background)" }}
-        handleStyle={{
-          width: 7,
-          height: 7,
-          borderRadius: "50%",
-          background: "var(--color--base--primary)",
-          border: "2px solid var(--color--surface--0)",
-        }}
+        isVisible={true}
+        lineStyle={{ borderWidth: 0, borderColor: "transparent" }}
+        handleStyle={{ width: 0, height: 0, opacity: 0, background: "transparent", border: "none" }}
         onResizeStart={() => setIsResizing(true)}
         onResize={(_, p) => setDims({ w: Math.round(p.width), h: Math.round(p.height) })}
         onResizeEnd={() => setIsResizing(false)}
       />
-
-      <Handle type="target" position={Position.Left} style={{ background: "var(--color--base--primary)", width: 8, height: 8 }} />
-      <Handle type="source" position={Position.Right} style={{ background: "var(--color--base--primary)", width: 8, height: 8 }} />
 
       {/* ── Chrome bar — floats above the node bounds ── */}
       <div
@@ -374,7 +362,8 @@ ${ruleLines.join("\n")}</style>
           position: "relative",
           overflow: "hidden",
           background: "#fff",
-          ...(borderColor ? { borderColor } : {}),
+          borderRadius: 0,
+          border: `${selected ? 2.5 : 1}px solid ${selected ? "var(--color--outline--on-background)" : "var(--color--border--on-surface-0)"}`,
           boxShadow: selected
             ? "0 0 0 1px var(--color--outline--on-background), 0 4px 20px rgba(37,99,235,0.1)"
             : "0 4px 20px rgba(0,0,0,0.25)",
@@ -427,6 +416,7 @@ ${ruleLines.join("\n")}</style>
           </div>
         )}
       </div>
+
     </div>
   );
 }

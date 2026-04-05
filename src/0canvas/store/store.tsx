@@ -15,6 +15,7 @@ export type ElementNode = {
   selector: string;
   visible: boolean;
   locked: boolean;
+  componentName?: string;
 };
 
 export type IDEType = "claude-code" | "cursor" | "vscode" | "windsurf" | "antigravity" | "custom";
@@ -48,15 +49,6 @@ export type BrainstormNote = {
   linkedVersions: string[];
   color: string;
   category?: "feedback" | "idea" | "bug" | "improvement";
-};
-
-// ── File mapping types ──
-export type FileMapping = {
-  elementId: string;
-  filePath: string;
-  componentName: string;
-  lineNumber?: number;
-  confidence: "high" | "medium" | "low";
 };
 
 // ── Project types ──
@@ -126,6 +118,7 @@ export type WSLogEntry = {
 };
 
 export type AppView = "onboarding" | "workspace";
+export type WorkspacePage = "design" | "settings";
 
 export type WorkspaceState = {
   // App-level
@@ -139,10 +132,6 @@ export type WorkspaceState = {
 
   // IDE connections
   ides: IDEConnection[];
-
-  // File mappings
-  fileMappings: FileMapping[];
-  fileMapPanelOpen: boolean;
 
   // WebSocket / MCP bridge
   wsStatus: WSStatus;
@@ -168,6 +157,7 @@ export type WorkspaceState = {
   routeHistory: string[];
 
   // UI state
+  activePage: WorkspacePage;
   inspectorMode: boolean;
   layersPanelOpen: boolean;
   stylePanelOpen: boolean;
@@ -181,6 +171,7 @@ type Action =
   | { type: "UPDATE_STYLE"; elementId: string; property: string; value: string }
   | { type: "SET_ELEMENT_STYLES"; id: string; styles: Record<string, string> }
   | { type: "UPDATE_IDE_STATUS"; id: string; status: IDEConnection["status"] }
+  | { type: "SET_ACTIVE_PAGE"; page: WorkspacePage }
   | { type: "TOGGLE_INSPECTOR" }
   | { type: "TOGGLE_LAYERS_PANEL" }
   | { type: "TOGGLE_STYLE_PANEL" }
@@ -194,9 +185,6 @@ type Action =
   | { type: "CONNECT_PROJECT"; project: ProjectConnection }
   | { type: "UPDATE_PROJECT_STATUS"; status: ProjectConnection["status"]; errorMessage?: string }
   | { type: "DISCONNECT_PROJECT" }
-  // File mapping actions
-  | { type: "SET_FILE_MAPPINGS"; mappings: FileMapping[] }
-  | { type: "TOGGLE_FILE_MAP_PANEL" }
   // Feedback / Agent Waitlist actions
   | { type: "ADD_FEEDBACK"; item: FeedbackItem }
   | { type: "UPDATE_FEEDBACK"; id: string; updates: Partial<FeedbackItem> }
@@ -291,8 +279,6 @@ const initialState: WorkspaceState = {
   selectedElementId: null,
   hoveredElementId: null,
   ides: defaultIDEs,
-  fileMappings: [],
-  fileMapPanelOpen: false,
   wsStatus: "disconnected",
   wsLogs: [],
   wsPort: 0,
@@ -311,6 +297,7 @@ const initialState: WorkspaceState = {
   ocProjectFile: null,
   currentRoute: typeof window !== "undefined" ? window.location.pathname : "/",
   routeHistory: typeof window !== "undefined" ? [window.location.pathname] : ["/"],
+  activePage: "design",
   inspectorMode: true,
   layersPanelOpen: true,
   stylePanelOpen: true,
@@ -380,17 +367,14 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
             : ide
         ),
       };
+    case "SET_ACTIVE_PAGE":
+      return { ...state, activePage: action.page };
     case "TOGGLE_INSPECTOR":
       return { ...state, inspectorMode: !state.inspectorMode };
     case "TOGGLE_LAYERS_PANEL":
       return { ...state, layersPanelOpen: !state.layersPanelOpen };
     case "TOGGLE_STYLE_PANEL":
-      return {
-        ...state,
-        stylePanelOpen: !state.stylePanelOpen,
-        // Close competing right panels
-        ...(!state.stylePanelOpen ? { fileMapPanelOpen: false } : {}),
-      };
+      return { ...state, stylePanelOpen: !state.stylePanelOpen };
     case "TOGGLE_IDE_PANEL":
       return { ...state, idePanelOpen: !state.idePanelOpen };
     case "TOGGLE_ELEMENT_VISIBILITY":
@@ -448,16 +432,6 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
         elements: [],
         selectedElementId: null,
         hoveredElementId: null,
-      };
-    // File mapping actions
-    case "SET_FILE_MAPPINGS":
-      return { ...state, fileMappings: action.mappings };
-    case "TOGGLE_FILE_MAP_PANEL":
-      return {
-        ...state,
-        fileMapPanelOpen: !state.fileMapPanelOpen,
-        // Close competing right panels
-        ...(!state.fileMapPanelOpen ? { stylePanelOpen: false } : {}),
       };
     // Feedback / Agent Waitlist
     case "ADD_FEEDBACK":

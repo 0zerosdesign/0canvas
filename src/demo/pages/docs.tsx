@@ -393,13 +393,16 @@ export default function DocsPage() {
 
       <main className="pb-24">
         <section className="mx-auto max-w-[1120px] px-6 pt-6">
-          <div className="demo-card demo-reveal flex items-start gap-3 p-4" style={{ animationDelay: "0.06s" }}>
+          <div
+            className="demo-card demo-reveal flex items-start gap-3 p-4 text-[#000]"
+            style={{ animationDelay: "0.06s" }}
+          >
             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[var(--color--status--warning)]" />
             <div>
-              <p className="mb-1 text-[0.95rem] font-semibold text-foreground">
+              <p className="mb-1 text-[0.95rem] font-semibold">
                 Not published to npm yet
               </p>
-              <p className="text-[0.9rem] leading-7 text-muted-foreground">
+              <p className="text-[0.9rem] leading-7">
                 Running <code className="demo-inline-code">npm install @zerosdesign/0canvas</code> still returns a
                 404. Use the GitHub install path or build from source for now. The sections below walk through both.
               </p>

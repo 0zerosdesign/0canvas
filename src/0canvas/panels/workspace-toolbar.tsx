@@ -2,8 +2,6 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   Layers,
   Palette,
-  Zap,
-  FileCode,
   Wifi,
   ChevronDown,
   Save,
@@ -28,8 +26,6 @@ interface WorkspaceToolbarProps {
 
 export function WorkspaceToolbar({ onNavigate }: WorkspaceToolbarProps = {}) {
   const { state, dispatch } = useWorkspace();
-
-  const connectedIDEs = state.ides.filter((i) => i.status === "connected").length;
 
   const handleSaveProject = useCallback(async () => {
     dispatch({ type: "SAVE_OC_PROJECT" });
@@ -65,14 +61,13 @@ export function WorkspaceToolbar({ onNavigate }: WorkspaceToolbarProps = {}) {
         state.ocProject,
         state.variants,
         state.feedbackItems,
-        state.fileMappings,
         state.currentRoute,
       );
       downloadProjectFile(file);
     } catch (err) {
       console.warn("[DD] Export failed:", err);
     }
-  }, [state.ocProject, state.variants, state.feedbackItems, state.fileMappings, state.currentRoute]);
+  }, [state.ocProject, state.variants, state.feedbackItems, state.currentRoute]);
 
   const handleImportDD = useCallback(async () => {
     const file = await importProjectFile();
@@ -89,7 +84,6 @@ export function WorkspaceToolbar({ onNavigate }: WorkspaceToolbarProps = {}) {
         state.ocProject,
         state.variants,
         state.feedbackItems,
-        state.fileMappings,
         state.currentRoute,
       );
       const ok = await pushProjectToIDE(file, port);
@@ -97,7 +91,7 @@ export function WorkspaceToolbar({ onNavigate }: WorkspaceToolbarProps = {}) {
     } catch (err) {
       console.warn("[DD] Sync failed:", err);
     }
-  }, [state.ocProject, state.variants, state.feedbackItems, state.fileMappings, state.currentRoute, state.wsPort, dispatch]);
+  }, [state.ocProject, state.variants, state.feedbackItems, state.currentRoute, state.wsPort, dispatch]);
 
   return (
     <div className="oc-toolbar">
@@ -123,8 +117,8 @@ export function WorkspaceToolbar({ onNavigate }: WorkspaceToolbarProps = {}) {
           onLoad={handleLoadProject}
         />
 
-        {state.wsStatus === "connected" && (
-          <span className="oc-toolbar-mcp-badge">
+        {state.wsStatus !== "connected" && (
+          <span className="oc-toolbar-mcp-badge is-error">
             <Wifi size={12} />
             MCP
           </span>
@@ -145,19 +139,6 @@ export function WorkspaceToolbar({ onNavigate }: WorkspaceToolbarProps = {}) {
           label="Style"
           active={state.stylePanelOpen}
           onClick={() => dispatch({ type: "TOGGLE_STYLE_PANEL" })}
-        />
-        <ToolbarBtn
-          icon={<FileCode size={14} />}
-          label="Files"
-          active={state.fileMapPanelOpen}
-          onClick={() => dispatch({ type: "TOGGLE_FILE_MAP_PANEL" })}
-        />
-        <ToolbarBtn
-          icon={<Zap size={14} />}
-          label="IDE"
-          active={state.idePanelOpen}
-          dot={connectedIDEs > 0}
-          onClick={() => dispatch({ type: "TOGGLE_IDE_PANEL" })}
         />
       </div>
 

@@ -1,0 +1,40 @@
+{
+  "name": "0canvas",
+  "displayName": "0canvas — Visual Feedback for AI Agents",
+  "description": "Receive visual feedback from 0canvas and send it directly to your AI coding agent (Cursor, Copilot, Claude Code, Codex).",
+  "version": "0.0.1",
+  "publisher": "zerosdesign",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "0canvas.sendToAgent",
+        "title": "0canvas: Send Feedback to Agent"
+      },
+      {
+        "command": "0canvas.copyFeedback",
+        "title": "0canvas: Copy Feedback to Clipboard"
+      },
+      {
+        "command": "0canvas.showFeedback",
+        "title": "0canvas: Show Pending Feedback"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --target=node18",
+    "watch": "npm run build -- --watch",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.0.0"
+  }
+}

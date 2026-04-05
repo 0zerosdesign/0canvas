@@ -9,7 +9,7 @@
 // This file was built by auditing EVERY className in:
 //   workspace-toolbar.tsx, layers-panel.tsx, style-panel.tsx,
 //   variant-canvas.tsx, agent-panel.tsx, brainstorm-panel.tsx,
-//   annotation-overlay.tsx, command-palette.tsx, file-map-panel.tsx,
+//   annotation-overlay.tsx, command-palette.tsx,
 //   ui/scroll-area.tsx
 //
 // ──────────────────────────────────────────────────────────
@@ -624,8 +624,119 @@ ${S} .oc-close-btn {
   padding: 0; outline: none;
 }
 ${S} .oc-close-btn:hover { color: var(--color--text--on-surface); border-color: var(--color--border--on-surface-2); }
+/* ── App Shell (sidebar + page) ────────────────────────────── */
+${S} .oc-app-shell {
+  height: 100%; display: flex; overflow: hidden;
+}
+
+/* ── Sidebar ──────────────────────────────────────────────── */
+${S} .oc-sidebar {
+  width: 48px; flex-shrink: 0; height: 100%;
+  display: flex; flex-direction: column;
+  align-items: center;
+  background: var(--color--surface--floor);
+  border-right: 1px solid var(--color--border--on-surface-0);
+  padding: 8px 0;
+  box-sizing: border-box;
+}
+${S} .oc-sidebar-top {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 2px;
+}
+${S} .oc-sidebar-bottom {
+  margin-top: auto;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 4px;
+  padding-bottom: 4px;
+}
+${S} .oc-sidebar-btn {
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; background: transparent;
+  color: var(--color--text--muted);
+  border-radius: 8px; cursor: pointer;
+  transition: all 0.15s ease;
+}
+${S} .oc-sidebar-btn:hover {
+  color: var(--color--text--on-surface);
+  background: var(--color--surface--1);
+}
+${S} .oc-sidebar-btn.is-active {
+  color: var(--color--text--on-surface);
+  background: var(--color--surface--2);
+}
+${S} .oc-sidebar-divider {
+  width: 24px; height: 1px;
+  background: var(--color--border--on-surface-0);
+  margin: 4px 0;
+}
+${S} .oc-sidebar-logo {
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--color--text--disabled);
+  opacity: 0.5;
+}
+
+/* ── Settings Page ────────────────────────────────────────── */
+${S} .oc-settings-page {
+  flex: 1; display: flex; height: 100%;
+  background: var(--color--surface--0);
+  overflow: hidden;
+}
+${S} .oc-settings-nav {
+  width: 220px; flex-shrink: 0; height: 100%;
+  border-right: 1px solid var(--color--border--on-surface-0);
+  padding: 16px 0;
+  overflow-y: auto;
+}
+${S} .oc-settings-nav-header {
+  font-size: 18px; font-weight: 600;
+  color: var(--color--text--on-surface);
+  padding: 0 16px; margin-bottom: 16px;
+}
+${S} .oc-settings-nav-list {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 0 8px;
+}
+${S} .oc-settings-nav-item {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 8px 10px;
+  border: none; background: transparent;
+  border-radius: 8px; cursor: pointer;
+  color: var(--color--text--muted);
+  font-size: 13px; text-align: left;
+  transition: all 0.15s ease;
+}
+${S} .oc-settings-nav-item:hover {
+  background: var(--color--surface--1);
+  color: var(--color--text--on-surface);
+}
+${S} .oc-settings-nav-item.is-active {
+  background: var(--color--surface--2);
+  color: var(--color--text--on-surface);
+}
+${S} .oc-settings-nav-icon {
+  display: flex; align-items: center;
+  color: inherit; flex-shrink: 0;
+}
+${S} .oc-settings-nav-label { flex: 1; }
+${S} .oc-settings-nav-chevron {
+  color: var(--color--text--disabled);
+  flex-shrink: 0; opacity: 0;
+  transition: opacity 0.15s ease;
+}
+${S} .oc-settings-nav-item:hover .oc-settings-nav-chevron,
+${S} .oc-settings-nav-item.is-active .oc-settings-nav-chevron { opacity: 1; }
+${S} .oc-settings-content {
+  flex: 1; height: 100%; overflow: hidden;
+}
+${S} .oc-settings-scroll {
+  height: 100%; max-width: 720px;
+  margin: 0 auto; padding: 24px 32px;
+}
+
 ${S} .oc-workspace {
-  height: 100%; display: flex; flex-direction: column;
+  flex: 1; height: 100%; display: flex; flex-direction: column;
   background: var(--color--surface--0); overflow: hidden;
 }
 ${S} .oc-workspace-main { flex: 1; display: flex; overflow: hidden; }
@@ -697,9 +808,11 @@ ${S} .oc-toolbar-logo-text {
 }
 ${S} .oc-toolbar-mcp-badge {
   display: inline-flex; align-items: center; gap: 4px;
-  font-size: 10px; color: var(--color--status--success);
-  background: rgba(16,185,129,0.1);
-  padding: 2px 8px; border-radius: 4px;
+  font-size: 10px; padding: 2px 8px; border-radius: 4px;
+}
+${S} .oc-toolbar-mcp-badge.is-error {
+  color: var(--color--status--error);
+  background: rgba(239,68,68,0.1);
 }
 ${S} .oc-toolbar-mcp-dot {
   width: 7px; height: 7px; border-radius: 50%;
@@ -1042,6 +1155,38 @@ ${S} .oc-source-btn {
 }
 ${S} .oc-source-btn:hover { background: var(--color--surface--1); color: var(--color--text--on-surface); }
 ${S} .oc-source-btn.is-active { background: var(--color--base--primary); color: var(--color--text--on-primary); }
+${S} .oc-source-badge {
+  position: absolute; top: -2px; right: -2px;
+  display: flex; align-items: center; justify-content: center;
+  min-width: 14px; height: 14px; padding: 0 3px;
+  border-radius: 7px;
+  background: var(--color--surface--floor); color: var(--color--text--on-surface);
+  font-size: 6px; font-weight: 700; line-height: 1;
+  pointer-events: none; box-sizing: border-box;
+  transform-origin: center; transform: scale(0.85);
+}
+${S} .oc-source-btn-group {
+  display: flex; align-items: center;
+  border-radius: 6px;
+}
+${S} .oc-source-btn-group.has-items {
+  background: var(--color--surface--1);
+  border: 1px solid var(--color--border--on-surface-0);
+  border-radius: 8px;
+  gap: 0;
+}
+${S} .oc-source-btn-group.has-items .oc-source-btn {
+  border-radius: 7px 0 0 7px;
+}
+${S} .oc-source-btn-group.has-items .oc-source-send-btn {
+  border-radius: 0 7px 7px 0;
+  border-left: 1px solid var(--color--border--on-surface-0);
+  color: var(--color--text--muted);
+}
+${S} .oc-source-btn-group.has-items .oc-source-send-btn:hover {
+  color: var(--color--text--on-surface);
+  background: var(--color--surface--2);
+}
 ${S} .oc-source-preset {
   padding: 3px 8px; border-radius: 4px; font-size: 10px;
   background: transparent; border: none; cursor: pointer;
@@ -1052,12 +1197,65 @@ ${S} .oc-source-preset:hover { background: var(--color--surface--1); color: var(
 ${S} .oc-source-preset.is-active { background: var(--color--base--primary); color: var(--color--text--on-primary); }
 
 ${S} .oc-variant-card {
-  border-radius: 10px; border: 1px solid var(--color--border--on-surface-0);
+  border-radius: 0; border: 1px solid var(--color--border--on-surface-0);
   background: var(--color--surface--0); overflow: hidden;
   transition: border-color 0.2s ease;
 }
 ${S} .oc-variant-card:hover { border-color: var(--color--border--on-surface-1); }
-${S} .oc-variant-card.is-selected { border-color: var(--color--outline--on-background); }
+${S} .oc-variant-card.is-selected { border-color: var(--color--outline--on-background); border-width: 2.5px; }
+
+/* ── Resize grab zones + visible handle bars (source node only) ── */
+
+/* Grab zone — wide transparent area the user can grab */
+${S} .oc-resize-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+/* Visible handle bar — thin bar inside the grab zone */
+${S} .oc-resize-handle {
+  border-radius: 3px;
+  background: var(--color--border--on-surface-1);
+  pointer-events: none;
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+${S} .oc-resize-handle-left,
+${S} .oc-resize-handle-right {
+  width: 4px;
+  height: 48px;
+}
+${S} .oc-resize-handle-bottom {
+  height: 4px;
+  width: 48px;
+}
+
+/* Hover on the ZONE triggers the handle animation */
+${S} .oc-resize-zone-left:hover .oc-resize-handle,
+${S} .oc-resize-zone-right:hover .oc-resize-handle {
+  background: var(--color--text--muted);
+  transform: scaleY(1.4);
+  box-shadow: 0 0 8px rgba(115,115,115,0.3);
+}
+${S} .oc-resize-zone-bottom:hover .oc-resize-handle {
+  background: var(--color--text--muted);
+  transform: scaleX(1.4);
+  box-shadow: 0 0 8px rgba(115,115,115,0.3);
+}
+
+/* Active (dragging) */
+${S} .oc-resize-zone.is-active .oc-resize-handle {
+  background: var(--color--text--on-surface-variant) !important;
+  box-shadow: 0 0 12px rgba(212,212,212,0.25) !important;
+}
+${S} .oc-resize-zone-left.is-active .oc-resize-handle,
+${S} .oc-resize-zone-right.is-active .oc-resize-handle {
+  transform: scaleY(1.6) !important;
+}
+${S} .oc-resize-zone-bottom.is-active .oc-resize-handle {
+  transform: scaleX(1.6) !important;
+}
 ${S} .oc-variant-header {
   display: flex; align-items: center; gap: 6px;
   padding: 6px 10px; background: var(--color--surface--0);
@@ -1201,317 +1399,6 @@ ${S} .oc-agent-log-summary.is-received { color: var(--color--status--success); }
 ${S} .oc-agent-log-summary.is-default { color: var(--color--text--muted); }
 ${S} .oc-agent-log-method { font-size: 9px; color: var(--color--text--disabled); }
 
-/* ── File Map Panel ────────────────────────────────────────── */
-${S} .oc-filemap-item {
-  display: flex; align-items: center; gap: 6px;
-  padding: 4px 10px; font-size: 12px; cursor: pointer;
-  color: var(--color--text--on-surface-variant); transition: background 0.1s ease;
-}
-${S} .oc-filemap-item:hover { background: rgba(255,255,255,0.03); }
-${S} .oc-filemap-item.is-selected {
-  background: rgba(37,99,235,0.08); color: var(--color--text--on-surface);
-  border-left: 2px solid var(--color--outline--on-background);
-}
-${S} .oc-filemap-dir { color: var(--color--text--muted); font-weight: 500; }
-${S} .oc-filemap-confidence {
-  padding: 1px 5px; border-radius: 3px; font-size: 9px;
-  font-weight: 600; color: var(--color--text--on-surface-variant);
-}
-${S} .oc-filemap-vscode-btn {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 4px 8px; border-radius: 4px;
-  background: var(--color--base--primary); color: var(--color--text--on-primary);
-  font-size: 11px; border: none; cursor: pointer;
-  transition: background 0.15s ease;
-}
-${S} .oc-filemap-vscode-btn:hover { background: var(--color--base--primary-hover); }
-
-/* File tree row (file or dir row in the tree) */
-${S} .oc-filemap-tree-row {
-  display: flex; align-items: center; gap: 6px;
-  height: 28px; padding-right: 8px; cursor: pointer;
-  border-left: 2px solid transparent;
-  transition: background 0.1s ease;
-}
-${S} .oc-filemap-tree-row:hover { background: rgba(255,255,255,0.03); }
-${S} .oc-filemap-tree-row.is-selected {
-  background: rgba(37,99,235,0.08);
-  border-left-color: var(--color--outline--on-background);
-}
-
-/* Filename text in tree */
-${S} .oc-filemap-filename {
-  font-size: 11px; color: var(--color--text--on-surface); flex: 1;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-
-/* File badge count */
-${S} .oc-filemap-badge {
-  font-size: 9px; color: var(--color--text--disabled);
-  background: var(--color--surface--1); padding: 1px 5px;
-  border-radius: 3px; font-family: var(--font-mono);
-}
-
-/* Dir count (no background) */
-${S} .oc-filemap-dir-count {
-  font-size: 9px; color: var(--color--text--disabled);
-  font-family: var(--font-mono);
-}
-
-/* Mapping item button (child of file node) */
-${S} .oc-filemap-mapping {
-  display: flex; align-items: center; gap: 6px;
-  width: 100%; height: 26px; padding-right: 8px;
-  background: transparent; border: none;
-  border-left: 2px solid transparent;
-  cursor: pointer; text-align: left;
-  transition: background 0.1s ease;
-}
-${S} .oc-filemap-mapping:hover { background: rgba(255,255,255,0.03); }
-${S} .oc-filemap-mapping.is-selected {
-  background: rgba(37,99,235,0.08);
-  border-left-color: var(--color--outline--on-background);
-}
-${S} .oc-filemap-mapping-name {
-  font-size: 10px; color: var(--color--text--muted); flex: 1;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-${S} .oc-filemap-mapping-dot {
-  width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0;
-}
-${S} .oc-filemap-mapping-eye {
-  display: none; flex-shrink: 0;
-}
-${S} .oc-filemap-mapping:hover .oc-filemap-mapping-eye {
-  display: block;
-}
-
-/* Confidence badge (inline) */
-${S} .oc-filemap-conf-badge {
-  display: inline-flex; align-items: center; gap: 4px;
-  font-size: 9px; padding: 1px 6px; border-radius: 4px;
-}
-${S} .oc-filemap-conf-dot {
-  width: 4px; height: 4px; border-radius: 50%;
-}
-
-/* Selected element view */
-${S} .oc-filemap-detail {
-  padding: 12px;
-}
-${S} .oc-filemap-card {
-  padding: 12px; background: var(--color--surface--1); border-radius: 10px;
-  border: 1px solid var(--color--border--on-surface-0); margin-bottom: 12px;
-}
-${S} .oc-filemap-card-row {
-  display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
-}
-${S} .oc-filemap-card-tag {
-  font-size: 12px; color: var(--color--text--primary); font-weight: 500;
-}
-${S} .oc-filemap-card-classes {
-  font-size: 10px; color: var(--color--text--disabled); font-family: var(--font-mono);
-}
-${S} .oc-filemap-card-selector {
-  font-size: 10px; color: var(--color--text--disabled);
-  font-family: var(--font-mono); word-break: break-all;
-}
-${S} .oc-filemap-card-text {
-  font-size: 10px; color: var(--color--text--muted); margin-top: 6px;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-
-/* Mapped file card (accent border) */
-${S} .oc-filemap-mapped-card {
-  padding: 12px; border-radius: 10px; margin-bottom: 12px;
-  border: 1px solid rgba(37,99,235,0.19);
-  background: rgba(37,99,235,0.03);
-}
-${S} .oc-filemap-mapped-name {
-  font-size: 12px; color: var(--color--text--on-surface); font-weight: 500;
-}
-${S} .oc-filemap-mapped-path {
-  font-size: 11px; color: var(--color--text--muted);
-  font-family: var(--font-mono); margin-bottom: 4px;
-}
-${S} .oc-filemap-inferred-hint {
-  display: flex; align-items: center; gap: 4px;
-  font-size: 9px; color: var(--color--status--warning); margin-bottom: 8px;
-}
-
-/* Open in VS Code button (full-width) */
-${S} .oc-filemap-open-btn {
-  width: 100%; display: flex; align-items: center; justify-content: center;
-  gap: 6px; padding: 7px 0; border-radius: 8px;
-  border: 1px solid rgba(37,99,235,0.25);
-  background: rgba(37,99,235,0.06);
-  color: var(--color--text--primary); font-size: 11px; font-weight: 500;
-  cursor: pointer; transition: all 0.15s ease;
-}
-${S} .oc-filemap-open-btn:hover {
-  background: rgba(37,99,235,0.13);
-}
-
-/* No-mapping card */
-${S} .oc-filemap-nomap-card {
-  padding: 12px; border-radius: 10px; margin-bottom: 12px;
-  border: 1px solid var(--color--border--on-surface-0); background: var(--color--surface--1);
-}
-${S} .oc-filemap-nomap-title {
-  font-size: 12px; color: var(--color--text--muted);
-}
-${S} .oc-filemap-nomap-desc {
-  font-size: 10px; color: var(--color--text--disabled); line-height: 1.5;
-}
-
-/* Child components section header */
-${S} .oc-filemap-section-title {
-  font-size: 10px; color: var(--color--text--disabled); text-transform: uppercase;
-  letter-spacing: 0.05em; margin-bottom: 6px; font-weight: 500;
-}
-${S} .oc-filemap-children-list {
-  border-radius: 8px; border: 1px solid var(--color--border--on-surface-0);
-  overflow: hidden;
-}
-${S} .oc-filemap-child-btn {
-  display: flex; align-items: center; gap: 8px;
-  width: 100%; padding: 7px 10px;
-  background: transparent; border: none;
-  border-bottom: 1px solid var(--color--border--on-surface-0);
-  cursor: pointer; text-align: left;
-  transition: background 0.1s ease;
-}
-${S} .oc-filemap-child-btn:hover { background: rgba(255,255,255,0.03); }
-${S} .oc-filemap-child-btn:last-child { border-bottom: none; }
-${S} .oc-filemap-child-name {
-  font-size: 11px; color: var(--color--text--on-surface);
-}
-${S} .oc-filemap-child-path {
-  font-size: 9px; color: var(--color--text--disabled);
-  font-family: var(--font-mono); flex: 1;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-
-/* Stats bar */
-${S} .oc-filemap-stats {
-  display: flex; align-items: center; gap: 10px;
-  padding: 6px 12px; border-bottom: 1px solid var(--color--border--on-surface-0);
-}
-${S} .oc-filemap-stat {
-  display: flex; align-items: center; gap: 4px;
-}
-${S} .oc-filemap-stat-label {
-  font-size: 9px; color: var(--color--text--muted);
-}
-${S} .oc-filemap-stat-dots {
-  display: flex; align-items: center; gap: 6px;
-}
-${S} .oc-filemap-stat-dot {
-  display: flex; align-items: center; gap: 2px;
-}
-${S} .oc-filemap-dot {
-  width: 4px; height: 4px; border-radius: 50%;
-}
-${S} .oc-filemap-dot-count {
-  font-size: 9px; color: var(--color--text--disabled);
-}
-
-/* Tabs */
-${S} .oc-filemap-tabs {
-  display: flex; border-bottom: 1px solid var(--color--border--on-surface-0);
-}
-${S} .oc-filemap-tab {
-  flex: 1; padding: 8px 0; font-size: 11px; font-weight: 450;
-  background: transparent; border: none; cursor: pointer;
-  color: var(--color--text--disabled);
-  border-bottom: 2px solid transparent;
-  transition: all 0.15s ease;
-}
-${S} .oc-filemap-tab:hover { color: var(--color--text--on-surface-variant); }
-${S} .oc-filemap-tab.is-active {
-  color: var(--color--text--on-surface);
-  border-bottom-color: var(--color--text--on-surface);
-}
-
-/* Search wrapper */
-${S} .oc-filemap-search-wrap {
-  padding: 8px 10px; border-bottom: 1px solid var(--color--border--on-surface-0);
-}
-${S} .oc-filemap-search-box {
-  display: flex; align-items: center; gap: 8px;
-  background: var(--color--surface--1); border: 1px solid var(--color--border--on-surface-0);
-  border-radius: 8px; padding: 0 10px; height: 28px;
-}
-${S} .oc-filemap-search-input {
-  flex: 1; background: transparent; border: none;
-  font-size: 11px; color: var(--color--text--on-surface);
-  outline: none;
-}
-${S} .oc-filemap-search-input::placeholder { color: var(--color--text--disabled); }
-
-/* Empty state */
-${S} .oc-filemap-empty {
-  display: flex; flex-direction: column; align-items: center;
-  justify-content: center; padding: 48px 20px; text-align: center;
-}
-${S} .oc-filemap-empty-title {
-  font-size: 12px; color: var(--color--text--muted); margin-bottom: 4px;
-}
-${S} .oc-filemap-empty-desc {
-  font-size: 10px; color: var(--color--text--disabled); line-height: 1.5; max-width: 200px;
-}
-
-/* Header */
-${S} .oc-filemap-header {
-  padding: 10px 14px; border-bottom: 1px solid var(--color--border--on-surface-0);
-  display: flex; align-items: center; justify-content: space-between;
-}
-${S} .oc-filemap-header-left {
-  display: flex; align-items: center; gap: 8px;
-}
-${S} .oc-filemap-header-title {
-  font-size: 13px; font-weight: 500;
-}
-${S} .oc-filemap-inferred-badge {
-  display: inline-flex; align-items: center; gap: 3px;
-  font-size: 9px; color: var(--color--status--warning);
-  background: rgba(245,158,11,0.08);
-  padding: 1px 6px; border-radius: 4px;
-}
-${S} .oc-filemap-header-count {
-  font-size: 10px; color: var(--color--text--disabled);
-  font-family: var(--font-mono);
-}
-
-/* Footer / legend */
-${S} .oc-filemap-footer {
-  padding: 6px 12px; border-top: 1px solid var(--color--border--on-surface-0);
-  display: flex; align-items: center; gap: 10px;
-}
-${S} .oc-filemap-footer-label {
-  font-size: 9px; color: var(--color--text--disabled);
-}
-${S} .oc-filemap-legend-item {
-  display: flex; align-items: center; gap: 3px;
-}
-${S} .oc-filemap-legend-dot {
-  width: 4px; height: 4px; border-radius: 50%;
-}
-${S} .oc-filemap-legend-text {
-  font-size: 9px; color: var(--color--text--disabled);
-}
-
-/* Content scroll area */
-${S} .oc-filemap-content {
-  flex: 1; overflow-y: auto; min-height: 0;
-}
-${S} .oc-filemap-tree-pad {
-  padding-top: 4px; padding-bottom: 8px;
-}
-
-/* Spacer for icons that have no chevron */
-${S} .oc-filemap-chevron-spacer { width: 10px; }
-
 /* ── Command Palette ───────────────────────────────────────── */
 ${S} .oc-cmd-overlay {
   position: fixed; inset: 0; z-index: 100;
@@ -1547,14 +1434,17 @@ ${S} .oc-cmd-kbd {
 /* ── Variant Canvas ────────────────────────── */
 ${S} .oc-vc-root {
   width: 100%; height: 100%;
-  background: var(--color--surface--0);
+  background: var(--color--surface--1);
 }
 ${S} .oc-vc-flow {
-  background: var(--color--surface--0);
+  background: var(--color--surface--1);
+}
+${S} .oc-vc-flow .react-flow__pane {
+  background: var(--color--surface--1);
 }
 ${S} .oc-vc-controls {
-  background: var(--color--surface--0);
-  border: 1px solid var(--color--surface--0);
+  background: var(--color--surface--1);
+  border: 1px solid var(--color--border--on-surface-0);
   border-radius: 8px;
 }
 `;

@@ -83,6 +83,42 @@ function emit(event: BridgeEvent) {
   }
 }
 
+/** Detect which IDE launched the MCP bridge by checking environment variables */
+function detectIDE(): string | null {
+  const env = process.env;
+
+  // Cursor-specific env vars (not always set)
+  if (env.CURSOR_TRACE_ID || env.CURSOR_CLI_PATH || env.CURSOR_CHANNEL) return "cursor";
+
+  // Windsurf / Codeium
+  if (env.WINDSURF_PATH || env.CODEIUM_PATH) return "windsurf";
+
+  // Claude Code (Anthropic CLI)
+  if (env.CLAUDE_CODE || env.ANTHROPIC_API_KEY) return "claude-code";
+
+  // VS Code family — Cursor is a VS Code fork, so VSCODE_* vars are set in both.
+  // Distinguish by checking if any VSCODE_* path values contain "cursor".
+  if (env.VSCODE_PID || env.VSCODE_CWD || env.VSCODE_IPC_HOOK) {
+    const vsVals = [
+      env.VSCODE_GIT_ASKPASS_NODE,
+      env.VSCODE_GIT_ASKPASS_MAIN,
+      env.VSCODE_IPC_HOOK,
+      env.VSCODE_CWD,
+      env.TERM_PROGRAM,
+    ].join(" ").toLowerCase();
+    if (vsVals.includes("cursor")) return "cursor";
+    if (vsVals.includes("windsurf")) return "windsurf";
+    return "vscode";
+  }
+
+  // Generic: check TERM_PROGRAM
+  const term = env.TERM_PROGRAM?.toLowerCase() || "";
+  if (term.includes("cursor")) return "cursor";
+  if (term.includes("vscode")) return "vscode";
+
+  return null;
+}
+
 function corsHeaders(res: ServerResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -116,7 +152,11 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse) {
   }
 
   if (path === "/api/health" && req.method === "GET") {
-    jsonResponse(res, { status: "ok", project: state.project?.name || null });
+    jsonResponse(res, {
+      status: "ok",
+      project: state.project?.name || null,
+      ide: detectIDE(),
+    });
     return;
   }
 

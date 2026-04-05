@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useWorkspace, IDEConnection, WSLogEntry } from "../store/store";
 import { copyToClipboard } from "../utils/clipboard";
+import { syncFeedbackToBridge } from "../utils/sync-feedback";
 
 const MCP_PORT = 24192;
 
@@ -137,34 +138,17 @@ export function AgentPanel() {
 
   const syncFeedbackToMcp = useCallback(async () => {
     if (mcpStatus !== "online") return;
-    const pendingItems = state.feedbackItems.filter((f) => f.status === "pending");
-    try {
-      await fetch(`http://127.0.0.1:${mcpPort}/api/feedback`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: pendingItems }),
-      });
-      await fetch(`http://127.0.0.1:${mcpPort}/api/variants`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ variants: state.variants }),
-      });
-      await fetch(`http://127.0.0.1:${mcpPort}/api/project`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ project: state.ocProject }),
-      });
-
-      const now = new Date();
+    const result = await syncFeedbackToBridge(state.feedbackItems, state.variants, state.ocProject, mcpPort);
+    if (result.ok && result.sentCount > 0) {
       const entry: WSLogEntry = {
         id: `log-${Date.now()}`,
         timestamp: Date.now(),
         direction: "sent",
         method: "sync",
-        summary: `Synced ${pendingItems.length} feedback items and ${state.variants.length} variants`,
+        summary: `Synced ${result.sentCount} feedback items and ${state.variants.length} variants`,
       };
       dispatch({ type: "WS_LOG", entry });
-    } catch {}
+    }
   }, [mcpStatus, mcpPort, state.feedbackItems, state.variants, state.ocProject, dispatch]);
 
   const mcpStatusClass =

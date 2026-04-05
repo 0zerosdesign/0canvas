@@ -13,7 +13,7 @@ import {
   projectFileToState,
   createEmptyProjectFile,
 } from "./oc-project";
-import type { VariantData, FeedbackItem, OCProject, FileMapping } from "../store/store";
+import type { VariantData, FeedbackItem, OCProject } from "../store/store";
 
 const DB_NAME = "0canvas-projects";
 const DB_VERSION = 1;
@@ -194,7 +194,6 @@ export function scheduleAutoSave(
   project: OCProject,
   variants: VariantData[],
   feedbackItems: FeedbackItem[],
-  fileMappings: FileMapping[],
   currentRoute: string,
   existingFile?: OCProjectFile | null,
 ): void {
@@ -202,7 +201,7 @@ export function scheduleAutoSave(
   _saveTimer = setTimeout(async () => {
     try {
       const file = stateToProjectFile(
-        project, variants, feedbackItems, fileMappings, currentRoute, existingFile,
+        project, variants, feedbackItems, currentRoute, existingFile,
       );
       await saveProjectFile(file);
       await markDirty(project.id);
@@ -218,12 +217,11 @@ export async function buildCurrentProjectFile(
   project: OCProject,
   variants: VariantData[],
   feedbackItems: FeedbackItem[],
-  fileMappings: FileMapping[],
   currentRoute: string,
 ): Promise<OCProjectFile> {
   const existing = await loadProjectFile(project.id);
   const file = stateToProjectFile(
-    project, variants, feedbackItems, fileMappings, currentRoute, existing,
+    project, variants, feedbackItems, currentRoute, existing,
   );
   const hash = await computeProjectHash(file);
   return { ...file, integrity: { ...file.integrity, hash } };

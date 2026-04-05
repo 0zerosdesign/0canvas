@@ -16,6 +16,7 @@
 // ──────────────────────────────────────────────────────────
 
 import type { ElementNode, VariantData } from "../store/store";
+import { identifyElement } from "./component-detection";
 
 // ── Configuration ──────────────────────────────────────────
 
@@ -49,13 +50,10 @@ export function setInspectionTarget(
   if (targetDoc !== doc) {
     if (highlightOverlay?.parentNode) highlightOverlay.remove();
     if (selectOverlay?.parentNode) selectOverlay.remove();
+    hideInspectorPill();
     highlightOverlay = null;
     selectOverlay = null;
     _selectedEl = null;
-    if (_scrollHandler) {
-      try { targetDoc.removeEventListener("scroll", _scrollHandler, true); } catch { /* noop */ }
-      _scrollHandler = null;
-    }
   }
   targetDoc = doc;
   targetIframe = iframe;
@@ -68,6 +66,7 @@ export function resetInspectionTarget(): void {
   if (targetDoc !== document) {
     if (highlightOverlay?.parentNode) highlightOverlay.remove();
     if (selectOverlay?.parentNode) selectOverlay.remove();
+    hideInspectorPill();
     highlightOverlay = null;
     selectOverlay = null;
     _selectedEl = null;
@@ -224,10 +223,11 @@ function walkElement(el: Element, depth: number = 0): ElementNode | null {
     classes: Array.from(el.classList).filter((c) => !c.startsWith("oc-")),
     children,
     text: getTextContent(el),
-    styles: depth < 8 ? getComputedStyles(el) : {}, // Only compute styles for top levels
+    styles: depth < 8 ? getComputedStyles(el) : {},
     selector: getSelector(el),
     visible: true,
     locked: false,
+    componentName: (() => { const info = identifyElement(el); return info.source !== "tag" ? info.displayName : undefined; })(),
   };
 }
 
@@ -311,29 +311,67 @@ export function applyStyle(
 // ── Hover/select highlight ─────────────────────────────────
 // Overlays are created in the TARGET document (inside the iframe),
 // so they naturally move with the canvas when ReactFlow pans/zooms.
+//
+// Design: overlays use hardcoded 0canvas design token colors
+// (not CSS variables) because they live inside the iframe which
+// does NOT have [data-0canvas-root] scope.
+
+// 0canvas design tokens (hardcoded for iframe context)
+const OC_SURFACE_0 = "#171717";
+const OC_SURFACE_1 = "#262626";
+const OC_SURFACE_FLOOR = "#0a0a0a";
+const OC_TEXT_ON_SURFACE = "#E5E5E5";
+const OC_TEXT_MUTED = "#737373";
+const OC_BORDER_0 = "#262626";
+const OC_BORDER_1 = "#404040";
+const OC_PRIMARY = "#2563EB";
+const OC_SUCCESS = "#10B981";
+const OC_FONT_SANS = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+const OC_FONT_MONO = "'Fira Code', 'JetBrains Mono', 'Geist Mono', monospace";
 
 let highlightOverlay: HTMLDivElement | null = null;
 let selectOverlay: HTMLDivElement | null = null;
+let inspectorPill: HTMLDivElement | null = null;
 let _selectedEl: Element | null = null;
-let _scrollHandler: (() => void) | null = null;
-let _rafId: number | null = null;
-let _feedbackCallback: (() => void) | null = null;
 let _forkElementCallback: ((elementId: string) => void) | null = null;
+let _changeCallback: ((elementId: string, description: string, clickPos: { x: number; y: number }) => void) | null = null;
+let _deleteCallback: ((elementId: string) => void) | null = null;
+let _feedbackLookup: ((elementId: string) => { id: string; comment: string } | null) | null = null;
+let _lastClickPos: { x: number; y: number } = { x: 0, y: 0 };
+let _escHandler: ((e: KeyboardEvent) => void) | null = null;
 
 /**
- * Register a callback that fires when the user clicks the "+ Feedback"
- * button on the selection overlay inside the iframe.
- */
-export function onFeedbackRequest(cb: (() => void) | null): void {
-  _feedbackCallback = cb;
-}
-
-/**
- * Register a callback for the "Fork" button on the selection overlay.
+ * Register a callback for the "Fork" button on the inspector pill.
  * When clicked, it passes the selected element's ZeroCanvas ID.
  */
 export function onForkElementRequest(cb: ((elementId: string) => void) | null): void {
   _forkElementCallback = cb;
+}
+
+/**
+ * Register a callback for when the user submits a change description.
+ * Fires with the element ID and the text the user typed.
+ */
+export function onChangeRequest(cb: ((elementId: string, description: string, clickPos: { x: number; y: number }) => void) | null): void {
+  _changeCallback = cb;
+}
+
+export function onDeleteFeedbackRequest(cb: ((elementId: string) => void) | null): void {
+  _deleteCallback = cb;
+}
+
+/** Register a lookup so the pill can check if an element already has feedback */
+export function setFeedbackLookup(cb: ((elementId: string) => { id: string; comment: string } | null) | null): void {
+  _feedbackLookup = cb;
+}
+
+/** Get document-absolute coordinates from a viewport rect */
+function toAbsolute(rect: DOMRect, doc: Document): { top: number; left: number } {
+  const win = doc.defaultView || window;
+  return {
+    top: rect.top + win.scrollY,
+    left: rect.left + win.scrollX,
+  };
 }
 
 function ensureOverlay(type: "hover" | "select"): HTMLDivElement {
@@ -359,43 +397,67 @@ function ensureOverlay(type: "hover" | "select"): HTMLDivElement {
     overlay = targetDoc.createElement("div");
     overlay.setAttribute(OC_ATTR, "overlay");
 
+    // position: absolute — anchored to the document, scrolls with the page
     if (isHover) {
       overlay.style.cssText = `
-        position: fixed;
+        position: absolute;
         pointer-events: none;
         z-index: 2147483646;
-        border: 1.5px dashed rgba(0, 112, 243, 0.6);
-        background: rgba(0, 112, 243, 0.04);
+        border: 1.5px dashed ${OC_PRIMARY}99;
+        background: ${OC_PRIMARY}0A;
         border-radius: 2px;
         display: none;
+        box-sizing: border-box;
       `;
+
+      const hoverLabel = targetDoc.createElement("div");
+      hoverLabel.setAttribute("data-oc-role", "hover-label");
+      hoverLabel.style.cssText = `
+        position: absolute;
+        top: -26px;
+        left: -1.5px;
+        padding: 2px 8px;
+        border-radius: 4px 4px 0 0;
+        background: ${OC_PRIMARY};
+        color: #fff;
+        font-size: 10px;
+        font-family: ${OC_FONT_SANS};
+        font-weight: 500;
+        white-space: nowrap;
+        line-height: 18px;
+        pointer-events: none;
+        box-sizing: border-box;
+      `;
+      overlay.appendChild(hoverLabel);
     } else {
       overlay.style.cssText = `
-        position: fixed;
+        position: absolute;
         pointer-events: none;
         z-index: 2147483646;
-        border: 2px solid rgba(0, 112, 243, 0.9);
-        background: rgba(0, 112, 243, 0.06);
+        border: 2px solid ${OC_PRIMARY};
+        background: ${OC_PRIMARY}0F;
         border-radius: 2px;
         display: none;
+        box-sizing: border-box;
       `;
 
       const tagLabel = targetDoc.createElement("div");
       tagLabel.setAttribute("data-oc-role", "tag-label");
       tagLabel.style.cssText = `
         position: absolute;
-        top: -24px;
+        top: -26px;
         left: -2px;
-        padding: 2px 8px;
+        padding: 2px 10px;
         border-radius: 4px 4px 0 0;
-        background: var(--color--base--primary);
+        background: ${OC_PRIMARY};
         color: #fff;
-        font-size: 10px;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 11px;
+        font-family: ${OC_FONT_SANS};
         font-weight: 500;
         white-space: nowrap;
-        line-height: 16px;
+        line-height: 18px;
         pointer-events: none;
+        box-sizing: border-box;
       `;
       overlay.appendChild(tagLabel);
 
@@ -406,101 +468,19 @@ function ensureOverlay(type: "hover" | "select"): HTMLDivElement {
         bottom: -20px;
         left: -2px;
         padding: 1px 6px;
-        border-radius: 3px;
-        background: var(--color--base--primary);
-        color: rgba(255,255,255,0.85);
+        border-radius: 0 0 4px 4px;
+        background: ${OC_SURFACE_FLOOR};
+        color: ${OC_TEXT_MUTED};
         font-size: 9px;
-        font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+        font-family: ${OC_FONT_MONO};
         white-space: nowrap;
         line-height: 14px;
         pointer-events: none;
+        border: 1px solid ${OC_BORDER_0};
+        border-top: none;
+        box-sizing: border-box;
       `;
       overlay.appendChild(sizeLabel);
-
-      // Button bar container (holds Fork + Feedback)
-      const btnBar = targetDoc.createElement("div");
-      btnBar.setAttribute("data-oc-role", "btn-bar");
-      btnBar.setAttribute(OC_ATTR, "btn-bar");
-      btnBar.style.cssText = `
-        position: absolute;
-        bottom: -32px;
-        right: -2px;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        pointer-events: auto;
-      `;
-
-      const overlayBtnStyle = `
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        padding: 4px 10px;
-        border-radius: 6px;
-        border: none;
-        color: #fff;
-        font-size: 11px;
-        font-weight: 500;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        cursor: pointer;
-        pointer-events: auto;
-        white-space: nowrap;
-        transition: all 0.15s ease;
-        line-height: 16px;
-      `;
-
-      // Fork button
-      const forkBtn = targetDoc.createElement("button");
-      forkBtn.setAttribute("data-oc-role", "fork-btn");
-      forkBtn.setAttribute(OC_ATTR, "fork-btn");
-      forkBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9"/><path d="M12 12v3"/></svg> Fork`;
-      forkBtn.style.cssText = overlayBtnStyle + `
-        background: var(--color--status--success);
-        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
-      `;
-      forkBtn.addEventListener("mouseenter", () => {
-        forkBtn.style.background = "var(--green-600)";
-        forkBtn.style.transform = "scale(1.03)";
-      });
-      forkBtn.addEventListener("mouseleave", () => {
-        forkBtn.style.background = "var(--color--status--success)";
-        forkBtn.style.transform = "scale(1)";
-      });
-      forkBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (_selectedEl && _forkElementCallback) {
-          const elId = elementMap.get(_selectedEl);
-          if (elId) _forkElementCallback(elId);
-        }
-      });
-      btnBar.appendChild(forkBtn);
-
-      // Feedback button
-      const feedbackBtn = targetDoc.createElement("button");
-      feedbackBtn.setAttribute("data-oc-role", "feedback-btn");
-      feedbackBtn.setAttribute(OC_ATTR, "feedback-btn");
-      feedbackBtn.textContent = "+ Feedback";
-      feedbackBtn.style.cssText = overlayBtnStyle + `
-        background: var(--color--base--primary);
-        box-shadow: 0 2px 8px rgba(0, 112, 243, 0.4);
-      `;
-      feedbackBtn.addEventListener("mouseenter", () => {
-        feedbackBtn.style.background = "var(--color--base--primary-hover)";
-        feedbackBtn.style.transform = "scale(1.03)";
-      });
-      feedbackBtn.addEventListener("mouseleave", () => {
-        feedbackBtn.style.background = "var(--color--base--primary)";
-        feedbackBtn.style.transform = "scale(1)";
-      });
-      feedbackBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        _feedbackCallback?.();
-      });
-      btnBar.appendChild(feedbackBtn);
-
-      overlay.appendChild(btnBar);
     }
 
     targetDoc.body?.appendChild(overlay);
@@ -512,13 +492,366 @@ function ensureOverlay(type: "hover" | "select"): HTMLDivElement {
 }
 
 /**
+ * Create the inspector pill — a floating card at the click position.
+ * Uses position:absolute so it stays at its document position and
+ * scrolls away naturally with the page (like Agentation).
+ *
+ * Layout (3 rows):
+ *   ┌──────────────────────────────┐
+ *   │ [icon] ComponentName    [fork]│  ← row 1: label + fork
+ *   ├──────────────────────────────┤
+ *   │ Describe the change...       │  ← row 2: textarea
+ *   ├──────────────────────────────┤
+ *   │ [Cancel]               [Add] │  ← row 3: actions
+ *   └──────────────────────────────┘
+ */
+function showInspectorPill(el: Element, clickX: number, clickY: number): void {
+  hideInspectorPill();
+
+  const info = identifyElement(el);
+  const displayLabel = info.displayName;
+  const win = targetDoc.defaultView || window;
+  const PILL_WIDTH = 320;
+
+  const pill = targetDoc.createElement("div");
+  pill.setAttribute(OC_ATTR, "inspector-pill");
+  pill.setAttribute("data-oc-role", "inspector-pill");
+  pill.style.cssText = `
+    position: absolute;
+    z-index: 2147483647;
+    display: flex;
+    flex-direction: column;
+    width: ${PILL_WIDTH}px;
+    background: ${OC_SURFACE_FLOOR};
+    border: 1px solid ${OC_BORDER_1};
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3);
+    pointer-events: auto;
+    overflow: hidden;
+    box-sizing: border-box;
+  `;
+
+  // Convert viewport click position to absolute document position
+  const viewW = win.innerWidth || 800;
+  let vpX = clickX + 12;
+  let vpY = clickY - 18;
+  if (vpX + PILL_WIDTH > viewW - 16) vpX = clickX - PILL_WIDTH - 12;
+  if (vpY < 8) vpY = 8;
+  pill.style.left = `${vpX + win.scrollX}px`;
+  pill.style.top = `${vpY + win.scrollY}px`;
+
+  // ── Row 1: [icon] ComponentName [fork] ──
+  const header = targetDoc.createElement("div");
+  header.style.cssText = `
+    display: flex; align-items: center;
+    padding: 8px 6px 6px 10px; gap: 6px; box-sizing: border-box;
+  `;
+
+  const nameBadge = targetDoc.createElement("span");
+  nameBadge.style.cssText = `
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; background: ${OC_PRIMARY}; color: #fff;
+    font-size: 12px; font-family: ${OC_FONT_SANS}; font-weight: 500;
+    border-radius: 6px; white-space: nowrap; max-width: 200px;
+    overflow: hidden; text-overflow: ellipsis; line-height: 18px;
+    box-sizing: border-box;
+  `;
+  nameBadge.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`;
+  nameBadge.appendChild(targetDoc.createTextNode(` ${displayLabel}`));
+  header.appendChild(nameBadge);
+
+  const spacer = targetDoc.createElement("div");
+  spacer.style.cssText = "flex:1;";
+  header.appendChild(spacer);
+
+  // Copy button — copies element info for AI agent
+  const copyBtn = targetDoc.createElement("button");
+  copyBtn.setAttribute(OC_ATTR, "copy-btn");
+  copyBtn.setAttribute("title", "Copy for agent");
+  copyBtn.style.cssText = `
+    display: flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; padding: 0; background: transparent;
+    border: none; cursor: pointer; color: ${OC_TEXT_MUTED}; flex-shrink: 0;
+    transition: color 0.15s ease, background 0.15s ease;
+    border-radius: 6px; box-sizing: border-box;
+  `;
+  copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+  copyBtn.addEventListener("mouseenter", () => { copyBtn.style.color = OC_TEXT_ON_SURFACE; copyBtn.style.background = OC_SURFACE_1; });
+  copyBtn.addEventListener("mouseleave", () => { copyBtn.style.color = OC_TEXT_MUTED; copyBtn.style.background = "transparent"; });
+  copyBtn.addEventListener("click", (e) => {
+    e.preventDefault(); e.stopPropagation();
+    if (_selectedEl) {
+      const elId = elementMap.get(_selectedEl);
+      if (elId) {
+        const output = generateAgentOutput(elId);
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(output).catch(() => {});
+        }
+        // Brief visual feedback
+        copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+        copyBtn.style.color = OC_SUCCESS;
+        setTimeout(() => {
+          copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+          copyBtn.style.color = OC_TEXT_MUTED;
+        }, 1500);
+      }
+    }
+  });
+  header.appendChild(copyBtn);
+
+  const forkBtn = targetDoc.createElement("button");
+  forkBtn.setAttribute(OC_ATTR, "fork-btn");
+  forkBtn.setAttribute("title", "Fork this element");
+  forkBtn.style.cssText = `
+    display: flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; padding: 0; background: transparent;
+    border: none; cursor: pointer; color: ${OC_TEXT_MUTED}; flex-shrink: 0;
+    transition: color 0.15s ease, background 0.15s ease;
+    border-radius: 6px; box-sizing: border-box;
+  `;
+  forkBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9"/><path d="M12 12v3"/></svg>`;
+  forkBtn.addEventListener("mouseenter", () => { forkBtn.style.color = OC_TEXT_ON_SURFACE; forkBtn.style.background = OC_SURFACE_1; });
+  forkBtn.addEventListener("mouseleave", () => { forkBtn.style.color = OC_TEXT_MUTED; forkBtn.style.background = "transparent"; });
+  forkBtn.addEventListener("click", (e) => {
+    e.preventDefault(); e.stopPropagation();
+    if (_selectedEl && _forkElementCallback) {
+      const elId = elementMap.get(_selectedEl);
+      if (elId) _forkElementCallback(elId);
+    }
+  });
+  header.appendChild(forkBtn);
+  pill.appendChild(header);
+
+  // ── Row 2: Textarea ──
+  const textareaWrap = targetDoc.createElement("div");
+  textareaWrap.style.cssText = `
+    padding: 0 10px 6px 10px; box-sizing: border-box;
+  `;
+
+  const textarea = targetDoc.createElement("textarea");
+  textarea.setAttribute("placeholder", "Describe the change or \u2318+L to add to chat");
+  textarea.setAttribute("rows", "1");
+  textarea.setAttribute(OC_ATTR, "inspector-input");
+  textarea.style.cssText = `
+    width: 100%; min-height: 32px; max-height: 120px;
+    padding: 6px 10px; background: ${OC_SURFACE_1};
+    border: 1px solid ${OC_BORDER_1}; border-radius: 8px;
+    outline: none; color: ${OC_TEXT_ON_SURFACE};
+    font-size: 12px; font-family: ${OC_FONT_SANS}; font-weight: 400;
+    line-height: 1.4; resize: none; overflow-y: hidden;
+    box-sizing: border-box;
+  `;
+
+  function autoResize() {
+    textarea.style.height = "auto";
+    textarea.style.height = Math.min(textarea.scrollHeight, 120) + "px";
+    textarea.style.overflowY = textarea.scrollHeight > 120 ? "auto" : "hidden";
+  }
+  textarea.addEventListener("input", autoResize);
+
+  textarea.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey && textarea.value.trim()) {
+      e.preventDefault(); e.stopPropagation();
+      if (_selectedEl && _changeCallback) {
+        const elId = elementMap.get(_selectedEl);
+        if (elId) _changeCallback(elId, textarea.value.trim(), { ..._lastClickPos });
+      }
+      dismissSelection();
+      return;
+    }
+    if (e.key === "Escape") {
+      e.preventDefault(); e.stopPropagation();
+      dismissSelection();
+    }
+  });
+  textarea.addEventListener("focus", () => { textarea.style.borderColor = OC_PRIMARY; });
+  textarea.addEventListener("blur", () => { textarea.style.borderColor = OC_BORDER_1; });
+  textarea.addEventListener("click", (e) => { e.stopPropagation(); });
+  textarea.addEventListener("mousedown", (e) => { e.stopPropagation(); });
+  textareaWrap.appendChild(textarea);
+  pill.appendChild(textareaWrap);
+
+  // ── Row 3: [Delete] ... [Cancel] [Add] ──
+  const actionRow = targetDoc.createElement("div");
+  actionRow.style.cssText = `
+    display: flex; align-items: center;
+    padding: 0 10px 8px 10px; gap: 8px; box-sizing: border-box;
+  `;
+
+  const btnBase = `
+    padding: 5px 14px; border-radius: 6px; border: none; cursor: pointer;
+    font-size: 12px; font-family: ${OC_FONT_SANS}; font-weight: 500;
+    line-height: 16px; transition: background 0.15s ease; box-sizing: border-box;
+  `;
+
+  // Check if this element already has feedback (edit mode)
+  const currentElId = _selectedEl ? elementMap.get(_selectedEl) : null;
+  const existingFeedback = currentElId && _feedbackLookup ? _feedbackLookup(currentElId) : null;
+
+  // Delete button (only in edit mode)
+  if (existingFeedback) {
+    const deleteBtn = targetDoc.createElement("button");
+    deleteBtn.setAttribute(OC_ATTR, "delete-btn");
+    deleteBtn.style.cssText = `
+      display: flex; align-items: center; justify-content: center;
+      width: 28px; height: 28px; padding: 0; border-radius: 6px;
+      border: none; cursor: pointer; background: transparent;
+      color: ${OC_TEXT_MUTED}; transition: all 0.15s ease; box-sizing: border-box;
+    `;
+    deleteBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
+    deleteBtn.title = "Delete feedback";
+    deleteBtn.addEventListener("mouseenter", () => { deleteBtn.style.background = "rgba(239,68,68,0.15)"; deleteBtn.style.color = "#EF4444"; });
+    deleteBtn.addEventListener("mouseleave", () => { deleteBtn.style.background = "transparent"; deleteBtn.style.color = OC_TEXT_MUTED; });
+    deleteBtn.addEventListener("click", (e) => {
+      e.preventDefault(); e.stopPropagation();
+      if (currentElId && _deleteCallback) _deleteCallback(currentElId);
+      dismissSelection();
+    });
+    actionRow.appendChild(deleteBtn);
+  }
+
+  // Spacer
+  const spacerRow = targetDoc.createElement("div");
+  spacerRow.style.cssText = "flex:1;";
+  actionRow.appendChild(spacerRow);
+
+  const cancelBtn = targetDoc.createElement("button");
+  cancelBtn.setAttribute(OC_ATTR, "cancel-btn");
+  cancelBtn.textContent = "Cancel";
+  cancelBtn.style.cssText = btnBase + `
+    background: ${OC_SURFACE_1}; color: ${OC_TEXT_MUTED};
+  `;
+  cancelBtn.addEventListener("mouseenter", () => { cancelBtn.style.background = OC_BORDER_1; });
+  cancelBtn.addEventListener("mouseleave", () => { cancelBtn.style.background = OC_SURFACE_1; });
+  cancelBtn.addEventListener("click", (e) => {
+    e.preventDefault(); e.stopPropagation();
+    dismissSelection();
+  });
+  actionRow.appendChild(cancelBtn);
+
+  const sendBtn = targetDoc.createElement("button");
+  sendBtn.setAttribute(OC_ATTR, "send-btn");
+  sendBtn.textContent = "Add";
+  sendBtn.style.cssText = btnBase + `
+    background: ${OC_TEXT_ON_SURFACE}; color: ${OC_SURFACE_FLOOR};
+  `;
+  sendBtn.addEventListener("mouseenter", () => { sendBtn.style.background = "#fff"; });
+  sendBtn.addEventListener("mouseleave", () => { sendBtn.style.background = OC_TEXT_ON_SURFACE; });
+  sendBtn.addEventListener("click", (e) => {
+    e.preventDefault(); e.stopPropagation();
+    if (textarea.value.trim() && _selectedEl && _changeCallback) {
+      const elId = elementMap.get(_selectedEl);
+      if (elId) _changeCallback(elId, textarea.value.trim(), { ..._lastClickPos });
+    }
+    dismissSelection();
+  });
+  actionRow.appendChild(sendBtn);
+  pill.appendChild(actionRow);
+
+  // If editing existing feedback, pre-fill textarea
+  if (existingFeedback) {
+    textarea.value = existingFeedback.comment;
+    autoResize();
+  }
+
+  // Prevent pill interactions from bubbling
+  pill.addEventListener("mousedown", (e) => { e.stopPropagation(); });
+  pill.addEventListener("click", (e) => { e.stopPropagation(); });
+
+  targetDoc.body?.appendChild(pill);
+  inspectorPill = pill;
+
+  // Pause inspection — remove hover/click handlers while pill is open
+  pauseInspection();
+
+  // Document-level Esc listener
+  if (_escHandler) {
+    try { targetDoc.removeEventListener("keydown", _escHandler, true); } catch { /* noop */ }
+  }
+  _escHandler = (e: KeyboardEvent) => {
+    if (e.key === "Escape") {
+      e.preventDefault(); e.stopPropagation();
+      dismissSelection();
+    }
+  };
+  targetDoc.addEventListener("keydown", _escHandler, true);
+
+  requestAnimationFrame(() => textarea.focus());
+}
+
+function hideInspectorPill(): void {
+  if (inspectorPill?.parentNode) {
+    inspectorPill.remove();
+  }
+  inspectorPill = null;
+  // Remove document-level Esc listener
+  if (_escHandler) {
+    try { targetDoc.removeEventListener("keydown", _escHandler, true); } catch { /* noop */ }
+    _escHandler = null;
+  }
+}
+
+/**
+ * Temporarily remove hover/click handlers so the user can interact
+ * with the pill without triggering new inspections. The handlers
+ * are restored when the selection is dismissed.
+ */
+function pauseInspection(): void {
+  if (inspectHoverHandler) {
+    targetDoc.removeEventListener("mousemove", inspectHoverHandler, true);
+  }
+  if (inspectHandler) {
+    targetDoc.removeEventListener("click", inspectHandler, true);
+  }
+  highlightElement(null, "hover");
+  if (targetDoc.body) {
+    targetDoc.body.style.cursor = "";
+  }
+}
+
+/**
+ * Re-attach hover/click handlers after the pill is dismissed.
+ */
+function resumeInspection(): void {
+  if (!inspectActive) return;
+  if (inspectHoverHandler) {
+    targetDoc.addEventListener("mousemove", inspectHoverHandler, true);
+  }
+  if (inspectHandler) {
+    targetDoc.addEventListener("click", inspectHandler, true);
+  }
+  if (targetDoc.body) {
+    targetDoc.body.style.cursor = "crosshair";
+  }
+}
+
+/**
+ * Dismiss the current selection — hides pill + overlay then resumes
+ * inspect mode. The user can immediately click another element.
+ * Only toggling off inspect in the toolbar actually stops inspect mode.
+ */
+function dismissSelection(): void {
+  hideInspectorPill();
+  highlightElement(null, "select");
+  resumeInspection();
+}
+
+/** Export so external callers (e.g. source-node) can dismiss selection */
+export { dismissSelection };
+
+/**
  * Show a highlight overlay on a DOM element.
  * Overlays are rendered inside the target document so they move
  * with the iframe when the ReactFlow canvas pans/zooms.
+ *
+ * For "select" type, also shows the inspector pill at the cursor
+ * position (pass clickX/clickY for cursor positioning).
  */
 export function highlightElement(
   elementId: string | null,
-  type: "hover" | "select" = "hover"
+  type: "hover" | "select" = "hover",
+  clickX?: number,
+  clickY?: number
 ): void {
   const overlay = ensureOverlay(type);
 
@@ -526,14 +859,7 @@ export function highlightElement(
     overlay.style.display = "none";
     if (type === "select") {
       _selectedEl = null;
-      if (_scrollHandler) {
-        try { targetDoc.removeEventListener("scroll", _scrollHandler, true); } catch { /* noop */ }
-        _scrollHandler = null;
-      }
-      if (_rafId) {
-        cancelAnimationFrame(_rafId);
-        _rafId = null;
-      }
+      hideInspectorPill();
     }
     return;
   }
@@ -544,21 +870,29 @@ export function highlightElement(
     return;
   }
 
+  // Use absolute document coordinates — overlay stays at its position
+  // and scrolls away naturally with the page content.
   const rect = el.getBoundingClientRect();
+  const abs = toAbsolute(rect, targetDoc);
   overlay.style.display = "block";
-  overlay.style.top = `${rect.top}px`;
-  overlay.style.left = `${rect.left}px`;
+  overlay.style.top = `${abs.top}px`;
+  overlay.style.left = `${abs.left}px`;
   overlay.style.width = `${rect.width}px`;
   overlay.style.height = `${rect.height}px`;
+
+  if (type === "hover") {
+    const hoverLabel = overlay.querySelector("[data-oc-role='hover-label']") as HTMLElement;
+    if (hoverLabel) {
+      hoverLabel.textContent = identifyElement(el).displayName;
+    }
+  }
 
   if (type === "select") {
     _selectedEl = el;
 
     const tagLabel = overlay.querySelector("[data-oc-role='tag-label']") as HTMLElement;
     if (tagLabel) {
-      const tag = el.tagName.toLowerCase();
-      const cls = Array.from(el.classList).slice(0, 2).map(c => `.${c}`).join("");
-      tagLabel.textContent = `${tag}${cls}`;
+      tagLabel.textContent = identifyElement(el).displayName;
     }
 
     const sizeLabel = overlay.querySelector("[data-oc-role='size-label']") as HTMLElement;
@@ -566,42 +900,12 @@ export function highlightElement(
       sizeLabel.textContent = `${Math.round(rect.width)} \u00d7 ${Math.round(rect.height)}`;
     }
 
-    if (_scrollHandler) {
-      try { targetDoc.removeEventListener("scroll", _scrollHandler, true); } catch { /* noop */ }
-    }
-    if (_rafId) {
-      cancelAnimationFrame(_rafId);
-      _rafId = null;
-    }
-    _scrollHandler = () => {
-      if (_rafId) return;
-      _rafId = requestAnimationFrame(() => {
-        _rafId = null;
-        if (!_selectedEl || !selectOverlay) return;
-        const r = _selectedEl.getBoundingClientRect();
-        selectOverlay.style.top = `${r.top}px`;
-        selectOverlay.style.left = `${r.left}px`;
-        selectOverlay.style.width = `${r.width}px`;
-        selectOverlay.style.height = `${r.height}px`;
-        const sl = selectOverlay.querySelector("[data-oc-role='size-label']") as HTMLElement;
-        if (sl) sl.textContent = `${Math.round(r.width)} \u00d7 ${Math.round(r.height)}`;
-      });
-    };
-    targetDoc.addEventListener("scroll", _scrollHandler, true);
+    // Show the inspector pill at the cursor position
+    const cx = clickX ?? _lastClickPos.x;
+    const cy = clickY ?? _lastClickPos.y;
+    showInspectorPill(el, cx, cy);
 
-    // Also observe window resize in target doc to keep overlay in sync
-    const targetWin = targetDoc.defaultView;
-    if (targetWin) {
-      const resizeHandler = () => {
-        if (!_selectedEl || !selectOverlay) return;
-        const r = _selectedEl.getBoundingClientRect();
-        selectOverlay.style.top = `${r.top}px`;
-        selectOverlay.style.left = `${r.left}px`;
-        selectOverlay.style.width = `${r.width}px`;
-        selectOverlay.style.height = `${r.height}px`;
-      };
-      targetWin.addEventListener("resize", resizeHandler);
-    }
+    // No scroll handler needed — position:absolute handles it naturally
   }
 }
 
@@ -611,17 +915,10 @@ export function highlightElement(
 export function cleanup(): void {
   if (highlightOverlay?.parentNode) highlightOverlay.remove();
   if (selectOverlay?.parentNode) selectOverlay.remove();
+  hideInspectorPill();
   highlightOverlay = null;
   selectOverlay = null;
   _selectedEl = null;
-  if (_scrollHandler) {
-    try { targetDoc.removeEventListener("scroll", _scrollHandler, true); } catch { /* noop */ }
-    _scrollHandler = null;
-  }
-  if (_rafId) {
-    cancelAnimationFrame(_rafId);
-    _rafId = null;
-  }
   idToElement.clear();
   resetInspectionTarget();
 }
@@ -661,10 +958,17 @@ export function startInspect(onSelect: InspectCallback): void {
     e.preventDefault();
     e.stopPropagation();
 
+    // Dismiss any existing selection (pill + overlay) before selecting new
+    hideInspectorPill();
+    highlightElement(null, "select");
+
+    // Store click position for the inspector pill
+    _lastClickPos = { x: e.clientX, y: e.clientY };
+
     const id = elementMap.get(target);
     if (id) {
       highlightElement(null, "hover");
-      highlightElement(id, "select");
+      highlightElement(id, "select", e.clientX, e.clientY);
       onSelect(id, target);
     }
   };
@@ -680,7 +984,7 @@ export function startInspect(onSelect: InspectCallback): void {
 }
 
 /**
- * Stop click-to-inspect mode.
+ * Stop click-to-inspect mode. Dismisses all overlays and pills.
  */
 export function stopInspect(): void {
   if (inspectHandler) {
@@ -692,6 +996,7 @@ export function stopInspect(): void {
     inspectHoverHandler = null;
   }
   highlightElement(null, "hover");
+  dismissSelection();
   if (targetDoc.body) {
     targetDoc.body.style.cursor = "";
   }
@@ -700,6 +1005,110 @@ export function stopInspect(): void {
 
 export function isInspecting(): boolean {
   return inspectActive;
+}
+
+// ── Feedback markers (numbered pins on inspected page) ─────
+
+type FeedbackMarkerData = {
+  id: string;
+  number: number;
+  elementId: string;
+  comment: string;
+  boundingBox: { x: number; y: number; width: number; height: number };
+};
+
+const feedbackMarkers: Map<string, HTMLDivElement> = new Map();
+let _editCallback: ((feedbackId: string) => void) | null = null;
+
+export function onEditFeedbackRequest(cb: ((feedbackId: string) => void) | null): void {
+  _editCallback = cb;
+}
+
+/** Render or update all feedback markers on the inspected page */
+export function renderFeedbackMarkers(items: FeedbackMarkerData[]): void {
+  // Remove stale markers
+  for (const [id, el] of feedbackMarkers) {
+    if (!items.find((i) => i.id === id)) {
+      el.remove();
+      feedbackMarkers.delete(id);
+    }
+  }
+
+  for (const item of items) {
+    let marker = feedbackMarkers.get(item.id);
+
+    if (!marker) {
+      marker = targetDoc.createElement("div");
+      marker.setAttribute(OC_ATTR, "feedback-marker");
+      marker.setAttribute("data-feedback-id", item.id);
+      marker.style.cssText = `
+        position: absolute; z-index: 2147483645;
+        width: 22px; height: 22px; border-radius: 50%;
+        background: ${OC_PRIMARY}; color: #fff;
+        border: 2px solid #fff;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 10px; font-weight: 700; font-family: ${OC_FONT_SANS};
+        cursor: pointer; pointer-events: auto;
+        box-shadow: 0 2px 10px rgba(37,99,235,0.4);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        user-select: none;
+      `;
+
+      const pencilSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>`;
+      const numberText = String(item.number);
+
+      // Hover: swap number for pencil icon
+      marker.addEventListener("mouseenter", () => {
+        if (marker) {
+          marker.innerHTML = pencilSvg;
+          marker.style.transform = "scale(1.15)";
+          marker.style.boxShadow = "0 4px 16px rgba(0,0,0,0.4)";
+          marker.title = item.comment;
+        }
+      });
+      marker.addEventListener("mouseleave", () => {
+        if (marker) {
+          marker.textContent = numberText;
+          marker.style.transform = "";
+          marker.style.boxShadow = "0 2px 8px rgba(0,0,0,0.3)";
+        }
+      });
+
+      // Click: open inspector pill at the element to edit feedback
+      marker.addEventListener("click", (e) => {
+        e.preventDefault(); e.stopPropagation();
+        const el = getElementById(item.elementId);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          highlightElement(item.elementId, "select", rect.x + rect.width / 2, rect.y + rect.height / 2);
+          // Pre-fill the pill textarea with existing comment
+          setTimeout(() => {
+            const pill = targetDoc.querySelector(`[${OC_ATTR}="inspector-pill"]`);
+            if (pill) {
+              const textarea = pill.querySelector("textarea") as HTMLTextAreaElement;
+              if (textarea) { textarea.value = item.comment; textarea.focus(); }
+            }
+          }, 50);
+        }
+        if (_editCallback) _editCallback(item.id);
+      });
+
+      targetDoc.body?.appendChild(marker);
+      feedbackMarkers.set(item.id, marker);
+    }
+
+    // Position marker at the click position (center of where pill was)
+    const win = targetDoc.defaultView || window;
+    marker.style.left = `${item.boundingBox.x + win.scrollX - 11}px`;
+    marker.style.top = `${item.boundingBox.y + win.scrollY - 11}px`;
+    marker.textContent = String(item.number);
+  }
+}
+
+/** Remove all feedback markers from the page */
+export function clearFeedbackMarkers(): void {
+  for (const [, el] of feedbackMarkers) el.remove();
+  feedbackMarkers.clear();
 }
 
 // ── Structured output for AI agents ────────────────────────

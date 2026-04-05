@@ -10,9 +10,7 @@ import {
   Background,
   BackgroundVariant,
   useNodesState,
-  useEdgesState,
   type Node,
-  type Edge,
   type NodeTypes,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -164,11 +162,12 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
     }
   }, [state.variants, dispatch]);
 
-  // ── Compute ReactFlow nodes + edges from state variants ─
+  // ── Compute ReactFlow nodes from state variants ──────────
+  // No edges — variants are positioned horizontally to the right
+  // of their source, with no wire connections.
 
-  const { flowNodes, flowEdges } = useMemo(() => {
+  const flowNodes = useMemo(() => {
     const nodes: Node[] = [];
-    const edges: Edge[] = [];
 
     // Source node (always at 0,0) — Framer-style resizable viewport
     nodes.push({
@@ -184,7 +183,8 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
       draggable: true,
     });
 
-    // Layout variants in columns by depth
+    // Layout variants in columns by depth, horizontally aligned
+    // Each depth level is a column to the right of the source
     const rootVariants = state.variants.filter((v) => v.parentId === null);
     const childMap = new Map<string, VariantData[]>();
     for (const v of state.variants) {
@@ -195,26 +195,28 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
       }
     }
 
-    let yOffset = 0;
-
     const DEFAULT_VARIANT_W = 560;
     const DEFAULT_VARIANT_H = 420;
 
-    function layoutVariant(variant: VariantData, depth: number, parentNodeId: string) {
+    // Track y offset per depth column so variants stack vertically within each column
+    const yOffsetByDepth = new Map<number, number>();
+
+    function layoutVariant(variant: VariantData, depth: number) {
       const nodeW = variant.sourceViewportWidth || DEFAULT_VARIANT_W;
       const rawH = variant.sourceContentHeight || Math.round(nodeW * (DEFAULT_VARIANT_H / DEFAULT_VARIANT_W));
-      // Add space for floating chrome bar (34px) + gap (8px), and ensure minimum useful height
-      const FLOATING_HEADER_H = 42; // chrome bar + gap
+      const FLOATING_HEADER_H = 42;
       const minContentH = variant.sourceType === "component" ? 200 : DEFAULT_VARIANT_H;
       const nodeH = Math.max(rawH, minContentH) + FLOATING_HEADER_H;
+
+      // Position: column to the right based on depth
       const x = VARIANT_COL_OFFSET + depth * (Math.max(nodeW, DEFAULT_VARIANT_W) + VARIANT_GAP_X);
-      const y = yOffset;
-      yOffset += nodeH + VARIANT_GAP_Y;
+      const currentY = yOffsetByDepth.get(depth) || 0;
+      yOffsetByDepth.set(depth, currentY + nodeH + VARIANT_GAP_Y);
 
       nodes.push({
         id: variant.id,
         type: "variant",
-        position: { x, y },
+        position: { x, y: currentY },
         data: {
           variant,
           onFork: handleForkVariant,
@@ -227,26 +229,18 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
         draggable: true,
       });
 
-      edges.push({
-        id: `edge-${parentNodeId}-${variant.id}`,
-        source: parentNodeId,
-        target: variant.id,
-        type: "smoothstep",
-        animated: variant.status === "draft",
-        style: { stroke: "var(--color--border--on-surface-1)", strokeWidth: 1.5 },
-      });
-
+      // Layout children in the next depth column
       const children = childMap.get(variant.id) || [];
       for (const child of children) {
-        layoutVariant(child, depth + 1, variant.id);
+        layoutVariant(child, depth + 1);
       }
     }
 
     for (const rv of rootVariants) {
-      layoutVariant(rv, 0, SOURCE_NODE_ID);
+      layoutVariant(rv, 0);
     }
 
-    return { flowNodes: nodes, flowEdges: edges };
+    return nodes;
   }, [
     state.variants,
     handleForkPage,
@@ -259,14 +253,12 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
   ]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(flowNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(flowEdges);
   const [canvasInteracting, setCanvasInteracting] = useState(false);
 
   // Sync ReactFlow state when store variants change
   useEffect(() => {
     setNodes(flowNodes);
-    setEdges(flowEdges);
-  }, [flowNodes, flowEdges, setNodes, setEdges]);
+  }, [flowNodes, setNodes]);
 
   // Disable iframe pointer events during canvas interactions (pan/zoom/drag)
   // This prevents iframes from stealing mouse events during drag operations
@@ -325,10 +317,9 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
     >
       <ReactFlow
         nodes={nodes}
-        edges={edges}
+        edges={[]}
         nodeTypes={NODE_TYPES}
         onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
         onMoveStart={handleMoveStart}
         onMoveEnd={handleMoveEnd}
         onNodeDragStart={handleNodeDragStart}
@@ -336,20 +327,22 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
         onNodeClick={handleNodeClick}
         fitView
         fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
-        minZoom={0.05}
-        maxZoom={2}
+        minZoom={0.02}
+        maxZoom={4}
         panOnScroll
-        panOnScrollMode="free" as any
+        panOnScrollMode={"free" as any}
         zoomOnScroll
         zoomOnPinch
+        zoomActivationKeyCode="Meta"
         nodesDraggable
         nodeDragThreshold={5}
         nodesConnectable={false}
+        edgesReconnectable={false}
         selectNodesOnDrag={false}
         proOptions={{ hideAttribution: true }}
         className="oc-vc-flow"
       >
-        <Background variant={BackgroundVariant.Dots} color="var(--color--surface--0)" gap={20} size={1} />
+        <Background variant={BackgroundVariant.Dots} color="var(--color--surface--2)" gap={20} size={1} />
         <Controls
           showInteractive={false}
           className="oc-vc-controls"
