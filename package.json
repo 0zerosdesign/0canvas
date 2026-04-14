@@ -30,9 +30,6 @@
       }
     }
   },
-  "bin": {
-    "0canvas-mcp": "./dist/mcp/server.mjs"
-  },
   "files": [
     "dist"
   ],
@@ -56,7 +53,6 @@
     }
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.27.1",
     "@radix-ui/react-scroll-area": "^1.2.0",
     "@xyflow/react": "^12.10.1",
     "clsx": "^2.1.0",
@@ -72,13 +68,15 @@
     "@tailwindcss/vite": "^4.2.2",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
+    "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^5.1.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "tailwindcss": "^4.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.0.0",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "ws": "^8.20.0"
   },
   "keywords": [
     "design",

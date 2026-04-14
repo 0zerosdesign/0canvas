@@ -32,7 +32,7 @@ import {
   stopInspect,
   isInspecting,
   highlightElement,
-} from "../inspector/dom-inspector";
+} from "../inspector";
 
 export type VariantNodeData = {
   variant: VariantData;

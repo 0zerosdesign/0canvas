@@ -8,7 +8,7 @@
 // feedback, and history checkpoints.
 //
 // The file is JSON-based, stored in IndexedDB in-browser,
-// downloadable as .0c, and syncable to IDE via MCP bridge.
+// downloadable as .0c.
 //
 // ──────────────────────────────────────────────────────────
 

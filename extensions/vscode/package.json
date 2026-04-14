@@ -1,17 +1,51 @@
 {
   "name": "0canvas",
   "displayName": "0canvas — Visual Feedback for AI Agents",
-  "description": "Receive visual feedback from 0canvas and send it directly to your AI coding agent (Cursor, Copilot, Claude Code, Codex).",
+  "description": "Visual design tool for production code. Real-time CSS editing bridge + AI agent feedback dispatch.",
   "version": "0.0.1",
   "publisher": "zerosdesign",
   "license": "MIT",
   "engines": {
     "vscode": "^1.85.0"
   },
-  "categories": ["Other"],
-  "activationEvents": ["onStartupFinished"],
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "0canvas-sidebar",
+          "title": "0canvas",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "0canvas-sidebar": [
+        {
+          "type": "webview",
+          "id": "0canvas.dashboardView",
+          "name": "Dashboard"
+        }
+      ]
+    },
+    "customEditors": [
+      {
+        "viewType": "0canvas.ocEditor",
+        "displayName": "0canvas Design Editor",
+        "selector": [
+          {
+            "filenamePattern": "*.0c"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
     "commands": [
       {
         "command": "0canvas.sendToAgent",
@@ -24,6 +58,79 @@
       {
         "command": "0canvas.showFeedback",
         "title": "0canvas: Show Pending Feedback"
+      },
+      {
+        "command": "0canvas.openBrowser",
+        "title": "0canvas: Open in Browser"
+      },
+      {
+        "command": "0canvas.startDevServer",
+        "title": "0canvas: Start Dev Server"
+      }
+    ],
+    "languageModelTools": [
+      {
+        "name": "0canvas_read_design_state",
+        "displayName": "Read 0canvas Design State",
+        "description": "Returns the .0c project file JSON with variants, feedback, and metadata.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "0canvas_read_design_state"
+      },
+      {
+        "name": "0canvas_get_element_styles",
+        "displayName": "Get Element Styles",
+        "description": "Returns computed styles and source file location for a CSS selector.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "0canvas_get_element_styles",
+        "parametersSchema": {
+          "type": "object",
+          "properties": {
+            "selector": {
+              "type": "string",
+              "description": "CSS selector (e.g. '.hero-title')"
+            }
+          },
+          "required": ["selector"]
+        }
+      },
+      {
+        "name": "0canvas_list_tokens",
+        "displayName": "List Design Tokens",
+        "description": "Returns all CSS custom properties from theme files.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "0canvas_list_tokens"
+      },
+      {
+        "name": "0canvas_get_feedback",
+        "displayName": "Get Pending Feedback",
+        "description": "Returns pending feedback items from the 0canvas project.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "0canvas_get_feedback"
+      },
+      {
+        "name": "0canvas_apply_change",
+        "displayName": "Apply CSS Change",
+        "description": "Writes a CSS change to the source file and notifies the browser.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "0canvas_apply_change",
+        "parametersSchema": {
+          "type": "object",
+          "properties": {
+            "selector": {
+              "type": "string",
+              "description": "CSS selector to target"
+            },
+            "property": {
+              "type": "string",
+              "description": "CSS property name in kebab-case"
+            },
+            "value": {
+              "type": "string",
+              "description": "New CSS value"
+            }
+          },
+          "required": ["selector", "property", "value"]
+        }
       }
     ]
   },
@@ -36,5 +143,10 @@
     "@types/vscode": "^1.85.0",
     "esbuild": "^0.20.0",
     "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@types/ws": "^8.18.1",
+    "ws": "^8.20.0"
   }
 }

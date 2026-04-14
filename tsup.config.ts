@@ -33,20 +33,4 @@ export default defineConfig([
     external: ["vite", /^node:/],
     noExternal: [],
   },
-  {
-    entry: ["src/mcp/server.ts"],
-    outDir: "dist/mcp",
-    format: ["esm"],
-    dts: false,
-    splitting: false,
-    sourcemap: true,
-    clean: false,
-    platform: "node",
-    target: "node18",
-    external: [],
-    noExternal: [/@modelcontextprotocol/, /zod/],
-    banner: {
-      js: "#!/usr/bin/env node",
-    },
-  },
 ]);

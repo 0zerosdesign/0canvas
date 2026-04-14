@@ -1,5 +1,5 @@
 import React from "react";
-import { Palette, Settings, X } from "lucide-react";
+import { PenTool, Palette, Settings, X } from "lucide-react";
 import { useWorkspace, type WorkspacePage } from "../store/store";
 
 export function AppSidebar({ onClose }: { onClose: () => void }) {
@@ -27,6 +27,14 @@ export function AppSidebar({ onClose }: { onClose: () => void }) {
           className={`oc-sidebar-btn ${state.activePage === "design" ? "is-active" : ""}`}
           onClick={() => setPage("design")}
           title="Design"
+        >
+          <PenTool size={18} />
+        </button>
+
+        <button
+          className={`oc-sidebar-btn ${state.activePage === "themes" ? "is-active" : ""}`}
+          onClick={() => setPage("themes")}
+          title="Themes"
         >
           <Palette size={18} />
         </button>

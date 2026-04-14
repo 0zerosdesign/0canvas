@@ -23,14 +23,18 @@
 import React, { useState, useEffect, useCallback, useRef, type MouseEvent as ReactMouseEvent } from "react";
 import ReactDOM from "react-dom";
 import { WorkspaceProvider, useWorkspace } from "../store/store";
+import { ScrollArea } from "../ui/scroll-area";
+import { BridgeProvider, useBridge } from "../bridge/use-bridge";
 import { injectStyles, removeStyles } from "./0canvas-styles";
-import { cleanup } from "../inspector/dom-inspector";
+import { cleanup } from "../inspector";
 import { WorkspaceToolbar } from "../panels/workspace-toolbar";
-import { LayersPanel } from "../panels/layers-panel";
 import { StylePanel } from "../panels/style-panel";
 import { VariantCanvas } from "../canvas/variant-canvas";
 import { AppSidebar } from "../panels/app-sidebar";
 import { SettingsPage } from "../panels/settings-page";
+import { ThemesPage } from "../themes/themes-page";
+import { ThemeModePanel } from "../themes/theme-mode-panel";
+import { AIChatPanel } from "../panels/ai-chat-panel";
 import { projectFileToState } from "../format/oc-project";
 import {
   scheduleAutoSave,
@@ -38,8 +42,8 @@ import {
   saveProjectFile,
   downloadProjectFile,
   importProjectFile,
-  pushProjectToIDE,
   buildCurrentProjectFile,
+  setBridgeSender,
 } from "../format/oc-project-store";
 
 // ── Props ──────────────────────────────────────────────────
@@ -247,9 +251,11 @@ export function ZeroCanvas({
       }}
     >
       <WorkspaceProvider>
-        <AutoConnect>
-          <EngineWorkspace onClose={toggle} />
-        </AutoConnect>
+        <BridgeProvider>
+          <AutoConnect>
+            <EngineWorkspace onClose={toggle} />
+          </AutoConnect>
+        </BridgeProvider>
       </WorkspaceProvider>
     </div>,
     portalRef.current,
@@ -303,11 +309,18 @@ function useResizable(initial: number, min: number, max: number) {
 
 function EngineWorkspace({ onClose }: { onClose: () => void }) {
   const { state, dispatch } = useWorkspace();
+  const bridge = useBridge();
   const iframeNavRef = React.useRef<((route: string) => void) | null>(null);
-  const lastPollRef = useRef<number>(0);
 
-  const layers = useResizable(260, 180, 480);
   const style = useResizable(280, 200, 500);
+
+  // ── Wire bridge sender for filesystem sync ──
+  useEffect(() => {
+    if (bridge) {
+      setBridgeSender((msg) => bridge.send(msg as any));
+    }
+    return () => setBridgeSender(null);
+  }, [bridge]);
 
   // ── Load .0c project file from IndexedDB on mount ──
   useEffect(() => {
@@ -339,6 +352,42 @@ function EngineWorkspace({ onClose }: { onClose: () => void }) {
     state.ocProjectFile,
   ]);
 
+  // ── Auto-send feedback to agent ──
+  const prevFeedbackCountRef = useRef(state.feedbackItems.length);
+  const [autoSendNotification, setAutoSendNotification] = useState<string | null>(null);
+
+  useEffect(() => {
+    const prevCount = prevFeedbackCountRef.current;
+    const newCount = state.feedbackItems.length;
+    prevFeedbackCountRef.current = newCount;
+
+    // Only trigger when items are ADDED (not removed or loaded)
+    if (
+      newCount > prevCount &&
+      state.aiSettings.autoSendFeedback &&
+      bridge
+    ) {
+      // Get the newly added items
+      const newItems = state.feedbackItems.slice(prevCount);
+      for (const item of newItems) {
+        if (item.status !== "pending") continue;
+
+        const query = `[Auto-feedback] ${item.intent}: "${item.comment}" on ${item.elementSelector} (${item.severity})`;
+        bridge.send({
+          type: "AI_CHAT_REQUEST",
+          query,
+          selector: item.elementSelector,
+          styles: item.computedStyles,
+          route: state.currentRoute,
+        } as any);
+
+        // Show notification
+        setAutoSendNotification(`Feedback sent to agent: "${item.comment.slice(0, 40)}${item.comment.length > 40 ? "..." : ""}"`);
+        setTimeout(() => setAutoSendNotification(null), 3000);
+      }
+    }
+  }, [state.feedbackItems, state.aiSettings.autoSendFeedback, bridge, state.currentRoute]);
+
   // ── Export .0c file ──
   const handleExportDD = useCallback(async () => {
     try {
@@ -356,110 +405,20 @@ function EngineWorkspace({ onClose }: { onClose: () => void }) {
 
   // ── Import .0c file ──
   const handleImportDD = useCallback(async () => {
+    // Warn if current project has data
+    if (state.variants.length > 0 || state.feedbackItems.length > 0) {
+      const confirmed = window.confirm(
+        "Importing will replace the current project data. This cannot be undone. Continue?"
+      );
+      if (!confirmed) return;
+    }
+
     const file = await importProjectFile();
     if (file) {
       const { project, variants, feedbackItems } = projectFileToState(file);
       dispatch({ type: "LOAD_FROM_OC_FILE", file, project, variants, feedbackItems });
     }
-  }, [dispatch]);
-
-  // ── Push to IDE ──
-  const handlePushToIDE = useCallback(async () => {
-    const port = state.wsPort || 24192;
-    const file = await buildCurrentProjectFile(
-      state.ocProject,
-      state.variants,
-      state.feedbackItems,
-      state.currentRoute,
-    );
-    const ok = await pushProjectToIDE(file, port);
-    if (ok) {
-      dispatch({ type: "SET_OC_PROJECT_FILE", file });
-    }
-  }, [state.ocProject, state.variants, state.feedbackItems, state.currentRoute, state.wsPort, dispatch]);
-
-  // ── Auto-connect IDE + MCP bridge on mount ──
-  // Reads globals injected by the Vite plugin for instant connection,
-  // then validates with a health check. Falls back to health-check-only
-  // if no Vite plugin is installed.
-  useEffect(() => {
-    const w = window as unknown as Record<string, unknown>;
-    const injectedPort = typeof w.__ZEROCANVAS_MCP_PORT__ === "number" ? w.__ZEROCANVAS_MCP_PORT__ as number : null;
-    const injectedIDE = typeof w.__ZEROCANVAS_IDE__ === "string" ? w.__ZEROCANVAS_IDE__ as string : null;
-    const port = injectedPort || 24192;
-
-    // If the Vite plugin injected IDE info, connect immediately (no network wait)
-    if (injectedIDE) {
-      dispatch({ type: "UPDATE_IDE_STATUS", id: injectedIDE, status: "connected" });
-    }
-    if (injectedPort) {
-      dispatch({ type: "WS_SET_PORT", port: injectedPort });
-    }
-
-    // Verify bridge is actually reachable, and pick up IDE from server if not injected
-    const detect = async () => {
-      try {
-        const res = await fetch(`http://127.0.0.1:${port}/api/health`, { signal: AbortSignal.timeout(3000) });
-        if (res.ok) {
-          const data = await res.json();
-          dispatch({ type: "WS_STATUS_UPDATE", status: "connected" });
-          dispatch({ type: "WS_SET_PORT", port });
-          // Server-side IDE detection (fallback if Vite plugin didn't inject)
-          if (data.ide && !injectedIDE) {
-            dispatch({ type: "UPDATE_IDE_STATUS", id: data.ide, status: "connected" });
-          }
-        }
-      } catch { /* bridge offline — IDE may still be correct from injected globals */ }
-    };
-    detect();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── MCP Bridge Polling ──
-  // Listens for events from AI agents (like pushed changes)
-  useEffect(() => {
-    const poll = async () => {
-      const port = state.wsPort || 24192;
-      try {
-        const res = await fetch(`http://127.0.0.1:${port}/api/poll?since=${lastPollRef.current}`);
-        if (res.ok) {
-          const data = await res.json();
-          let hasUpdates = false;
-
-          if (data.resolved && data.resolved.length > 0) {
-            dispatch({ type: "MARK_FEEDBACK_SENT", ids: data.resolved });
-            hasUpdates = true;
-          }
-
-          if (data.pushed && data.pushed.length > 0) {
-            for (const change of data.pushed) {
-              dispatch({
-                type: "UPDATE_VARIANT",
-                id: change.variantId,
-                updates: {
-                  modifiedHtml: change.html,
-                  ...(change.css !== undefined && { modifiedCss: change.css }),
-                },
-              });
-            }
-            hasUpdates = true;
-          }
-
-          if (hasUpdates) {
-            lastPollRef.current = Date.now();
-          }
-        }
-      } catch { /* bridge offline */ }
-    };
-
-    poll();
-    const interval = setInterval(poll, 2000);
-    const onFocus = () => poll();
-    window.addEventListener("focus", onFocus);
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener("focus", onFocus);
-    };
-  }, [state.wsPort, dispatch]);
+  }, [dispatch, state.variants.length, state.feedbackItems.length]);
 
   const handleNavigate = useCallback((route: string) => {
     iframeNavRef.current?.(route);
@@ -467,6 +426,14 @@ function EngineWorkspace({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="oc-app-shell" data-0canvas="workspace">
+      {/* Auto-send feedback notification */}
+      {autoSendNotification && (
+        <div className="oc-auto-send-notification" data-0canvas="notification">
+          <span className="oc-auto-send-icon">&#x2192;</span>
+          {autoSendNotification}
+        </div>
+      )}
+
       {/* Far-left sidebar */}
       <AppSidebar onClose={onClose} />
 
@@ -478,36 +445,73 @@ function EngineWorkspace({ onClose }: { onClose: () => void }) {
 
           {/* Main workspace */}
           <div className="oc-workspace-main">
-            {/* Left: Layers Panel + resize handle */}
-            {state.layersPanelOpen && (
-              <>
-                <div className="oc-panel-slot" style={{ width: layers.width }}>
-                  <LayersPanel />
-                </div>
-                <div className="oc-resize-handle" onMouseDown={(e) => layers.onMouseDown(e, 1)}>
-                  <span className="oc-resize-line" />
-                </div>
-              </>
-            )}
-
             {/* Center: Variant Canvas */}
             <div className="oc-workspace-center">
               <VariantCanvas onNavigateRef={iframeNavRef} />
             </div>
 
-            {/* Right: Style Panel */}
-            {state.stylePanelOpen && (
+            {/* Right panel — switches based on designMode */}
+            {!state.themeMode && (
               <>
                 <div className="oc-resize-handle" onMouseDown={(e) => style.onMouseDown(e, -1)}>
                   <span className="oc-resize-line" />
                 </div>
                 <div className="oc-panel-slot" style={{ width: style.width }}>
-                  <StylePanel />
+                  {state.designMode === "style" ? (
+                    <StylePanel />
+                  ) : state.designMode === "ai" ? (
+                    <AIChatPanel />
+                  ) : (
+                    /* Feedback panel */
+                    <div className="oc-panel">
+                      <div className="oc-panel-header">
+                        <span className="oc-panel-title">Feedback</span>
+                        <span className="oc-style-prop-count">
+                          {state.feedbackItems.filter(f => f.status === "pending").length} pending
+                        </span>
+                      </div>
+                      <ScrollArea className="oc-panel-body">
+                        {state.feedbackItems.length === 0 ? (
+                          <div className="oc-panel-empty">
+                            <p>No feedback yet.</p>
+                            <p className="oc-style-sub-hint">Click elements in the preview to add annotations.</p>
+                          </div>
+                        ) : (
+                          <div style={{ padding: "4px 10px" }}>
+                            {state.feedbackItems.map((item) => (
+                              <div key={item.id} className="oc-feedback-item">
+                                <div className="oc-feedback-item-header">
+                                  <span className="oc-feedback-badge" data-intent={item.intent}>{item.intent}</span>
+                                  <span className="oc-feedback-badge" data-severity={item.severity}>{item.severity}</span>
+                                </div>
+                                <span className="oc-feedback-selector">{item.elementSelector}</span>
+                                <p className="oc-feedback-comment">{item.comment}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </ScrollArea>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* Theme Mode Panel (overrides both style/feedback when active) */}
+            {state.themeMode && (
+              <>
+                <div className="oc-resize-handle" onMouseDown={(e) => style.onMouseDown(e, -1)}>
+                  <span className="oc-resize-line" />
+                </div>
+                <div className="oc-panel-slot" style={{ width: style.width }}>
+                  <ThemeModePanel />
                 </div>
               </>
             )}
           </div>
         </div>
+      ) : state.activePage === "themes" ? (
+        <ThemesPage />
       ) : (
         <SettingsPage />
       )}

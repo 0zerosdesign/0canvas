@@ -34,7 +34,7 @@ export {
   renderFeedbackMarkers,
   clearFeedbackMarkers,
   onEditFeedbackRequest,
-} from "./0canvas/inspector/dom-inspector";
+} from "./0canvas/inspector";
 
 // Component detection (for building custom UIs)
 export { identifyElement } from "./0canvas/inspector/component-detection";
@@ -104,6 +104,12 @@ export type {
   OCValidationResult,
 } from "./0canvas/format/oc-project";
 
+// Bridge — WebSocket communication with VS Code extension
+export { BridgeProvider, useBridge, useBridgeStatus, useExtensionConnected, useStyleChange } from "./0canvas/bridge/use-bridge";
+export { CanvasBridgeClient } from "./0canvas/bridge/ws-client";
+export type { ConnectionStatus } from "./0canvas/bridge/ws-client";
+export type { BridgeMessage, StyleChangeMessage, StyleChangeAckMessage } from "./0canvas/bridge/messages";
+
 // .0c project store — IndexedDB persistence + import/export
 export {
   saveProjectFile,
@@ -114,7 +120,6 @@ export {
   importProjectFile,
   scheduleAutoSave,
   buildCurrentProjectFile,
-  pushProjectToIDE,
-  pullProjectFromIDE,
+  setBridgeSender,
 } from "./0canvas/format/oc-project-store";
 export type { OCSyncMeta } from "./0canvas/format/oc-project-store";

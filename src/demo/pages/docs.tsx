@@ -306,7 +306,7 @@ function HeroPreview() {
               <div className="mb-3 h-2 w-16 rounded-full bg-[var(--color--surface--2)]" />
               <div className="mb-2 flex items-center gap-2">
                 <div className="h-9 w-9 rounded-xl bg-[var(--color--base--primary)]/12" />
-                <div className="space-y-2">
+                <div className="new">
                   <div className="h-2 w-28 rounded-full bg-[var(--color--surface--2)]" />
                   <div className="h-2 w-16 rounded-full bg-[var(--color--surface--2)]" />
                 </div>
@@ -326,7 +326,7 @@ function HeroPreview() {
                   Style edits
                 </span>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 new">
                 <div className="rounded-xl border border-[var(--color--border--on-surface-0)] bg-white/80 px-3 py-2 text-[0.78rem] text-muted-foreground">
                   gap: <span className="font-mono text-[var(--color--text--primary)]">24px</span>
                 </div>

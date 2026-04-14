@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────
-// ZeroCanvas Vite Plugin — Zero-config dev server integration
+// ZeroCanvas Vite Plugin — WebSocket bridge + dev integration
 // ──────────────────────────────────────────────────────────
 //
 // Usage in vite.config.ts:
@@ -9,106 +9,214 @@
 //     plugins: [react(), zeroCanvas()],
 //   });
 //
-// What it does:
-//   1. Starts the MCP bridge HTTP server when the Vite dev server starts
-//   2. Detects which IDE launched the dev server (Cursor, VS Code, etc.)
-//   3. Injects __ZEROCANVAS_MCP_PORT__ and __ZEROCANVAS_IDE__ into the page
-//   4. The <ZeroCanvas /> client reads these for instant auto-connection
+// The plugin:
+//   1. Creates a WebSocket server at /__0canvas on the Vite dev server
+//   2. Relays messages between browser overlay and VS Code extension
+//   3. Writes a .0canvas/.port file so the extension can auto-discover
 //
 // ──────────────────────────────────────────────────────────
 
-import type { Plugin } from "vite";
+import type { Plugin, ViteDevServer } from "vite";
+import { WebSocketServer, WebSocket } from "ws";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 export interface ZeroCanvasPluginOptions {
-  /** MCP bridge port. Default: 24192 */
-  port?: number;
-  /** Override IDE detection. Default: auto-detect from environment */
-  ide?: string;
+  /** WebSocket path on the Vite dev server. Default: "/__0canvas" */
+  wsPath?: string;
 }
 
-/** Detect which IDE launched the process by checking environment variables */
-function detectIDE(): string | null {
-  const env = process.env;
+type ClientRole = "browser" | "extension" | "unknown";
 
-  // Cursor-specific env vars (not always set)
-  if (env.CURSOR_TRACE_ID || env.CURSOR_CLI_PATH || env.CURSOR_CHANNEL) return "cursor";
-
-  // Windsurf / Codeium
-  if (env.WINDSURF_PATH || env.CODEIUM_PATH) return "windsurf";
-
-  // Claude Code (Anthropic CLI)
-  if (env.CLAUDE_CODE || env.ANTHROPIC_API_KEY) return "claude-code";
-
-  // VS Code family — Cursor is a VS Code fork, so VSCODE_* vars are set in both.
-  // Distinguish by checking if any VSCODE_* path values contain "cursor".
-  if (env.VSCODE_PID || env.VSCODE_CWD || env.VSCODE_IPC_HOOK) {
-    const vsVals = [
-      env.VSCODE_GIT_ASKPASS_NODE,
-      env.VSCODE_GIT_ASKPASS_MAIN,
-      env.VSCODE_IPC_HOOK,
-      env.VSCODE_CWD,
-      env.TERM_PROGRAM,
-    ].join(" ").toLowerCase();
-    if (vsVals.includes("cursor")) return "cursor";
-    if (vsVals.includes("windsurf")) return "windsurf";
-    return "vscode";
-  }
-
-  // Fallback: TERM_PROGRAM
-  const term = (env.TERM_PROGRAM || "").toLowerCase();
-  if (term.includes("cursor")) return "cursor";
-  if (term.includes("vscode")) return "vscode";
-
-  return null;
+interface ClientInfo {
+  role: ClientRole;
+  capabilities: string[];
 }
 
 export function zeroCanvas(options?: ZeroCanvasPluginOptions): Plugin {
-  const port = options?.port || 24192;
-  const ideOverride = options?.ide || null;
-  let actualPort = port;
-  let detectedIDE: string | null = null;
-  let bridgeStarted = false;
+  const wsPath = options?.wsPath ?? "/__0canvas";
+  let projectRoot = "";
+
+  function writePortFile(port: number) {
+    try {
+      const dir = path.join(projectRoot, ".0canvas");
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, ".port"), String(port), "utf-8");
+      console.log(`[0canvas] Port file written: ${port}`);
+    } catch (err) {
+      console.error("[0canvas] Failed to write port file:", err);
+    }
+  }
+
+  function removePortFile() {
+    try {
+      const portFile = path.join(projectRoot, ".0canvas", ".port");
+      if (fs.existsSync(portFile)) fs.unlinkSync(portFile);
+    } catch {
+      // Ignore cleanup errors
+    }
+  }
 
   return {
     name: "0canvas",
-    apply: "serve", // Only run during dev server, not production builds
+    apply: "serve",
 
-    configureServer() {
-      if (bridgeStarted) return;
-      bridgeStarted = true;
-
-      detectedIDE = ideOverride || detectIDE();
-
-      // Start the bridge HTTP server (dynamic import to avoid issues in non-Node contexts)
-      import("./mcp/bridge.js").then(({ startBridge }) => {
-        startBridge(port)
-          .then((p: number) => {
-            actualPort = p;
-            const ideLabel = detectedIDE ? ` (IDE: ${detectedIDE})` : "";
-            console.log(
-              `\n  \x1b[36m0canvas\x1b[0m  MCP bridge → http://127.0.0.1:${actualPort}${ideLabel}\n`
-            );
-          })
-          .catch((err: Error) => {
-            console.warn(`[0canvas] Failed to start MCP bridge: ${err.message}`);
-          });
-      }).catch(() => {
-        // Bridge module not available (e.g. in browser context) — skip silently
-      });
+    configResolved(config) {
+      projectRoot = config.root;
     },
 
-    transformIndexHtml() {
-      const ide = detectedIDE;
-      return [
-        {
-          tag: "script",
-          children: [
-            `window.__ZEROCANVAS_MCP_PORT__=${actualPort};`,
-            `window.__ZEROCANVAS_IDE__=${JSON.stringify(ide)};`,
-          ].join(""),
-          injectTo: "head-prepend",
-        },
-      ];
+    configureServer(server: ViteDevServer) {
+      console.log("[0canvas] configureServer called");
+
+      const wss = new WebSocketServer({ noServer: true });
+      const clients = new Map<WebSocket, ClientInfo>();
+
+      function relay(sender: WebSocket, raw: string) {
+        let msg: { source?: string; type?: string };
+        try {
+          msg = JSON.parse(raw);
+        } catch {
+          return;
+        }
+
+        const senderInfo = clients.get(sender);
+        const senderRole = senderInfo?.role ?? msg.source;
+
+        for (const [client, info] of clients) {
+          if (client === sender) continue;
+          if (client.readyState !== WebSocket.OPEN) continue;
+
+          if (senderRole === "browser" && info.role === "extension") {
+            client.send(raw);
+          }
+          if (senderRole === "extension" && info.role === "browser") {
+            client.send(raw);
+          }
+        }
+      }
+
+      // Wire up WebSocket upgrade handling
+      function attachToHttpServer(httpServer: NonNullable<ViteDevServer["httpServer"]>) {
+        console.log("[0canvas] Attaching WebSocket to httpServer");
+
+        httpServer.on("upgrade", (request, socket, head) => {
+          const url = new URL(request.url ?? "", `http://${request.headers.host}`);
+          if (url.pathname !== wsPath) return;
+
+          console.log("[0canvas] WebSocket upgrade for", url.pathname);
+          wss.handleUpgrade(request, socket, head, (ws) => {
+            wss.emit("connection", ws, request);
+          });
+        });
+
+        // Write port file
+        const addr = httpServer.address();
+        if (addr && typeof addr === "object") {
+          writePortFile(addr.port);
+        } else {
+          httpServer.on("listening", () => {
+            const a = httpServer.address();
+            if (a && typeof a === "object") writePortFile(a.port);
+          });
+        }
+      }
+
+      // Handle new WebSocket connections
+      wss.on("connection", (ws) => {
+        clients.set(ws, { role: "unknown", capabilities: [] });
+        console.log("[0canvas] New WebSocket connection");
+
+        ws.on("message", (data) => {
+          const raw = data.toString();
+
+          try {
+            const msg = JSON.parse(raw);
+
+            if (msg.type === "CONNECTED" && msg.role) {
+              clients.set(ws, {
+                role: msg.role as ClientRole,
+                capabilities: msg.capabilities ?? [],
+              });
+              console.log(`[0canvas] Client identified as: ${msg.role}`);
+
+              // Notify OTHER clients about this new peer
+              const notification = JSON.stringify({
+                id: `${Date.now()}-notify`,
+                type: "PEER_CONNECTED",
+                source: "vite",
+                role: msg.role,
+                timestamp: Date.now(),
+              });
+              for (const [client] of clients) {
+                if (client !== ws && client.readyState === WebSocket.OPEN) {
+                  client.send(notification);
+                }
+              }
+
+              // Tell THIS client about already-connected peers
+              for (const [client, info] of clients) {
+                if (client !== ws && info.role !== "unknown") {
+                  ws.send(JSON.stringify({
+                    id: `${Date.now()}-existing`,
+                    type: "PEER_CONNECTED",
+                    source: "vite",
+                    role: info.role,
+                    timestamp: Date.now(),
+                  }));
+                }
+              }
+              return;
+            }
+          } catch {
+            // Not JSON
+          }
+
+          relay(ws, raw);
+        });
+
+        ws.on("close", () => {
+          const info = clients.get(ws);
+          clients.delete(ws);
+          console.log(`[0canvas] Client disconnected: ${info?.role ?? "unknown"}`);
+
+          if (info && info.role !== "unknown") {
+            const notification = JSON.stringify({
+              id: `${Date.now()}-notify`,
+              type: "PEER_DISCONNECTED",
+              source: "vite",
+              role: info.role,
+              timestamp: Date.now(),
+            });
+            for (const [client] of clients) {
+              if (client.readyState === WebSocket.OPEN) {
+                client.send(notification);
+              }
+            }
+          }
+        });
+
+        ws.on("error", () => {
+          clients.delete(ws);
+        });
+      });
+
+      // Attach to httpServer — handle both immediate and deferred cases
+      if (server.httpServer) {
+        attachToHttpServer(server.httpServer);
+      } else {
+        console.log("[0canvas] httpServer not ready, waiting...");
+        const interval = setInterval(() => {
+          if (server.httpServer) {
+            clearInterval(interval);
+            attachToHttpServer(server.httpServer);
+          }
+        }, 50);
+        setTimeout(() => clearInterval(interval), 10000);
+      }
+    },
+
+    buildEnd() {
+      removePortFile();
     },
   };
 }

@@ -185,6 +185,47 @@ export function importProjectFile(): Promise<OCProjectFile | null> {
   });
 }
 
+// ── Filesystem sync via WebSocket bridge ──────────────────
+
+type BridgeSender = (msg: { type: string; [key: string]: unknown }) => void;
+let _bridgeSend: BridgeSender | null = null;
+let _fsSyncTimer: ReturnType<typeof setTimeout> | null = null;
+const FS_SYNC_DEBOUNCE_MS = 1000; // 1s debounce for disk writes
+
+/** Set the bridge send function. Call this once when the bridge connects. */
+export function setBridgeSender(send: BridgeSender | null): void {
+  _bridgeSend = send;
+}
+
+/** Derive .0c filename from project name. */
+function projectToFileName(name: string): string {
+  const safe = (name || "project").replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
+  return `${safe}.0c`;
+}
+
+/** Send the current project state to the extension for filesystem write. */
+function syncToFilesystem(file: OCProjectFile): void {
+  if (!_bridgeSend) return;
+
+  if (_fsSyncTimer) clearTimeout(_fsSyncTimer);
+  _fsSyncTimer = setTimeout(() => {
+    try {
+      const json = serializeProjectFile(file);
+      const fileName = projectToFileName(file.project.name);
+      _bridgeSend?.({
+        type: "PROJECT_STATE_SYNC",
+        source: "browser",
+        projectFile: json,
+        filePath: fileName, // each project gets its own file
+        projectId: file.project.id,
+      });
+      console.log(`[0canvas] Synced ${fileName} to filesystem`);
+    } catch (err) {
+      console.warn("[0canvas] Filesystem sync error:", err);
+    }
+  }, FS_SYNC_DEBOUNCE_MS);
+}
+
 // ── Auto-save from runtime state ───────────────────────────
 
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -205,6 +246,9 @@ export function scheduleAutoSave(
       );
       await saveProjectFile(file);
       await markDirty(project.id);
+
+      // Also sync to filesystem via bridge (debounced separately at 3s)
+      syncToFilesystem(file);
     } catch (err) {
       console.warn("[DD Project] Auto-save error:", err);
     }
@@ -227,46 +271,3 @@ export async function buildCurrentProjectFile(
   return { ...file, integrity: { ...file.integrity, hash } };
 }
 
-// ── Push to IDE via bridge ─────────────────────────────────
-
-export async function pushProjectToIDE(
-  file: OCProjectFile,
-  bridgePort: number,
-): Promise<boolean> {
-  try {
-    const res = await fetch(`http://127.0.0.1:${bridgePort}/api/oc-project`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: serializeProjectFile(file),
-    });
-    if (res.ok) {
-      await markSynced(file.project.id, file.project.revision);
-      return true;
-    }
-    return false;
-  } catch {
-    return false;
-  }
-}
-
-// ── Pull from IDE via bridge ───────────────────────────────
-
-export async function pullProjectFromIDE(
-  projectId: string,
-  bridgePort: number,
-): Promise<OCProjectFile | null> {
-  try {
-    const res = await fetch(`http://127.0.0.1:${bridgePort}/api/oc-project?id=${encodeURIComponent(projectId)}`);
-    if (!res.ok) return null;
-    const json = await res.json();
-    const result = validateOCProjectFile(json);
-    if (result.valid) {
-      await saveProjectFile(result.data);
-      await markSynced(result.data.project.id, result.data.project.revision);
-      return result.data;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}

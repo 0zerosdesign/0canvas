@@ -1,14 +1,15 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
-  Layers,
   Palette,
-  Wifi,
+  Droplets,
+  MessageCircle,
+  PenTool,
+  Sparkles,
   ChevronDown,
   Save,
   Trash2,
   Download,
   Upload,
-  RefreshCw,
 } from "lucide-react";
 import { useWorkspace, OCProject } from "../store/store";
 import { saveProject, getAllProjects, deleteProject as dbDeleteProject, type StoredProject } from "../db/variant-db";
@@ -16,7 +17,6 @@ import {
   downloadProjectFile,
   importProjectFile,
   buildCurrentProjectFile,
-  pushProjectToIDE,
 } from "../format/oc-project-store";
 import { projectFileToState } from "../format/oc-project";
 
@@ -77,22 +77,6 @@ export function WorkspaceToolbar({ onNavigate }: WorkspaceToolbarProps = {}) {
     }
   }, [dispatch]);
 
-  const handleSyncToIDE = useCallback(async () => {
-    const port = state.wsPort || 24192;
-    try {
-      const file = await buildCurrentProjectFile(
-        state.ocProject,
-        state.variants,
-        state.feedbackItems,
-        state.currentRoute,
-      );
-      const ok = await pushProjectToIDE(file, port);
-      if (ok) dispatch({ type: "SET_OC_PROJECT_FILE", file });
-    } catch (err) {
-      console.warn("[DD] Sync failed:", err);
-    }
-  }, [state.ocProject, state.variants, state.feedbackItems, state.currentRoute, state.wsPort, dispatch]);
-
   return (
     <div className="oc-toolbar">
       {/* Left: Logo + Project */}
@@ -117,28 +101,35 @@ export function WorkspaceToolbar({ onNavigate }: WorkspaceToolbarProps = {}) {
           onLoad={handleLoadProject}
         />
 
-        {state.wsStatus !== "connected" && (
-          <span className="oc-toolbar-mcp-badge is-error">
-            <Wifi size={12} />
-            MCP
-          </span>
-        )}
-
       </div>
 
-      {/* Center: Panel toggles */}
+      {/* Center: Mode toggles (mutually exclusive) */}
       <div className="oc-toolbar-group is-pill">
         <ToolbarBtn
-          icon={<Layers size={14} />}
-          label="Layers"
-          active={state.layersPanelOpen}
-          onClick={() => dispatch({ type: "TOGGLE_LAYERS_PANEL" })}
+          icon={<MessageCircle size={14} />}
+          label="Feedback"
+          active={!state.themeMode && state.designMode === "feedback"}
+          badge={state.feedbackItems.filter(f => f.status === "pending").length || undefined}
+          onClick={() => { if (state.themeMode) dispatch({ type: "TOGGLE_THEME_MODE" }); dispatch({ type: "SET_DESIGN_MODE", mode: "feedback" }); }}
         />
         <ToolbarBtn
-          icon={<Palette size={14} />}
+          icon={<PenTool size={14} />}
           label="Style"
-          active={state.stylePanelOpen}
-          onClick={() => dispatch({ type: "TOGGLE_STYLE_PANEL" })}
+          active={!state.themeMode && state.designMode === "style"}
+          onClick={() => { if (state.themeMode) dispatch({ type: "TOGGLE_THEME_MODE" }); dispatch({ type: "SET_DESIGN_MODE", mode: "style" }); }}
+        />
+        <ToolbarBtn
+          icon={<Sparkles size={14} />}
+          label="AI"
+          active={!state.themeMode && state.designMode === "ai"}
+          onClick={() => { if (state.themeMode) dispatch({ type: "TOGGLE_THEME_MODE" }); dispatch({ type: "SET_DESIGN_MODE", mode: "ai" }); }}
+        />
+        <ToolbarBtn
+          icon={<Droplets size={14} />}
+          label="Theme"
+          active={state.themeMode}
+          badge={state.themeChanges.length || undefined}
+          onClick={() => dispatch({ type: "TOGGLE_THEME_MODE" })}
         />
       </div>
 
@@ -157,12 +148,6 @@ export function WorkspaceToolbar({ onNavigate }: WorkspaceToolbarProps = {}) {
             label="Import"
             active={false}
             onClick={handleImportDD}
-          />
-          <ToolbarBtn
-            icon={<RefreshCw size={14} />}
-            label="Sync"
-            active={false}
-            onClick={handleSyncToIDE}
           />
         </div>
       </div>

@@ -10,6 +10,7 @@ import {
 import {
   MessageCircle,
   Send,
+  Check,
   RefreshCw,
   GitFork,
   Loader2,
@@ -18,8 +19,8 @@ import {
   Tablet,
   Laptop,
 } from "lucide-react";
-import { useWorkspace, type WSLogEntry } from "../store/store";
-import { syncFeedbackToBridge } from "../utils/sync-feedback";
+import { useWorkspace, type FeedbackItem } from "../store/store";
+import { copyToClipboard } from "../utils/clipboard";
 import {
   buildElementTree,
   rebuildElementMap,
@@ -34,7 +35,14 @@ import {
   onDeleteFeedbackRequest,
   setFeedbackLookup,
   renderFeedbackMarkers,
-} from "../inspector/dom-inspector";
+  setInspectMode,
+  setThemeTokensProvider,
+  setThemeChangesProvider,
+  onThemeChangeRequest,
+  onThemeResetRequest,
+  renderThemeChangeMarkers,
+  clearThemeChangeMarkers,
+} from "../inspector";
 
 export type SourceNodeData = {
   label: string;
@@ -85,6 +93,16 @@ export function SourceNode({ id, data, selected }: NodeProps) {
     setActivePreset(match ? match.label : "");
   }, [id, updateNode]);
 
+  // ── Respond to global breakpoint changes ─────────────────
+  useEffect(() => {
+    const bp = state.activeBreakpoint;
+    const presetMap: Record<string, number> = { desktop: 1440, laptop: 1280, tablet: 768, mobile: 375 };
+    const targetWidth = presetMap[bp] || DEFAULT_WIDTH;
+    if (Math.abs(dims.w - targetWidth) > 20) {
+      applyDims(targetWidth, dims.h);
+    }
+  }, [state.activeBreakpoint]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Iframe load ──────────────────────────────────────────
 
   const handleIframeLoad = useCallback(() => {
@@ -130,38 +148,32 @@ export function SourceNode({ id, data, selected }: NodeProps) {
     setElementCount(countNodes(tree));
   }, [dispatch]);
 
-  // ── Send feedback to MCP bridge ─────────────────────────
+  // ── Copy feedback to clipboard ──────────────────────────
 
-  const [sending, setSending] = useState(false);
+  const [sendCopied, setSendCopied] = useState(false);
 
-  const handleSendFeedback = useCallback(async () => {
-    if (sending) return;
-    setSending(true);
-    const port = state.wsPort || 24192;
-    const result = await syncFeedbackToBridge(
-      state.feedbackItems,
-      state.variants,
-      state.ocProject,
-      port,
-    );
-    if (result.ok && result.sentCount > 0) {
-      // Mark all sent items
-      const sentIds = state.feedbackItems
-        .filter((f) => f.status === "pending")
-        .map((f) => f.id);
-      dispatch({ type: "MARK_FEEDBACK_SENT", ids: sentIds });
-      // Log it
-      const entry: WSLogEntry = {
-        id: `log-${Date.now()}`,
-        timestamp: Date.now(),
-        direction: "sent",
-        method: "sync",
-        summary: `Sent ${result.sentCount} feedback items to agent`,
-      };
-      dispatch({ type: "WS_LOG", entry });
-    }
-    setSending(false);
-  }, [sending, state.feedbackItems, state.variants, state.ocProject, state.wsPort, dispatch]);
+  const handleCopyFeedback = useCallback(() => {
+    const pending = state.feedbackItems.filter((f: FeedbackItem) => f.status === "pending");
+    if (pending.length === 0) return;
+
+    const lines: string[] = [];
+    lines.push(`# ZeroCanvas Feedback (${pending.length} items)`);
+    lines.push("");
+    lines.push("## Feedback Items");
+    lines.push("");
+    pending.forEach((item: FeedbackItem, i: number) => {
+      lines.push(`### ${i + 1}. ${item.elementSelector} [${item.intent.toUpperCase()} - ${item.severity.toUpperCase()}]`);
+      lines.push(`- **Selector:** \`${item.elementSelector}\``);
+      lines.push(`- **Tag:** ${item.elementTag} | **Classes:** ${item.elementClasses.join(", ") || "(none)"}`);
+      lines.push(`- **Feedback:** ${item.comment}`);
+      lines.push("");
+    });
+
+    copyToClipboard(lines.join("\n"));
+    dispatch({ type: "MARK_FEEDBACK_SENT", ids: pending.map((f: FeedbackItem) => f.id) });
+    setSendCopied(true);
+    setTimeout(() => setSendCopied(false), 2000);
+  }, [state.feedbackItems, dispatch]);
 
   // ── Inspect ──────────────────────────────────────────────
 
@@ -279,6 +291,100 @@ export function SourceNode({ id, data, selected }: NodeProps) {
       }));
     renderFeedbackMarkers(markers);
   }, [state.feedbackItems]);
+
+  // ── Inspect mode: switches based on themeMode and designMode ──
+  useEffect(() => {
+    if (state.themeMode) {
+      setInspectMode("theme");
+    } else if (state.designMode === "feedback") {
+      setInspectMode("feedback");
+    } else {
+      setInspectMode("style");
+    }
+  }, [state.themeMode, state.designMode]);
+
+  // ── Theme Mode: provide tokens to inspector ──
+  useEffect(() => {
+    if (!state.themeMode) {
+      setThemeTokensProvider(null);
+      setThemeChangesProvider(null);
+      onThemeChangeRequest(null);
+      onThemeResetRequest(null);
+      clearThemeChangeMarkers();
+      return;
+    }
+
+    setThemeTokensProvider(() => {
+      const tokens: { name: string; value: string }[] = [];
+      for (const file of state.themes.files) {
+        for (const token of file.tokens) {
+          if (token.syntax !== "color") continue;
+          const defaultTheme = file.themes.find((t) => t.isDefault) || file.themes[0];
+          const value = defaultTheme ? token.values[defaultTheme.id] : Object.values(token.values)[0];
+          if (value) tokens.push({ name: token.name, value });
+        }
+      }
+      return tokens;
+    });
+
+    // Provide stored changes so the popup can show original source info
+    setThemeChangesProvider(() => state.themeChanges);
+
+    onThemeChangeRequest((change) => {
+      const existing = state.themeChanges.find(
+        (c) => c.elementId === change.elementId && c.property === change.property
+      );
+      if (existing) {
+        // PRESERVE original values — only update the "new" side
+        dispatch({
+          type: "UPDATE_THEME_CHANGE",
+          id: existing.id,
+          updates: {
+            newToken: change.newToken,
+            newValue: change.newValue,
+            timestamp: Date.now(),
+            boundingBox: change.boundingBox,
+          },
+        });
+      } else {
+        dispatch({
+          type: "ADD_THEME_CHANGE",
+          item: {
+            id: `tc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            ...change,
+            timestamp: Date.now(),
+          },
+        });
+      }
+    });
+
+    onThemeResetRequest((elementId, property) => {
+      const existing = state.themeChanges.find(
+        (c) => c.elementId === elementId && c.property === property
+      );
+      if (existing) dispatch({ type: "REMOVE_THEME_CHANGE", id: existing.id });
+    });
+
+    return () => {
+      setThemeTokensProvider(null);
+      setThemeChangesProvider(null);
+      onThemeChangeRequest(null);
+      onThemeResetRequest(null);
+    };
+  }, [state.themeMode, state.themes.files, state.themeChanges, dispatch]);
+
+  // ── Theme Mode: render change markers ──
+  useEffect(() => {
+    if (!state.themeMode) { clearThemeChangeMarkers(); return; }
+    const markers = state.themeChanges.map((c, i) => ({
+      id: c.id,
+      number: i + 1,
+      elementId: c.elementId,
+      label: `${c.property}: var(${c.newToken})`,
+      boundingBox: c.boundingBox,
+    }));
+    renderThemeChangeMarkers(markers);
+  }, [state.themeChanges, state.themeMode]);
 
   useEffect(() => {
     if (state.hoveredElementId) highlightElement(state.hoveredElementId, "hover");
@@ -417,10 +523,12 @@ export function SourceNode({ id, data, selected }: NodeProps) {
                 {hasFeedback && (
                   <button
                     className="oc-source-btn oc-source-send-btn"
-                    onClick={(e) => { e.stopPropagation(); handleSendFeedback(); }}
-                    title={`Send ${pendingCount} feedback items`}
+                    onClick={(e) => { e.stopPropagation(); handleCopyFeedback(); }}
+                    title={sendCopied ? "Copied!" : `Copy ${pendingCount} feedback items to clipboard`}
                   >
-                    <Send style={{ width: 11, height: 11 }} />
+                    {sendCopied
+                      ? <Check style={{ width: 11, height: 11, color: "#10B981" }} />
+                      : <Send style={{ width: 11, height: 11 }} />}
                   </button>
                 )}
               </div>

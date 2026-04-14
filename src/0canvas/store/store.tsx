@@ -61,6 +61,24 @@ export type OCProject = {
   saved: boolean;
 };
 
+// ── Theme Mode types ──
+export type ThemeChangeItem = {
+  id: string;
+  elementId: string;
+  elementSelector: string;
+  elementTag: string;
+  elementClasses: string[];
+  property: string;              // "color", "background-color", etc.
+  originalValue: string;         // computed value before change
+  originalTokenChain: string[];  // var() resolution chain, e.g. ["--color--text--primary", "--blue-600", "#2563EB"]
+  originalSourceSelector: string; // CSS rule that originally set this, e.g. ".demo-card"
+  originalSourceType: "rule" | "inline" | "inherited";
+  newToken: string;              // token name applied, e.g. "--green-500"
+  newValue: string;              // resolved value of the new token
+  timestamp: number;
+  boundingBox: { x: number; y: number; width: number; height: number };
+};
+
 // ── Feedback / Agent Waitlist types ──
 export type FeedbackIntent = "fix" | "change" | "question" | "approve";
 export type FeedbackSeverity = "blocking" | "important" | "suggestion";
@@ -105,20 +123,64 @@ export type VariantData = {
   sourceContentHeight?: number;
 };
 
-// ── WebSocket / MCP types ──
-export type WSStatus = "disconnected" | "connecting" | "connected" | "error";
+export type AppView = "onboarding" | "workspace";
+export type WorkspacePage = "design" | "themes" | "settings";
+export type DesignMode = "style" | "feedback" | "ai";
+export type Breakpoint = "desktop" | "laptop" | "tablet" | "mobile";
 
-export type WSLogEntry = {
-  id: string;
-  timestamp: number;
-  direction: "sent" | "received" | "system";
-  method: string;
-  summary: string;
-  payload?: any;
+export const BREAKPOINT_WIDTHS: Record<Breakpoint, number> = {
+  desktop: 1440,
+  laptop: 1280,
+  tablet: 768,
+  mobile: 375,
+};
+export type AiProvider = "chatgpt" | "openai" | "ide";
+
+export type AiSettings = {
+  provider: AiProvider;
+  proxyUrl: string;
+  apiKey: string;
+  model: string;
+  temperature: number;
+  autoSendFeedback: boolean;
+};
+export type ViewMode = "canvas" | "fullscreen";
+
+// ── Theme / Token types ──
+export type TokenSyntax = "color" | "length-percentage" | "percentage" | "number" | "angle" | "time" | "*";
+
+export type DesignToken = {
+  name: string;          // e.g. "--blue-500"
+  values: Record<string, string>; // themeId → value, e.g. { default: "#3B82F6", light: "#2563EB" }
+  syntax: TokenSyntax;
+  description: string;
+  inherits: boolean;
+  group: string;         // derived from name, e.g. "blue"
 };
 
-export type AppView = "onboarding" | "workspace";
-export type WorkspacePage = "design" | "settings";
+export type ThemeColumn = {
+  id: string;
+  name: string;
+  isDefault: boolean;
+};
+
+export type ThemeFile = {
+  id: string;
+  name: string;          // filename, e.g. "variables.css"
+  handle: FileSystemFileHandle | null; // File System Access API handle for two-way sync
+  content: string;       // raw CSS content
+  tokens: DesignToken[];
+  themes: ThemeColumn[];
+  lastSynced: number;
+};
+
+export type ThemesState = {
+  files: ThemeFile[];
+  activeFileId: string | null;
+  selectedTokens: Set<string>; // set of token names
+  searchQuery: string;
+  editingToken: string | null; // token name being edited in detail panel
+};
 
 export type WorkspaceState = {
   // App-level
@@ -133,12 +195,7 @@ export type WorkspaceState = {
   // IDE connections
   ides: IDEConnection[];
 
-  // WebSocket / MCP bridge
-  wsStatus: WSStatus;
-  wsLogs: WSLogEntry[];
-  wsPort: number;
-
-  // Feedback (used by project format and MCP bridge)
+  // Feedback
   feedbackItems: FeedbackItem[];
 
   // Selection source tracking
@@ -158,11 +215,23 @@ export type WorkspaceState = {
 
   // UI state
   activePage: WorkspacePage;
+  designMode: DesignMode;
+  viewMode: ViewMode;
+  activeBreakpoint: Breakpoint;
   inspectorMode: boolean;
-  layersPanelOpen: boolean;
   stylePanelOpen: boolean;
-  idePanelOpen: boolean;
+  showInlineEdit: boolean;
   isLoading: boolean;
+
+  // Themes
+  themes: ThemesState;
+
+  // Theme Mode (color inspection)
+  themeMode: boolean;
+  themeChanges: ThemeChangeItem[];
+
+  // AI settings
+  aiSettings: AiSettings;
 };
 
 type Action =
@@ -173,9 +242,7 @@ type Action =
   | { type: "UPDATE_IDE_STATUS"; id: string; status: IDEConnection["status"] }
   | { type: "SET_ACTIVE_PAGE"; page: WorkspacePage }
   | { type: "TOGGLE_INSPECTOR" }
-  | { type: "TOGGLE_LAYERS_PANEL" }
   | { type: "TOGGLE_STYLE_PANEL" }
-  | { type: "TOGGLE_IDE_PANEL" }
   | { type: "TOGGLE_ELEMENT_VISIBILITY"; id: string }
   | { type: "TOGGLE_ELEMENT_LOCK"; id: string }
   | { type: "SET_ELEMENTS"; elements: ElementNode[] }
@@ -207,11 +274,35 @@ type Action =
   // Route actions
   | { type: "SET_CURRENT_ROUTE"; route: string }
   | { type: "ADD_ROUTE_HISTORY"; route: string }
-  // WebSocket actions
-  | { type: "WS_STATUS_UPDATE"; status: WSStatus }
-  | { type: "WS_LOG"; entry: WSLogEntry }
-  | { type: "WS_CLEAR_LOGS" }
-  | { type: "WS_SET_PORT"; port: number };
+  // Theme Mode actions
+  | { type: "TOGGLE_THEME_MODE" }
+  | { type: "ADD_THEME_CHANGE"; item: ThemeChangeItem }
+  | { type: "UPDATE_THEME_CHANGE"; id: string; updates: Partial<ThemeChangeItem> }
+  | { type: "REMOVE_THEME_CHANGE"; id: string }
+  | { type: "CLEAR_THEME_CHANGES" }
+  // Themes actions
+  | { type: "ADD_THEME_FILE"; file: ThemeFile }
+  | { type: "REMOVE_THEME_FILE"; id: string }
+  | { type: "SET_ACTIVE_THEME_FILE"; id: string | null }
+  | { type: "UPDATE_THEME_FILE"; id: string; updates: Partial<ThemeFile> }
+  | { type: "SET_THEME_TOKENS"; fileId: string; tokens: DesignToken[]; themes: ThemeColumn[] }
+  | { type: "UPDATE_TOKEN_VALUE"; fileId: string; tokenName: string; themeId: string; value: string }
+  | { type: "UPDATE_TOKEN_META"; fileId: string; tokenName: string; updates: Partial<DesignToken> }
+  | { type: "ADD_THEME_COLUMN"; fileId: string; theme: ThemeColumn }
+  | { type: "REMOVE_THEME_COLUMN"; fileId: string; themeId: string }
+  | { type: "SET_SELECTED_TOKENS"; tokens: Set<string> }
+  | { type: "TOGGLE_TOKEN_SELECTION"; tokenName: string }
+  | { type: "SET_THEME_SEARCH"; query: string }
+  | { type: "SET_EDITING_TOKEN"; tokenName: string | null }
+  | { type: "RENAME_TOKENS"; fileId: string; renames: { from: string; to: string }[] }
+  | { type: "DELETE_TOKENS"; fileId: string; tokenNames: string[] }
+  | { type: "ADD_TOKENS"; fileId: string; tokens: DesignToken[] }
+  // View mode
+  | { type: "SET_VIEW_MODE"; mode: ViewMode }
+  | { type: "SET_DESIGN_MODE"; mode: DesignMode }
+  | { type: "SET_AI_SETTINGS"; settings: AiSettings }
+  | { type: "SET_BREAKPOINT"; breakpoint: Breakpoint }
+  | { type: "SHOW_INLINE_EDIT"; show: boolean }
 
 // ──────────────────────────────────────────────────────────
 // IDE definitions
@@ -279,9 +370,6 @@ const initialState: WorkspaceState = {
   selectedElementId: null,
   hoveredElementId: null,
   ides: defaultIDEs,
-  wsStatus: "disconnected",
-  wsLogs: [],
-  wsPort: 0,
   feedbackItems: [],
   selectionSource: null,
   variants: [],
@@ -298,16 +386,46 @@ const initialState: WorkspaceState = {
   currentRoute: typeof window !== "undefined" ? window.location.pathname : "/",
   routeHistory: typeof window !== "undefined" ? [window.location.pathname] : ["/"],
   activePage: "design",
+  designMode: "style",
+  viewMode: "canvas",
+  activeBreakpoint: "desktop",
   inspectorMode: true,
-  layersPanelOpen: true,
   stylePanelOpen: true,
-  idePanelOpen: false,
+  showInlineEdit: false,
   isLoading: false,
+  themes: {
+    files: [],
+    activeFileId: null,
+    selectedTokens: new Set(),
+    searchQuery: "",
+    editingToken: null,
+  },
+  themeMode: false,
+  themeChanges: [],
+  aiSettings: {
+    provider: "ide",
+    proxyUrl: "http://127.0.0.1:10531",
+    apiKey: "",
+    model: "gpt-4o",
+    temperature: 0.7,
+    autoSendFeedback: false,
+  },
 };
 
 // ──────────────────────────────────────────────────────────
 // Helpers
 // ──────────────────────────────────────────────────────────
+
+/** Derive group name from a CSS custom property name, e.g. "--blue-500" → "blue", "--color--text--muted" → "color" */
+export function deriveGroup(name: string): string {
+  const stripped = name.replace(/^--/, "");
+  const dashIdx = stripped.indexOf("-");
+  const doubleDashIdx = stripped.indexOf("--");
+  if (doubleDashIdx > 0) return stripped.substring(0, doubleDashIdx);
+  if (dashIdx > 0) return stripped.substring(0, dashIdx);
+  return stripped;
+}
+
 function findElement(elements: ElementNode[], id: string): ElementNode | null {
   for (const el of elements) {
     if (el.id === id) return el;
@@ -371,12 +489,18 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
       return { ...state, activePage: action.page };
     case "TOGGLE_INSPECTOR":
       return { ...state, inspectorMode: !state.inspectorMode };
-    case "TOGGLE_LAYERS_PANEL":
-      return { ...state, layersPanelOpen: !state.layersPanelOpen };
     case "TOGGLE_STYLE_PANEL":
-      return { ...state, stylePanelOpen: !state.stylePanelOpen };
-    case "TOGGLE_IDE_PANEL":
-      return { ...state, idePanelOpen: !state.idePanelOpen };
+      return { ...state, stylePanelOpen: !state.stylePanelOpen, themeMode: false };
+    case "SET_VIEW_MODE":
+      return { ...state, viewMode: action.mode };
+    case "SET_DESIGN_MODE":
+      return { ...state, designMode: action.mode };
+    case "SET_AI_SETTINGS":
+      return { ...state, aiSettings: action.settings };
+    case "SET_BREAKPOINT":
+      return { ...state, activeBreakpoint: action.breakpoint };
+    case "SHOW_INLINE_EDIT":
+      return { ...state, showInlineEdit: action.show };
     case "TOGGLE_ELEMENT_VISIBILITY":
       return {
         ...state,
@@ -526,15 +650,173 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
         : [...state.routeHistory, action.route];
       return { ...state, routeHistory: history };
     }
-    // WebSocket actions
-    case "WS_STATUS_UPDATE":
-      return { ...state, wsStatus: action.status };
-    case "WS_LOG":
-      return { ...state, wsLogs: [...state.wsLogs, action.entry] };
-    case "WS_CLEAR_LOGS":
-      return { ...state, wsLogs: [] };
-    case "WS_SET_PORT":
-      return { ...state, wsPort: action.port };
+    // ── Theme Mode ─────────────────────────────────────────
+    case "TOGGLE_THEME_MODE": {
+      const entering = !state.themeMode;
+      return {
+        ...state,
+        themeMode: entering,
+        stylePanelOpen: entering ? false : state.stylePanelOpen,
+      };
+    }
+    case "ADD_THEME_CHANGE":
+      return { ...state, themeChanges: [...state.themeChanges, action.item] };
+    case "UPDATE_THEME_CHANGE":
+      return {
+        ...state,
+        themeChanges: state.themeChanges.map((c) =>
+          c.id === action.id ? { ...c, ...action.updates } : c
+        ),
+      };
+    case "REMOVE_THEME_CHANGE":
+      return { ...state, themeChanges: state.themeChanges.filter((c) => c.id !== action.id) };
+    case "CLEAR_THEME_CHANGES":
+      return { ...state, themeChanges: [] };
+    // ── Themes ──────────────────────────────────────────────
+    case "ADD_THEME_FILE":
+      return { ...state, themes: { ...state.themes, files: [...state.themes.files, action.file], activeFileId: action.file.id } };
+    case "REMOVE_THEME_FILE":
+      return {
+        ...state,
+        themes: {
+          ...state.themes,
+          files: state.themes.files.filter((f) => f.id !== action.id),
+          activeFileId: state.themes.activeFileId === action.id ? null : state.themes.activeFileId,
+        },
+      };
+    case "SET_ACTIVE_THEME_FILE":
+      return { ...state, themes: { ...state.themes, activeFileId: action.id } };
+    case "UPDATE_THEME_FILE":
+      return {
+        ...state,
+        themes: {
+          ...state.themes,
+          files: state.themes.files.map((f) => (f.id === action.id ? { ...f, ...action.updates } : f)),
+        },
+      };
+    case "SET_THEME_TOKENS":
+      return {
+        ...state,
+        themes: {
+          ...state.themes,
+          files: state.themes.files.map((f) =>
+            f.id === action.fileId ? { ...f, tokens: action.tokens, themes: action.themes, lastSynced: Date.now() } : f
+          ),
+        },
+      };
+    case "UPDATE_TOKEN_VALUE":
+      return {
+        ...state,
+        themes: {
+          ...state.themes,
+          files: state.themes.files.map((f) =>
+            f.id === action.fileId
+              ? {
+                  ...f,
+                  tokens: f.tokens.map((t) =>
+                    t.name === action.tokenName
+                      ? { ...t, values: { ...t.values, [action.themeId]: action.value } }
+                      : t
+                  ),
+                }
+              : f
+          ),
+        },
+      };
+    case "UPDATE_TOKEN_META":
+      return {
+        ...state,
+        themes: {
+          ...state.themes,
+          files: state.themes.files.map((f) =>
+            f.id === action.fileId
+              ? { ...f, tokens: f.tokens.map((t) => (t.name === action.tokenName ? { ...t, ...action.updates } : t)) }
+              : f
+          ),
+        },
+      };
+    case "ADD_THEME_COLUMN":
+      return {
+        ...state,
+        themes: {
+          ...state.themes,
+          files: state.themes.files.map((f) =>
+            f.id === action.fileId ? { ...f, themes: [...f.themes, action.theme] } : f
+          ),
+        },
+      };
+    case "REMOVE_THEME_COLUMN":
+      return {
+        ...state,
+        themes: {
+          ...state.themes,
+          files: state.themes.files.map((f) =>
+            f.id === action.fileId
+              ? {
+                  ...f,
+                  themes: f.themes.filter((t) => t.id !== action.themeId),
+                  tokens: f.tokens.map((t) => {
+                    const { [action.themeId]: _, ...rest } = t.values;
+                    return { ...t, values: rest };
+                  }),
+                }
+              : f
+          ),
+        },
+      };
+    case "SET_SELECTED_TOKENS":
+      return { ...state, themes: { ...state.themes, selectedTokens: action.tokens } };
+    case "TOGGLE_TOKEN_SELECTION": {
+      const next = new Set(state.themes.selectedTokens);
+      if (next.has(action.tokenName)) next.delete(action.tokenName);
+      else next.add(action.tokenName);
+      return { ...state, themes: { ...state.themes, selectedTokens: next } };
+    }
+    case "SET_THEME_SEARCH":
+      return { ...state, themes: { ...state.themes, searchQuery: action.query } };
+    case "SET_EDITING_TOKEN":
+      return { ...state, themes: { ...state.themes, editingToken: action.tokenName } };
+    case "RENAME_TOKENS":
+      return {
+        ...state,
+        themes: {
+          ...state.themes,
+          files: state.themes.files.map((f) =>
+            f.id === action.fileId
+              ? {
+                  ...f,
+                  tokens: f.tokens.map((t) => {
+                    const rename = action.renames.find((r) => r.from === t.name);
+                    return rename ? { ...t, name: rename.to, group: deriveGroup(rename.to) } : t;
+                  }),
+                }
+              : f
+          ),
+        },
+      };
+    case "DELETE_TOKENS":
+      return {
+        ...state,
+        themes: {
+          ...state.themes,
+          files: state.themes.files.map((f) =>
+            f.id === action.fileId
+              ? { ...f, tokens: f.tokens.filter((t) => !action.tokenNames.includes(t.name)) }
+              : f
+          ),
+          selectedTokens: new Set([...state.themes.selectedTokens].filter((n) => !action.tokenNames.includes(n))),
+        },
+      };
+    case "ADD_TOKENS":
+      return {
+        ...state,
+        themes: {
+          ...state.themes,
+          files: state.themes.files.map((f) =>
+            f.id === action.fileId ? { ...f, tokens: [...f.tokens, ...action.tokens] } : f
+          ),
+        },
+      };
     default:
       return state;
   }

@@ -1,225 +1,276 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useWorkspace, findElement } from "../store/store";
 import {
-  Search,
-  Layers,
-  Palette,
-  Settings,
-  Lightbulb,
-  GitBranch,
-  MousePointer2,
-  Send,
-  Copy,
-  PenTool,
-} from "lucide-react";
-import { useWorkspace } from "../store/store";
+  downloadProjectFile,
+  importProjectFile,
+  buildCurrentProjectFile,
+} from "../format/oc-project-store";
+import { projectFileToState } from "../format/oc-project";
+import { copyToClipboard } from "../utils/clipboard";
 
-type CommandItem = {
+// ── Types ────────────────────────────────────────────────────
+
+interface Command {
   id: string;
   label: string;
-  description: string;
-  icon: React.ReactNode;
   shortcut?: string;
-  action: () => void;
   category: string;
-};
+  action: () => void;
+}
 
-export function CommandPalette() {
+// ── Fuzzy filter ─────────────────────────────────────────────
+
+function fuzzyMatch(query: string, text: string): boolean {
+  const q = query.toLowerCase();
+  const t = text.toLowerCase();
+  if (t.includes(q)) return true;
+  let qi = 0;
+  for (let ti = 0; ti < t.length && qi < q.length; ti++) {
+    if (t[ti] === q[qi]) qi++;
+  }
+  return qi === q.length;
+}
+
+// ── Command Palette Component ────────────────────────────────
+
+export function CommandPalette({ onClose }: { onClose: () => void }) {
   const { state, dispatch } = useWorkspace();
-  const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("");
+  const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
+  // ── Build command list ──
+  const buildCommands = useCallback((): Command[] => {
+    const cmds: Command[] = [];
+
+    // Modes
+    cmds.push({
+      id: "mode-design",
+      label: "Switch to Design",
+      category: "Modes",
+      action: () => dispatch({ type: "SET_ACTIVE_PAGE", page: "design" }),
+    });
+    cmds.push({
+      id: "mode-settings",
+      label: "Switch to Settings",
+      category: "Modes",
+      action: () => dispatch({ type: "SET_ACTIVE_PAGE", page: "settings" }),
+    });
+
+    // Panel toggles
+    cmds.push({
+      id: "toggle-layers",
+      label: "Toggle Layers Panel",
+      shortcut: "L",
+      category: "Panels",
+      action: () => dispatch({ type: "TOGGLE_STYLE_PANEL" }),
+    });
+    cmds.push({
+      id: "toggle-style",
+      label: "Toggle Style Panel",
+      shortcut: "S",
+      category: "Panels",
+      action: () => dispatch({ type: "TOGGLE_STYLE_PANEL" }),
+    });
+
+    // Tools
+    cmds.push({
+      id: "toggle-inspector",
+      label: "Toggle Inspector",
+      shortcut: "I",
+      category: "Tools",
+      action: () => dispatch({ type: "TOGGLE_INSPECTOR" }),
+    });
+
+    // Actions
+    cmds.push({
+      id: "export-0c",
+      label: "Export .0c File",
+      category: "Actions",
+      action: async () => {
+        try {
+          const file = await buildCurrentProjectFile(
+            state.ocProject,
+            state.variants,
+            state.feedbackItems,
+            state.currentRoute,
+          );
+          downloadProjectFile(file);
+        } catch (err) {
+          console.warn("[CommandPalette] Export failed:", err);
+        }
+      },
+    });
+    cmds.push({
+      id: "import-0c",
+      label: "Import .0c File",
+      category: "Actions",
+      action: async () => {
+        const file = await importProjectFile();
+        if (file) {
+          const { project, variants, feedbackItems } = projectFileToState(file);
+          dispatch({ type: "LOAD_FROM_OC_FILE", file, project, variants, feedbackItems });
+        }
+      },
+    });
+    cmds.push({
+      id: "copy-css",
+      label: "Copy CSS of Selected Element",
+      category: "Actions",
+      action: () => {
+        if (state.selectedElementId) {
+          const el = findElement(state.elements, state.selectedElementId);
+          if (el) {
+            const css = Object.entries(el.styles)
+              .map(([k, v]) => `  ${k.replace(/([A-Z])/g, "-$1").toLowerCase()}: ${v};`)
+              .join("\n");
+            copyToClipboard(`${el.selector} {\n${css}\n}`);
+          }
+        }
+      },
+    });
+
+    // Navigation
+    cmds.push({
+      id: "nav-settings",
+      label: "Open Settings",
+      category: "Navigation",
+      action: () => dispatch({ type: "SET_ACTIVE_PAGE", page: "settings" }),
+    });
+    cmds.push({
+      id: "nav-design",
+      label: "Open Design Canvas",
+      category: "Navigation",
+      action: () => dispatch({ type: "SET_ACTIVE_PAGE", page: "design" }),
+    });
+
+    return cmds;
+  }, [state, dispatch]);
+
+  const commands = buildCommands();
+
+  // ── Filter commands ──
+  const filtered = query
+    ? commands.filter((cmd) => fuzzyMatch(query, cmd.label) || fuzzyMatch(query, cmd.category))
+    : commands;
+
+  const visible = filtered.slice(0, 10);
+
+  // ── Group by category ──
+  const grouped = visible.reduce<Record<string, Command[]>>((acc, cmd) => {
+    if (!acc[cmd.category]) acc[cmd.category] = [];
+    acc[cmd.category].push(cmd);
+    return acc;
+  }, {});
+
+  // ── Keep active index in bounds ──
+  useEffect(() => {
+    if (activeIndex >= visible.length) {
+      setActiveIndex(Math.max(0, visible.length - 1));
+    }
+  }, [visible.length, activeIndex]);
+
+  // ── Scroll active item into view ──
+  useEffect(() => {
+    const item = listRef.current?.querySelector(`[data-cmd-index="${activeIndex}"]`);
+    if (item) item.scrollIntoView({ block: "nearest" });
+  }, [activeIndex]);
+
+  // ── Execute command ──
+  const execute = useCallback(
+    (cmd: Command) => {
+      onClose();
+      requestAnimationFrame(() => cmd.action());
+    },
+    [onClose],
+  );
+
+  // ── Keyboard handling ──
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      switch (e.key) {
+        case "ArrowDown":
+          e.preventDefault();
+          setActiveIndex((i) => Math.min(i + 1, visible.length - 1));
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          setActiveIndex((i) => Math.max(i - 1, 0));
+          break;
+        case "Enter":
+          e.preventDefault();
+          if (visible[activeIndex]) execute(visible[activeIndex]);
+          break;
+        case "Escape":
+          e.preventDefault();
+          onClose();
+          break;
+      }
+    },
+    [visible, activeIndex, execute, onClose],
+  );
+
+  // ── Auto-focus ──
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        dispatch({ type: "TOGGLE_COMMAND_PALETTE" });
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [dispatch]);
-
-  const commands: CommandItem[] = [
-    {
-      id: "toggle-layers",
-      label: "Toggle Layers Panel",
-      description: "Show or hide the layers panel",
-      icon: <Layers className="w-4 h-4" />,
-      shortcut: "L",
-      action: () => {
-        dispatch({ type: "TOGGLE_LAYERS_PANEL" });
-        dispatch({ type: "TOGGLE_COMMAND_PALETTE" });
-      },
-      category: "Panels",
+  // ── Close on backdrop click ──
+  const handleBackdropClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.target === e.currentTarget) onClose();
     },
-    {
-      id: "toggle-styles",
-      label: "Toggle Style Panel",
-      description: "Show or hide the style panel",
-      icon: <Palette className="w-4 h-4" />,
-      shortcut: "S",
-      action: () => {
-        dispatch({ type: "TOGGLE_STYLE_PANEL" });
-        dispatch({ type: "TOGGLE_COMMAND_PALETTE" });
-      },
-      category: "Panels",
-    },
-    {
-      id: "open-settings",
-      label: "Open Settings",
-      description: "IDE & Agents configuration",
-      icon: <Settings className="w-4 h-4" />,
-      shortcut: "A",
-      action: () => {
-        dispatch({ type: "SET_ACTIVE_PAGE", page: "settings" });
-        dispatch({ type: "TOGGLE_COMMAND_PALETTE" });
-      },
-      category: "Panels",
-    },
-    {
-      id: "toggle-inspector",
-      label: "Toggle Inspector",
-      description: "Enable or disable element inspector",
-      icon: <MousePointer2 className="w-4 h-4" />,
-      shortcut: "I",
-      action: () => {
-        dispatch({ type: "TOGGLE_INSPECTOR" });
-        dispatch({ type: "TOGGLE_COMMAND_PALETTE" });
-      },
-      category: "Tools",
-    },
-    {
-      id: "toggle-annotations",
-      label: "Toggle Annotation Mode",
-      description: "Draw annotations on the preview",
-      icon: <PenTool className="w-4 h-4" />,
-      shortcut: "D",
-      action: () => {
-        dispatch({ type: "TOGGLE_ANNOTATION_MODE" });
-        dispatch({ type: "TOGGLE_COMMAND_PALETTE" });
-      },
-      category: "Tools",
-    },
-    {
-      id: "clear-annotations",
-      label: "Clear All Annotations",
-      description: "Remove all drawn annotations",
-      icon: <PenTool className="w-4 h-4" />,
-      action: () => {
-        dispatch({ type: "CLEAR_ANNOTATIONS" });
-        dispatch({ type: "TOGGLE_COMMAND_PALETTE" });
-      },
-      category: "Actions",
-    },
-    {
-      id: "send-to-ide",
-      label: "Send to IDE",
-      description: "Send current changes to connected IDE",
-      icon: <Send className="w-4 h-4" />,
-      action: () => {
-        dispatch({ type: "TOGGLE_COMMAND_PALETTE" });
-      },
-      category: "Actions",
-    },
-    {
-      id: "save-version",
-      label: "Save Version",
-      description: "Save current state as a new version",
-      icon: <GitBranch className="w-4 h-4" />,
-      shortcut: "V",
-      action: () => {
-        dispatch({ type: "TOGGLE_COMMAND_PALETTE" });
-      },
-      category: "Actions",
-    },
-    {
-      id: "copy-css",
-      label: "Copy All CSS Changes",
-      description: "Copy all pending CSS changes to clipboard",
-      icon: <Copy className="w-4 h-4" />,
-      action: () => {
-        dispatch({ type: "TOGGLE_COMMAND_PALETTE" });
-      },
-      category: "Actions",
-    },
-  ];
-
-  const filtered = commands.filter(
-    (cmd) =>
-      cmd.label.toLowerCase().includes(search.toLowerCase()) ||
-      cmd.description.toLowerCase().includes(search.toLowerCase())
+    [onClose],
   );
 
-  const grouped = filtered.reduce(
-    (acc, cmd) => {
-      if (!acc[cmd.category]) acc[cmd.category] = [];
-      acc[cmd.category].push(cmd);
-      return acc;
-    },
-    {} as Record<string, CommandItem[]>
-  );
+  let globalIdx = 0;
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-start justify-center pt-[20vh] bg-black/60 backdrop-blur-sm"
-      onClick={() => dispatch({ type: "TOGGLE_COMMAND_PALETTE" })}
+      className="oc-cmd-overlay"
+      data-0canvas="command-palette"
+      onClick={handleBackdropClick}
+      onKeyDown={handleKeyDown}
     >
-      <div
-        className="w-[520px] bg-[var(--color--surface--floor)] border border-[var(--color--border--on-surface-0)] rounded-xl shadow-2xl overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Search */}
-        <div className="flex items-center px-4 py-3 border-b border-[var(--color--border--on-surface-0)]">
-          <Search className="w-4 h-4 text-muted-foreground mr-3 shrink-0" />
-          <input
-            ref={inputRef}
-            type="text"
-            placeholder="Type a command..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
-          />
-          <kbd className="text-[10px] text-muted-foreground bg-[var(--color--surface--1)] px-1.5 py-0.5 rounded border border-[var(--color--border--on-surface-0)]">
-            ESC
-          </kbd>
-        </div>
-
-        {/* Commands */}
-        <div className="max-h-[300px] overflow-y-auto py-2">
+      <div className="oc-cmd-panel">
+        <input
+          ref={inputRef}
+          className="oc-cmd-input"
+          placeholder="Type a command..."
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setActiveIndex(0);
+          }}
+        />
+        <div className="oc-cmd-divider" />
+        <div className="oc-cmd-list" ref={listRef}>
           {Object.entries(grouped).map(([category, cmds]) => (
             <div key={category}>
-              <div className="px-4 py-1.5">
-                <span className="text-[10px] tracking-wider text-muted-foreground uppercase">
-                  {category}
-                </span>
-              </div>
-              {cmds.map((cmd) => (
-                <button
-                  key={cmd.id}
-                  className="w-full flex items-center gap-3 px-4 py-2 hover:bg-[var(--color--surface--1)] transition-colors"
-                  onClick={cmd.action}
-                >
-                  <span className="text-muted-foreground">{cmd.icon}</span>
-                  <div className="flex-1 text-left">
-                    <span className="text-[13px] text-foreground block">
-                      {cmd.label}
-                    </span>
-                    <span className="text-[11px] text-muted-foreground">
-                      {cmd.description}
-                    </span>
+              <div className="oc-cmd-category">{category}</div>
+              {cmds.map((cmd) => {
+                const idx = globalIdx++;
+                return (
+                  <div
+                    key={cmd.id}
+                    data-cmd-index={idx}
+                    className={`oc-cmd-item${idx === activeIndex ? " is-active" : ""}`}
+                    onClick={() => execute(cmd)}
+                    onMouseEnter={() => setActiveIndex(idx)}
+                  >
+                    <span className="oc-cmd-label">{cmd.label}</span>
+                    {cmd.shortcut && (
+                      <span className="oc-cmd-kbd">{cmd.shortcut}</span>
+                    )}
                   </div>
-                  {cmd.shortcut && (
-                    <kbd className="text-[10px] text-muted-foreground bg-[var(--color--surface--1)] px-1.5 py-0.5 rounded border border-[var(--color--border--on-surface-0)]">
-                      {cmd.shortcut}
-                    </kbd>
-                  )}
-                </button>
-              ))}
+                );
+              })}
             </div>
           ))}
+          {visible.length === 0 && (
+            <div className="oc-cmd-empty">No commands found</div>
+          )}
         </div>
       </div>
     </div>

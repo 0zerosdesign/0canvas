@@ -17,7 +17,7 @@ import "@xyflow/react/dist/style.css";
 import { useWorkspace, VariantData } from "../store/store";
 import { SourceNode, type SourceNodeData } from "./source-node";
 import { VariantNode, type VariantNodeData } from "./variant-node";
-import { capturePageSnapshot, captureComponentSnapshot, getElementOuterHTML, pushVariantToMain as domPushToMain, setInspectionTarget, rebuildElementMap, buildElementTree } from "../inspector/dom-inspector";
+import { capturePageSnapshot, captureComponentSnapshot, getElementOuterHTML, pushVariantToMain as domPushToMain, setInspectionTarget, rebuildElementMap, buildElementTree } from "../inspector";
 import { saveVariant, deleteVariant as dbDeleteVariant } from "../db/variant-db";
 import { copyToClipboard } from "../utils/clipboard";
 
