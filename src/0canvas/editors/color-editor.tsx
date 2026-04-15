@@ -10,9 +10,9 @@
 // ──────────────────────────────────────────────────────────
 
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { X, Check, AlertCircle, Wifi, WifiOff } from "lucide-react";
+import { X, Check, AlertCircle } from "lucide-react";
 import { ColorPicker } from "../themes/color-picker";
-import { useStyleChange, useBridgeStatus } from "../bridge/use-bridge";
+import { useStyleChange } from "../bridge/use-bridge";
 import { useWorkspace } from "../store/store";
 import { applyStyle } from "../inspector";
 
@@ -33,7 +33,6 @@ export function ColorEditor({
 }: ColorEditorProps) {
   const { dispatch } = useWorkspace();
   const sendStyleChange = useStyleChange();
-  const bridgeStatus = useBridgeStatus();
   const [writeStatus, setWriteStatus] = useState<"idle" | "writing" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -95,11 +94,6 @@ export function ColorEditor({
             <span className="oc-color-editor-badge oc-badge-error" title={errorMsg}>
               <AlertCircle size={12} />
             </span>
-          )}
-          {bridgeStatus === "connected" ? (
-            <Wifi size={12} className="oc-color-editor-icon oc-icon-connected" />
-          ) : (
-            <WifiOff size={12} className="oc-color-editor-icon oc-icon-disconnected" />
           )}
           <button onClick={onClose} className="oc-panel-btn" title="Close">
             <X size={14} />

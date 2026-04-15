@@ -13,7 +13,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Link, Unlink } from "lucide-react";
-import { useStyleChange, useBridgeStatus } from "../bridge/use-bridge";
+import { useStyleChange } from "../bridge/use-bridge";
 import { useWorkspace } from "../store/store";
 import { applyStyle } from "../inspector";
 
@@ -101,7 +101,6 @@ function SpacingInput({
 export function SpacingEditor({ elementId, selector, styles }: SpacingEditorProps) {
   const { dispatch } = useWorkspace();
   const sendStyleChange = useStyleChange();
-  const bridgeStatus = useBridgeStatus();
   const [marginLinked, setMarginLinked] = useState(true);
   const [paddingLinked, setPaddingLinked] = useState(true);
   const [editingCell, setEditingCell] = useState<string | null>(null);
@@ -120,30 +119,25 @@ export function SpacingEditor({ elementId, selector, styles }: SpacingEditorProp
       const isLinked = type === "margin" ? marginLinked : paddingLinked;
 
       if (isLinked) {
-        // Apply to all four sides
         const sides: SpacingSide[] = ["Top", "Right", "Bottom", "Left"];
         for (const s of sides) {
           const property = `${type}${s}`;
           const kebabProp = `${type}-${s.toLowerCase()}`;
           dispatch({ type: "UPDATE_STYLE", elementId, property, value });
           applyStyle(elementId, kebabProp, value);
-          if (bridgeStatus === "connected") {
-            await sendStyleChange(selector, kebabProp, value);
-          }
+          await sendStyleChange(selector, kebabProp, value);
         }
       } else {
         const property = `${type}${side}`;
         const kebabProp = `${type}-${side.toLowerCase()}`;
         dispatch({ type: "UPDATE_STYLE", elementId, property, value });
         applyStyle(elementId, kebabProp, value);
-        if (bridgeStatus === "connected") {
-          await sendStyleChange(selector, kebabProp, value);
-        }
+        await sendStyleChange(selector, kebabProp, value);
       }
 
       setEditingCell(null);
     },
-    [elementId, selector, dispatch, sendStyleChange, bridgeStatus, marginLinked, paddingLinked]
+    [elementId, selector, dispatch, sendStyleChange, marginLinked, paddingLinked]
   );
 
   const cellKey = (type: SpacingType, side: SpacingSide) => `${type}-${side}`;

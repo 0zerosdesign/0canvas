@@ -1,10 +1,13 @@
 // ──────────────────────────────────────────────────────────
-// 0canvas Protocol — Message types for browser ↔ engine
+// 0canvas Engine Protocol — Message types for engine ↔ overlay
 // ──────────────────────────────────────────────────────────
 //
-// These types define the WebSocket protocol between:
-//   - Browser overlay (ws-client.ts)
-//   - 0canvas Engine (Node.js process on port 24193)
+// Defines the WebSocket protocol between:
+//   - Browser overlay (connects as WebSocket client)
+//   - 0canvas Engine (Node.js process, WebSocket server)
+//
+// V2: The engine handles messages directly — no relay, no
+// VS Code extension required.
 //
 // ──────────────────────────────────────────────────────────
 
@@ -61,6 +64,7 @@ export interface ProjectStateSyncMessage extends BaseMessage {
   type: "PROJECT_STATE_SYNC";
   projectFile: string; // JSON-serialized OCProjectFile
   filePath?: string;   // relative path to .0c file
+  projectId?: string;
 }
 
 // ── Engine → Browser ─────────────────────────────────────
@@ -105,9 +109,20 @@ export interface EngineReadyMessage extends BaseMessage {
   port: number;
 }
 
+export interface ErrorMessage extends BaseMessage {
+  type: "ERROR";
+  code: string;
+  message: string;
+  requestId?: string;
+}
+
+export interface HeartbeatMessage extends BaseMessage {
+  type: "HEARTBEAT";
+}
+
 export interface CSSFileChangedMessage extends BaseMessage {
   type: "CSS_FILE_CHANGED";
-  file: string;
+  file: string; // relative path
 }
 
 export interface OCFileChangedMessage extends BaseMessage {
@@ -123,20 +138,9 @@ export interface ConnectedMessage extends BaseMessage {
   capabilities: string[];
 }
 
-export interface HeartbeatMessage extends BaseMessage {
-  type: "HEARTBEAT";
-}
-
-export interface ErrorMessage extends BaseMessage {
-  type: "ERROR";
-  code: string;
-  message: string;
-  requestId?: string;
-}
-
 // ── Union ────────────────────────────────────────────────
 
-export type BridgeMessage =
+export type EngineMessage =
   | StyleChangeMessage
   | RequestSourceMapMessage
   | ElementSelectedMessage
@@ -157,12 +161,14 @@ export type BridgeMessage =
 // ── Helpers ──────────────────────────────────────────────
 
 export function createMessageId(): string {
-  return typeof crypto !== "undefined" && crypto.randomUUID
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  // Node.js 19+ has crypto.randomUUID globally
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-export function createMessage<T extends BridgeMessage>(
+export function createMessage<T extends EngineMessage>(
   msg: Omit<T, "id" | "timestamp">
 ): T {
   return {

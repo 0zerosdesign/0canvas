@@ -6,7 +6,7 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import { X, Plus, Search } from "lucide-react";
 import { detectTailwindClasses, classifyTailwindClass, COMMON_TAILWIND_CLASSES, type TailwindCategory } from "../lib/tailwind";
 import { useWorkspace } from "../store/store";
-import { useBridge, useBridgeStatus } from "../bridge/use-bridge";
+import { useBridge } from "../bridge/use-bridge";
 
 interface TailwindEditorProps {
   elementId: string;
@@ -39,7 +39,6 @@ const CATEGORY_COLORS: Record<TailwindCategory, string> = {
 export function TailwindEditor({ elementId, selector, classes }: TailwindEditorProps) {
   const { dispatch } = useWorkspace();
   const bridge = useBridge();
-  const bridgeStatus = useBridgeStatus();
   const [showAdd, setShowAdd] = useState(false);
   const [search, setSearch] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -64,8 +63,8 @@ export function TailwindEditor({ elementId, selector, classes }: TailwindEditorP
     const el = document.querySelector(`[data-0canvas-id="${elementId}"]`) as HTMLElement;
     if (el) el.classList.remove(cls);
 
-    // Send to extension for source file write
-    if (bridge && bridgeStatus === "connected") {
+    // Send to engine for source file write
+    if (bridge) {
       bridge.send({
         type: "TAILWIND_CLASS_CHANGE",
         source: "browser",
@@ -78,7 +77,7 @@ export function TailwindEditor({ elementId, selector, classes }: TailwindEditorP
     // Update store classes
     const newClasses = classes.filter((c) => c !== cls);
     dispatch({ type: "SET_ELEMENT_STYLES", id: elementId, styles: {} }); // trigger re-render
-  }, [elementId, selector, classes, bridge, bridgeStatus, dispatch]);
+  }, [elementId, selector, classes, bridge, dispatch]);
 
   const addClass = useCallback((cls: string) => {
     if (classes.includes(cls)) return;
@@ -89,8 +88,8 @@ export function TailwindEditor({ elementId, selector, classes }: TailwindEditorP
     const el = document.querySelector(`[data-0canvas-id="${elementId}"]`) as HTMLElement;
     if (el) el.classList.add(cls);
 
-    // Send to extension
-    if (bridge && bridgeStatus === "connected") {
+    // Send to engine for source file write
+    if (bridge) {
       bridge.send({
         type: "TAILWIND_CLASS_CHANGE",
         source: "browser",
@@ -99,7 +98,7 @@ export function TailwindEditor({ elementId, selector, classes }: TailwindEditorP
         className: cls,
       } as any);
     }
-  }, [elementId, selector, classes, bridge, bridgeStatus]);
+  }, [elementId, selector, classes, bridge]);
 
   // Autocomplete suggestions
   const suggestions = search.trim()

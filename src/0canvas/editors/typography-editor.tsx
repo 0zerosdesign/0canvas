@@ -19,7 +19,7 @@ import {
   AlignRight,
   AlignJustify,
 } from "lucide-react";
-import { useStyleChange, useBridgeStatus } from "../bridge/use-bridge";
+import { useStyleChange } from "../bridge/use-bridge";
 import { useWorkspace } from "../store/store";
 import { applyStyle } from "../inspector";
 
@@ -127,22 +127,15 @@ function NumberInput({
 export function TypographyEditor({ elementId, selector, styles }: TypographyEditorProps) {
   const { dispatch } = useWorkspace();
   const sendStyleChange = useStyleChange();
-  const bridgeStatus = useBridgeStatus();
 
   const applyChange = useCallback(
     async (property: string, value: string) => {
       const kebabProp = property.replace(/([A-Z])/g, "-$1").toLowerCase();
-
-      // 1. Local update
       dispatch({ type: "UPDATE_STYLE", elementId, property, value });
       applyStyle(elementId, kebabProp, value);
-
-      // 2. Bridge send
-      if (bridgeStatus === "connected") {
-        await sendStyleChange(selector, kebabProp, value);
-      }
+      await sendStyleChange(selector, kebabProp, value);
     },
-    [elementId, selector, dispatch, sendStyleChange, bridgeStatus]
+    [elementId, selector, dispatch, sendStyleChange]
   );
 
   const currentAlign = styles.textAlign || "left";

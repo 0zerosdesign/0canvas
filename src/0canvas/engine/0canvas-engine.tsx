@@ -35,6 +35,9 @@ import { SettingsPage } from "../panels/settings-page";
 import { ThemesPage } from "../themes/themes-page";
 import { ThemeModePanel } from "../themes/theme-mode-panel";
 import { AIChatPanel } from "../panels/ai-chat-panel";
+import { CommandPalette } from "../panels/command-palette";
+import { InlineEdit } from "../panels/inline-edit";
+import { VisualDiff } from "../panels/visual-diff";
 import { projectFileToState } from "../format/oc-project";
 import {
   scheduleAutoSave,
@@ -322,6 +325,46 @@ function EngineWorkspace({ onClose }: { onClose: () => void }) {
     return () => setBridgeSender(null);
   }, [bridge]);
 
+  // ── Keyboard shortcuts ──────────────────────────────────
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const meta = e.metaKey || e.ctrlKey;
+
+      // Cmd+/ or Ctrl+/ → Command Palette
+      if (meta && e.key === "/") {
+        e.preventDefault();
+        dispatch({ type: "SHOW_COMMAND_PALETTE", show: !state.showCommandPalette });
+        return;
+      }
+
+      // Cmd+K or Ctrl+K → Inline Edit (requires selected element)
+      if (meta && e.key === "k") {
+        e.preventDefault();
+        if (state.selectedElementId) {
+          dispatch({ type: "SHOW_INLINE_EDIT", show: !state.showInlineEdit });
+        }
+        return;
+      }
+
+      // Escape → close overlays in priority order
+      if (e.key === "Escape") {
+        if (state.showCommandPalette) {
+          e.preventDefault();
+          dispatch({ type: "SHOW_COMMAND_PALETTE", show: false });
+          return;
+        }
+        if (state.showVisualDiff) {
+          e.preventDefault();
+          dispatch({ type: "SHOW_VISUAL_DIFF", diff: null });
+          return;
+        }
+        // InlineEdit handles its own Escape
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [dispatch, state.showCommandPalette, state.showInlineEdit, state.showVisualDiff, state.selectedElementId]);
+
   // ── Load .0c project file from IndexedDB on mount ──
   useEffect(() => {
     (async () => {
@@ -351,42 +394,6 @@ function EngineWorkspace({ onClose }: { onClose: () => void }) {
     state.currentRoute,
     state.ocProjectFile,
   ]);
-
-  // ── Auto-send feedback to agent ──
-  const prevFeedbackCountRef = useRef(state.feedbackItems.length);
-  const [autoSendNotification, setAutoSendNotification] = useState<string | null>(null);
-
-  useEffect(() => {
-    const prevCount = prevFeedbackCountRef.current;
-    const newCount = state.feedbackItems.length;
-    prevFeedbackCountRef.current = newCount;
-
-    // Only trigger when items are ADDED (not removed or loaded)
-    if (
-      newCount > prevCount &&
-      state.aiSettings.autoSendFeedback &&
-      bridge
-    ) {
-      // Get the newly added items
-      const newItems = state.feedbackItems.slice(prevCount);
-      for (const item of newItems) {
-        if (item.status !== "pending") continue;
-
-        const query = `[Auto-feedback] ${item.intent}: "${item.comment}" on ${item.elementSelector} (${item.severity})`;
-        bridge.send({
-          type: "AI_CHAT_REQUEST",
-          query,
-          selector: item.elementSelector,
-          styles: item.computedStyles,
-          route: state.currentRoute,
-        } as any);
-
-        // Show notification
-        setAutoSendNotification(`Feedback sent to agent: "${item.comment.slice(0, 40)}${item.comment.length > 40 ? "..." : ""}"`);
-        setTimeout(() => setAutoSendNotification(null), 3000);
-      }
-    }
-  }, [state.feedbackItems, state.aiSettings.autoSendFeedback, bridge, state.currentRoute]);
 
   // ── Export .0c file ──
   const handleExportDD = useCallback(async () => {
@@ -426,14 +433,6 @@ function EngineWorkspace({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="oc-app-shell" data-0canvas="workspace">
-      {/* Auto-send feedback notification */}
-      {autoSendNotification && (
-        <div className="oc-auto-send-notification" data-0canvas="notification">
-          <span className="oc-auto-send-icon">&#x2192;</span>
-          {autoSendNotification}
-        </div>
-      )}
-
       {/* Far-left sidebar */}
       <AppSidebar onClose={onClose} />
 
@@ -514,6 +513,28 @@ function EngineWorkspace({ onClose }: { onClose: () => void }) {
         <ThemesPage />
       ) : (
         <SettingsPage />
+      )}
+
+      {/* ── Global overlays ──────────────────────────────── */}
+
+      {/* Command Palette (Cmd+/) */}
+      {state.showCommandPalette && (
+        <CommandPalette onClose={() => dispatch({ type: "SHOW_COMMAND_PALETTE", show: false })} />
+      )}
+
+      {/* Inline Edit (Cmd+K) */}
+      {state.showInlineEdit && state.selectedElementId && (
+        <InlineEdit />
+      )}
+
+      {/* Visual Diff */}
+      {state.showVisualDiff && (
+        <VisualDiff
+          before={state.showVisualDiff.before}
+          after={state.showVisualDiff.after}
+          variantName={state.showVisualDiff.variantName}
+          onClose={() => dispatch({ type: "SHOW_VISUAL_DIFF", diff: null })}
+        />
       )}
     </div>
   );

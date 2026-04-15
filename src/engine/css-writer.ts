@@ -5,26 +5,30 @@
 // Given a file path, line number, CSS property, and new value,
 // updates the declaration in place while preserving formatting.
 //
-// After the write, Vite HMR detects the change and hot-reloads.
+// After the write, the dev server's file watcher detects the
+// change and triggers HMR.
+//
+// Ported from extensions/vscode/src/css-file-writer.ts
+// (already pure Node.js — no VS Code API dependencies).
 //
 // ──────────────────────────────────────────────────────────
 
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import type { EngineCache } from "./cache";
 
 export interface WriteResult {
   success: boolean;
-  file?: string;
+  file?: string;     // relative path
   line?: number;
   error?: string;
 }
 
 export class CSSFileWriter {
-  private workspaceRoot: string;
-
-  constructor(workspaceRoot: string) {
-    this.workspaceRoot = workspaceRoot;
-  }
+  constructor(
+    private root: string,
+    private cache?: EngineCache
+  ) {}
 
   /**
    * Update a CSS property value at a specific file and line.
@@ -38,9 +42,8 @@ export class CSSFileWriter {
   ): WriteResult {
     const absPath = path.isAbsolute(filePath)
       ? filePath
-      : path.resolve(this.workspaceRoot, filePath);
+      : path.resolve(this.root, filePath);
 
-    // Validate file exists
     if (!fs.existsSync(absPath)) {
       return { success: false, error: `File not found: ${filePath}` };
     }
@@ -48,18 +51,17 @@ export class CSSFileWriter {
     const content = fs.readFileSync(absPath, "utf-8");
     const lines = content.split("\n");
 
-    // Validate line number
     const idx = line - 1; // 1-based to 0-based
     if (idx < 0 || idx >= lines.length) {
       return { success: false, error: `Line ${line} out of range (file has ${lines.length} lines)` };
     }
 
     const targetLine = lines[idx];
-    const kebabProperty = this.toKebabCase(property);
+    const kebabProperty = toKebabCase(property);
 
     // Match: "  property: oldValue;" or "  property: oldValue" (no semicolon at EOF)
     const regex = new RegExp(
-      `^(\\s*${this.escapeForRegex(kebabProperty)}\\s*:\\s*)([^;!]*)(\\s*(?:![^;]*)?;?.*)$`,
+      `^(\\s*${escapeForRegex(kebabProperty)}\\s*:\\s*)([^;!]*)(\\s*(?:![^;]*)?;?.*)$`,
       "i"
     );
     const match = targetLine.match(regex);
@@ -71,7 +73,7 @@ export class CSSFileWriter {
       };
     }
 
-    // Replace only the value part, preserving leading whitespace, property name, and trailing semicolon/!important
+    // Replace only the value part, preserving indentation and trailing semicolon/!important
     lines[idx] = match[1] + newValue + match[3];
 
     // Write back atomically (write to temp, then rename)
@@ -80,7 +82,6 @@ export class CSSFileWriter {
       fs.writeFileSync(tmpPath, lines.join("\n"), "utf-8");
       fs.renameSync(tmpPath, absPath);
     } catch (err) {
-      // Cleanup temp file if rename failed
       try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
       return {
         success: false,
@@ -88,16 +89,21 @@ export class CSSFileWriter {
       };
     }
 
+    // Invalidate cache for this file
+    if (this.cache) {
+      this.cache.updateFile(absPath);
+    }
+
     return {
       success: true,
-      file: path.relative(this.workspaceRoot, absPath),
+      file: path.relative(this.root, absPath),
       line,
     };
   }
 
   /**
    * Add a new property declaration to a CSS rule block.
-   * Finds the selector, then inserts the property before the closing brace.
+   * Finds the closing brace and inserts the property before it.
    */
   addProperty(
     filePath: string,
@@ -107,7 +113,7 @@ export class CSSFileWriter {
   ): WriteResult {
     const absPath = path.isAbsolute(filePath)
       ? filePath
-      : path.resolve(this.workspaceRoot, filePath);
+      : path.resolve(this.root, filePath);
 
     if (!fs.existsSync(absPath)) {
       return { success: false, error: `File not found: ${filePath}` };
@@ -115,7 +121,7 @@ export class CSSFileWriter {
 
     const content = fs.readFileSync(absPath, "utf-8");
     const lines = content.split("\n");
-    const kebabProperty = this.toKebabCase(property);
+    const kebabProperty = toKebabCase(property);
 
     // Find the closing brace of this rule block
     let depth = 0;
@@ -153,27 +159,36 @@ export class CSSFileWriter {
     const newLine = `${indent}${kebabProperty}: ${value};`;
     lines.splice(closingBraceLine, 0, newLine);
 
+    // Atomic write
+    const tmpPath = absPath + ".0canvas-tmp";
     try {
-      fs.writeFileSync(absPath, lines.join("\n"), "utf-8");
+      fs.writeFileSync(tmpPath, lines.join("\n"), "utf-8");
+      fs.renameSync(tmpPath, absPath);
     } catch (err) {
+      try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
       return {
         success: false,
         error: `Write failed: ${err instanceof Error ? err.message : String(err)}`,
       };
     }
 
+    // Invalidate cache
+    if (this.cache) {
+      this.cache.updateFile(absPath);
+    }
+
     return {
       success: true,
-      file: path.relative(this.workspaceRoot, absPath),
+      file: path.relative(this.root, absPath),
       line: closingBraceLine + 1,
     };
   }
+}
 
-  private toKebabCase(str: string): string {
-    return str.replace(/([A-Z])/g, "-$1").toLowerCase();
-  }
+function toKebabCase(str: string): string {
+  return str.replace(/([A-Z])/g, "-$1").toLowerCase();
+}
 
-  private escapeForRegex(str: string): string {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  }
+function escapeForRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

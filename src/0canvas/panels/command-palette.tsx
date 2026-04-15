@@ -44,34 +44,51 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
   const buildCommands = useCallback((): Command[] => {
     const cmds: Command[] = [];
 
-    // Modes
+    // Navigation
     cmds.push({
-      id: "mode-design",
-      label: "Switch to Design",
-      category: "Modes",
+      id: "nav-design",
+      label: "Open Design Canvas",
+      category: "Navigation",
       action: () => dispatch({ type: "SET_ACTIVE_PAGE", page: "design" }),
     });
     cmds.push({
-      id: "mode-settings",
-      label: "Switch to Settings",
-      category: "Modes",
+      id: "nav-themes",
+      label: "Open Themes",
+      category: "Navigation",
+      action: () => dispatch({ type: "SET_ACTIVE_PAGE", page: "themes" }),
+    });
+    cmds.push({
+      id: "nav-settings",
+      label: "Open Settings",
+      category: "Navigation",
       action: () => dispatch({ type: "SET_ACTIVE_PAGE", page: "settings" }),
     });
 
-    // Panel toggles
+    // Design modes
     cmds.push({
-      id: "toggle-layers",
-      label: "Toggle Layers Panel",
-      shortcut: "L",
-      category: "Panels",
-      action: () => dispatch({ type: "TOGGLE_STYLE_PANEL" }),
+      id: "mode-feedback",
+      label: "Switch to Feedback Mode",
+      category: "Modes",
+      action: () => { if (state.themeMode) dispatch({ type: "TOGGLE_THEME_MODE" }); dispatch({ type: "SET_DESIGN_MODE", mode: "feedback" }); },
     });
     cmds.push({
-      id: "toggle-style",
-      label: "Toggle Style Panel",
+      id: "mode-style",
+      label: "Switch to Style Mode",
       shortcut: "S",
-      category: "Panels",
-      action: () => dispatch({ type: "TOGGLE_STYLE_PANEL" }),
+      category: "Modes",
+      action: () => { if (state.themeMode) dispatch({ type: "TOGGLE_THEME_MODE" }); dispatch({ type: "SET_DESIGN_MODE", mode: "style" }); },
+    });
+    cmds.push({
+      id: "mode-ai",
+      label: "Switch to AI Mode",
+      category: "Modes",
+      action: () => { if (state.themeMode) dispatch({ type: "TOGGLE_THEME_MODE" }); dispatch({ type: "SET_DESIGN_MODE", mode: "ai" }); },
+    });
+    cmds.push({
+      id: "mode-theme",
+      label: "Toggle Theme Mode",
+      category: "Modes",
+      action: () => dispatch({ type: "TOGGLE_THEME_MODE" }),
     });
 
     // Tools
@@ -81,6 +98,17 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
       shortcut: "I",
       category: "Tools",
       action: () => dispatch({ type: "TOGGLE_INSPECTOR" }),
+    });
+    cmds.push({
+      id: "inline-edit",
+      label: "AI Quick Edit (Cmd+K)",
+      shortcut: "\u2318K",
+      category: "Tools",
+      action: () => {
+        if (state.selectedElementId) {
+          dispatch({ type: "SHOW_INLINE_EDIT", show: true });
+        }
+      },
     });
 
     // Actions
@@ -129,20 +157,6 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
           }
         }
       },
-    });
-
-    // Navigation
-    cmds.push({
-      id: "nav-settings",
-      label: "Open Settings",
-      category: "Navigation",
-      action: () => dispatch({ type: "SET_ACTIVE_PAGE", page: "settings" }),
-    });
-    cmds.push({
-      id: "nav-design",
-      label: "Open Design Canvas",
-      category: "Navigation",
-      action: () => dispatch({ type: "SET_ACTIVE_PAGE", page: "design" }),
     });
 
     return cmds;

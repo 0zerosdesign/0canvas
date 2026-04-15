@@ -1,8 +1,8 @@
 // ──────────────────────────────────────────────────────────
-// Browser-side WebSocket client for the 0canvas bridge
+// Browser-side WebSocket client for the 0canvas engine
 // ──────────────────────────────────────────────────────────
 //
-// Connects to the Vite plugin's WebSocket server at /__0canvas.
+// Connects directly to the 0canvas engine at ws://localhost:24193/ws.
 // Uses the browser's native WebSocket API — no npm dependencies.
 //
 // ──────────────────────────────────────────────────────────
@@ -31,42 +31,42 @@ export class CanvasBridgeClient {
     return this._status;
   }
 
-  /** Whether the extension side is connected (we received PEER_CONNECTED) */
-  private _extensionConnected = false;
+  /** Whether the engine is connected and ready */
+  private _engineConnected = false;
   get extensionConnected(): boolean {
-    return this._extensionConnected;
+    return this._engineConnected;
   }
 
   connect(): void {
     if (this._disposed) return;
     if (this.ws?.readyState === WebSocket.OPEN) return;
 
-    // Derive WS URL from the page's own origin (same host/port as Vite)
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/__0canvas`;
-
+    const wsUrl = `ws://localhost:24193/ws`;
     this.setStatus("connecting");
 
+    let ws: WebSocket;
     try {
-      this.ws = new WebSocket(wsUrl);
+      ws = new WebSocket(wsUrl);
     } catch {
       this.setStatus("disconnected");
       this.scheduleReconnect();
       return;
     }
 
-    this.ws.onopen = () => {
+    ws.onopen = () => {
+      this.ws = ws;
+      this._engineConnected = true;
       this.setStatus("connected");
+
       // Announce ourselves
       this.send({
         type: "CONNECTED",
         source: "browser",
-        role: "browser",
         capabilities: ["style-edit", "element-select"],
       } as BridgeMessage);
     };
 
-    this.ws.onmessage = (event) => {
+    ws.onmessage = (event) => {
       let msg: BridgeMessage;
       try {
         msg = JSON.parse(event.data);
@@ -74,12 +74,9 @@ export class CanvasBridgeClient {
         return;
       }
 
-      // Track extension connection state
-      if (msg.type === "PEER_CONNECTED" && msg.role === "extension") {
-        this._extensionConnected = true;
-      }
-      if (msg.type === "PEER_DISCONNECTED" && msg.role === "extension") {
-        this._extensionConnected = false;
+      // ENGINE_READY confirms the engine is fully initialized
+      if (msg.type === "ENGINE_READY") {
+        this._engineConnected = true;
       }
 
       // Resolve pending request-response
@@ -98,13 +95,14 @@ export class CanvasBridgeClient {
       }
     };
 
-    this.ws.onclose = () => {
+    ws.onclose = () => {
+      this.ws = null;
       this.setStatus("disconnected");
-      this._extensionConnected = false;
+      this._engineConnected = false;
       this.scheduleReconnect();
     };
 
-    this.ws.onerror = () => {
+    ws.onerror = () => {
       // onclose will fire after onerror
     };
   }
@@ -132,7 +130,7 @@ export class CanvasBridgeClient {
 
       const timer = window.setTimeout(() => {
         this.pendingRequests.delete(id);
-        reject(new Error(`Bridge request timeout: ${msg.type}`));
+        reject(new Error(`Request timeout: ${msg.type}`));
       }, timeoutMs);
 
       this.pendingRequests.set(id, {
@@ -172,7 +170,7 @@ export class CanvasBridgeClient {
     }
     for (const [, pending] of this.pendingRequests) {
       window.clearTimeout(pending.timer);
-      pending.reject(new Error("Bridge disposed"));
+      pending.reject(new Error("Client disposed"));
     }
     this.pendingRequests.clear();
     this.handlers.clear();

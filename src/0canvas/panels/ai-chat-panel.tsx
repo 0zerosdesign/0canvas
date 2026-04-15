@@ -11,7 +11,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Send, Bot, User, Loader2, Sparkles, Square, Check, AlertCircle, Undo2, ArrowRight, X } from "lucide-react";
 import { useWorkspace, findElement } from "../store/store";
-import { useBridge, useBridgeStatus, useExtensionConnected } from "../bridge/use-bridge";
+import { useBridge } from "../bridge/use-bridge";
 import type { BridgeMessage } from "../bridge/messages";
 import { streamChat, isAiConfigured, type OpenAIMessage } from "../lib/openai";
 import { applyStyle, flashElement } from "../inspector";
@@ -156,8 +156,6 @@ function VariantDiffView({
 export function AIChatPanel() {
   const { state, dispatch } = useWorkspace();
   const bridge = useBridge();
-  const bridgeStatus = useBridgeStatus();
-  const extensionConnected = useExtensionConnected();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -172,8 +170,6 @@ export function AIChatPanel() {
   const aiSettings = state.aiSettings;
   const isLocalAI = aiSettings.provider === "chatgpt" || aiSettings.provider === "openai";
   const isIDE = aiSettings.provider === "ide";
-  const isBridgeConnected = bridgeStatus === "connected" && extensionConnected;
-
   // Get active variant
   const activeVariant = state.activeVariantId
     ? state.variants.find((v) => v.id === state.activeVariantId)

@@ -9,7 +9,6 @@ import { panelsCSS } from "./panels";
 import { toolbarCSS } from "./toolbar";
 import { stylePanelCSS } from "./style-panel";
 import { canvasCSS } from "./canvas";
-import { agentPanelCSS } from "./agent-panel";
 import { commandPaletteCSS } from "./command-palette";
 import { settingsCSS } from "./settings";
 
@@ -27,7 +26,6 @@ ${[
   toolbarCSS(S),
   stylePanelCSS(S),
   canvasCSS(S),
-  agentPanelCSS(S),
   commandPaletteCSS(S),
   settingsCSS(S),
 ].join("\n")}

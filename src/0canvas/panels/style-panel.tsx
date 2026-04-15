@@ -12,8 +12,6 @@ import {
   Sparkles,
   Globe,
   MousePointer2,
-  Wifi,
-  WifiOff,
   Search,
   Move,
   Focus,
@@ -29,7 +27,6 @@ import { BorderEditor } from "../editors/border-editor";
 import { TailwindEditor } from "../editors/tailwind-editor";
 import { detectTailwindClasses } from "../lib/tailwind";
 import { SliderInput } from "../editors/controls";
-import { useBridgeStatus, useExtensionConnected } from "../bridge/use-bridge";
 import { useStyleChange } from "../bridge/use-bridge";
 import { applyStyle, flashElement } from "../inspector";
 import { getAutocompleteSuggestions } from "../lib/css-properties";
@@ -345,7 +342,6 @@ function EffectsEditor({
 }) {
   const { dispatch } = useWorkspace();
   const sendStyleChange = useStyleChange();
-  const bridgeStatus = useBridgeStatus();
 
   // Parse opacity
   const rawOpacity = styles.opacity;
@@ -360,11 +356,9 @@ function EffectsEditor({
       const kebab = property.replace(/([A-Z])/g, "-$1").toLowerCase();
       dispatch({ type: "UPDATE_STYLE", elementId, property, value });
       applyStyle(elementId, kebab, value);
-      if (bridgeStatus === "connected") {
-        await sendStyleChange(selector, kebab, value, styles[property] || "");
-      }
+      await sendStyleChange(selector, kebab, value, styles[property] || "");
     },
-    [elementId, selector, styles, dispatch, sendStyleChange, bridgeStatus]
+    [elementId, selector, styles, dispatch, sendStyleChange]
   );
 
   return (
@@ -420,7 +414,6 @@ function StylePropertyRow({
 }) {
   const { dispatch } = useWorkspace();
   const sendStyleChange = useStyleChange();
-  const bridgeStatus = useBridgeStatus();
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
 
@@ -431,20 +424,16 @@ function StylePropertyRow({
     dispatch({ type: "UPDATE_STYLE", elementId, property, value: editValue });
     applyStyle(elementId, kebabProp, editValue);
     flashElement(elementId);
-    if (bridgeStatus === "connected") {
-      await sendStyleChange(selector, kebabProp, editValue, value);
-    }
+    await sendStyleChange(selector, kebabProp, editValue, value);
     setEditing(false);
-  }, [elementId, selector, property, value, editValue, dispatch, sendStyleChange, bridgeStatus]);
+  }, [elementId, selector, property, value, editValue, dispatch, sendStyleChange]);
 
   const handleTokenSelect = useCallback(async (tokenValue: string) => {
     const kebabProp = formatProperty(property);
     dispatch({ type: "UPDATE_STYLE", elementId, property, value: tokenValue });
     applyStyle(elementId, kebabProp, tokenValue);
-    if (bridgeStatus === "connected") {
-      await sendStyleChange(selector, kebabProp, tokenValue, value);
-    }
-  }, [elementId, selector, property, value, dispatch, sendStyleChange, bridgeStatus]);
+    await sendStyleChange(selector, kebabProp, tokenValue, value);
+  }, [elementId, selector, property, value, dispatch, sendStyleChange]);
 
   const colorMatch = typeof value === "string"
     ? value.match(/(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\))/)
@@ -591,8 +580,6 @@ export function StylePanel() {
   const sendStyleChange = useStyleChange();
   const [tab, setTab] = useState<"editor" | "code">("editor");
   const [searchQuery, setSearchQuery] = useState("");
-  const bridgeStatus = useBridgeStatus();
-  const extensionConnected = useExtensionConnected();
 
   // ── Focus Mode ──
   const [focusMode, setFocusMode] = useState<boolean>(() => {
@@ -671,9 +658,7 @@ export function StylePanel() {
         next.delete(property);
         dispatch({ type: "UPDATE_STYLE", elementId: selectedEl.id, property, value: originalValue });
         applyStyle(selectedEl.id, kebabProp, originalValue);
-        if (bridgeStatus === "connected") {
-          sendStyleChange(selectedEl.selector, kebabProp, originalValue, "");
-        }
+        sendStyleChange(selectedEl.selector, kebabProp, originalValue, "");
       } else {
         // Disable: store original value, remove inline style
         next.set(property, currentValue);
@@ -681,7 +666,7 @@ export function StylePanel() {
       }
       return next;
     });
-  }, [state.selectedElementId, state.elements, dispatch, bridgeStatus, sendStyleChange]);
+  }, [state.selectedElementId, state.elements, dispatch, sendStyleChange]);
 
   // Clear disabled props when selection changes
   const prevElementId = useRef(state.selectedElementId);
@@ -710,7 +695,6 @@ export function StylePanel() {
       <div className="oc-panel">
         <div className="oc-panel-header">
           <span className="oc-panel-title">Style</span>
-          <BridgeIndicator status={bridgeStatus} extensionConnected={extensionConnected} />
         </div>
         <div className="oc-style-empty-centered">
           <div>
@@ -764,8 +748,7 @@ export function StylePanel() {
         <div className="oc-style-header-row">
           <span className="oc-panel-title">Style</span>
           <div className="oc-style-header-actions">
-            <BridgeIndicator status={bridgeStatus} extensionConnected={extensionConnected} />
-            <button
+              <button
               className={`oc-panel-btn oc-focus-toggle${focusMode ? " is-active" : ""}`}
               onClick={toggleFocusMode}
               title={focusMode ? "Focus mode ON — one section at a time" : "Focus mode OFF — expand freely"}
@@ -907,25 +890,5 @@ function CopyBtn({ onClick }: { onClick: () => void }) {
     <button onClick={onClick} className="oc-panel-btn" title="Copy CSS">
       <Copy size={13} />
     </button>
-  );
-}
-
-function BridgeIndicator({ status, extensionConnected }: { status: string; extensionConnected: boolean }) {
-  const bridgeUp = status === "connected";
-  const isConnected = bridgeUp && extensionConnected;
-  const title = isConnected
-    ? "Bridge connected — edits write to source files"
-    : bridgeUp
-    ? "Bridge connected, extension reconnecting..."
-    : "Bridge disconnected — edits are local only";
-
-  return (
-    <span className="oc-bridge-indicator" title={title}>
-      {bridgeUp ? (
-        <Wifi size={11} className={isConnected ? "oc-icon-connected" : "oc-icon-partial"} />
-      ) : (
-        <WifiOff size={11} className="oc-icon-disconnected" />
-      )}
-    </span>
   );
 }

@@ -1,17 +1,18 @@
 // ──────────────────────────────────────────────────────────
 // Tailwind Writer — Modify className in JSX/TSX source files
 // ──────────────────────────────────────────────────────────
+//
+// Ported from extensions/vscode/src/tailwind-writer.ts.
+// Only change: vscode.workspace.findFiles() → tinyglobby.
+//
+// ──────────────────────────────────────────────────────────
 
-import * as vscode from "vscode";
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { findJSXFiles } from "./discovery";
 
 export class TailwindWriter {
-  private workspaceRoot: string;
-
-  constructor(workspaceRoot: string) {
-    this.workspaceRoot = workspaceRoot;
-  }
+  constructor(private root: string) {}
 
   /**
    * Add or remove a Tailwind class from a JSX/TSX element.
@@ -30,14 +31,10 @@ export class TailwindWriter {
         return { success: false, error: "No classes in selector to search for" };
       }
 
-      // Find JSX/TSX files containing these classes
-      const files = await vscode.workspace.findFiles(
-        "**/*.{tsx,jsx}",
-        "{**/node_modules/**,**/dist/**,**/.next/**}"
-      );
+      const files = await findJSXFiles(this.root);
 
-      for (const uri of files) {
-        const content = fs.readFileSync(uri.fsPath, "utf-8");
+      for (const filePath of files) {
+        const content = fs.readFileSync(filePath, "utf-8");
 
         // Look for className containing our selector classes
         // Match patterns: className="...", className={`...`}, className={clsx(...)}
@@ -71,9 +68,9 @@ export class TailwindWriter {
               .replace(classString, newClassString) +
             content.slice(match.index + match[0].length);
 
-          fs.writeFileSync(uri.fsPath, newContent, "utf-8");
+          fs.writeFileSync(filePath, newContent, "utf-8");
 
-          const relPath = path.relative(this.workspaceRoot, uri.fsPath);
+          const relPath = path.relative(this.root, filePath);
           console.log(`[0canvas] Tailwind: ${action} "${className}" in ${relPath}`);
 
           return {

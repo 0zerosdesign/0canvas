@@ -1,18 +1,19 @@
 // ──────────────────────────────────────────────────────────
-// React hooks for the 0canvas WebSocket bridge
+// React hooks for the 0canvas engine connection
 // ──────────────────────────────────────────────────────────
 //
 // Provides:
-//   - BridgeProvider  — mounts at engine root, manages connection lifecycle
-//   - useBridge       — access the bridge client instance
-//   - useBridgeStatus — reactive connection status
-//   - useStyleChange  — send a style change and await ACK
+//   - BridgeProvider       — mounts at root, manages connection lifecycle
+//   - useBridge            — access the client instance
+//   - useBridgeStatus      — reactive connection status
+//   - useExtensionConnected — whether engine is ready
+//   - useStyleChange       — send a style change and await ACK
 //
 // ──────────────────────────────────────────────────────────
 
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
 import { CanvasBridgeClient, type ConnectionStatus } from "./ws-client";
-import type { StyleChangeAckMessage, BridgeMessage } from "./messages";
+import type { StyleChangeAckMessage } from "./messages";
 
 // ── Context ──────────────────────────────────────────────
 
@@ -26,7 +27,6 @@ export function BridgeProvider({ children }: { children: React.ReactNode }) {
     const client = new CanvasBridgeClient();
     clientRef.current = client;
     client.connect();
-    // Force a re-render so children can access the client
     forceUpdate((n) => n + 1);
     return () => {
       client.dispose();
@@ -64,7 +64,7 @@ export function useBridgeStatus(): ConnectionStatus {
   return status;
 }
 
-/** Whether the VS Code extension is connected to the bridge. */
+/** Whether the engine is connected and ready. */
 export function useExtensionConnected(): boolean {
   const bridge = useBridge();
   const [connected, setConnected] = useState(false);
@@ -72,22 +72,20 @@ export function useExtensionConnected(): boolean {
   useEffect(() => {
     if (!bridge) return;
 
-    const onPeerConnect = (msg: BridgeMessage) => {
-      if (msg.type === "PEER_CONNECTED" && msg.role === "extension") setConnected(true);
-    };
-    const onPeerDisconnect = (msg: BridgeMessage) => {
-      if (msg.type === "PEER_DISCONNECTED" && msg.role === "extension") setConnected(false);
-    };
-
-    const unsub1 = bridge.on("PEER_CONNECTED", onPeerConnect);
-    const unsub2 = bridge.on("PEER_DISCONNECTED", onPeerDisconnect);
+    const onEngineReady = () => setConnected(true);
+    const unsub = bridge.on("ENGINE_READY", onEngineReady);
 
     // Check current state
     setConnected(bridge.extensionConnected);
 
+    // Also track disconnection via status changes
+    const unsubStatus = bridge.onStatusChange((status) => {
+      if (status === "disconnected") setConnected(false);
+    });
+
     return () => {
-      unsub1();
-      unsub2();
+      unsub();
+      unsubStatus();
     };
   }, [bridge]);
 
@@ -96,8 +94,7 @@ export function useExtensionConnected(): boolean {
 
 /**
  * Returns a function that sends a STYLE_CHANGE message and awaits ACK.
- * The returned function applies the change locally first (instant feedback),
- * then sends to the extension for file write.
+ * The engine resolves the CSS source and writes the change to disk.
  */
 export function useStyleChange() {
   const bridge = useBridge();

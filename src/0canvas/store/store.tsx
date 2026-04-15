@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, ReactNode } from "react";
 import type { OCProjectFile } from "../format/oc-project";
+import { loadAiSettings } from "../lib/openai";
 
 // ──────────────────────────────────────────────────────────
 // Types
@@ -16,21 +17,6 @@ export type ElementNode = {
   visible: boolean;
   locked: boolean;
   componentName?: string;
-};
-
-export type IDEType = "claude-code" | "cursor" | "vscode" | "windsurf" | "antigravity" | "custom";
-
-export type IDEConnection = {
-  id: string;
-  name: string;
-  type: IDEType;
-  status: "connected" | "disconnected" | "connecting";
-  lastSync?: number;
-  projectPath?: string;
-  description: string;
-  color: string;
-  icon: string; // 2-letter abbreviation
-  setupMethod: "cli" | "extension" | "mcp";
 };
 
 export type ProjectConnection = {
@@ -192,9 +178,6 @@ export type WorkspaceState = {
   selectedElementId: string | null;
   hoveredElementId: string | null;
 
-  // IDE connections
-  ides: IDEConnection[];
-
   // Feedback
   feedbackItems: FeedbackItem[];
 
@@ -221,6 +204,8 @@ export type WorkspaceState = {
   inspectorMode: boolean;
   stylePanelOpen: boolean;
   showInlineEdit: boolean;
+  showCommandPalette: boolean;
+  showVisualDiff: { before: { html: string; css: string }; after: { html: string; css: string }; variantName: string } | null;
   isLoading: boolean;
 
   // Themes
@@ -239,7 +224,6 @@ type Action =
   | { type: "HOVER_ELEMENT"; id: string | null }
   | { type: "UPDATE_STYLE"; elementId: string; property: string; value: string }
   | { type: "SET_ELEMENT_STYLES"; id: string; styles: Record<string, string> }
-  | { type: "UPDATE_IDE_STATUS"; id: string; status: IDEConnection["status"] }
   | { type: "SET_ACTIVE_PAGE"; page: WorkspacePage }
   | { type: "TOGGLE_INSPECTOR" }
   | { type: "TOGGLE_STYLE_PANEL" }
@@ -303,63 +287,12 @@ type Action =
   | { type: "SET_AI_SETTINGS"; settings: AiSettings }
   | { type: "SET_BREAKPOINT"; breakpoint: Breakpoint }
   | { type: "SHOW_INLINE_EDIT"; show: boolean }
+  | { type: "SHOW_COMMAND_PALETTE"; show: boolean }
+  | { type: "SHOW_VISUAL_DIFF"; diff: WorkspaceState["showVisualDiff"] }
 
 // ──────────────────────────────────────────────────────────
 // IDE definitions
 // ──────────────────────────────────────────────────────────
-const defaultIDEs: IDEConnection[] = [
-  {
-    id: "claude-code",
-    name: "Claude Code",
-    type: "claude-code",
-    status: "disconnected",
-    description: "AI-powered coding agent by Anthropic",
-    color: "#2563EB",
-    icon: "CC",
-    setupMethod: "mcp",
-  },
-  {
-    id: "cursor",
-    name: "Cursor",
-    type: "cursor",
-    status: "disconnected",
-    description: "AI-first code editor",
-    color: "#3B82F6",
-    icon: "Cu",
-    setupMethod: "extension",
-  },
-  {
-    id: "windsurf",
-    name: "Windsurf",
-    type: "windsurf",
-    status: "disconnected",
-    description: "Agentic IDE by Codeium",
-    color: "#1D4ED8",
-    icon: "Ws",
-    setupMethod: "extension",
-  },
-  {
-    id: "vscode",
-    name: "VS Code",
-    type: "vscode",
-    status: "disconnected",
-    description: "With GitHub Copilot",
-    color: "#60A5FA",
-    icon: "VS",
-    setupMethod: "extension",
-  },
-  {
-    id: "antigravity",
-    name: "Antigravity",
-    type: "antigravity",
-    status: "disconnected",
-    description: "Visual-first AI development",
-    color: "#1E40AF",
-    icon: "AG",
-    setupMethod: "cli",
-  },
-];
-
 // ──────────────────────────────────────────────────────────
 // Initial state
 // ──────────────────────────────────────────────────────────
@@ -369,7 +302,6 @@ const initialState: WorkspaceState = {
   elements: [],
   selectedElementId: null,
   hoveredElementId: null,
-  ides: defaultIDEs,
   feedbackItems: [],
   selectionSource: null,
   variants: [],
@@ -392,6 +324,8 @@ const initialState: WorkspaceState = {
   inspectorMode: true,
   stylePanelOpen: true,
   showInlineEdit: false,
+  showCommandPalette: false,
+  showVisualDiff: null,
   isLoading: false,
   themes: {
     files: [],
@@ -402,14 +336,7 @@ const initialState: WorkspaceState = {
   },
   themeMode: false,
   themeChanges: [],
-  aiSettings: {
-    provider: "ide",
-    proxyUrl: "http://127.0.0.1:10531",
-    apiKey: "",
-    model: "gpt-4o",
-    temperature: 0.7,
-    autoSendFeedback: false,
-  },
+  aiSettings: loadAiSettings(),
 };
 
 // ──────────────────────────────────────────────────────────
@@ -472,19 +399,6 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
           styles: action.styles,
         })),
       };
-    case "UPDATE_IDE_STATUS":
-      return {
-        ...state,
-        ides: state.ides.map((ide) =>
-          ide.id === action.id
-            ? {
-                ...ide,
-                status: action.status,
-                lastSync: action.status === "connected" ? Date.now() : ide.lastSync,
-              }
-            : ide
-        ),
-      };
     case "SET_ACTIVE_PAGE":
       return { ...state, activePage: action.page };
     case "TOGGLE_INSPECTOR":
@@ -501,6 +415,10 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
       return { ...state, activeBreakpoint: action.breakpoint };
     case "SHOW_INLINE_EDIT":
       return { ...state, showInlineEdit: action.show };
+    case "SHOW_COMMAND_PALETTE":
+      return { ...state, showCommandPalette: action.show };
+    case "SHOW_VISUAL_DIFF":
+      return { ...state, showVisualDiff: action.diff };
     case "TOGGLE_ELEMENT_VISIBILITY":
       return {
         ...state,

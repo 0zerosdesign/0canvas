@@ -104,7 +104,7 @@ export type {
   OCValidationResult,
 } from "./0canvas/format/oc-project";
 
-// Bridge — WebSocket communication with VS Code extension
+// Bridge — WebSocket communication with 0canvas engine
 export { BridgeProvider, useBridge, useBridgeStatus, useExtensionConnected, useStyleChange } from "./0canvas/bridge/use-bridge";
 export { CanvasBridgeClient } from "./0canvas/bridge/ws-client";
 export type { ConnectionStatus } from "./0canvas/bridge/ws-client";

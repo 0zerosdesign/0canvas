@@ -119,6 +119,28 @@ export function SourceNode({ id, data, selected }: NodeProps) {
       dispatch({ type: "SET_ELEMENTS", elements: tree });
       setElementCount(countNodes(tree));
 
+      // Auto-start inspect mode so clicking elements works immediately
+      startInspect((elId, el) => {
+        dispatch({ type: "SELECT_ELEMENT", id: elId, source: "inspect" });
+        const doc = iframeRef.current?.contentDocument || document;
+        const win = doc.defaultView || window;
+        const computed = win.getComputedStyle(el);
+        const styles: Record<string, string> = {};
+        const props = [
+          "color", "backgroundColor", "fontSize", "fontFamily", "fontWeight",
+          "lineHeight", "padding", "margin", "width", "height", "display",
+          "flexDirection", "alignItems", "justifyContent", "gap", "position",
+          "borderRadius", "border", "boxShadow", "opacity", "transform",
+        ];
+        for (const prop of props) {
+          const cssProp = prop.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
+          const val = computed.getPropertyValue(cssProp);
+          if (val && val !== "none" && val !== "normal" && val !== "auto") styles[prop] = val;
+        }
+        dispatch({ type: "SET_ELEMENT_STYLES", id: elId, styles });
+      });
+      setInspecting(true);
+
       setTimeout(() => {
         try {
           const iframeEl = iframeRef.current;

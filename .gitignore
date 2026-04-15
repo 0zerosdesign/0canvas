@@ -38,6 +38,10 @@ coverage/
 .tmp/
 temp/
 
+# 0canvas engine (generated at runtime)
+.0canvas/
+.mcp.json
+
 # Testing harness (local only)
 testing/
 

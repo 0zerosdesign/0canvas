@@ -12,9 +12,9 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useWorkspace, findElement } from "../store/store";
 import { getElementById, applyStyle } from "../inspector";
-import { streamCSSChanges, hasApiKey, setApiKey } from "../lib/ai-stream";
+import { streamChat, isAiConfigured, type OpenAIMessage } from "../lib/openai";
 
-type Phase = "input" | "streaming" | "done" | "error" | "api-key";
+type Phase = "input" | "streaming" | "done" | "error";
 
 type AppliedChange = {
   property: string;
@@ -24,14 +24,12 @@ type AppliedChange = {
 
 export function InlineEdit() {
   const { state, dispatch } = useWorkspace();
-  const [phase, setPhase] = useState<Phase>(() => hasApiKey() ? "input" : "api-key");
+  const [phase, setPhase] = useState<Phase>("input");
   const [inputValue, setInputValue] = useState("");
-  const [apiKeyInput, setApiKeyInput] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [appliedChanges, setAppliedChanges] = useState<AppliedChange[]>([]);
   const [position, setPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const inputRef = useRef<HTMLInputElement>(null);
-  const apiKeyRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const changesRef = useRef<AppliedChange[]>([]);
@@ -69,12 +67,7 @@ export function InlineEdit() {
   // ── Auto-focus input ──────────────────────────────────────
   useEffect(() => {
     if (phase === "input") {
-      // Small delay to let the animation start
       const t = setTimeout(() => inputRef.current?.focus(), 50);
-      return () => clearTimeout(t);
-    }
-    if (phase === "api-key") {
-      const t = setTimeout(() => apiKeyRef.current?.focus(), 50);
       return () => clearTimeout(t);
     }
   }, [phase]);
@@ -119,7 +112,7 @@ export function InlineEdit() {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
         if (phase === "done") {
           accept();
-        } else if (phase === "input" || phase === "error" || phase === "api-key") {
+        } else if (phase === "input" || phase === "error") {
           close();
         }
         // During streaming, ignore outside clicks
@@ -157,9 +150,16 @@ export function InlineEdit() {
   }, [phase, accept, reject, close]);
 
   // ── Submit handler ────────────────────────────────────────
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     const instruction = inputValue.trim();
     if (!instruction || !elementId) return;
+
+    const aiSettings = state.aiSettings;
+    if (!isAiConfigured(aiSettings)) {
+      setErrorMessage("AI not configured. Set it in Settings → AI Settings.");
+      setPhase("error");
+      return;
+    }
 
     const elementNode = findElement(state.elements, elementId);
     if (!elementNode) return;
@@ -171,38 +171,91 @@ export function InlineEdit() {
     const abort = new AbortController();
     abortRef.current = abort;
 
-    streamCSSChanges(
-      instruction,
-      elementNode.tag,
-      elementNode.classes,
-      elementNode.styles,
-      {
-        onProperty: (property: string, value: string) => {
-          const oldValue = applyStyle(elementId, property, value) || "";
-          const change: AppliedChange = { property, oldValue, newValue: value };
-          changesRef.current = [...changesRef.current, change];
-          setAppliedChanges((prev) => [...prev, change]);
-        },
-        onComplete: () => {
-          setPhase("done");
-        },
-        onError: (error: string) => {
-          setErrorMessage(error);
-          setPhase("error");
-        },
-      },
-      abort.signal,
-    );
-  }, [inputValue, elementId, state.elements]);
+    const styleLines = Object.entries(elementNode.styles)
+      .map(([k, v]) => `  ${k.replace(/([A-Z])/g, "-$1").toLowerCase()}: ${v};`)
+      .join("\n");
 
-  // ── API key submission ────────────────────────────────────
-  const handleApiKeySubmit = useCallback(() => {
-    const key = apiKeyInput.trim();
-    if (!key) return;
-    setApiKey(key);
-    setApiKeyInput("");
-    setPhase("input");
-  }, [apiKeyInput]);
+    const messages: OpenAIMessage[] = [
+      {
+        role: "system",
+        content: `You are a CSS expert inside a visual design tool called 0canvas.
+The user will describe a visual change they want on a selected HTML element.
+You MUST respond ONLY with a CSS code block containing property: value pairs.
+Do NOT include selectors or curly braces — just the properties.
+Do NOT explain or add any text outside the code block.
+
+Example response:
+\`\`\`css
+border-radius: 12px;
+background-color: #3B82F6;
+\`\`\`
+
+Rules:
+- Only output CSS properties that directly address the user's request
+- Use standard CSS property names (kebab-case)
+- Use concrete values (px, rem, hex colors, etc.)
+- Keep it minimal — only the properties needed for the change
+- Always wrap in a css code block`,
+      },
+      {
+        role: "user",
+        content: `Element: <${elementNode.tag}> with classes [${elementNode.classes.join(", ")}]
+Current computed styles:
+${styleLines}
+
+Change requested: "${instruction}"`,
+      },
+    ];
+
+    try {
+      let accumulated = "";
+      let lastParsedIndex = 0;
+      let insideCodeBlock = false;
+
+      for await (const chunk of streamChat({ settings: aiSettings, messages, signal: abort.signal })) {
+        accumulated += chunk;
+
+        // Parse CSS properties as they stream in
+        let searchFrom = lastParsedIndex;
+        while (searchFrom < accumulated.length) {
+          const nextNewline = accumulated.indexOf("\n", searchFrom);
+          if (nextNewline === -1) break;
+
+          const line = accumulated.slice(searchFrom, nextNewline).trim();
+          searchFrom = nextNewline + 1;
+
+          if (line.startsWith("```")) {
+            insideCodeBlock = !insideCodeBlock;
+            continue;
+          }
+
+          if (!insideCodeBlock) continue;
+
+          const match = line.match(/^([a-z][a-z-]*)\s*:\s*(.+?)\s*;?\s*$/i);
+          if (match) {
+            const property = match[1].toLowerCase();
+            const value = match[2].trim().replace(/;$/, "");
+            if (property && value) {
+              const oldValue = applyStyle(elementId, property, value) || "";
+              const change: AppliedChange = { property, oldValue, newValue: value };
+              changesRef.current = [...changesRef.current, change];
+              setAppliedChanges((prev) => [...prev, change]);
+            }
+          }
+        }
+        lastParsedIndex = searchFrom;
+      }
+
+      setPhase("done");
+    } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setPhase("done");
+        return;
+      }
+      setErrorMessage(err instanceof Error ? err.message : "Streaming failed");
+      setPhase("error");
+    }
+  }, [inputValue, elementId, state.elements, state.aiSettings]);
 
   // ── Don't render if no element selected ───────────────────
   if (!elementId) return null;
@@ -218,42 +271,6 @@ export function InlineEdit() {
         left: position.left,
       }}
     >
-      {/* API Key input phase */}
-      {phase === "api-key" && (
-        <div className="oc-inline-edit-apikey">
-          <div className="oc-inline-edit-apikey-label">
-            Enter your OpenAI API key to enable AI quick-edit
-          </div>
-          <div className="oc-inline-edit-input-row">
-            <input
-              ref={apiKeyRef}
-              type="password"
-              className="oc-inline-edit-input"
-              placeholder="sk-..."
-              value={apiKeyInput}
-              onChange={(e) => setApiKeyInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleApiKeySubmit();
-                }
-                if (e.key === "Escape") {
-                  e.preventDefault();
-                  close();
-                }
-              }}
-            />
-            <button
-              className="oc-inline-edit-send"
-              onClick={handleApiKeySubmit}
-              disabled={!apiKeyInput.trim()}
-            >
-              Save
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Main input phase */}
       {phase === "input" && (
         <div className="oc-inline-edit-input-row">

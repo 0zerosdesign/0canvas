@@ -5,7 +5,7 @@
 import React, { useState, useCallback } from "react";
 import { Link, Unlink } from "lucide-react";
 import { SegmentedControl, NumberInputWithUnit } from "./controls";
-import { useStyleChange, useBridgeStatus } from "../bridge/use-bridge";
+import { useStyleChange } from "../bridge/use-bridge";
 import { useWorkspace } from "../store/store";
 import { applyStyle } from "../inspector";
 
@@ -43,7 +43,6 @@ function parseShadow(val: string | undefined): {
 export function BorderEditor({ elementId, selector, styles, onOpenColorEditor }: BorderEditorProps) {
   const { dispatch } = useWorkspace();
   const sendStyleChange = useStyleChange();
-  const bridgeStatus = useBridgeStatus();
   const [radiusLinked, setRadiusLinked] = useState(true);
 
   const apply = useCallback(
@@ -51,11 +50,9 @@ export function BorderEditor({ elementId, selector, styles, onOpenColorEditor }:
       const kebab = property.replace(/([A-Z])/g, "-$1").toLowerCase();
       dispatch({ type: "UPDATE_STYLE", elementId, property, value });
       applyStyle(elementId, kebab, value);
-      if (bridgeStatus === "connected") {
-        await sendStyleChange(selector, kebab, value);
-      }
+      await sendStyleChange(selector, kebab, value);
     },
-    [elementId, selector, dispatch, sendStyleChange, bridgeStatus]
+    [elementId, selector, dispatch, sendStyleChange]
   );
 
   // ── Border width/style/color ────────────────────────────

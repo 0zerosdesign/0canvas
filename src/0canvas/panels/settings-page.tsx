@@ -1,45 +1,27 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { Zap, Sparkles, ChevronRight } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { useWorkspace, type AiSettings, type AiProvider } from "../store/store";
-import { AgentPanel } from "./agent-panel";
 import { ScrollArea } from "../ui/scroll-area";
 import { loadAiSettings, saveAiSettings, AVAILABLE_MODELS } from "../lib/openai";
 
-type SettingsSection = "ide-agents" | "ai-settings";
-
-const SECTIONS: { id: SettingsSection; label: string; icon: React.ReactNode }[] = [
-  { id: "ai-settings", label: "AI Settings", icon: <Sparkles size={16} /> },
-  { id: "ide-agents", label: "IDE & Agents", icon: <Zap size={16} /> },
-];
-
 export function SettingsPage() {
-  const [activeSection, setActiveSection] = useState<SettingsSection>("ai-settings");
-
   return (
     <div className="oc-settings-page">
       {/* Left: settings nav */}
       <div className="oc-settings-nav">
         <div className="oc-settings-nav-header">Settings</div>
         <div className="oc-settings-nav-list">
-          {SECTIONS.map((section) => (
-            <button
-              key={section.id}
-              className={`oc-settings-nav-item ${activeSection === section.id ? "is-active" : ""}`}
-              onClick={() => setActiveSection(section.id)}
-            >
-              <span className="oc-settings-nav-icon">{section.icon}</span>
-              <span className="oc-settings-nav-label">{section.label}</span>
-              <ChevronRight size={14} className="oc-settings-nav-chevron" />
-            </button>
-          ))}
+          <button className="oc-settings-nav-item is-active">
+            <span className="oc-settings-nav-icon"><Sparkles size={16} /></span>
+            <span className="oc-settings-nav-label">AI Settings</span>
+          </button>
         </div>
       </div>
 
       {/* Right: settings content */}
       <div className="oc-settings-content">
         <ScrollArea className="oc-settings-scroll">
-          {activeSection === "ai-settings" && <AiSettingsPanel />}
-          {activeSection === "ide-agents" && <AgentPanel />}
+          <AiSettingsPanel />
         </ScrollArea>
       </div>
     </div>
@@ -84,7 +66,7 @@ function AiSettingsPanel() {
         {([
           { value: "chatgpt" as AiProvider, label: "ChatGPT", desc: "Use your ChatGPT subscription via local proxy" },
           { value: "openai" as AiProvider, label: "OpenAI API", desc: "Direct API with your own key (BYOK)" },
-          { value: "ide" as AiProvider, label: "IDE Agent", desc: "Send to Cursor, Claude Code, or Copilot" },
+          { value: "ide" as AiProvider, label: "IDE Agent", desc: "Send to your AI coding tool (Cursor, Claude Code, etc.)" },
         ]).map((opt) => (
           <button
             key={opt.value}
@@ -175,31 +157,10 @@ function AiSettingsPanel() {
       {settings.provider === "ide" && (
         <div className="oc-ai-config-section">
           <p className="oc-ai-hint">
-            AI requests will be sent to the connected IDE agent (Cursor, Claude Code, Copilot) via the WebSocket bridge.
+            AI requests will be saved to <code>.0canvas/ai-request.md</code> for your AI coding tool to pick up.
           </p>
         </div>
       )}
-
-      {/* Auto-send feedback toggle */}
-      <div className="oc-ai-config-section">
-        <div className="oc-settings-section-title">Feedback Pipeline</div>
-        <label className="oc-ai-toggle-row" data-0canvas="auto-send-toggle">
-          <div className="oc-ai-toggle-info">
-            <span className="oc-ai-toggle-label">Auto-send feedback to agent</span>
-            <span className="oc-ai-toggle-desc">
-              Automatically dispatch new feedback items to the AI agent for processing.
-            </span>
-          </div>
-          <button
-            role="switch"
-            aria-checked={settings.autoSendFeedback}
-            className={`oc-toggle-switch${settings.autoSendFeedback ? " is-on" : ""}`}
-            onClick={() => updateField("autoSendFeedback", !settings.autoSendFeedback)}
-          >
-            <span className="oc-toggle-thumb" />
-          </button>
-        </label>
-      </div>
 
       {/* Save button */}
       <button className="oc-ai-save-btn" onClick={handleSave}>

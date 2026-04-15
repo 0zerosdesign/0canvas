@@ -8,7 +8,7 @@ import {
   WrapText,
 } from "lucide-react";
 import { SegmentedControl, NumberInputWithUnit } from "./controls";
-import { useStyleChange, useBridgeStatus } from "../bridge/use-bridge";
+import { useStyleChange } from "../bridge/use-bridge";
 import { useWorkspace } from "../store/store";
 import { applyStyle } from "../inspector";
 
@@ -62,18 +62,15 @@ function AlignmentGrid({
 export function LayoutEditor({ elementId, selector, styles }: LayoutEditorProps) {
   const { dispatch } = useWorkspace();
   const sendStyleChange = useStyleChange();
-  const bridgeStatus = useBridgeStatus();
 
   const apply = useCallback(
     async (property: string, value: string) => {
       const kebab = property.replace(/([A-Z])/g, "-$1").toLowerCase();
       dispatch({ type: "UPDATE_STYLE", elementId, property, value });
       applyStyle(elementId, kebab, value);
-      if (bridgeStatus === "connected") {
-        await sendStyleChange(selector, kebab, value);
-      }
+      await sendStyleChange(selector, kebab, value);
     },
-    [elementId, selector, dispatch, sendStyleChange, bridgeStatus]
+    [elementId, selector, dispatch, sendStyleChange]
   );
 
   const display = styles.display || "block";
