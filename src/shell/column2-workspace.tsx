@@ -1,15 +1,15 @@
 // ──────────────────────────────────────────────────────────
-// Column 2 — Agent Workspace (Phase 1A scaffold)
+// Column 2 — Agent Workspace
 // ──────────────────────────────────────────────────────────
 //
-// Tabbed panel that will host Chat / Git / Terminal / Env / Todo
-// in subsequent phases:
-//   - Phase 1B implements Chat (migrates ai-chat-panel into here)
-//   - Phase 1C implements Git (git2-rs IPC), Terminal (tauri-plugin-pty +
-//     xterm.js), Env (native fs), Todo (.0canvas/todo.md parser)
+// Phase 1B-d: Chat tab now mounts the real AIChatPanel — the
+// same component Column 3's right-panel-slot used in Phase 0.
+// Git / Terminal / Env / Todo remain placeholders until 1C.
 //
-// For 1A-1 it renders the tab bar skeleton so the UI proportions
-// are established and the layout reads as "three columns".
+// Tab state persists within a session but resets on reload,
+// which is fine: the underlying data (chat thread, git index,
+// env files) is owned by the workspace store or the filesystem,
+// not by the tab itself.
 // ──────────────────────────────────────────────────────────
 
 import React, { useState } from "react";
@@ -20,6 +20,7 @@ import {
   KeyRound,
   ListChecks,
 } from "lucide-react";
+import { AIChatPanel } from "../0canvas/panels/ai-chat-panel";
 
 type TabId = "chat" | "git" | "terminal" | "env" | "todo";
 
@@ -35,12 +36,23 @@ const TABS: Array<{
   { id: "todo", label: "Todo", icon: ListChecks },
 ];
 
-const TAB_PHASE: Record<TabId, string> = {
-  chat: "Phase 1B — migrates today's AI chat panel into this tab.",
-  git: "Phase 1C — git2-rs via Tauri IPC. Branch, stage, commit, push, pull.",
-  terminal: "Phase 1C — tauri-plugin-pty + xterm.js. Shell in your project root.",
-  env: "Phase 1C — native-fs .env editor with masked values and Add Variable.",
-  todo: "Phase 1C — markdown-backed at .0canvas/todo.md, agent-editable.",
+const TAB_PLACEHOLDERS: Partial<Record<TabId, { title: string; body: string }>> = {
+  git: {
+    title: "Git",
+    body: "Phase 1C — git2-rs via Tauri IPC. Branch, stage, commit, push, pull.",
+  },
+  terminal: {
+    title: "Terminal",
+    body: "Phase 1C — tauri-plugin-pty + xterm.js. Shell in your project root.",
+  },
+  env: {
+    title: "Env",
+    body: "Phase 1C — native-fs .env editor with masked values and Add Variable.",
+  },
+  todo: {
+    title: "Todo",
+    body: "Phase 1C — markdown-backed at .0canvas/todo.md, agent-editable.",
+  },
 };
 
 export function Column2Workspace() {
@@ -67,11 +79,25 @@ export function Column2Workspace() {
         })}
       </nav>
 
-      <div className="oc-column-2__body" role="tabpanel">
-        <div className="oc-column-2__placeholder">
-          <h2>{TABS.find((t) => t.id === activeTab)?.label}</h2>
-          <p>{TAB_PHASE[activeTab]}</p>
-        </div>
+      <div
+        className={`oc-column-2__body ${
+          activeTab === "chat" ? "is-chat" : ""
+        }`}
+        role="tabpanel"
+      >
+        {activeTab === "chat" ? (
+          <AIChatPanel />
+        ) : (
+          (() => {
+            const p = TAB_PLACEHOLDERS[activeTab];
+            return p ? (
+              <div className="oc-column-2__placeholder">
+                <h2>{p.title}</h2>
+                <p>{p.body}</p>
+              </div>
+            ) : null;
+          })()
+        )}
       </div>
     </section>
   );

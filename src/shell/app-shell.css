@@ -387,6 +387,21 @@
   flex: 1;
   overflow: auto;
   padding: 20px;
+  min-height: 0;
+}
+
+/* Chat tab: AIChatPanel owns its own scrolling and padding. Give it the
+ * full body height and clip overflow so the internal ScrollArea works. */
+.oc-column-2__body.is-chat {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.oc-column-2__body.is-chat > * {
+  flex: 1;
+  min-height: 0;
 }
 
 .oc-column-2__placeholder {
