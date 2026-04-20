@@ -3,9 +3,9 @@
   "schemaVersion": 1,
   "project": {
     "id": "proj-1776407915766",
-    "name": "Untitled",
-    "createdAt": "2026-04-17T06:39:26.900Z",
-    "updatedAt": "2026-04-17T06:39:26.899Z",
+    "name": "arun",
+    "createdAt": "2026-04-17T06:54:30.156Z",
+    "updatedAt": "2026-04-17T06:54:30.156Z",
     "revision": 1
   },
   "workspace": {
@@ -28,7 +28,7 @@
   "pages": [
     {
       "id": "page_main",
-      "name": "Untitled",
+      "name": "arun",
       "route": "/",
       "source": {
         "html": "",
