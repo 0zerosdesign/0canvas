@@ -120,9 +120,11 @@ export function AppShell() {
           <div className="oc-app">
             <Column1Nav />
             <Column2Workspace />
-            <div className="oc-column-3">
-              {/* onClose omitted — Mac app has no overlay to close,
-                  so the AppSidebar's X button is hidden entirely. */}
+            <div className="oc-column-3" data-0canvas-root="">
+              {/* data-0canvas-root scopes the engine's injected CSS
+                  (all rules are prefixed with [data-0canvas-root]).
+                  onClose is omitted — the Mac app has no overlay
+                  to close, so AppSidebar's X button is hidden. */}
               <EngineWorkspace />
             </div>
           </div>

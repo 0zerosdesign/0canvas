@@ -517,6 +517,20 @@
   min-height: 0;
 }
 
+/* The [data-0canvas-root] wrapper needs to pass height through to
+ * AIChatPanel, which uses flex:1 on its own root. */
+.oc-column-2__chat-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.oc-column-2__chat-root > * {
+  flex: 1;
+  min-height: 0;
+}
+
 /* Context chips above the chat input. */
 .oc-ai-chips {
   display: flex;

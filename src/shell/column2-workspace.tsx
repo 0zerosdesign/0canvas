@@ -101,7 +101,14 @@ export function Column2Workspace() {
         }`}
         role="tabpanel"
       >
-        {activeTab === "chat" && <AIChatPanel key={chatKey} />}
+        {/* AIChatPanel's CSS is scoped under [data-0canvas-root]
+            (same injected stylesheet as Column 3). Wrap it in a root
+            marker so its styles apply here too. */}
+        {activeTab === "chat" && (
+          <div data-0canvas-root="" className="oc-column-2__chat-root">
+            <AIChatPanel key={chatKey} />
+          </div>
+        )}
         {activeTab === "terminal" && <TerminalPanel />}
         {activeTab === "env" && <EnvPanel />}
         {activeTab === "todo" && <TodoPanel />}
