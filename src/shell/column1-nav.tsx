@@ -297,10 +297,20 @@ export function Column1Nav() {
   };
 
   const grouped = React.useMemo(() => groupChatsByFolder(state.chats), [state.chats]);
-  const folderKeys = React.useMemo(
-    () => Array.from(grouped.keys()).sort((a, b) => a.localeCompare(b)),
-    [grouped],
-  );
+  // Current-project folder first, "" (No project) second, others
+  // alphabetical. Keeps the active project's chats prominent even
+  // when the user has threads from many repos.
+  const folderKeys = React.useMemo(() => {
+    const keys = Array.from(grouped.keys());
+    const currentRoot = workspaceMenu.currentRoot;
+    return keys.sort((a, b) => {
+      if (a === currentRoot && b !== currentRoot) return -1;
+      if (b === currentRoot && a !== currentRoot) return 1;
+      if (a === "" && b !== "") return -1;
+      if (b === "" && a !== "") return 1;
+      return a.localeCompare(b);
+    });
+  }, [grouped, workspaceMenu.currentRoot]);
 
   const handleSelect = (service: LocalhostService) => {
     if (!state.project) return;
@@ -505,8 +515,12 @@ export function Column1Nav() {
                 {folderKeys.map((folder) => {
                   const chats = grouped.get(folder) ?? [];
                   const isCollapsed = foldersCollapsed[folder] === true;
+                  const isCurrent = folder !== "" && folder === workspaceMenu.currentRoot;
                   return (
-                    <div key={folder} className="oc-column-1__folder">
+                    <div
+                      key={folder}
+                      className={`oc-column-1__folder ${isCurrent ? "is-current" : ""}`}
+                    >
                       <button
                         className="oc-column-1__folder-header"
                         onClick={() => toggleFolder(folder)}

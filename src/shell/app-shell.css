@@ -770,6 +770,14 @@
   background: rgba(255, 255, 255, 0.03);
 }
 
+.oc-column-1__folder.is-current .oc-column-1__folder-header {
+  color: var(--color--text--primary-light);
+}
+
+.oc-column-1__folder.is-current .oc-column-1__folder-header:hover {
+  background: rgba(59, 130, 246, 0.08);
+}
+
 .oc-column-1__folder-name {
   flex: 1;
   overflow: hidden;
