@@ -265,6 +265,20 @@ export async function shellOpenUrl(url: string): Promise<void> {
   await invoke<void>("shell_open_url", { url });
 }
 
+/** Reveal a path in macOS Finder. */
+export async function revealInFinder(path: string): Promise<void> {
+  if (!isTauriWebview()) return;
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke<void>("reveal_in_finder", { path });
+}
+
+/** Launch macOS Terminal.app at the given directory. */
+export async function openInTerminal(path: string): Promise<void> {
+  if (!isTauriWebview()) return;
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke<void>("open_in_terminal", { path });
+}
+
 /** Phase 3-F: finalize a clone by handing the destination to the sidecar. */
 export async function openClonedProject(
   path: string,

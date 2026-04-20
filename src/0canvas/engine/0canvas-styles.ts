@@ -3154,11 +3154,11 @@ ${S} .oc-slash-menu {
 }
 ${S} .oc-slash-item {
   display: flex; align-items: center; gap: 10px;
-  padding: 8px 10px;
+  padding: 6px 10px;
   background: transparent; border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   color: var(--color--text--on-surface);
-  font-family: inherit; font-size: 13px;
+  font-family: inherit; font-size: 12px;
   text-align: left; cursor: pointer;
 }
 ${S} .oc-slash-item:hover,
@@ -3167,14 +3167,15 @@ ${S} .oc-slash-item.is-active {
 }
 ${S} .oc-slash-label {
   font-family: var(--font-firacode);
+  font-size: 11px;
   font-weight: 600;
   color: var(--color--text--on-surface);
-  min-width: 90px;
+  min-width: 80px;
   padding: 0; background: none;
 }
 ${S} .oc-slash-desc {
   color: var(--color--text--muted);
-  font-size: 12px;
+  font-size: 11px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 ${S} .oc-slash-footer {
@@ -3190,7 +3191,9 @@ ${S} .oc-chat-composer-card {
   border: 1px solid rgba(255,255,255,0.05);
   border-radius: 12px;
   transition: border-color 120ms ease;
-  overflow: hidden;
+  /* Intentionally not overflow:hidden — the toolbar's dropdown
+   * menus (Effort / Permission / Model) anchor inside the card and
+   * need to escape its bounds to render fully. */
 }
 ${S} .oc-chat-composer-card:focus-within {
   border-color: rgba(59,130,246,0.35);
@@ -3322,26 +3325,55 @@ ${S} .oc-chat-dropdown-root.is-footer .oc-chat-dropdown-menu {
 }
 ${S} .oc-chat-dropdown-item {
   display: flex; flex-direction: column; gap: 2px;
-  padding: 8px 10px;
+  padding: 6px 10px;
   background: transparent; border: none;
   border-radius: 6px;
   color: var(--color--text--on-surface);
   font-family: inherit; text-align: left;
   cursor: pointer;
   position: relative;
+  padding-right: 24px;
 }
 ${S} .oc-chat-dropdown-item:hover { background: rgba(255, 255, 255, 0.06); }
 ${S} .oc-chat-dropdown-item.is-active {
   background: rgba(59, 130, 246, 0.12);
   color: var(--color--text--primary-light);
 }
-${S} .oc-chat-dropdown-item-label { font-size: 13px; font-weight: 500; }
+${S} .oc-chat-dropdown-item-label { font-size: 12px; font-weight: 500; line-height: 1.3; }
 ${S} .oc-chat-dropdown-item-hint {
-  font-size: 11px; color: var(--color--text--muted);
+  font-size: 11px; color: var(--color--text--muted); line-height: 1.3;
 }
 ${S} .oc-chat-dropdown-item-check {
-  position: absolute; right: 10px; top: 10px;
+  position: absolute; right: 8px; top: 8px;
   color: var(--color--text--primary-light);
+}
+${S} .oc-chat-dropdown-item-row {
+  display: inline-flex; align-items: center; gap: 8px;
+  min-width: 0;
+}
+${S} .oc-chat-dropdown-divider {
+  height: 1px; background: var(--color--border--on-surface-0);
+  margin: 4px 2px;
+}
+${S} .oc-chat-dropdown-section-label {
+  padding: 4px 10px;
+  font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--color--text--muted);
+}
+${S} .oc-chat-dropdown-badge {
+  display: inline-flex; align-items: center;
+  padding: 1px 5px; border-radius: 4px;
+  background: var(--color--status--warning);
+  color: var(--color--text--on-warning);
+  font-size: 10px; font-weight: 700; letter-spacing: 0.03em;
+}
+${S} .oc-chat-model-menu {
+  min-width: 240px;
+}
+${S} .oc-chat-dropdown-empty {
+  padding: 10px 12px;
+  font-size: 11px; color: var(--color--text--muted); line-height: 1.4;
 }
 
 ${S} .oc-chat-send {

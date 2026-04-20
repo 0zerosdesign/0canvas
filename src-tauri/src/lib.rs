@@ -72,6 +72,40 @@ fn shell_open_url(url: String) -> Result<(), String> {
     Ok(())
 }
 
+/// Open macOS Finder with the given path selected.
+#[tauri::command]
+fn reveal_in_finder(path: String) -> Result<(), String> {
+    let p = PathBuf::from(&path);
+    if !p.exists() {
+        return Err(format!("path does not exist: {}", path));
+    }
+    std::process::Command::new("open")
+        .arg("-R")
+        .arg(&path)
+        .spawn()
+        .map_err(|e| format!("open: {}", e))?;
+    Ok(())
+}
+
+/// Launch macOS Terminal.app at the given directory.
+#[tauri::command]
+fn open_in_terminal(path: String) -> Result<(), String> {
+    let p = PathBuf::from(&path);
+    if !p.exists() {
+        return Err(format!("path does not exist: {}", path));
+    }
+    if !p.is_dir() {
+        return Err(format!("not a directory: {}", path));
+    }
+    std::process::Command::new("open")
+        .arg("-a")
+        .arg("Terminal")
+        .arg(&path)
+        .spawn()
+        .map_err(|e| format!("open: {}", e))?;
+    Ok(())
+}
+
 /// Spawn the engine sidecar against a freshly-cloned repository and emit
 /// `project-changed`. Used by the Phase 3-F clone flow — the UI invokes
 /// `git_clone`, then hands the path here to finalise.
@@ -375,6 +409,8 @@ pub fn run() {
             git::git_reset_hard,
             git::git_push_force,
             shell_open_url,
+            reveal_in_finder,
+            open_in_terminal,
             open_cloned_project,
             ai_cli::ai_cli_check,
             ai_cli::ai_cli_is_authenticated,

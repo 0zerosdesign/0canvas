@@ -12,7 +12,7 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   Send, Bot, User, Loader2, Sparkles, Square, Check, AlertCircle,
   Undo2, ArrowRight, X, FolderOpen, ChevronDown, MoreHorizontal,
-  GitBranch, Eye, Plus, Image as ImageIcon,
+  GitBranch, Eye, Image as ImageIcon,
   Compass, Users, Plug, Clock, FileText, MessageCircle,
   Brain, LogIn, Search,
   type LucideIcon,
@@ -277,6 +277,360 @@ function filterSlashCommands(query: string): SlashCommand[] {
   if (!q) return SLASH_COMMANDS;
   return SLASH_COMMANDS.filter((c) =>
     c.label.slice(1).toLowerCase().startsWith(q),
+  );
+}
+
+// ── Model picker (Stream 5) ──────────────────────────────
+// Two-level dropdown: providers at top, models for the active provider
+// below. Matches the structure the user showed in the Claude / Codex
+// screenshots. Provider icon + tint mirrors the auth/brand identity.
+
+type ProviderKey = "claude" | "codex";
+
+type ModelEntry = {
+  value: string;
+  label: string;
+  badge?: string;
+};
+
+const MODELS_BY_PROVIDER: Record<ProviderKey, ModelEntry[]> = {
+  claude: [
+    { value: "claude-opus-4-7", label: "Claude Opus 4.7", badge: "NEW" },
+    { value: "claude-opus-4-6", label: "Claude Opus 4.6", badge: "1M" },
+    { value: "claude-sonnet-4-6", label: "Claude Sonnet 4.6" },
+    { value: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5" },
+  ],
+  codex: [
+    { value: "gpt-5.4", label: "GPT-5.4", badge: "NEW" },
+    { value: "gpt-5.3-codex", label: "GPT-5.3 Codex" },
+    { value: "gpt-5.2-codex", label: "GPT-5.2 Codex" },
+    { value: "gpt-5-codex", label: "GPT-5 Codex" },
+  ],
+};
+
+function providerKey(p: string): ProviderKey {
+  if (p === "codex" || p === "openai" || p === "chatgpt") return "codex";
+  return "claude";
+}
+
+function ProviderIcon({ provider, size = 12 }: { provider: ProviderKey; size?: number }) {
+  return provider === "claude" ? (
+    <Sparkles size={size} style={{ color: "var(--orange-400)" }} />
+  ) : (
+    <Bot size={size} style={{ color: "var(--color--text--on-surface-variant)" }} />
+  );
+}
+
+function ModelPickerPill({
+  settings,
+  onChange,
+}: {
+  settings: ReturnType<typeof useWorkspace>["state"]["aiSettings"];
+  onChange: (next: ReturnType<typeof useWorkspace>["state"]["aiSettings"]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc, true);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc, true);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const current = providerKey(settings.provider);
+  const models = MODELS_BY_PROVIDER[current];
+  const currentModelLabel =
+    models.find((m) => m.value === settings.model)?.label ?? models[0]?.label ?? "";
+
+  const switchProvider = (p: ProviderKey) => {
+    const firstModel = MODELS_BY_PROVIDER[p][0].value;
+    onChange({ ...settings, provider: p as typeof settings.provider, model: firstModel });
+  };
+
+  const pickModel = (value: string) => {
+    onChange({ ...settings, model: value });
+    setOpen(false);
+  };
+
+  return (
+    <div ref={rootRef} className="oc-chat-dropdown-root">
+      <button
+        className="oc-chat-toolbar-pill"
+        title={`Model: ${currentModelLabel}`}
+        onClick={() => setOpen((v) => !v)}
+        type="button"
+      >
+        <ProviderIcon provider={current} size={12} />
+        <ChevronDown size={10} className="oc-chat-toolbar-caret" />
+      </button>
+      {open && (
+        <div className="oc-chat-dropdown-menu oc-chat-model-menu">
+          {(["claude", "codex"] as ProviderKey[]).map((p) => (
+            <button
+              key={p}
+              className={`oc-chat-dropdown-item ${
+                current === p ? "is-active" : ""
+              }`}
+              onClick={() => {
+                switchProvider(p);
+                // leave menu open so the user can pick a model after switching
+              }}
+              type="button"
+            >
+              <span className="oc-chat-dropdown-item-row">
+                <ProviderIcon provider={p} size={14} />
+                <span className="oc-chat-dropdown-item-label">
+                  {p === "claude" ? "Claude" : "Codex"}
+                </span>
+              </span>
+              {current === p && (
+                <Check size={12} className="oc-chat-dropdown-item-check" />
+              )}
+            </button>
+          ))}
+          <div className="oc-chat-dropdown-divider" />
+          <div className="oc-chat-dropdown-section-label">
+            {current === "claude" ? "Model" : "Codex Model"}
+          </div>
+          {models.map((m) => (
+            <button
+              key={m.value}
+              className={`oc-chat-dropdown-item ${
+                settings.model === m.value ? "is-active" : ""
+              }`}
+              onClick={() => pickModel(m.value)}
+              type="button"
+            >
+              <span className="oc-chat-dropdown-item-row">
+                <span className="oc-chat-dropdown-item-label">{m.label}</span>
+                {m.badge && (
+                  <span className="oc-chat-dropdown-badge">{m.badge}</span>
+                )}
+              </span>
+              {settings.model === m.value && (
+                <Check size={12} className="oc-chat-dropdown-item-check" />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Open-project dropdown (Stream 5) ─────────────────────
+// "Open" button in the chat header → Open Terminal / Open in Finder
+// for the active project root. Mirrors the Cursor header pattern.
+
+function OpenProjectMenu() {
+  const [open, setOpen] = useState(false);
+  const [root, setRoot] = useState<string>("");
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    (async () => {
+      if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) {
+        return;
+      }
+      try {
+        const { invoke } = await import("@tauri-apps/api/core");
+        const r = await invoke<string | null>("get_engine_root");
+        setRoot(r ?? "");
+      } catch {
+        /* ignore — no Tauri */
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc, true);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc, true);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const handleAction = async (kind: "terminal" | "finder") => {
+    setOpen(false);
+    if (!root) return;
+    try {
+      const mod = await import("../../native/tauri-events");
+      if (kind === "terminal") await mod.openInTerminal(root);
+      else await mod.revealInFinder(root);
+    } catch (err) {
+      console.warn("[0canvas] open project action failed", err);
+    }
+  };
+
+  return (
+    <div ref={rootRef} className="oc-chat-dropdown-root">
+      <button
+        className="oc-chat-headerbtn"
+        title="Open project folder / terminal"
+        onClick={() => setOpen((v) => !v)}
+        type="button"
+        disabled={!root}
+      >
+        <FolderOpen size={13} />
+        <span>Open</span>
+        <ChevronDown size={11} className="oc-chat-headerbtn-caret" />
+      </button>
+      {open && (
+        <div className="oc-chat-dropdown-menu">
+          <button
+            className="oc-chat-dropdown-item"
+            onClick={() => handleAction("terminal")}
+            type="button"
+          >
+            <span className="oc-chat-dropdown-item-row">
+              <span className="oc-chat-dropdown-item-label">Open Terminal</span>
+            </span>
+          </button>
+          <button
+            className="oc-chat-dropdown-item"
+            onClick={() => handleAction("finder")}
+            type="button"
+          >
+            <span className="oc-chat-dropdown-item-row">
+              <span className="oc-chat-dropdown-item-label">Open in Finder</span>
+            </span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Branch switcher pill (Stream 5) ──────────────────────
+// Reads current branch + list on open via the git.branchList/Switch
+// helpers. Mirrors the Col 2 Git panel's branch menu in a compact
+// footer-pill form.
+
+function BranchSwitcherPill() {
+  const [open, setOpen] = useState(false);
+  const [branches, setBranches] = useState<
+    Array<{ name: string; isHead: boolean; isRemote: boolean }>
+  >([]);
+  const [busy, setBusy] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  const refresh = useCallback(async () => {
+    try {
+      const mod = await import("../../native/tauri-events");
+      const list = await mod.git.branchList();
+      setBranches(list);
+    } catch {
+      setBranches([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    refresh();
+    const onDoc = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc, true);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc, true);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open, refresh]);
+
+  // Initial load so the pill label reflects current branch on mount.
+  useEffect(() => { refresh(); }, [refresh]);
+
+  const current =
+    branches.find((b) => b.isHead)?.name ??
+    (branches[0]?.name ?? "main");
+  const local = branches.filter((b) => !b.isRemote);
+
+  const handleSwitch = async (name: string) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const mod = await import("../../native/tauri-events");
+      await mod.git.branchSwitch(name);
+      await refresh();
+      setOpen(false);
+    } catch (err) {
+      console.warn("[0canvas] branch switch failed", err);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div ref={rootRef} className="oc-chat-dropdown-root is-footer">
+      <button
+        className="oc-chat-footer-pill"
+        title={`Branch: ${current}`}
+        onClick={() => setOpen((v) => !v)}
+        type="button"
+      >
+        <GitBranch size={11} />
+        <span>{current}</span>
+        <ChevronDown size={10} className="oc-chat-toolbar-caret" />
+      </button>
+      {open && (
+        <div className="oc-chat-dropdown-menu">
+          <div className="oc-chat-dropdown-section-label">Branches</div>
+          {local.length === 0 ? (
+            <div className="oc-chat-dropdown-empty">
+              No branches found. Open a git repo to switch branches.
+            </div>
+          ) : (
+            local.map((b) => (
+              <button
+                key={b.name}
+                className={`oc-chat-dropdown-item ${
+                  b.isHead ? "is-active" : ""
+                }`}
+                onClick={() => !b.isHead && handleSwitch(b.name)}
+                disabled={b.isHead || busy}
+                type="button"
+              >
+                <span className="oc-chat-dropdown-item-row">
+                  <GitBranch size={11} />
+                  <span className="oc-chat-dropdown-item-label">{b.name}</span>
+                </span>
+                {b.isHead && (
+                  <Check size={12} className="oc-chat-dropdown-item-check" />
+                )}
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -1053,11 +1407,7 @@ Styles:\n${Object.entries(selectedElement.styles)
       <div className="oc-chat-header">
         <span className="oc-chat-title">{activeChatTitle}</span>
         <div className="oc-chat-header-actions">
-          <button className="oc-chat-headerbtn" title="Open project folder / terminal">
-            <FolderOpen size={13} />
-            <span>Open</span>
-            <ChevronDown size={11} className="oc-chat-headerbtn-caret" />
-          </button>
+          <OpenProjectMenu />
           {variantHistory.length > 0 && (
             <button className="oc-chat-iconbtn" onClick={handleUndo} title="Undo last AI change">
               <Undo2 size={13} />
@@ -1266,14 +1616,13 @@ Styles:\n${Object.entries(selectedElement.styles)
             data-0canvas="ai-input"
           />
           <div className="oc-chat-composer-toolbar">
-            <button
-              className="oc-chat-toolbar-pill"
-              title={`Model: ${aiSettings.model}`}
-              type="button"
-            >
-              <Sparkles size={12} style={{ color: providerIconTint }} />
-              <ChevronDown size={10} className="oc-chat-toolbar-caret" />
-            </button>
+            <ModelPickerPill
+              settings={aiSettings}
+              onChange={(next) => {
+                saveAiSettings(next);
+                dispatch({ type: "SET_AI_SETTINGS", settings: next });
+              }}
+            />
             <DropdownPill<AiThinkingEffort>
               title="Adaptive thinking"
               label={effortLabel(aiSettings.thinkingEffort)}
@@ -1291,9 +1640,6 @@ Styles:\n${Object.entries(selectedElement.styles)
                 dispatch({ type: "SET_AI_SETTINGS", settings: updated });
               }}
             />
-            <button className="oc-chat-toolbar-iconbtn" title="Attach" type="button">
-              <Plus size={14} />
-            </button>
             <button className="oc-chat-toolbar-iconbtn" title="Attach image" type="button">
               <ImageIcon size={13} />
             </button>
@@ -1339,11 +1685,7 @@ Styles:\n${Object.entries(selectedElement.styles)
 
       {/* Footer — branch pill, plan-only, token meter */}
       <div className="oc-chat-footer">
-        <button className="oc-chat-footer-pill" title="Active branch" type="button">
-          <GitBranch size={11} />
-          <span>main</span>
-          <ChevronDown size={10} className="oc-chat-toolbar-caret" />
-        </button>
+        <BranchSwitcherPill />
         <DropdownPill<AiPermissionMode>
           title="Permission mode"
           label={permissionLabel(aiSettings.permissionMode)}
