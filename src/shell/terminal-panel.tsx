@@ -1,25 +1,28 @@
 // ──────────────────────────────────────────────────────────
-// Terminal — xterm.js + tauri-plugin-pty
+// Terminal — xterm.js + tauri-plugin-pty, multi-session
 // ──────────────────────────────────────────────────────────
 //
-// Spawns the user's $SHELL in the current project root and
-// pipes it to an xterm.js instance. Arrow keys, mouse,
-// unicode, resize — all native because pty+xterm handle them.
+// Each TerminalSession spawns /bin/zsh -l in the current
+// project root and wires it bidirectionally to an xterm.js
+// instance. TerminalPanel manages any number of sessions
+// side-by-side: a tab strip at the top, plus-button to add,
+// close-button per tab. Inactive sessions stay mounted with
+// `display: none` so their pty keeps receiving output and
+// you don't lose state when switching away.
 //
-// Phase 1C scope:
-//   - Single session per mount (re-entering the tab reuses the
-//     live pty if it's still running; remount creates a new one).
-//   - Resize on container size change via the fit addon.
-//   - Clean shutdown on unmount: kill() the pty and dispose
-//     the xterm instance.
-//   - Clear user-visible error if the pty refuses to spawn.
+// Keyboard: ⌘T adds a new session, ⌘W closes the active one
+// (only fires when the Terminal tab is visible — xterm's
+// own shortcuts win otherwise).
 //
 // Deferred:
-//   - Multiple terminal sessions (tabs-within-a-tab).
-//   - Terminal persistence across 0canvas restarts.
+//   - Terminal persistence across 0canvas restarts (v0.2)
+//   - Per-session shell override (custom cwd / user-picked
+//     command) — currently every session is zsh in the engine
+//     root.
 // ──────────────────────────────────────────────────────────
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Plus, X as XIcon } from "lucide-react";
 import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { spawn, type IPty } from "tauri-pty";
@@ -64,9 +67,12 @@ const TERMINAL_THEME = {
   brightWhite: "#fff",
 };
 
-export function TerminalPanel() {
+// ── Single session (xterm + pty) ──────────────────────────
+
+function TerminalSession({ active }: { active: boolean }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<XTerm | null>(null);
+  const fitRef = useRef<FitAddon | null>(null);
   const ptyRef = useRef<IPty | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -86,25 +92,21 @@ export function TerminalPanel() {
       cursorBlink: true,
       allowProposedApi: true,
       scrollback: 10000,
-      // Without this xterm won't react to keydown events that lack a
-      // printable char (arrow keys, backspace) — not the user's issue
-      // here, but makes arrow history + Ctrl+C work out of the box.
       convertEol: false,
     });
     const fit = new FitAddon();
     term.loadAddon(fit);
     term.open(hostRef.current);
     termRef.current = term;
+    fitRef.current = fit;
 
-    // Fit as soon as the container has real dimensions, then focus so
-    // keystrokes land in xterm from the first paint.
     requestAnimationFrame(() => {
       try {
         fit.fit();
       } catch {
-        /* fit before layout settles is fine; resize observer re-runs */
+        /* fit before layout settles is fine */
       }
-      term.focus();
+      if (active) term.focus();
     });
 
     let cancelled = false;
@@ -121,11 +123,6 @@ export function TerminalPanel() {
           `\x1b[90m[0canvas] starting /bin/zsh${cwd ? ` in ${cwd}` : ""}\x1b[0m`,
         );
 
-        // Spawn the shell. We deliberately pass an empty env object so
-        // tauri-plugin-pty inherits the Tauri parent's environment as-is
-        // (which is the shell that launched the app — full $PATH, etc.).
-        // Passing `undefined` vars from the webview's fake `process.env`
-        // otherwise strips PATH and the shell can't resolve commands.
         const pty = spawn("/bin/zsh", ["-l"], {
           name: "xterm-256color",
           cols: term.cols,
@@ -134,12 +131,6 @@ export function TerminalPanel() {
         });
         ptyRef.current = pty;
 
-        // tauri-plugin-pty's Rust side returns Vec<u8>, which Tauri
-        // serializes to the JS invoke() boundary as a plain array of
-        // numbers (NOT a Uint8Array), despite what the plugin's .d.ts
-        // claims. Normalise every reasonable shape to a string before
-        // handing to xterm; silently dropping bytes here was the cause
-        // of the "terminal boots but no prompt ever appears" symptom.
         const dec = new TextDecoder();
         const toText = (data: unknown): string => {
           if (typeof data === "string") return data;
@@ -148,9 +139,8 @@ export function TerminalPanel() {
           if (Array.isArray(data)) return dec.decode(new Uint8Array(data));
           return "";
         };
-        const dataSub = pty.onData((data) => {
-          term.write(toText(data));
-        });
+
+        const dataSub = pty.onData((data) => term.write(toText(data)));
         disposeOnData = dataSub.dispose.bind(dataSub);
 
         const exitSub = pty.onExit(({ exitCode, signal }) => {
@@ -177,18 +167,16 @@ export function TerminalPanel() {
       }
     })();
 
-    // Click the host → give xterm focus (helps after tab-switching).
     const hostEl = hostRef.current;
     const onClick = () => term.focus();
     hostEl.addEventListener("mousedown", onClick);
 
-    // Resize observer → keep cols/rows in sync with the container.
     const ro = new ResizeObserver(() => {
       try {
         fit.fit();
         ptyRef.current?.resize(term.cols, term.rows);
       } catch {
-        /* ignore transient layout errors */
+        /* transient layout jitter */
       }
     });
     ro.observe(hostEl);
@@ -208,13 +196,138 @@ export function TerminalPanel() {
       ptyRef.current = null;
       term.dispose();
       termRef.current = null;
+      fitRef.current = null;
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Refit + focus when this session becomes active (it was display:none).
+  useEffect(() => {
+    if (!active) return;
+    requestAnimationFrame(() => {
+      try {
+        fitRef.current?.fit();
+        if (ptyRef.current && termRef.current) {
+          ptyRef.current.resize(termRef.current.cols, termRef.current.rows);
+        }
+      } catch {
+        /* ignore */
+      }
+      termRef.current?.focus();
+    });
+  }, [active]);
 
   return (
     <div className="oc-terminal">
       {error && <div className="oc-terminal__error">{error}</div>}
       <div ref={hostRef} className="oc-terminal__host" />
+    </div>
+  );
+}
+
+// ── Multi-session container ───────────────────────────────
+
+type SessionMeta = { id: string };
+
+function newSessionId(): string {
+  return `t-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
+export function TerminalPanel() {
+  const [sessions, setSessions] = useState<SessionMeta[]>(() => [
+    { id: newSessionId() },
+  ]);
+  const [activeId, setActiveId] = useState<string>(() => sessions[0].id);
+
+  const addSession = useCallback(() => {
+    const id = newSessionId();
+    setSessions((prev) => [...prev, { id }]);
+    setActiveId(id);
+  }, []);
+
+  const closeSession = useCallback(
+    (id: string) => {
+      setSessions((prev) => {
+        const next = prev.filter((s) => s.id !== id);
+        if (next.length === 0) {
+          const fresh: SessionMeta = { id: newSessionId() };
+          setActiveId(fresh.id);
+          return [fresh];
+        }
+        if (id === activeId) {
+          setActiveId(next[next.length - 1].id);
+        }
+        return next;
+      });
+    },
+    [activeId],
+  );
+
+  // ⌘T adds a session, ⌘W closes the active one — only while Terminal
+  // tab is visible so we don't interfere with Cmd+W elsewhere.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      if (e.shiftKey || e.altKey) return;
+      if (e.key.toLowerCase() === "t") {
+        e.preventDefault();
+        addSession();
+      } else if (e.key.toLowerCase() === "w") {
+        e.preventDefault();
+        closeSession(activeId);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [activeId, addSession, closeSession]);
+
+  return (
+    <div className="oc-terminal-panel">
+      <nav className="oc-terminal-panel__tabs" role="tablist">
+        {sessions.map((s, i) => {
+          const isActive = s.id === activeId;
+          return (
+            <div
+              key={s.id}
+              className={`oc-terminal-panel__tab ${isActive ? "is-active" : ""}`}
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => setActiveId(s.id)}
+            >
+              <span>Terminal {i + 1}</span>
+              <button
+                className="oc-terminal-panel__close"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closeSession(s.id);
+                }}
+                title="Close terminal"
+                aria-label="Close terminal"
+              >
+                <XIcon size={10} />
+              </button>
+            </div>
+          );
+        })}
+        <button
+          className="oc-terminal-panel__add"
+          onClick={addSession}
+          title="New terminal (⌘T)"
+          aria-label="New terminal"
+        >
+          <Plus size={12} />
+        </button>
+      </nav>
+      <div className="oc-terminal-panel__sessions">
+        {sessions.map((s) => (
+          <div
+            key={s.id}
+            className="oc-terminal-panel__session"
+            style={{ display: s.id === activeId ? "flex" : "none" }}
+          >
+            <TerminalSession active={s.id === activeId} />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

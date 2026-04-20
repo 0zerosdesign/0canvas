@@ -221,6 +221,23 @@ export type WorkspaceState = {
 
   // AI settings
   aiSettings: AiSettings;
+
+  // Chat threads (Phase 1B-e). Persisted via src/native/settings.ts;
+  // `activeChatId` scopes which conversation the Column 2 Chat panel
+  // is currently rendering. Messages are kept per-mount inside
+  // AIChatPanel; switching chats remounts with a fresh message list.
+  chats: ChatThread[];
+  activeChatId: string | null;
+};
+
+export type ChatThread = {
+  id: string;
+  /** Absolute path of the project this chat belongs to, or "" for the
+   *  ambient "No project" folder when 0canvas hasn't been rooted yet. */
+  folder: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
 };
 
 type Action =
@@ -293,6 +310,13 @@ type Action =
   | { type: "SHOW_INLINE_EDIT"; show: boolean }
   | { type: "SHOW_COMMAND_PALETTE"; show: boolean }
   | { type: "SHOW_VISUAL_DIFF"; diff: WorkspaceState["showVisualDiff"] }
+  // Chat threading (Phase 1B-e)
+  | { type: "HYDRATE_CHATS"; chats: ChatThread[]; activeChatId: string | null }
+  | { type: "ADD_CHAT"; chat: ChatThread }
+  | { type: "SET_ACTIVE_CHAT"; id: string | null }
+  | { type: "DELETE_CHAT"; id: string }
+  | { type: "UPDATE_CHAT_TITLE"; id: string; title: string }
+  | { type: "TOUCH_CHAT"; id: string }
 
 // ──────────────────────────────────────────────────────────
 // IDE definitions
@@ -341,6 +365,8 @@ const initialState: WorkspaceState = {
   themeMode: false,
   themeChanges: [],
   aiSettings: loadAiSettings(),
+  chats: [],
+  activeChatId: null,
 };
 
 // ──────────────────────────────────────────────────────────
@@ -423,6 +449,42 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
       return { ...state, showCommandPalette: action.show };
     case "SHOW_VISUAL_DIFF":
       return { ...state, showVisualDiff: action.diff };
+    // ── Chat threads ──────────────────────────────────────
+    case "HYDRATE_CHATS":
+      return { ...state, chats: action.chats, activeChatId: action.activeChatId };
+    case "ADD_CHAT":
+      return {
+        ...state,
+        chats: [...state.chats, action.chat],
+        activeChatId: action.chat.id,
+      };
+    case "SET_ACTIVE_CHAT":
+      return { ...state, activeChatId: action.id };
+    case "DELETE_CHAT": {
+      const next = state.chats.filter((c) => c.id !== action.id);
+      return {
+        ...state,
+        chats: next,
+        activeChatId:
+          state.activeChatId === action.id
+            ? next[next.length - 1]?.id ?? null
+            : state.activeChatId,
+      };
+    }
+    case "UPDATE_CHAT_TITLE":
+      return {
+        ...state,
+        chats: state.chats.map((c) =>
+          c.id === action.id ? { ...c, title: action.title, updatedAt: Date.now() } : c,
+        ),
+      };
+    case "TOUCH_CHAT":
+      return {
+        ...state,
+        chats: state.chats.map((c) =>
+          c.id === action.id ? { ...c, updatedAt: Date.now() } : c,
+        ),
+      };
     case "TOGGLE_ELEMENT_VISIBILITY":
       return {
         ...state,

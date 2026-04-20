@@ -11,7 +11,7 @@
 // - Profile row opens the Phase 1B-b menu (next sub-step).
 // ──────────────────────────────────────────────────────────
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   MessageSquarePlus,
   Sparkles,
@@ -24,8 +24,13 @@ import {
   HelpCircle,
   Settings as SettingsIcon,
   LogOut,
+  ChevronDown,
+  ChevronRight,
+  Folder,
+  MessageSquare,
+  Trash2,
 } from "lucide-react";
-import { useWorkspace } from "../0canvas/store/store";
+import { useWorkspace, type ChatThread } from "../0canvas/store/store";
 import {
   discoverLocalhostServices,
   type LocalhostService,
@@ -34,6 +39,7 @@ import { getSetting, setSetting } from "../native/settings";
 
 const DOCS_URL = "https://github.com/zerosdesign/0canvas#readme";
 const COLLAPSE_KEY = "column-1-collapsed";
+const FOLDERS_COLLAPSED_KEY = "column-1-folders-collapsed";
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -122,6 +128,45 @@ function ServiceRow({
   );
 }
 
+// ── Chat helpers ─────────────────────────────────────────
+
+function folderBasename(folder: string): string {
+  if (!folder) return "No project";
+  const parts = folder.split("/").filter(Boolean);
+  return parts[parts.length - 1] || folder;
+}
+
+function groupChatsByFolder(chats: ChatThread[]): Map<string, ChatThread[]> {
+  const map = new Map<string, ChatThread[]>();
+  for (const chat of chats) {
+    const list = map.get(chat.folder) ?? [];
+    list.push(chat);
+    map.set(chat.folder, list);
+  }
+  // Sort each folder's chats by updatedAt desc.
+  for (const list of map.values()) {
+    list.sort((a, b) => b.updatedAt - a.updatedAt);
+  }
+  return map;
+}
+
+async function getCurrentProjectFolder(): Promise<string> {
+  if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) {
+    return "";
+  }
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const root = await invoke<string | null>("get_engine_root");
+    return root ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function newChatId(): string {
+  return `chat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
 function useProfileMenu() {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -155,6 +200,9 @@ export function Column1Nav() {
   const [collapsed, setCollapsed] = useState<boolean>(() =>
     getSetting<boolean>(COLLAPSE_KEY, false),
   );
+  const [foldersCollapsed, setFoldersCollapsed] = useState<Record<string, boolean>>(() =>
+    getSetting<Record<string, boolean>>(FOLDERS_COLLAPSED_KEY, {}),
+  );
 
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
@@ -163,6 +211,41 @@ export function Column1Nav() {
       return next;
     });
   };
+
+  const toggleFolder = (folder: string) => {
+    setFoldersCollapsed((prev) => {
+      const next = { ...prev, [folder]: !prev[folder] };
+      setSetting(FOLDERS_COLLAPSED_KEY, next);
+      return next;
+    });
+  };
+
+  const handleNewChat = useCallback(async () => {
+    const folder = await getCurrentProjectFolder();
+    const chat: ChatThread = {
+      id: newChatId(),
+      folder,
+      title: "New chat",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    dispatch({ type: "ADD_CHAT", chat });
+  }, [dispatch]);
+
+  const handleSelectChat = (id: string) => {
+    dispatch({ type: "SET_ACTIVE_CHAT", id });
+  };
+
+  const handleDeleteChat = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    dispatch({ type: "DELETE_CHAT", id });
+  };
+
+  const grouped = React.useMemo(() => groupChatsByFolder(state.chats), [state.chats]);
+  const folderKeys = React.useMemo(
+    () => Array.from(grouped.keys()).sort((a, b) => a.localeCompare(b)),
+    [grouped],
+  );
 
   const handleSelect = (service: LocalhostService) => {
     if (!state.project) return;
@@ -220,8 +303,8 @@ export function Column1Nav() {
       <div className="oc-column-1__actions">
         <button
           className="oc-column-1__action"
-          disabled
-          title={collapsed ? "New Chat (Phase 1B-e)" : undefined}
+          onClick={handleNewChat}
+          title={collapsed ? "New Chat" : undefined}
         >
           <MessageSquarePlus size={16} />
           {!collapsed && <span>New Chat</span>}
@@ -229,7 +312,7 @@ export function Column1Nav() {
         <button
           className="oc-column-1__action"
           disabled
-          title={collapsed ? "Skills (Phase 1B-e)" : undefined}
+          title={collapsed ? "Skills (later phase)" : undefined}
         >
           <Sparkles size={16} />
           {!collapsed && <span>Skills</span>}
@@ -238,9 +321,70 @@ export function Column1Nav() {
 
       {!collapsed && (
         <>
-          <section className="oc-column-1__section">
-            <h3 className="oc-column-1__section-title">CHATS</h3>
-            <p className="oc-column-1__placeholder">Chat threads land in Phase 1B-e.</p>
+          <section className="oc-column-1__section oc-column-1__chats">
+            <h3 className="oc-column-1__section-title">
+              CHATS
+              {state.chats.length > 0 && (
+                <span className="oc-column-1__section-badge">{state.chats.length}</span>
+              )}
+            </h3>
+            {state.chats.length === 0 ? (
+              <p className="oc-column-1__placeholder">
+                Click <strong>New Chat</strong> to start a conversation. Chats are grouped by project.
+              </p>
+            ) : (
+              <div className="oc-column-1__folders">
+                {folderKeys.map((folder) => {
+                  const chats = grouped.get(folder) ?? [];
+                  const isCollapsed = foldersCollapsed[folder] === true;
+                  return (
+                    <div key={folder} className="oc-column-1__folder">
+                      <button
+                        className="oc-column-1__folder-header"
+                        onClick={() => toggleFolder(folder)}
+                        title={folder || "Not associated with a project"}
+                      >
+                        {isCollapsed ? (
+                          <ChevronRight size={12} />
+                        ) : (
+                          <ChevronDown size={12} />
+                        )}
+                        <Folder size={12} />
+                        <span className="oc-column-1__folder-name">
+                          {folderBasename(folder)}
+                        </span>
+                        <span className="oc-column-1__folder-count">{chats.length}</span>
+                      </button>
+                      {!isCollapsed && (
+                        <div className="oc-column-1__chat-list">
+                          {chats.map((chat) => (
+                            <div
+                              key={chat.id}
+                              className={`oc-column-1__chat ${
+                                state.activeChatId === chat.id ? "is-active" : ""
+                              }`}
+                              onClick={() => handleSelectChat(chat.id)}
+                              title={chat.title}
+                            >
+                              <MessageSquare size={12} />
+                              <span className="oc-column-1__chat-title">{chat.title}</span>
+                              <button
+                                className="oc-column-1__chat-delete"
+                                onClick={(e) => handleDeleteChat(e, chat.id)}
+                                title="Delete chat"
+                                aria-label="Delete chat"
+                              >
+                                <Trash2 size={10} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </section>
 
           <section className="oc-column-1__section">

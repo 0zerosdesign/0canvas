@@ -18,14 +18,18 @@
 // ──────────────────────────────────────────────────────────
 
 import React, { useEffect } from "react";
-import { WorkspaceProvider, useWorkspace } from "./0canvas/store/store";
+import { WorkspaceProvider, useWorkspace, type ChatThread } from "./0canvas/store/store";
 import { BridgeProvider } from "./0canvas/bridge/use-bridge";
 import { AutoConnect, EngineWorkspace } from "./0canvas/engine/0canvas-engine";
 import { injectStyles } from "./0canvas/engine/0canvas-styles";
 import { Column1Nav } from "./shell/column1-nav";
 import { Column2Workspace } from "./shell/column2-workspace";
 import { onProjectChanged } from "./native/tauri-events";
+import { getSetting, setSetting } from "./native/settings";
 import "./shell/app-shell.css";
+
+const CHATS_STORAGE_KEY = "chats-v1";
+const ACTIVE_CHAT_KEY = "active-chat-id";
 
 // Inject the existing 0canvas overlay CSS exactly once at module load.
 // The workspace panels inside Column 3 rely on it.
@@ -42,6 +46,43 @@ function ForceDesignPageOnBoot() {
   useEffect(() => {
     dispatch({ type: "SET_ACTIVE_PAGE", page: "design" });
   }, [dispatch]);
+  return null;
+}
+
+/**
+ * Hydrate the chat list from settings on mount; save back on every
+ * change. Kept separate from the UI components so Column 1 and the
+ * Chat panel can both render off the same store-backed list without
+ * re-implementing persistence.
+ */
+function ChatsPersistence() {
+  const { state, dispatch } = useWorkspace();
+  const hydrated = React.useRef(false);
+
+  // Hydrate once.
+  useEffect(() => {
+    if (hydrated.current) return;
+    hydrated.current = true;
+    const chats = getSetting<ChatThread[]>(CHATS_STORAGE_KEY, []);
+    const activeChatId = getSetting<string | null>(ACTIVE_CHAT_KEY, null);
+    const stillActive =
+      activeChatId && chats.some((c) => c.id === activeChatId)
+        ? activeChatId
+        : null;
+    dispatch({ type: "HYDRATE_CHATS", chats, activeChatId: stillActive });
+  }, [dispatch]);
+
+  // Persist on change (after hydration).
+  useEffect(() => {
+    if (!hydrated.current) return;
+    setSetting(CHATS_STORAGE_KEY, state.chats);
+  }, [state.chats]);
+
+  useEffect(() => {
+    if (!hydrated.current) return;
+    setSetting(ACTIVE_CHAT_KEY, state.activeChatId);
+  }, [state.activeChatId]);
+
   return null;
 }
 
@@ -75,6 +116,7 @@ export function AppShell() {
         <AutoConnect>
           <ForceDesignPageOnBoot />
           <ReloadOnProjectChange />
+          <ChatsPersistence />
           <div className="oc-app">
             <Column1Nav />
             <Column2Workspace />

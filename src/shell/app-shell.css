@@ -246,6 +246,119 @@
   line-height: 1.5;
 }
 
+/* ── Chats tree ────────────────────────────────────────── */
+
+.oc-column-1__chats {
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.oc-column-1__folders {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 2px;
+}
+
+.oc-column-1__folder {
+  display: flex;
+  flex-direction: column;
+}
+
+.oc-column-1__folder-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--oc-text, #e6e6e6);
+  font-size: 11px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  width: 100%;
+}
+
+.oc-column-1__folder-header:hover {
+  background: var(--oc-hover, rgba(255, 255, 255, 0.04));
+}
+
+.oc-column-1__folder-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.oc-column-1__folder-count {
+  font-size: 10px;
+  color: var(--oc-text-muted, #888);
+  padding: 0 4px;
+}
+
+.oc-column-1__chat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 2px 0 2px 14px;
+}
+
+.oc-column-1__chat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  color: var(--oc-text-muted, #888);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.oc-column-1__chat:hover {
+  background: var(--oc-hover, rgba(255, 255, 255, 0.05));
+  color: var(--oc-text, #e6e6e6);
+}
+
+.oc-column-1__chat.is-active {
+  background: rgba(59, 130, 246, 0.15);
+  color: #cfe0ff;
+}
+
+.oc-column-1__chat-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.oc-column-1__chat-delete {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  color: var(--oc-text-muted, #888);
+  cursor: pointer;
+  padding: 0;
+}
+
+.oc-column-1__chat:hover .oc-column-1__chat-delete {
+  display: inline-flex;
+}
+
+.oc-column-1__chat-delete:hover {
+  background: rgba(255, 107, 107, 0.15);
+  color: #ff6b6b;
+}
+
 .oc-column-1__spacer {
   flex: 1;
 }
@@ -404,6 +517,63 @@
   min-height: 0;
 }
 
+/* Context chips above the chat input. */
+.oc-ai-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 10px 0;
+  flex: 0 0 auto;
+}
+
+.oc-ai-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px 3px 8px;
+  background: rgba(59, 130, 246, 0.15);
+  color: #cfe0ff;
+  border-radius: 10px;
+  font-size: 10px;
+  font-family: var(--oc-font-mono, ui-monospace, monospace);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.oc-ai-chip.is-variant {
+  background: rgba(139, 92, 246, 0.15);
+  color: #d6c5ff;
+  border-color: rgba(139, 92, 246, 0.25);
+}
+
+.oc-ai-chip code {
+  background: none;
+  color: inherit;
+  padding: 0;
+}
+
+.oc-ai-chip-x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.6;
+  padding: 0;
+  margin-left: 2px;
+  border-radius: 50%;
+}
+
+.oc-ai-chip-x:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.12);
+}
+
 /* Terminal tab: xterm needs zero-padding full-bleed area; its own scroll
  * is inside the canvas. */
 .oc-column-2__body.is-terminal {
@@ -439,6 +609,102 @@
 
 .oc-terminal__host .xterm .xterm-viewport {
   background: transparent;
+}
+
+/* ── Multi-session terminal ────────────────────────────── */
+
+.oc-terminal-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--oc-bg, #0f0f0f);
+}
+
+.oc-terminal-panel__tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 6px 0;
+  border-bottom: 1px solid var(--oc-border, rgba(255, 255, 255, 0.06));
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+
+.oc-terminal-panel__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px 5px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 5px 5px 0 0;
+  color: var(--oc-text-muted, #888);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.oc-terminal-panel__tab:hover {
+  background: var(--oc-hover, rgba(255, 255, 255, 0.04));
+  color: var(--oc-text, #e6e6e6);
+}
+
+.oc-terminal-panel__tab.is-active {
+  background: var(--oc-hover-strong, rgba(255, 255, 255, 0.08));
+  color: var(--oc-text, #e6e6e6);
+}
+
+.oc-terminal-panel__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  color: var(--oc-text-muted, #888);
+  cursor: pointer;
+  padding: 0;
+}
+
+.oc-terminal-panel__close:hover {
+  background: var(--oc-hover-strong, rgba(255, 255, 255, 0.12));
+  color: var(--oc-text, #e6e6e6);
+}
+
+.oc-terminal-panel__add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--oc-text-muted, #888);
+  cursor: pointer;
+  margin-left: 2px;
+}
+
+.oc-terminal-panel__add:hover {
+  background: var(--oc-hover, rgba(255, 255, 255, 0.06));
+  color: var(--oc-text, #e6e6e6);
+}
+
+.oc-terminal-panel__sessions {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  position: relative;
+}
+
+.oc-terminal-panel__session {
+  flex: 1;
+  min-height: 0;
+  display: flex;
 }
 
 /* ── Env panel ─────────────────────────────────────────── */

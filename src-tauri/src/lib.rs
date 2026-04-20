@@ -234,6 +234,8 @@ pub fn run() {
             git::git_log_recent,
             git::git_branch_list,
             git::git_branch_switch,
+            git::git_branch_create,
+            git::git_branch_delete,
         ])
         .setup(|app| {
             // Spawn the engine before the webview tries to connect. If it
@@ -245,6 +247,12 @@ pub fn run() {
                 Ok(port) => println!("[0canvas] engine spawned on port {} at {:?}", port, root),
                 Err(err) => eprintln!("[0canvas] engine spawn failed: {}", err),
             }
+
+            // Crash watchdog: polls the engine's TCP port and respawns
+            // after three consecutive failed probes. Lives for the life
+            // of the process; `sidecar::shutdown` sets the stop flag so
+            // it doesn't race against the clean-quit shutdown.
+            sidecar::start_watchdog(&state, app.handle().clone());
 
             let menu = build_app_menu(app.handle())?;
             app.set_menu(menu)?;

@@ -12,7 +12,7 @@
 // not by the tab itself.
 // ──────────────────────────────────────────────────────────
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   MessageSquare,
   GitBranch,
@@ -26,6 +26,7 @@ import { TerminalPanel } from "./terminal-panel";
 import { EnvPanel } from "./env-panel";
 import { TodoPanel } from "./todo-panel";
 import { GitPanel } from "./git-panel";
+import { useWorkspace } from "../0canvas/store/store";
 
 type TabId = "chat" | "git" | "terminal" | "env" | "todo";
 
@@ -45,11 +46,34 @@ const TAB_PLACEHOLDERS: Partial<Record<TabId, { title: string; body: string }>> 
 
 export function Column2Workspace() {
   const [activeTab, setActiveTab] = useState<TabId>("chat");
+  const { state } = useWorkspace();
+  // Remount AIChatPanel when the active chat changes so each thread
+  // starts with a clean slate. Message persistence per-chat is a v0.2
+  // concern (needs message array in the store).
+  const chatKey = state.activeChatId ?? "default";
+
+  // ⌘1..⌘5 → jump to the nth tab. Not fired if any modifier beyond the
+  // primary meta/ctrl is held so this doesn't clobber xterm's Cmd+Shift+
+  // shortcuts inside the Terminal tab.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      if (e.shiftKey || e.altKey) return;
+      const idx = ["1", "2", "3", "4", "5"].indexOf(e.key);
+      if (idx === -1) return;
+      const tab = TABS[idx];
+      if (!tab) return;
+      e.preventDefault();
+      setActiveTab(tab.id);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   return (
     <section className="oc-column-2" aria-label="Agent Workspace">
       <nav className="oc-column-2__tabs" role="tablist">
-        {TABS.map(({ id, label, icon: Icon }) => {
+        {TABS.map(({ id, label, icon: Icon }, idx) => {
           const isActive = activeTab === id;
           return (
             <button
@@ -58,7 +82,7 @@ export function Column2Workspace() {
               aria-selected={isActive}
               className={`oc-column-2__tab ${isActive ? "is-active" : ""}`}
               onClick={() => setActiveTab(id)}
-              title={label}
+              title={`${label}  ⌘${idx + 1}`}
             >
               <Icon size={16} />
               <span>{label}</span>
@@ -77,7 +101,7 @@ export function Column2Workspace() {
         }`}
         role="tabpanel"
       >
-        {activeTab === "chat" && <AIChatPanel />}
+        {activeTab === "chat" && <AIChatPanel key={chatKey} />}
         {activeTab === "terminal" && <TerminalPanel />}
         {activeTab === "env" && <EnvPanel />}
         {activeTab === "todo" && <TodoPanel />}

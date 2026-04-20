@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────
-// Engine sidecar — spawn, track, shutdown
+// Engine sidecar — spawn, track, shutdown, crash watchdog
 // ──────────────────────────────────────────────────────────
 //
 // The Node.js 0canvas engine runs as a child process of the
@@ -7,45 +7,64 @@
 // 127.0.0.1:24193 (retries up to 24200) and writes the actual
 // port to `<project_root>/.0canvas/.port` after binding.
 //
-// Phase 1A-2 implementation notes:
-// - Uses std::process::Command to spawn `node dist-engine/cli.js`.
-//   Phase 1A-3 swaps this for a Bun-compiled single-file binary
-//   located in src-tauri/binaries/ for production bundles.
-// - Port discovery polls `.0canvas/.port` for up to 10 seconds.
-// - `shutdown()` MUST be called from the window-destroy handler,
-//   otherwise the Node child outlives the Tauri window and eats
-//   port 24193 on the next launch.
+// Crash recovery: a lightweight watchdog task polls a TCP
+// connection against the bound port every 2 s. If the port
+// stops responding for three consecutive probes, we respawn
+// the engine with the last-known project root and emit an
+// `engine-restarted { port }` event so the webview can drop
+// cached state that assumed the old process.
+//
+// `shutdown()` MUST be called from the window-destroy handler,
+// otherwise the Node child outlives the Tauri window and eats
+// port 24193 on the next launch.
 //
 // ──────────────────────────────────────────────────────────
 
 use std::fs;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
-pub struct SidecarState {
+use tauri::{AppHandle, Emitter};
+
+struct SidecarInner {
     child: Mutex<Option<Child>>,
     port: Mutex<Option<u16>>,
     root: Mutex<Option<PathBuf>>,
+    /// Set to true by `shutdown()` so the watchdog stops respawning.
+    shutting_down: Mutex<bool>,
+    /// Bumped every successful spawn. The watchdog captures it at launch
+    /// and bails if the counter moves — that means another spawn replaced
+    /// the child this task was watching.
+    spawn_generation: Mutex<u64>,
+}
+
+pub struct SidecarState {
+    inner: Arc<SidecarInner>,
 }
 
 impl SidecarState {
     pub fn new() -> Self {
         Self {
-            child: Mutex::new(None),
-            port: Mutex::new(None),
-            root: Mutex::new(None),
+            inner: Arc::new(SidecarInner {
+                child: Mutex::new(None),
+                port: Mutex::new(None),
+                root: Mutex::new(None),
+                shutting_down: Mutex::new(false),
+                spawn_generation: Mutex::new(0),
+            }),
         }
     }
 
     pub fn current_port(&self) -> Option<u16> {
-        *self.port.lock().unwrap()
+        *self.inner.port.lock().unwrap()
     }
 
     pub fn current_root(&self) -> Option<PathBuf> {
-        self.root.lock().unwrap().clone()
+        self.inner.root.lock().unwrap().clone()
     }
 }
 
@@ -54,17 +73,8 @@ impl SidecarState {
 /// Layout differs between the dev tree and the bundled .app:
 ///
 /// Dev:     `<repo>/src-tauri/binaries/0canvas-engine-<triple>`
-///          (kept with the triple suffix — `pnpm build:sidecar` writes
-///          the exact name Tauri expects to find for `externalBin`)
-///
 /// Release: `<App>.app/Contents/MacOS/0canvas-engine`
-///          (Tauri STRIPS the `-<triple>` suffix during bundling on macOS
-///          and Linux; Windows keeps it plus `.exe`. Ask me how I learned
-///          this the hard way.)
-///
-/// We try every reasonable combination in release-first, dev-fallback
-/// order so a mis-located binary fails with a clear error rather than
-/// a silent "engine never connects" bug.
+///          (Tauri STRIPS the `-<triple>` suffix on macOS/Linux.)
 fn locate_engine_binary() -> Result<PathBuf, String> {
     let triple = match std::env::consts::ARCH {
         "aarch64" => "aarch64-apple-darwin",
@@ -78,16 +88,9 @@ fn locate_engine_binary() -> Result<PathBuf, String> {
         .ok_or_else(|| "current_exe has no parent".to_string())?
         .to_path_buf();
 
-    // Order matters: check the release layout first because in a bundled
-    // .app the dev path happens to NOT exist (exe_dir is inside the .app,
-    // walking up doesn't reach <repo>/src-tauri/binaries).
     let candidates: [PathBuf; 3] = [
-        // Release: .app/Contents/MacOS/0canvas-engine  (triple stripped)
         exe_dir.join("0canvas-engine"),
-        // Also handle the pre-strip name in case Tauri behavior changes
         exe_dir.join(format!("0canvas-engine-{}", triple)),
-        // Dev: <repo>/src-tauri/binaries/0canvas-engine-<triple>
-        //      exe_dir is <repo>/src-tauri/target/debug → pop twice to src-tauri
         {
             let mut d = exe_dir.clone();
             d.pop();
@@ -114,19 +117,27 @@ fn locate_engine_binary() -> Result<PathBuf, String> {
     ))
 }
 
+fn port_reachable(port: u16) -> bool {
+    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), port);
+    TcpStream::connect_timeout(&addr, Duration::from_millis(500)).is_ok()
+}
+
 /// Spawn the engine with `project_root` as its working directory.
 /// Kills any previous child first, then polls for `<root>/.0canvas/.port`.
 pub fn spawn_engine(state: &SidecarState, project_root: &Path) -> Result<u16, String> {
+    spawn_engine_impl(&state.inner, project_root)
+}
+
+fn spawn_engine_impl(inner: &Arc<SidecarInner>, project_root: &Path) -> Result<u16, String> {
     // Kill any previous engine owned by this state.
-    if let Some(mut prev) = state.child.lock().unwrap().take() {
+    if let Some(mut prev) = inner.child.lock().unwrap().take() {
         let _ = prev.kill();
         let _ = prev.wait();
     }
-    *state.port.lock().unwrap() = None;
+    *inner.port.lock().unwrap() = None;
 
     let engine_bin = locate_engine_binary()?;
 
-    // Remove any stale port file so we know the new one is genuinely written.
     let port_file = project_root.join(".0canvas").join(".port");
     let _ = fs::remove_file(&port_file);
 
@@ -137,22 +148,25 @@ pub fn spawn_engine(state: &SidecarState, project_root: &Path) -> Result<u16, St
         .arg("--port")
         .arg("24193")
         .current_dir(project_root)
-        // Engine's startup logs go to the Tauri parent's stdout/stderr so they
-        // surface in the `cargo tauri dev` terminal alongside Rust output.
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .spawn()
         .map_err(|e| format!("spawn failed: {}", e))?;
 
-    *state.child.lock().unwrap() = Some(child);
-    *state.root.lock().unwrap() = Some(project_root.to_path_buf());
+    *inner.child.lock().unwrap() = Some(child);
+    *inner.root.lock().unwrap() = Some(project_root.to_path_buf());
+    // Bumping the generation invalidates any in-flight watchdog loop that
+    // was watching a previous spawn.
+    {
+        let mut gen = inner.spawn_generation.lock().unwrap();
+        *gen = gen.wrapping_add(1);
+    }
 
-    // Poll for .0canvas/.port — engine writes it after binding.
     let deadline = Instant::now() + Duration::from_secs(10);
     while Instant::now() < deadline {
         if let Ok(content) = fs::read_to_string(&port_file) {
             if let Ok(port) = content.trim().parse::<u16>() {
-                *state.port.lock().unwrap() = Some(port);
+                *inner.port.lock().unwrap() = Some(port);
                 println!("[0canvas] engine ready on port {}", port);
                 return Ok(port);
             }
@@ -162,13 +176,79 @@ pub fn spawn_engine(state: &SidecarState, project_root: &Path) -> Result<u16, St
     Err("engine did not bind within 10 seconds".into())
 }
 
-/// Kill the engine child cleanly. Idempotent.
+/// Kill the engine child cleanly. Idempotent. Flips `shutting_down` so the
+/// watchdog stops respawning.
 pub fn shutdown(state: &SidecarState) {
-    if let Some(mut child) = state.child.lock().unwrap().take() {
+    *state.inner.shutting_down.lock().unwrap() = true;
+    if let Some(mut child) = state.inner.child.lock().unwrap().take() {
         let _ = child.kill();
         let _ = child.wait();
         println!("[0canvas] engine stopped");
     }
-    *state.port.lock().unwrap() = None;
-    *state.root.lock().unwrap() = None;
+    *state.inner.port.lock().unwrap() = None;
+    *state.inner.root.lock().unwrap() = None;
+}
+
+/// Start the watchdog task. Call once from setup; it runs for the life of
+/// the process. Every 2 s it probes the bound port over TCP; three
+/// consecutive failures trigger a respawn at the last known project root
+/// and an `engine-restarted` event with the new port.
+pub fn start_watchdog(state: &SidecarState, app: AppHandle) {
+    let inner = state.inner.clone();
+
+    thread::spawn(move || {
+        // How many consecutive unreachable probes trigger a respawn.
+        const FAIL_THRESHOLD: u32 = 3;
+        const POLL_INTERVAL: Duration = Duration::from_secs(2);
+
+        let mut fails: u32 = 0;
+
+        loop {
+            thread::sleep(POLL_INTERVAL);
+            if *inner.shutting_down.lock().unwrap() {
+                return;
+            }
+
+            let port = *inner.port.lock().unwrap();
+            let Some(port) = port else {
+                // No port recorded — probably never spawned, nothing to
+                // monitor yet.
+                fails = 0;
+                continue;
+            };
+
+            if port_reachable(port) {
+                fails = 0;
+                continue;
+            }
+
+            fails += 1;
+            if fails < FAIL_THRESHOLD {
+                continue;
+            }
+
+            // Three strikes — respawn at the recorded root.
+            let root = inner.root.lock().unwrap().clone();
+            let Some(root) = root else {
+                // No root recorded, can't respawn. Back off.
+                fails = 0;
+                continue;
+            };
+
+            eprintln!(
+                "[0canvas] engine unreachable on port {} after {} probes; respawning",
+                port, FAIL_THRESHOLD
+            );
+            fails = 0;
+            match spawn_engine_impl(&inner, &root) {
+                Ok(new_port) => {
+                    println!("[0canvas] watchdog respawned engine on port {}", new_port);
+                    let _ = app.emit("engine-restarted", new_port);
+                }
+                Err(err) => {
+                    eprintln!("[0canvas] watchdog respawn failed: {}", err);
+                }
+            }
+        }
+    });
 }

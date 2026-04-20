@@ -576,3 +576,55 @@ pub fn git_branch_switch(
     repo.set_head(&refname).map_err(|e| e.to_string())?;
     Ok(())
 }
+
+/// Create a new local branch at HEAD. If `checkout` is true, also switches
+/// to the new branch (mirrors `git checkout -b`). Errors if the branch
+/// already exists.
+#[tauri::command]
+pub fn git_branch_create(
+    state: tauri::State<'_, SidecarState>,
+    name: String,
+    checkout: bool,
+) -> Result<(), String> {
+    let trimmed = name.trim();
+    if trimmed.is_empty() {
+        return Err("branch name is empty".into());
+    }
+    let root = root_from_state(&state)?;
+    let repo = open_repo(&root)?;
+    let head_commit = repo
+        .head()
+        .map_err(|e| format!("head: {}", e))?
+        .peel_to_commit()
+        .map_err(|e| format!("peel_to_commit: {}", e))?;
+    repo.branch(trimmed, &head_commit, false)
+        .map_err(|e| format!("branch({}): {}", trimmed, e))?;
+    if checkout {
+        let refname = format!("refs/heads/{}", trimmed);
+        let obj = repo
+            .revparse_single(&refname)
+            .map_err(|e| format!("revparse({}): {}", refname, e))?;
+        repo.checkout_tree(&obj, Some(CheckoutBuilder::new().safe()))
+            .map_err(|e| format!("checkout: {}", e))?;
+        repo.set_head(&refname).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+/// Delete a local branch. Refuses if the branch is the current HEAD.
+#[tauri::command]
+pub fn git_branch_delete(
+    state: tauri::State<'_, SidecarState>,
+    name: String,
+) -> Result<(), String> {
+    let root = root_from_state(&state)?;
+    let repo = open_repo(&root)?;
+    let mut branch = repo
+        .find_branch(&name, BranchType::Local)
+        .map_err(|e| format!("find_branch({}): {}", name, e))?;
+    if branch.is_head() {
+        return Err("cannot delete the currently checked-out branch".into());
+    }
+    branch.delete().map_err(|e| format!("delete: {}", e))?;
+    Ok(())
+}

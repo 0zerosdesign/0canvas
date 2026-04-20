@@ -186,6 +186,10 @@ export const git = {
   branchList: () => gitInvoke<GitBranch[]>("git_branch_list"),
   branchSwitch: (name: string) =>
     gitInvoke<void>("git_branch_switch", { name }),
+  branchCreate: (name: string, checkout: boolean) =>
+    gitInvoke<void>("git_branch_create", { name, checkout }),
+  branchDelete: (name: string) =>
+    gitInvoke<void>("git_branch_delete", { name }),
 };
 
 /**

@@ -736,6 +736,44 @@ Styles:\n${Object.entries(selectedElement.styles)
         </div>
       </ScrollArea>
 
+      {/* Context chips — surface the element / variant the AI will see */}
+      {(activeVariant || selectedElement) && (
+        <div className="oc-ai-chips">
+          {activeVariant && (
+            <span
+              className="oc-ai-chip is-variant"
+              title={`Active variant: ${activeVariant.name}`}
+            >
+              @variant · {activeVariant.name}
+            </span>
+          )}
+          {selectedElement && (
+            <span
+              className="oc-ai-chip"
+              title={`Selected element: ${selectedElement.selector}`}
+            >
+              @element ·{" "}
+              <code>
+                {selectedElement.tag}
+                {selectedElement.classes.length > 0
+                  ? `.${selectedElement.classes[0]}`
+                  : ""}
+              </code>
+              <button
+                className="oc-ai-chip-x"
+                onClick={() =>
+                  dispatch({ type: "SELECT_ELEMENT", id: null, source: "panel" })
+                }
+                title="Clear selection"
+                aria-label="Clear element selection"
+              >
+                ×
+              </button>
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Input */}
       <div className="oc-ai-input-row">
         <input
