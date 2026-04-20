@@ -21,6 +21,7 @@
 //
 // ──────────────────────────────────────────────────────────
 
+mod env_files;
 mod localhost;
 mod sidecar;
 
@@ -211,6 +212,8 @@ pub fn run() {
             get_engine_root,
             open_project_folder,
             localhost::discover_localhost_services,
+            env_files::list_env_files,
+            env_files::save_env_file,
         ])
         .setup(|app| {
             // Spawn the engine before the webview tries to connect. If it

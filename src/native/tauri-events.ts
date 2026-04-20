@@ -37,6 +37,33 @@ export async function discoverLocalhostServices(): Promise<LocalhostService[]> {
   return invoke<LocalhostService[]>("discover_localhost_services");
 }
 
+// ── .env file editor ──────────────────────────────────────
+
+export type EnvVar = { key: string; value: string };
+
+export type EnvFile = {
+  /** Absolute path to the file. */
+  path: string;
+  /** Filename only (e.g. ".env.local"). */
+  filename: string;
+  /** Ordered KEY=VALUE pairs. Comments + blanks are kept server-side. */
+  variables: EnvVar[];
+  /** True when the file is covered by a .gitignore rule. */
+  gitignored: boolean;
+};
+
+export async function listEnvFiles(): Promise<EnvFile[]> {
+  if (!isTauriWebview()) return [];
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<EnvFile[]>("list_env_files");
+}
+
+export async function saveEnvFile(path: string, variables: EnvVar[]): Promise<void> {
+  if (!isTauriWebview()) throw new Error("Env editing requires the Mac app");
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<void>("save_env_file", { path, variables });
+}
+
 /**
  * Subscribe to the Rust-emitted `project-changed` event (fired when the
  * user picks a new folder via File > Open Folder). Returns an unsubscribe

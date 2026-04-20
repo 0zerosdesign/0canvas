@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { AIChatPanel } from "../0canvas/panels/ai-chat-panel";
 import { TerminalPanel } from "./terminal-panel";
+import { EnvPanel } from "./env-panel";
 
 type TabId = "chat" | "git" | "terminal" | "env" | "todo";
 
@@ -41,10 +42,6 @@ const TAB_PLACEHOLDERS: Partial<Record<TabId, { title: string; body: string }>> 
   git: {
     title: "Git",
     body: "Phase 1C-Git — git2-rs via Tauri IPC. Branch, stage, commit, push, pull.",
-  },
-  env: {
-    title: "Env",
-    body: "Phase 1C-Env — native-fs .env editor with masked values and Add Variable.",
   },
   todo: {
     title: "Todo",
@@ -79,11 +76,14 @@ export function Column2Workspace() {
       <div
         className={`oc-column-2__body ${
           activeTab === "chat" ? "is-chat" : ""
-        } ${activeTab === "terminal" ? "is-terminal" : ""}`}
+        } ${activeTab === "terminal" ? "is-terminal" : ""} ${
+          activeTab === "env" ? "is-env" : ""
+        }`}
         role="tabpanel"
       >
         {activeTab === "chat" && <AIChatPanel />}
         {activeTab === "terminal" && <TerminalPanel />}
+        {activeTab === "env" && <EnvPanel />}
         {(() => {
           const p = TAB_PLACEHOLDERS[activeTab];
           return p ? (
