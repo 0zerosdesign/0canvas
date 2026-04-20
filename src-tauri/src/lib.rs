@@ -1,30 +1,164 @@
 // ──────────────────────────────────────────────────────────
-// 0canvas — Tauri Rust core (Phase 1A-1 scaffold)
+// 0canvas — Tauri Rust core
 // ──────────────────────────────────────────────────────────
 //
-// This file currently only boots a webview pointing at the
-// Vite dev server (dev) or the bundled frontend (release).
-// In subsequent sub-phases this module gains:
+// Phase 1A-2 wiring:
+//   - Spawn the Node engine as a sidecar on app startup.
+//   - Kill the engine when the main window is destroyed so we
+//     never leak a background Node process.
+//   - Expose `get_engine_port` as a Tauri command for the
+//     webview's WebSocket bridge to call when it can't find the
+//     port injected by Tauri (Phase 1A-3 replaces polling with
+//     a proper initialization_script injection).
 //
-//   1A-2   sidecar spawn for the Node/Bun engine
-//          (tauri::async_runtime + Command::sidecar)
-//   1A-3   file dialog, open folder, project switching
-//   Phase 1C  tauri-plugin-pty registration + terminal sessions
-//   Phase 2   macOS keychain via security-framework
-//   Phase 3   git2-rs IPC commands
-//   Phase 4   shell::spawn for claude-code / codex / gh
+// Later phases layer on top without changing this file's shape:
+//   1A-2c  Open Folder dialog → dispatch respawn with new root
+//   1A-3   Bun-compiled engine sidecar + initialization_script
+//   Phase 1C   tauri-plugin-pty + xterm.js
+//   Phase 2    macOS keychain via security-framework
+//   Phase 3    git2-rs IPC commands
+//   Phase 4    shell::spawn for claude-code / codex / gh
 //
 // ──────────────────────────────────────────────────────────
+
+mod sidecar;
+
+use sidecar::SidecarState;
+use std::path::PathBuf;
+use tauri::{
+    menu::{Menu, MenuItem, PredefinedMenuItem, Submenu},
+    Manager, WindowEvent,
+};
+
+#[tauri::command]
+fn get_engine_port(state: tauri::State<'_, SidecarState>) -> Option<u16> {
+    state.current_port()
+}
+
+#[tauri::command]
+fn get_engine_root(state: tauri::State<'_, SidecarState>) -> Option<String> {
+    state
+        .current_root()
+        .map(|p| p.to_string_lossy().into_owned())
+}
+
+/// Resolve the initial project root. In `cargo tauri dev` the CWD is
+/// `<repo>/src-tauri`; we walk up one directory so the engine operates on
+/// the repo itself. Phase 1A-2c replaces this with the folder the user
+/// picks via the Open Folder dialog.
+fn default_project_root() -> PathBuf {
+    let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    if cwd.file_name().map(|n| n == "src-tauri").unwrap_or(false) {
+        cwd.parent().map(|p| p.to_path_buf()).unwrap_or(cwd)
+    } else {
+        cwd
+    }
+}
+
+fn build_app_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result<Menu<R>> {
+    // macOS app menu: 0canvas (app name), File, Edit, View, Window, Help
+    // All standard PredefinedMenuItems; dynamic items (Open Folder, Toggle
+    // Columns) land in Phase 1A-2c / 1B with their own handlers.
+
+    let app_menu = Submenu::with_items(
+        app,
+        "0canvas",
+        true,
+        &[
+            &PredefinedMenuItem::about(app, Some("About 0canvas"), None)?,
+            &PredefinedMenuItem::separator(app)?,
+            &PredefinedMenuItem::services(app, None)?,
+            &PredefinedMenuItem::separator(app)?,
+            &PredefinedMenuItem::hide(app, None)?,
+            &PredefinedMenuItem::hide_others(app, None)?,
+            &PredefinedMenuItem::show_all(app, None)?,
+            &PredefinedMenuItem::separator(app)?,
+            &PredefinedMenuItem::quit(app, None)?,
+        ],
+    )?;
+
+    let file_menu = Submenu::with_items(
+        app,
+        "File",
+        true,
+        &[
+            // Phase 1A-2c replaces this placeholder with a real Open Folder dialog.
+            &MenuItem::with_id(
+                app,
+                "open_folder",
+                "Open Folder…",
+                false, // disabled until 1A-2c lands
+                Some("CmdOrCtrl+O"),
+            )?,
+            &PredefinedMenuItem::separator(app)?,
+            &PredefinedMenuItem::close_window(app, None)?,
+        ],
+    )?;
+
+    let edit_menu = Submenu::with_items(
+        app,
+        "Edit",
+        true,
+        &[
+            &PredefinedMenuItem::undo(app, None)?,
+            &PredefinedMenuItem::redo(app, None)?,
+            &PredefinedMenuItem::separator(app)?,
+            &PredefinedMenuItem::cut(app, None)?,
+            &PredefinedMenuItem::copy(app, None)?,
+            &PredefinedMenuItem::paste(app, None)?,
+            &PredefinedMenuItem::select_all(app, None)?,
+        ],
+    )?;
+
+    let view_menu = Submenu::with_items(
+        app,
+        "View",
+        true,
+        &[&PredefinedMenuItem::fullscreen(app, None)?],
+    )?;
+
+    let window_menu = Submenu::with_items(
+        app,
+        "Window",
+        true,
+        &[
+            &PredefinedMenuItem::minimize(app, None)?,
+            &PredefinedMenuItem::maximize(app, None)?,
+        ],
+    )?;
+
+    Menu::with_items(
+        app,
+        &[&app_menu, &file_menu, &edit_menu, &view_menu, &window_menu],
+    )
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .setup(|_app| {
-            // Phase 1A-2 will: start the Node sidecar here, discover its
-            // actual port (retry range 24193–24200), and inject
-            // window.__0CANVAS_PORT__ into the webview via
-            // app.get_webview_window("main").eval(...) before show.
+        .manage(SidecarState::new())
+        .invoke_handler(tauri::generate_handler![get_engine_port, get_engine_root])
+        .setup(|app| {
+            // Spawn the engine before the webview tries to connect. If it
+            // fails we log and continue — the webview will simply show a
+            // disconnected state, which is a better error than a blank app.
+            let state = app.state::<SidecarState>();
+            let root = default_project_root();
+            match sidecar::spawn_engine(&state, &root) {
+                Ok(port) => println!("[0canvas] engine spawned on port {} at {:?}", port, root),
+                Err(err) => eprintln!("[0canvas] engine spawn failed: {}", err),
+            }
+
+            let menu = build_app_menu(app.handle())?;
+            app.set_menu(menu)?;
+
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if matches!(event, WindowEvent::Destroyed) {
+                let state = window.state::<SidecarState>();
+                sidecar::shutdown(&state);
+            }
         })
         .run(tauri::generate_context!())
         .expect("error while running 0canvas");

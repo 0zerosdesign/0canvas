@@ -64,5 +64,11 @@
   "homepage": "https://github.com/zerosdesign/0canvas#readme",
   "bugs": {
     "url": "https://github.com/zerosdesign/0canvas/issues"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "esbuild"
+    ]
   }
 }
