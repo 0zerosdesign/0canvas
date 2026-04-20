@@ -44,6 +44,22 @@
  *   9999px   pills (branch chip, tag pill, segmented)
  *
  * Icons:   16px for nav, 14px for inline, 12px for micro.
+ *
+ * Primitives (Pass 5) — new code should use these instead of
+ * defining per-feature button/input/card rules:
+ *   .oc-btn              ghost (transparent, tinted hover)
+ *   .oc-btn--primary     solid brand (CTAs, save)
+ *   .oc-btn--secondary   surface-1 (muted actions)
+ *   .oc-btn--critical    error bg (destructive)
+ *   .oc-btn--icon        square 26x26 icon-only
+ *   .oc-btn--sm|--lg     size modifiers
+ *   .oc-input            full-width text input
+ *   .oc-card             surface-1 bordered container
+ *   .oc-card--flat       transparent with border
+ *   .oc-card--elevated   shadow-md lift
+ * Existing per-feature classes still render; they share focus
+ * and disabled styling with the primitives via the legacy
+ * normalization block below.
  * ────────────────────────────────────────────────────────── */
 
 .oc-app {
@@ -58,6 +74,229 @@
   background: var(--color--surface--floor);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================================
+ * Pass 5 — UI Primitives
+ * ============================================================
+ * Canonical button / input / card classes. New code should use
+ * these instead of defining per-component variants. Existing
+ * component-specific classes (oc-toolbar-btn, oc-chat-iconbtn,
+ * oc-ai-send-btn, etc.) remain in place and render correctly;
+ * they will migrate onto these primitives as features are touched.
+ *
+ * Usage:
+ *   <button class="oc-btn">Label</button>             ghost (default)
+ *   <button class="oc-btn oc-btn--primary">Save</button>
+ *   <button class="oc-btn oc-btn--secondary">Back</button>
+ *   <button class="oc-btn oc-btn--critical">Delete</button>
+ *   <button class="oc-btn oc-btn--icon"><Icon/></button>
+ *   <button class="oc-btn oc-btn--sm">small</button>
+ *   <input  class="oc-input" />
+ *   <div    class="oc-card">...</div>
+ */
+
+.oc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--color--text--muted);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+  user-select: none;
+}
+
+.oc-btn:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color--text--on-surface);
+}
+
+.oc-btn:disabled,
+.oc-btn[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.oc-btn:disabled:hover,
+.oc-btn[aria-disabled="true"]:hover {
+  background: transparent;
+  color: var(--color--text--muted);
+}
+
+.oc-btn:focus-visible {
+  outline: 2px solid var(--color--outline--focus);
+  outline-offset: 1px;
+}
+
+/* Variants */
+.oc-btn--primary {
+  background: var(--color--base--primary);
+  color: var(--color--text--on-primary);
+}
+.oc-btn--primary:hover {
+  background: var(--color--base--primary-hover);
+  color: var(--color--text--on-primary);
+}
+
+.oc-btn--secondary {
+  background: var(--color--surface--1);
+  color: var(--color--text--on-surface);
+  border-color: var(--color--border--on-surface-1);
+}
+.oc-btn--secondary:hover {
+  background: var(--color--surface--2);
+  color: var(--color--text--on-surface);
+}
+
+.oc-btn--critical {
+  background: var(--color--status--critical);
+  color: var(--color--text--on-critical);
+}
+.oc-btn--critical:hover {
+  background: var(--color--status--critical);
+  color: var(--color--text--on-critical);
+  filter: brightness(1.1);
+}
+
+.oc-btn--ghost {
+  /* explicit opt-in for the default ghost treatment */
+}
+
+.oc-btn--icon {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  gap: 0;
+}
+
+/* Sizes */
+.oc-btn--sm {
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 4px;
+}
+.oc-btn--sm.oc-btn--icon {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+}
+
+.oc-btn--lg {
+  padding: 8px 14px;
+  font-size: 13px;
+}
+
+/* ── Input primitive ───────────────────────────────────── */
+.oc-input {
+  width: 100%;
+  padding: 6px 10px;
+  background: var(--color--surface--0);
+  border: 1px solid var(--color--border--on-surface-1);
+  border-radius: 6px;
+  color: var(--color--text--on-surface);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  outline: none;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.oc-input::placeholder {
+  color: var(--color--text--muted);
+}
+
+.oc-input:hover {
+  border-color: var(--color--border--on-surface-2);
+}
+
+.oc-input:focus {
+  border-color: var(--color--base--primary);
+}
+
+.oc-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Card primitive ────────────────────────────────────── */
+.oc-card {
+  padding: 12px 14px;
+  background: var(--color--surface--1);
+  border: 1px solid var(--color--border--on-surface-1);
+  border-radius: 8px;
+  color: var(--color--text--on-surface);
+}
+
+.oc-card--flat {
+  background: transparent;
+  border: 1px solid var(--color--border--on-surface-0);
+}
+
+.oc-card--elevated {
+  padding: 14px 16px;
+  box-shadow: var(--shadow-md);
+}
+
+/* ============================================================
+ * Legacy button normalization (Pass 5)
+ * ============================================================
+ * Until each component migrates onto .oc-btn, these rules bring
+ * the older per-feature button classes into a single hover /
+ * focus / disabled vocabulary. They don't change size or role —
+ * just make the interaction feel identical across features.
+ *
+ * Once a class is migrated to .oc-btn in JSX, its entry here and
+ * any per-feature duplicate hover/focus rules in the engine CSS
+ * should be removed.
+ */
+
+.oc-toolbar-btn:focus-visible,
+.oc-panel-btn:focus-visible,
+.oc-chat-iconbtn:focus-visible,
+.oc-chat-toolbar-iconbtn:focus-visible,
+.oc-git__btn:focus-visible,
+.oc-git__icon-btn:focus-visible,
+.oc-git__refresh-btn:focus-visible,
+.oc-env-panel__icon-btn:focus-visible,
+.oc-todo__icon-btn:focus-visible,
+.oc-themes-action-btn:focus-visible,
+.oc-theme-header-btn:focus-visible,
+.oc-layers-action-btn:focus-visible,
+.oc-style-section-btn:focus-visible,
+.oc-typo-align-btn:focus-visible,
+.oc-source-btn:focus-visible,
+.oc-variant-action-btn:focus-visible,
+.oc-segmented-btn:focus-visible,
+.oc-ai-provider-btn:focus-visible,
+.oc-chat-headerbtn:focus-visible,
+.oc-close-btn:focus-visible {
+  outline: 2px solid var(--color--outline--focus);
+  outline-offset: 1px;
+}
+
+.oc-toolbar-btn:disabled,
+.oc-panel-btn:disabled,
+.oc-chat-iconbtn:disabled,
+.oc-chat-toolbar-iconbtn:disabled,
+.oc-git__btn:disabled,
+.oc-git__icon-btn:disabled,
+.oc-ai-send-btn:disabled,
+.oc-ai-save-btn:disabled,
+.oc-theme-dialog-btn:disabled,
+.oc-theme-mode-send-btn:disabled,
+.oc-themes-empty-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ============================================================
