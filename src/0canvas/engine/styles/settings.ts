@@ -49,12 +49,13 @@ ${S} .oc-settings-content {
   background: var(--color--surface--0);
   overflow: hidden;
 }
-/* Comfortable reading column that still gives the cards room to
- * breathe on larger displays. The section title acts as the left
- * edge. */
+/* Left-aligned reading column with a comfortable max width.
+ * When Col 3 is wider than ~720px the content stops at that
+ * width so lines stay readable; the left edge anchors to the
+ * tab bar's left padding so headings sit under the tab row. */
 ${S} .oc-settings-scroll {
-  height: 100%; max-width: 960px;
-  margin: 0 auto; padding: 24px 32px 32px;
+  height: 100%; max-width: 720px;
+  margin: 0; padding: 24px 20px 32px;
 }
 
 /* ── AI Models panel (Phase 4) ─────────────────────────── */
