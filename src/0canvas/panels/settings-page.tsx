@@ -82,30 +82,32 @@ export function SettingsPage() {
 
   return (
     <div className="oc-settings-page">
-      <div className="oc-settings-nav">
+      <nav className="oc-settings-tabs" role="tablist" data-tauri-drag-region>
         <button
-          className="oc-settings-back"
+          className="oc-settings-tab oc-settings-tab--back"
           onClick={handleBack}
           title="Back to app"
         >
           <ArrowLeft size={14} />
-          <span>Back to app</span>
+          <span>Back</span>
         </button>
-
-        <div className="oc-settings-nav-section">Settings</div>
-        <div className="oc-settings-nav-list">
-          {SECTIONS.map(({ id, label, icon: Icon }) => (
+        {SECTIONS.map(({ id, label, icon: Icon }) => {
+          const isActive = active === id;
+          return (
             <button
               key={id}
-              className={`oc-settings-nav-item ${active === id ? "is-active" : ""}`}
+              role="tab"
+              aria-selected={isActive}
+              className={`oc-settings-tab ${isActive ? "is-active" : ""}`}
               onClick={() => setActive(id)}
+              title={label}
             >
-              <span className="oc-settings-nav-icon"><Icon size={16} /></span>
-              <span className="oc-settings-nav-label">{label}</span>
+              <Icon size={14} />
+              <span>{label}</span>
             </button>
-          ))}
-        </div>
-      </div>
+          );
+        })}
+      </nav>
 
       <div className="oc-settings-content">
         <ScrollArea className="oc-settings-scroll">

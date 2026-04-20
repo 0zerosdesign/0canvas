@@ -4,88 +4,57 @@
 
 export const settingsCSS = (S: string) => `
 /* ── Settings Page ────────────────────────────────────────── */
+/* Settings renders inside Column 3 alongside Design / Themes.
+ * Layout: horizontal section tabs on top (matching .oc-page-tabs)
+ * + scrollable content below. No vertical sidebar, no fullscreen
+ * takeover — Col 1 and Col 2 stay reachable. */
 ${S} .oc-settings-page {
-  flex: 1; display: flex; height: 100%;
+  flex: 1; display: flex; flex-direction: column; height: 100%;
+  overflow: hidden;
+}
+${S} .oc-settings-tabs {
+  display: flex; align-items: center; gap: 2px;
+  padding: 10px 10px 4px;
+  flex-shrink: 0;
+  background: var(--color--surface--floor);
+  border-bottom: 1px solid var(--color--border--on-surface-0);
+  overflow-x: auto;
+}
+${S} .oc-settings-tab {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 10px;
+  background: transparent; border: none; border-radius: 6px;
+  color: var(--color--text--muted);
+  font-size: 12px; font-weight: 500;
+  cursor: pointer; white-space: nowrap;
+  font-family: inherit;
+  transition: background 120ms ease, color 120ms ease;
+}
+${S} .oc-settings-tab:hover {
+  color: var(--color--text--on-surface);
+  background: rgba(255, 255, 255, 0.03);
+}
+${S} .oc-settings-tab.is-active {
+  color: var(--color--text--on-surface);
+  background: rgba(255, 255, 255, 0.06);
+}
+${S} .oc-settings-tab--back {
+  margin-right: 6px;
+  padding-right: 12px;
+  border-right: 1px solid var(--color--border--on-surface-0);
+  border-radius: 6px 0 0 6px;
+}
+${S} .oc-settings-content {
+  flex: 1; min-height: 0;
   background: var(--color--surface--0);
   overflow: hidden;
 }
-${S} .oc-settings-nav {
-  width: 240px; flex-shrink: 0; height: 100%;
-  background: var(--color--surface--floor);
-  border-right: 1px solid var(--color--border--on-surface-0);
-  padding: 16px 12px;
-  overflow-y: auto;
-  display: flex; flex-direction: column; gap: 12px;
-}
-${S} .oc-settings-nav-header {
-  font-size: 18px; font-weight: 600;
-  color: var(--color--text--on-surface);
-  padding: 0 4px; margin: 0;
-}
-${S} .oc-settings-back {
-  display: inline-flex; align-items: center; gap: 8px;
-  margin: 0 0 4px;
-  padding: 8px 10px;
-  background: transparent; border: none;
-  border-radius: 8px; cursor: pointer;
-  color: var(--color--text--muted);
-  font-size: 12px; font-weight: 500;
-  font-family: inherit;
-  text-align: left; width: fit-content;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-${S} .oc-settings-back:hover {
-  background: var(--color--surface--1);
-  color: var(--color--text--on-surface);
-}
-${S} .oc-settings-nav-section {
-  padding: 0 10px; margin: 4px 0 2px;
-  font-size: 10px; font-weight: 600;
-  letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--color--text--muted);
-}
-${S} .oc-settings-nav-list {
-  display: flex; flex-direction: column; gap: 2px;
-  padding: 0;
-}
-${S} .oc-settings-nav-item {
-  display: flex; align-items: center; gap: 10px;
-  width: 100%; padding: 8px 10px;
-  border: none; background: transparent;
-  border-radius: 8px; cursor: pointer;
-  color: var(--color--text--muted);
-  font-size: 13px; text-align: left;
-  transition: all 0.15s ease;
-}
-${S} .oc-settings-nav-item:hover {
-  background: var(--color--surface--1);
-  color: var(--color--text--on-surface);
-}
-${S} .oc-settings-nav-item.is-active {
-  background: var(--color--surface--2);
-  color: var(--color--text--on-surface);
-}
-${S} .oc-settings-nav-icon {
-  display: flex; align-items: center;
-  color: inherit; flex-shrink: 0;
-}
-${S} .oc-settings-nav-label { flex: 1; }
-${S} .oc-settings-nav-chevron {
-  color: var(--color--text--disabled);
-  flex-shrink: 0; opacity: 0;
-  transition: opacity 0.15s ease;
-}
-${S} .oc-settings-nav-item:hover .oc-settings-nav-chevron,
-${S} .oc-settings-nav-item.is-active .oc-settings-nav-chevron { opacity: 1; }
-${S} .oc-settings-content {
-  flex: 1; height: 100%; overflow: hidden;
-}
-/* Content width matches the Clonk reference — a comfortable
- * reading column that still gives the cards room to breathe on
- * larger displays. The section title acts as the left edge. */
+/* Comfortable reading column that still gives the cards room to
+ * breathe on larger displays. The section title acts as the left
+ * edge. */
 ${S} .oc-settings-scroll {
   height: 100%; max-width: 960px;
-  margin: 0 auto; padding: 24px 48px 32px;
+  margin: 0 auto; padding: 24px 32px 32px;
 }
 
 /* ── AI Models panel (Phase 4) ─────────────────────────── */

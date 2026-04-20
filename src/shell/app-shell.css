@@ -2727,25 +2727,6 @@
   50% { opacity: 0.9; transform: scale(1.1); }
 }
 
-/* ============================================================
- * Full-screen Settings (takes over the entire window)
- * ============================================================
- * Settings is a destination, not a panel — it hides the 3-column
- * shell entirely while active. The wrapper carries
- * data-0canvas-root so the engine-injected .oc-settings-* rules
- * apply inside.
- */
-
-.oc-settings-fullscreen {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  background: var(--color--surface--0);
-  z-index: 10;
-  font-family: var(--font-sans);
-  color: var(--color--text--on-surface);
-}
-
 /* Native drag + double-click-zoom are delivered by
  * `data-tauri-drag-region` attached to each column's top container
  * (brand row, tab bar, app sidebar, workspace toolbar). No extra
