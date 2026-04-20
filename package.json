@@ -19,6 +19,7 @@
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@parcel/watcher": "^2.5.0",
     "@radix-ui/react-scroll-area": "^1.2.0",
+    "@tauri-apps/api": "^2.10.1",
     "@xyflow/react": "^12.10.1",
     "clsx": "^2.1.0",
     "idb": "^8.0.3",

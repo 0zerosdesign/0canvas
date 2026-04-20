@@ -3,9 +3,10 @@ target/
 
 # Tauri generated
 gen/
-icons/*.png
-icons/*.icns
-icons/*.ico
+
+# Platform icons we don't ship (Mac-only for now)
+icons/android/
+icons/ios/
 
 # macOS
 .DS_Store

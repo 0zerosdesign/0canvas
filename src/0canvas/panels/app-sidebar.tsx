@@ -2,7 +2,7 @@ import React from "react";
 import { PenTool, Palette, Settings, X } from "lucide-react";
 import { useWorkspace, type WorkspacePage } from "../store/store";
 
-export function AppSidebar({ onClose }: { onClose: () => void }) {
+export function AppSidebar({ onClose }: { onClose?: () => void }) {
   const { state, dispatch } = useWorkspace();
 
   const setPage = (page: WorkspacePage) => {
@@ -13,15 +13,18 @@ export function AppSidebar({ onClose }: { onClose: () => void }) {
     <div className="oc-sidebar" data-0canvas="sidebar">
       {/* Top icons */}
       <div className="oc-sidebar-top">
-        <button
-          className="oc-sidebar-btn"
-          onClick={onClose}
-          title="Close 0canvas"
-        >
-          <X size={18} />
-        </button>
-
-        <div className="oc-sidebar-divider" />
+        {onClose && (
+          <>
+            <button
+              className="oc-sidebar-btn"
+              onClick={onClose}
+              title="Close 0canvas"
+            >
+              <X size={18} />
+            </button>
+            <div className="oc-sidebar-divider" />
+          </>
+        )}
 
         <button
           className={`oc-sidebar-btn ${state.activePage === "design" ? "is-active" : ""}`}

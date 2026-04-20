@@ -17,8 +17,8 @@
 // 100% feature parity is the Phase 1A exit criterion.
 // ──────────────────────────────────────────────────────────
 
-import React from "react";
-import { WorkspaceProvider } from "./0canvas/store/store";
+import React, { useEffect } from "react";
+import { WorkspaceProvider, useWorkspace } from "./0canvas/store/store";
 import { BridgeProvider } from "./0canvas/bridge/use-bridge";
 import { AutoConnect, EngineWorkspace } from "./0canvas/engine/0canvas-engine";
 import { injectStyles } from "./0canvas/engine/0canvas-styles";
@@ -30,23 +30,33 @@ import "./shell/app-shell.css";
 // The workspace panels inside Column 3 rely on it.
 injectStyles();
 
-const noopClose = () => {
-  // In the Mac app there's no "close the overlay" — the workspace is the app.
-  // This exists only to satisfy EngineWorkspace's current prop contract; the
-  // X button inside the existing AppSidebar is harmless until Phase 1B
-  // moves page switching into Column 1.
-};
+/**
+ * Force the design page on first mount. Page state may persist between
+ * sessions via the workspace store; in the Mac app we always want Design
+ * to be the landing view — Themes / Settings are secondary surfaces the
+ * user navigates to explicitly.
+ */
+function ForceDesignPageOnBoot() {
+  const { dispatch } = useWorkspace();
+  useEffect(() => {
+    dispatch({ type: "SET_ACTIVE_PAGE", page: "design" });
+  }, [dispatch]);
+  return null;
+}
 
 export function AppShell() {
   return (
     <WorkspaceProvider>
       <BridgeProvider>
         <AutoConnect>
+          <ForceDesignPageOnBoot />
           <div className="oc-app">
             <Column1Nav />
             <Column2Workspace />
             <div className="oc-column-3">
-              <EngineWorkspace onClose={noopClose} />
+              {/* onClose omitted — Mac app has no overlay to close,
+                  so the AppSidebar's X button is hidden entirely. */}
+              <EngineWorkspace />
             </div>
           </div>
         </AutoConnect>

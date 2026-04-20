@@ -310,7 +310,7 @@ function useResizable(initial: number, min: number, max: number) {
 // Mirrors the same panel arrangement as the docs site workspace
 // but without any navigation links.
 
-export function EngineWorkspace({ onClose }: { onClose: () => void }) {
+export function EngineWorkspace({ onClose }: { onClose?: () => void }) {
   const { state, dispatch } = useWorkspace();
   const bridge = useBridge();
   const iframeNavRef = React.useRef<((route: string) => void) | null>(null);
