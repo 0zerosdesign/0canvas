@@ -3307,11 +3307,17 @@ ${S} .oc-chat-skill-empty code {
 }
 
 /* ── Generic chat dropdown pill (Stream 5) ───────────────── */
+/* Direction modifiers on the root control which side of the trigger
+ * the menu opens on. Default = upward (good for composer/footer
+ * pills). .is-top opens downward (chat-header buttons). .is-right
+ * aligns to the trigger's right edge (buttons on the right side of
+ * their container). */
 ${S} .oc-chat-dropdown-root { position: relative; }
 ${S} .oc-chat-dropdown-menu {
   position: absolute;
   bottom: calc(100% + 6px); left: 0;
-  min-width: 220px; max-width: 320px;
+  min-width: 200px; max-width: 320px;
+  max-height: 60vh; overflow-y: auto;
   z-index: 30;
   background: var(--color--surface--1);
   border: 1px solid var(--color--border--on-surface-1);
@@ -3322,6 +3328,12 @@ ${S} .oc-chat-dropdown-menu {
 }
 ${S} .oc-chat-dropdown-root.is-footer .oc-chat-dropdown-menu {
   bottom: calc(100% + 6px); left: 0; right: auto;
+}
+${S} .oc-chat-dropdown-root.is-top .oc-chat-dropdown-menu {
+  bottom: auto; top: calc(100% + 6px);
+}
+${S} .oc-chat-dropdown-root.is-right .oc-chat-dropdown-menu {
+  left: auto; right: 0;
 }
 ${S} .oc-chat-dropdown-item {
   display: flex; flex-direction: column; gap: 2px;

@@ -163,10 +163,24 @@ var(--color--border--on-surface-0)`. Individual tabs:
 ## 6. Dropdowns, menus, and overlays
 
 - **Don't clip.** If a dropdown is anchored inside a container, make
-  sure the container does NOT have `overflow: hidden`. Anchor menus
-  with `position: absolute` + `bottom: calc(100% + 6px)` for
-  bottom-rising menus or `top: calc(100% + 6px)` for top-rising.
-  Z-index ≥ 25 for composer/toolbar menus, ≥ 100 for modals.
+  sure the container does NOT have `overflow: hidden`. Z-index ≥ 25
+  for composer/toolbar menus, ≥ 100 for modals.
+- **Direction-aware.** The menu must open *away* from the nearest
+  clipping edge of its host column:
+  - Button near the **bottom** of its column → open upward
+    (`bottom: calc(100% + 6px)`), e.g. composer/footer pills.
+  - Button near the **top** of its column → open downward
+    (`top: calc(100% + 6px)`), e.g. chat-header pills, toolbar
+    buttons, workspace manager.
+  - Button on the **right edge** of its row → align the menu to the
+    right (`left: auto; right: 0`) so it doesn't overflow the
+    column's right edge.
+  - For the generic chat-dropdown primitive, apply the `.is-top` and
+    `.is-right` modifiers on `.oc-chat-dropdown-root` rather than
+    writing bespoke position CSS.
+- **Max height + scroll.** Dropdowns must cap height (`max-height:
+  60vh` or a fixed `max-height: 360px`) with `overflow-y: auto` so
+  long lists don't push the menu off-screen.
 - **Click-outside + Escape dismiss.** Every dropdown must handle
   `mousedown` outside its root and the `Escape` key to close.
 - **Current selection mark.** Use a `Check` icon at the right edge of

@@ -12,7 +12,7 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   Send, Bot, User, Loader2, Sparkles, Square, Check, AlertCircle,
   Undo2, ArrowRight, X, FolderOpen, ChevronDown, MoreHorizontal,
-  GitBranch, Eye, Image as ImageIcon,
+  GitBranch, Eye, Image as ImageIcon, TerminalSquare,
   Compass, Users, Plug, Clock, FileText, MessageCircle,
   Brain, LogIn, Search,
   type LucideIcon,
@@ -485,7 +485,7 @@ function OpenProjectMenu() {
   };
 
   return (
-    <div ref={rootRef} className="oc-chat-dropdown-root">
+    <div ref={rootRef} className="oc-chat-dropdown-root is-top is-right">
       <button
         className="oc-chat-headerbtn"
         title="Open project folder / terminal"
@@ -505,6 +505,7 @@ function OpenProjectMenu() {
             type="button"
           >
             <span className="oc-chat-dropdown-item-row">
+              <TerminalSquare size={12} />
               <span className="oc-chat-dropdown-item-label">Open Terminal</span>
             </span>
           </button>
@@ -514,6 +515,7 @@ function OpenProjectMenu() {
             type="button"
           >
             <span className="oc-chat-dropdown-item-row">
+              <FolderOpen size={12} />
               <span className="oc-chat-dropdown-item-label">Open in Finder</span>
             </span>
           </button>
