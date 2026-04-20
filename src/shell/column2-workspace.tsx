@@ -19,6 +19,7 @@ import {
   TerminalSquare,
   KeyRound,
   ListChecks,
+  type LucideIcon,
 } from "lucide-react";
 import { AIChatPanel } from "../0canvas/panels/ai-chat-panel";
 import { TerminalPanel } from "./terminal-panel";
@@ -31,7 +32,7 @@ type TabId = "chat" | "git" | "terminal" | "env" | "todo";
 const TABS: Array<{
   id: TabId;
   label: string;
-  icon: React.ComponentType<{ size?: number }>;
+  icon: LucideIcon;
 }> = [
   { id: "chat", label: "Chat", icon: MessageSquare },
   { id: "git", label: "Git", icon: GitBranch },
