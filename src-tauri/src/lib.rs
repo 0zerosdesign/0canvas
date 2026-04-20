@@ -24,6 +24,7 @@
 mod env_files;
 mod localhost;
 mod sidecar;
+mod todo;
 
 use sidecar::SidecarState;
 use serde::Serialize;
@@ -214,6 +215,8 @@ pub fn run() {
             localhost::discover_localhost_services,
             env_files::list_env_files,
             env_files::save_env_file,
+            todo::load_todo_file,
+            todo::save_todo_file,
         ])
         .setup(|app| {
             // Spawn the engine before the webview tries to connect. If it

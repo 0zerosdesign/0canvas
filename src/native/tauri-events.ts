@@ -64,6 +64,34 @@ export async function saveEnvFile(path: string, variables: EnvVar[]): Promise<vo
   return invoke<void>("save_env_file", { path, variables });
 }
 
+// ── Todo list ─────────────────────────────────────────────
+
+export type TodoItem = {
+  /** 0-based source line; useful for toggling without reparsing. */
+  line: number;
+  done: boolean;
+  text: string;
+};
+
+export type TodoFile = {
+  path: string;
+  /** Raw markdown, source of truth. */
+  raw: string;
+  items: TodoItem[];
+};
+
+export async function loadTodoFile(): Promise<TodoFile | null> {
+  if (!isTauriWebview()) return null;
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<TodoFile>("load_todo_file");
+}
+
+export async function saveTodoFile(raw: string): Promise<void> {
+  if (!isTauriWebview()) throw new Error("Todo editing requires the Mac app");
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<void>("save_todo_file", { raw });
+}
+
 /**
  * Subscribe to the Rust-emitted `project-changed` event (fired when the
  * user picks a new folder via File > Open Folder). Returns an unsubscribe
