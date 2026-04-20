@@ -188,6 +188,17 @@ export function AIChatPanel() {
     }
   }, [messages, pendingCssChanges, pendingVariant]);
 
+  // Phase 2-B: consume submissions pushed by InlineEdit / feedback pill.
+  // Waits for any in-flight stream to finish so we don't interleave
+  // concurrent AI calls.
+  const pendingSub = state.pendingChatSubmission;
+  useEffect(() => {
+    if (!pendingSub || streaming) return;
+    const { id, text } = pendingSub;
+    handleSend(text);
+    dispatch({ type: "CONSUME_CHAT_SUBMISSION", id });
+  }, [pendingSub, streaming]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Parse and apply AI response ─────────────────────────
 
   const applyVariantRewrite = useCallback((content: string): string[] => {
@@ -443,14 +454,16 @@ export function AIChatPanel() {
 
   // ── Send message ────────────────────────────────────────
 
-  const handleSend = useCallback(async () => {
-    const query = input.trim();
+  const handleSend = useCallback(async (overrideQuery?: string) => {
+    const query = (overrideQuery ?? input).trim();
     if (!query || streaming) return;
 
     setMessages((prev) => [...prev, {
       id: `user-${Date.now()}`, role: "user", content: query, timestamp: Date.now(),
     }]);
-    setInput("");
+    // Only clear the input box if we consumed its value; programmatic
+    // submissions from inline-edit / feedback leave the user's draft alone.
+    if (overrideQuery === undefined) setInput("");
     setStreaming(true);
 
     // ── Build context based on mode ──
@@ -790,7 +803,7 @@ Styles:\n${Object.entries(selectedElement.styles)
             <Square size={12} />
           </button>
         ) : (
-          <button className="oc-ai-send-btn" onClick={handleSend} disabled={!input.trim()} title="Send">
+          <button className="oc-ai-send-btn" onClick={() => handleSend()} disabled={!input.trim()} title="Send">
             <Send size={14} />
           </button>
         )}

@@ -52,6 +52,14 @@ export function Column2Workspace() {
   // concern (needs message array in the store).
   const chatKey = state.activeChatId ?? "default";
 
+  // Phase 2-B: when InlineEdit or the feedback pill queues a chat
+  // submission, flip to the Chat tab so the user sees it being sent.
+  useEffect(() => {
+    if (state.pendingChatSubmission && activeTab !== "chat") {
+      setActiveTab("chat");
+    }
+  }, [state.pendingChatSubmission, activeTab]);
+
   // ⌘1..⌘5 → jump to the nth tab. Not fired if any modifier beyond the
   // primary meta/ctrl is held so this doesn't clobber xterm's Cmd+Shift+
   // shortcuts inside the Terminal tab.

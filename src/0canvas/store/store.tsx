@@ -228,6 +228,19 @@ export type WorkspaceState = {
   // AIChatPanel; switching chats remounts with a fresh message list.
   chats: ChatThread[];
   activeChatId: string | null;
+
+  // One-shot hand-off to Column 2's chat panel (Phase 2-B). InlineEdit
+  // and the feedback pill used to call the AI themselves; in the Mac
+  // app all AI flows route into the integrated chat instead. Setting
+  // this triggers Column 2 to switch to the Chat tab, AIChatPanel to
+  // auto-submit the text, then clear via CONSUME_CHAT_SUBMISSION.
+  pendingChatSubmission: PendingChatSubmission | null;
+};
+
+export type PendingChatSubmission = {
+  id: string;
+  text: string;
+  source: "inline-edit" | "feedback" | "manual";
 };
 
 export type ChatThread = {
@@ -317,6 +330,9 @@ type Action =
   | { type: "DELETE_CHAT"; id: string }
   | { type: "UPDATE_CHAT_TITLE"; id: string; title: string }
   | { type: "TOUCH_CHAT"; id: string }
+  // Auto-submit into Column 2 chat (Phase 2-B)
+  | { type: "ENQUEUE_CHAT_SUBMISSION"; submission: PendingChatSubmission }
+  | { type: "CONSUME_CHAT_SUBMISSION"; id: string }
 
 // ──────────────────────────────────────────────────────────
 // IDE definitions
@@ -367,6 +383,7 @@ const initialState: WorkspaceState = {
   aiSettings: loadAiSettings(),
   chats: [],
   activeChatId: null,
+  pendingChatSubmission: null,
 };
 
 // ──────────────────────────────────────────────────────────
@@ -485,6 +502,13 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
           c.id === action.id ? { ...c, updatedAt: Date.now() } : c,
         ),
       };
+    case "ENQUEUE_CHAT_SUBMISSION":
+      return { ...state, pendingChatSubmission: action.submission };
+    case "CONSUME_CHAT_SUBMISSION":
+      // Only clear if the id matches — prevents a race where a new
+      // submission lands between AIChatPanel reading and dispatching.
+      if (state.pendingChatSubmission?.id !== action.id) return state;
+      return { ...state, pendingChatSubmission: null };
     case "TOGGLE_ELEMENT_VISIBILITY":
       return {
         ...state,

@@ -273,16 +273,20 @@ export function SourceNode({ id, data, selected }: NodeProps) {
       const existing = state.feedbackItems.find((f) => f.elementId === elementId && f.status === "pending");
       if (existing) {
         dispatch({ type: "UPDATE_FEEDBACK", id: existing.id, updates: { comment: description } });
+        // Phase 2-B: also forward the updated comment to Column 2 chat.
+        dispatchFeedbackToChat(existing.elementTag, existing.elementClasses, description);
         return;
       }
       const el = getElementById(elementId);
+      const elementTag = el?.tagName.toLowerCase() || "";
+      const elementClasses = el ? Array.from(el.classList) : [];
       const item = {
         id: `fb-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         variantId: state.activeVariantId || "",
         elementId,
         elementSelector: el ? (el.id ? `#${el.id}` : el.tagName.toLowerCase() + (el.className ? `.${el.className.split(" ")[0]}` : "")) : "",
-        elementTag: el?.tagName.toLowerCase() || "",
-        elementClasses: el ? Array.from(el.classList) : [],
+        elementTag,
+        elementClasses,
         comment: description,
         intent: "change" as const,
         severity: "suggestion" as const,
@@ -292,7 +296,24 @@ export function SourceNode({ id, data, selected }: NodeProps) {
         boundingBox: { x: clickPos.x, y: clickPos.y, width: 0, height: 0 },
       };
       dispatch({ type: "ADD_FEEDBACK", item });
+      // Phase 2-B: auto-forward the feedback to Column 2 chat so the
+      // agent can act on it. The feedback item remains in feedbackItems
+      // for the canvas marker; the chat message is what drives the edit.
+      dispatchFeedbackToChat(elementTag, elementClasses, description);
     });
+
+    function dispatchFeedbackToChat(tag: string, classes: string[], comment: string) {
+      const desc = `<${tag}>${classes.length ? `.${classes.join(".")}` : ""}`;
+      const text = `Feedback on ${desc}: ${comment}`;
+      dispatch({
+        type: "ENQUEUE_CHAT_SUBMISSION",
+        submission: {
+          id: `fb-chat-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          text,
+          source: "feedback",
+        },
+      });
+    }
 
     // Delete feedback by element ID
     onDeleteFeedbackRequest((elementId: string) => {
