@@ -1,59 +1,15 @@
 {
   "name": "@zerosdesign/0canvas",
   "version": "0.0.5",
-  "description": "Visual feedback engine for AI-powered development. Inspect elements, edit styles, and send structured instructions to your AI coding agent.",
+  "private": true,
+  "description": "Visual design tool for production code — Mac app (Tauri). Inspect elements, edit styles, push to git.",
   "license": "MIT",
-  "bin": {
-    "0canvas": "./dist/cli.js"
-  },
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": {
-        "types": "./dist/index.d.mts",
-        "default": "./dist/index.mjs"
-      },
-      "require": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      }
-    },
-    "./vite": {
-      "types": "./dist/vite-plugin.d.ts",
-      "import": {
-        "types": "./dist/vite-plugin.d.mts",
-        "default": "./dist/vite-plugin.mjs"
-      },
-      "require": {
-        "types": "./dist/vite-plugin.d.ts",
-        "default": "./dist/vite-plugin.js"
-      }
-    }
-  },
-  "files": [
-    "dist"
-  ],
   "scripts": {
-    "build": "tsup",
-    "watch": "tsup --watch",
-    "dev": "pnpm build && pnpm watch",
+    "build:engine": "tsup",
+    "watch:engine": "tsup --watch",
+    "dev": "vite",
     "test:ui": "vite",
-    "prepublishOnly": "pnpm build"
-  },
-  "peerDependencies": {
-    "react": ">=18.0.0",
-    "react-dom": ">=18.0.0"
-  },
-  "peerDependenciesMeta": {
-    "react": {
-      "optional": true
-    },
-    "react-dom": {
-      "optional": true
-    }
+    "serve:engine": "node dist/cli.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
@@ -64,6 +20,8 @@
     "idb": "^8.0.3",
     "lucide-react": "^0.400.0",
     "postcss": "^8.4.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "react-router": "^7.14.0",
     "tailwind-merge": "^3.0.0",
     "tinyglobby": "^0.2.0",
@@ -78,8 +36,6 @@
     "@types/react-dom": "^18.2.0",
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^5.1.4",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
     "tailwindcss": "^4.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.0.0",
@@ -87,15 +43,13 @@
   },
   "keywords": [
     "design",
-    "feedback",
+    "mac-app",
+    "tauri",
     "inspector",
     "ai",
     "agent",
     "visual",
-    "css",
-    "devtools",
-    "overlay",
-    "react"
+    "css"
   ],
   "repository": {
     "type": "git",

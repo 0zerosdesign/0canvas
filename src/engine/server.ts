@@ -191,7 +191,7 @@ export class EngineServer {
 
       this.httpServer.once("error", onError);
       this.httpServer.once("listening", onListening);
-      this.httpServer.listen(port, "0.0.0.0");
+      this.httpServer.listen(port, "127.0.0.1");
     });
   }
 

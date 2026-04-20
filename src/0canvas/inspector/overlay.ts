@@ -73,7 +73,7 @@ function ensureOverlay(type: "hover" | "select"): HTMLDivElement {
       overlay.style.cssText = `
         position: absolute;
         pointer-events: none;
-        z-index: 2147483646;
+        z-index: 9999;
         border: 1.5px dashed ${OC_PRIMARY}99;
         background: ${OC_PRIMARY}0A;
         border-radius: 2px;
@@ -104,7 +104,7 @@ function ensureOverlay(type: "hover" | "select"): HTMLDivElement {
       overlay.style.cssText = `
         position: absolute;
         pointer-events: none;
-        z-index: 2147483646;
+        z-index: 9999;
         border: 2px solid ${OC_PRIMARY};
         background: ${OC_PRIMARY}0F;
         border-radius: 2px;

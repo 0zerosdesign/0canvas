@@ -2,13 +2,27 @@
 // Browser-side WebSocket client for the 0canvas engine
 // ──────────────────────────────────────────────────────────
 //
-// Connects directly to the 0canvas engine at ws://localhost:24193/ws.
-// Uses the browser's native WebSocket API — no npm dependencies.
+// Connects to the 0canvas engine on localhost.
+// Port resolution order:
+//   1. window.__0CANVAS_PORT__ — injected by Tauri shell at startup
+//   2. fallback: 24193 (engine default)
 //
 // ──────────────────────────────────────────────────────────
 
 import type { BridgeMessage } from "./messages";
 import { createMessageId } from "./messages";
+
+const DEFAULT_ENGINE_PORT = 24193;
+
+function resolveEnginePort(): number {
+  if (typeof window !== "undefined") {
+    const injected = (window as unknown as { __0CANVAS_PORT__?: number }).__0CANVAS_PORT__;
+    if (typeof injected === "number" && Number.isFinite(injected) && injected > 0) {
+      return injected;
+    }
+  }
+  return DEFAULT_ENGINE_PORT;
+}
 
 export type ConnectionStatus = "disconnected" | "connecting" | "connected";
 
@@ -41,7 +55,7 @@ export class CanvasBridgeClient {
     if (this._disposed) return;
     if (this.ws?.readyState === WebSocket.OPEN) return;
 
-    const wsUrl = `ws://localhost:24193/ws`;
+    const wsUrl = `ws://localhost:${resolveEnginePort()}/ws`;
     this.setStatus("connecting");
 
     let ws: WebSocket;
