@@ -91,7 +91,15 @@ function ChatsPersistence() {
   useEffect(() => {
     if (hydrated.current) return;
     hydrated.current = true;
-    const chats = getSetting<ChatThread[]>(CHATS_STORAGE_KEY, []);
+    const raw = getSetting<ChatThread[]>(CHATS_STORAGE_KEY, []);
+    // Schema migration (Stream 3): ensure every chat has a `folder`
+    // field. Chats persisted before the project-grouping work don't
+    // carry one; default them to "" so they fall under the ambient
+    // "No project" header rather than crashing the group function.
+    const chats: ChatThread[] = raw.map((c) => ({
+      ...c,
+      folder: typeof c.folder === "string" ? c.folder : "",
+    }));
     const activeChatId = getSetting<string | null>(ACTIVE_CHAT_KEY, null);
     const stillActive =
       activeChatId && chats.some((c) => c.id === activeChatId)
