@@ -36,6 +36,11 @@ git2 = { version = "0.20", default-features = false, features = [
     "ssh",
 ] }
 
+# macOS Keychain (Phase 2-C). Target-specific so builds on Linux/Windows
+# later don't fail — those platforms get their own secret backends.
+[target.'cfg(target_os = "macos")'.dependencies]
+security-framework = "2"
+
 [profile.release]
 panic = "abort"
 codegen-units = 1

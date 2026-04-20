@@ -47,8 +47,8 @@ function AiSettingsPanel() {
     setSaved(false);
   }, []);
 
-  const handleSave = useCallback(() => {
-    saveAiSettings(settings);
+  const handleSave = useCallback(async () => {
+    await saveAiSettings(settings);
     dispatch({ type: "SET_AI_SETTINGS", settings });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);

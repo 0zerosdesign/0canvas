@@ -19,6 +19,7 @@
 
 import React, { useEffect } from "react";
 import { WorkspaceProvider, useWorkspace, type ChatThread } from "./0canvas/store/store";
+import { hydrateAiApiKey } from "./0canvas/lib/openai";
 import { BridgeProvider } from "./0canvas/bridge/use-bridge";
 import { AutoConnect, EngineWorkspace } from "./0canvas/engine/0canvas-engine";
 import { injectStyles } from "./0canvas/engine/0canvas-styles";
@@ -46,6 +47,30 @@ function ForceDesignPageOnBoot() {
   useEffect(() => {
     dispatch({ type: "SET_ACTIVE_PAGE", page: "design" });
   }, [dispatch]);
+  return null;
+}
+
+/**
+ * Phase 2-C: pull the OpenAI api key from the macOS keychain and merge
+ * it into AiSettings. The initial store value is synchronous and comes
+ * from localStorage without the secret; this effect fills it in a tick
+ * later. Any save from the Settings page persists the key back to the
+ * keychain, so subsequent reloads find it here.
+ */
+function HydrateAiApiKey() {
+  const { state, dispatch } = useWorkspace();
+  useEffect(() => {
+    let cancelled = false;
+    hydrateAiApiKey(state.aiSettings).then((hydrated) => {
+      if (cancelled) return;
+      if (hydrated.apiKey && hydrated.apiKey !== state.aiSettings.apiKey) {
+        dispatch({ type: "SET_AI_SETTINGS", settings: hydrated });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   return null;
 }
 
@@ -115,6 +140,7 @@ export function AppShell() {
       <BridgeProvider>
         <AutoConnect>
           <ForceDesignPageOnBoot />
+          <HydrateAiApiKey />
           <ReloadOnProjectChange />
           <ChatsPersistence />
           <div className="oc-app">

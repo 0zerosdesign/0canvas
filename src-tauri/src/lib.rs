@@ -25,6 +25,7 @@ mod css_files;
 mod env_files;
 mod git;
 mod localhost;
+mod secrets;
 mod sidecar;
 mod todo;
 
@@ -236,6 +237,9 @@ pub fn run() {
             git::git_branch_switch,
             git::git_branch_create,
             git::git_branch_delete,
+            secrets::keychain_set,
+            secrets::keychain_get,
+            secrets::keychain_delete,
         ])
         .setup(|app| {
             // Spawn the engine before the webview tries to connect. If it
