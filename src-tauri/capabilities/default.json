@@ -6,6 +6,8 @@
   "permissions": [
     "core:default",
     "dialog:default",
-    "pty:default"
+    "pty:default",
+    "deep-link:default",
+    "notification:default"
   ]
 }

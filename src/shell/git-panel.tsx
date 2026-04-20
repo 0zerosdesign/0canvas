@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import {
   git,
+  notify,
   type GitStatus,
   type GitFileStatus,
   type GitCommit,
@@ -229,6 +230,7 @@ export function GitPanel() {
       const result = await git.commit(message.trim());
       setMessage("");
       showToast(`Committed ${result.sha.slice(0, 7)}`);
+      notify("Commit created", `${result.sha.slice(0, 7)} — ${result.summary}`);
       await refresh();
     });
 
@@ -236,6 +238,7 @@ export function GitPanel() {
     wrap(async () => {
       await git.push();
       showToast("Pushed to origin");
+      notify("Pushed to origin", "Remote is up to date.");
       await refresh();
     });
 

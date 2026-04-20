@@ -36,6 +36,7 @@ use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem, Submenu},
     AppHandle, Emitter, Manager, WindowEvent,
 };
+use tauri_plugin_deep_link::DeepLinkExt;
 use tauri_plugin_dialog::DialogExt;
 
 /// Shape emitted to the webview whenever the active project root changes.
@@ -132,6 +133,59 @@ async fn open_project_folder_path(
     app.emit("project-changed", payload.clone())
         .map_err(|e| format!("emit project-changed: {}", e))?;
     Ok(payload)
+}
+
+/// Parse a `zero-canvas://…` URL and trigger the matching action.
+/// Supported forms today:
+///   zero-canvas://open?path=/absolute/path/to/project
+///
+/// Unknown actions are forwarded to the webview as `deep-link` events
+/// so frontend code can handle them without a Rust-side rebuild.
+fn handle_deep_link(app: &AppHandle, url: tauri::Url) {
+    println!("[0canvas] deep link: {}", url);
+    let host = url.host_str().unwrap_or("");
+    // tauri::Url exposes url.path() too but the "open" action lives
+    // in host (zero-canvas://open?...) because there's no //user part.
+    let action = if !host.is_empty() {
+        host.to_string()
+    } else {
+        url.path().trim_matches('/').to_string()
+    };
+
+    if action == "open" {
+        // Pull path= from the query string.
+        let path = url
+            .query_pairs()
+            .find(|(k, _)| k == "path")
+            .map(|(_, v)| v.into_owned());
+        if let Some(path) = path {
+            let app_clone = app.clone();
+            let spawn_path = PathBuf::from(path.clone());
+            tauri::async_runtime::spawn(async move {
+                let state_app = app_clone.clone();
+                let result = tauri::async_runtime::spawn_blocking(move || {
+                    let state = state_app.state::<SidecarState>();
+                    sidecar::spawn_engine(&state, &spawn_path)
+                })
+                .await;
+                match result {
+                    Ok(Ok(port)) => {
+                        let payload = ProjectChanged {
+                            root: path,
+                            port,
+                        };
+                        let _ = app_clone.emit("project-changed", payload);
+                    }
+                    Ok(Err(err)) => eprintln!("[0canvas] deep-link spawn failed: {}", err),
+                    Err(err) => eprintln!("[0canvas] deep-link join failed: {}", err),
+                }
+            });
+            return;
+        }
+    }
+
+    // Fallback: emit to webview.
+    let _ = app.emit("deep-link", url.to_string());
 }
 
 /// Resolve the initial project root. Cases in priority order:
@@ -245,6 +299,8 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_pty::init())
+        .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_notification::init())
         .manage(SidecarState::new())
         .invoke_handler(tauri::generate_handler![
             get_engine_port,
@@ -293,6 +349,18 @@ pub fn run() {
             // of the process; `sidecar::shutdown` sets the stop flag so
             // it doesn't race against the clean-quit shutdown.
             sidecar::start_watchdog(&state, app.handle().clone());
+
+            // Phase 2-F: listen for zero-canvas:// deep links. We support
+            // `zero-canvas://open?path=/Users/...` (open a known folder)
+            // and pass everything else through to the webview as-is via
+            // the `deep-link` event, in case JS wants to handle custom
+            // paths later.
+            let deep_link_app = app.handle().clone();
+            app.deep_link().on_open_url(move |event| {
+                for url in event.urls() {
+                    handle_deep_link(&deep_link_app, url);
+                }
+            });
 
             let menu = build_app_menu(app.handle())?;
             app.set_menu(menu)?;

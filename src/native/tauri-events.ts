@@ -237,3 +237,44 @@ export async function openProjectFolderPath(
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<ProjectChangedPayload>("open_project_folder_path", { path });
 }
+
+// ── Native notifications (Phase 2-F) ──────────────────────
+//
+// Thin wrapper over tauri-plugin-notification. Requests permission
+// lazily on first use so the OS prompt only appears when there's
+// actually a notification to show.
+
+let notificationPermission: "granted" | "denied" | "default" | null = null;
+
+export async function notify(title: string, body?: string): Promise<void> {
+  if (!isTauriWebview()) return;
+  const { isPermissionGranted, requestPermission, sendNotification } =
+    await import("@tauri-apps/plugin-notification");
+
+  if (notificationPermission === null) {
+    const granted = await isPermissionGranted();
+    if (granted) {
+      notificationPermission = "granted";
+    } else {
+      const result = await requestPermission();
+      notificationPermission = result;
+    }
+  }
+
+  if (notificationPermission !== "granted") return;
+  sendNotification({ title, body });
+}
+
+// ── Deep links (Phase 2-F) ────────────────────────────────
+//
+// Rust handles zero-canvas://open?path=... directly. Other routes
+// are forwarded as "deep-link" events for future handling.
+
+export async function onDeepLink(
+  handler: (url: string) => void,
+): Promise<() => void> {
+  if (!isTauriWebview()) return () => {};
+  const { listen } = await import("@tauri-apps/api/event");
+  const unlisten = await listen<string>("deep-link", (e) => handler(e.payload));
+  return unlisten;
+}

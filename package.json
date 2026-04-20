@@ -21,6 +21,8 @@
     "@parcel/watcher": "^2.5.0",
     "@radix-ui/react-scroll-area": "^1.2.0",
     "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/plugin-deep-link": "^2.4.8",
+    "@tauri-apps/plugin-notification": "^2.3.3",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/xterm": "^6.0.0",
     "@xyflow/react": "^12.10.1",

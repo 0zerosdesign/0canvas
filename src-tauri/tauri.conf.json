@@ -41,5 +41,13 @@
     "category": "DeveloperTool",
     "shortDescription": "Visual design tool for production code",
     "longDescription": "0canvas is a design-first Mac app that lets designers and solo developers edit production React + Tailwind code visually, with git, an embedded terminal, and AI agent integration."
+  },
+  "plugins": {
+    "deep-link": {
+      "mobile": [],
+      "desktop": {
+        "schemes": ["zero-canvas"]
+      }
+    }
   }
 }
