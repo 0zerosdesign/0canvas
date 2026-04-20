@@ -27,15 +27,25 @@ import {
   ChevronDown,
   ChevronRight,
   Folder,
+  FolderOpen,
+  FolderPlus,
   MessageSquare,
   Trash2,
+  X,
 } from "lucide-react";
 import { useWorkspace, type ChatThread } from "../0canvas/store/store";
 import {
   discoverLocalhostServices,
+  openProjectFolder,
+  openProjectFolderPath,
   type LocalhostService,
 } from "../native/tauri-events";
 import { getSetting, setSetting } from "../native/settings";
+import {
+  loadRecentProjects,
+  forgetProject,
+  type RecentProject,
+} from "../native/recent-projects";
 
 const DOCS_URL = "https://github.com/zerosdesign/0canvas#readme";
 const COLLAPSE_KEY = "column-1-collapsed";
@@ -192,11 +202,52 @@ function useProfileMenu() {
   return { open, setOpen, rootRef };
 }
 
+// Phase 2-D: state for the recent-projects dropdown. Same click-outside
+// + Esc pattern as the profile menu; different scope so opening one
+// doesn't close the other.
+function useWorkspaceMenu() {
+  const [open, setOpen] = useState(false);
+  const [currentRoot, setCurrentRoot] = useState<string>("");
+  const [recents, setRecents] = useState<RecentProject[]>([]);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // Re-read the recent-projects list every time the menu opens so we
+  // pick up the rememberProject() side-effect from ReloadOnProjectChange.
+  useEffect(() => {
+    if (!open) return;
+    setRecents(loadRecentProjects());
+    getCurrentProjectFolder().then(setCurrentRoot);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDocClick, true);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick, true);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const refresh = () => setRecents(loadRecentProjects());
+
+  return { open, setOpen, rootRef, currentRoot, recents, refresh };
+}
+
 export function Column1Nav() {
   const { state, dispatch } = useWorkspace();
   const services = useLocalhostServices();
   const currentUrl = state.project?.devServerUrl ?? "";
   const profileMenu = useProfileMenu();
+  const workspaceMenu = useWorkspaceMenu();
   const [collapsed, setCollapsed] = useState<boolean>(() =>
     getSetting<boolean>(COLLAPSE_KEY, false),
   );
@@ -275,6 +326,37 @@ export function Column1Nav() {
     // Device-Flow auth. For now this is a visible affordance that no-ops.
   };
 
+  // ── Workspace Manager handlers ──────────────────────────
+  const handlePickProject = async (path: string) => {
+    workspaceMenu.setOpen(false);
+    try {
+      await openProjectFolderPath(path);
+      // ReloadOnProjectChange triggers a window.location.reload()
+      // once Rust emits project-changed, so no state cleanup needed.
+    } catch (err) {
+      // Path went missing — drop it from the list so the user doesn't
+      // keep hitting the same ghost entry.
+      console.warn("[0canvas] could not open project:", err);
+      forgetProject(path);
+      workspaceMenu.refresh();
+    }
+  };
+
+  const handleOpenFolder = async () => {
+    workspaceMenu.setOpen(false);
+    try {
+      await openProjectFolder();
+    } catch (err) {
+      console.warn("[0canvas] open folder failed:", err);
+    }
+  };
+
+  const handleForgetProject = (e: React.MouseEvent, path: string) => {
+    e.stopPropagation();
+    forgetProject(path);
+    workspaceMenu.refresh();
+  };
+
   return (
     <aside
       className={`oc-column-1 ${collapsed ? "is-collapsed" : ""}`}
@@ -317,6 +399,72 @@ export function Column1Nav() {
           <Sparkles size={16} />
           {!collapsed && <span>Skills</span>}
         </button>
+      </div>
+
+      {/* Phase 2-D: Workspace Manager — current project + recents dropdown */}
+      <div className="oc-column-1__workspace" ref={workspaceMenu.rootRef}>
+        <button
+          className={`oc-column-1__action oc-column-1__workspace-btn ${
+            workspaceMenu.open ? "is-open" : ""
+          }`}
+          onClick={() => workspaceMenu.setOpen(!workspaceMenu.open)}
+          title={collapsed ? "Workspace" : undefined}
+        >
+          <FolderOpen size={16} />
+          {!collapsed && (
+            <>
+              <span className="oc-column-1__workspace-name">
+                {folderBasename(workspaceMenu.currentRoot || state.project?.name || "")}
+              </span>
+              <ChevronDown size={12} className="oc-column-1__workspace-caret" />
+            </>
+          )}
+        </button>
+
+        {workspaceMenu.open && (
+          <div className={`oc-column-1__workspace-menu ${collapsed ? "is-collapsed" : ""}`}>
+            {workspaceMenu.recents.length === 0 ? (
+              <p className="oc-column-1__workspace-empty">No recent projects.</p>
+            ) : (
+              <ul className="oc-column-1__workspace-list">
+                {workspaceMenu.recents.map((p) => {
+                  const isCurrent = p.path === workspaceMenu.currentRoot;
+                  return (
+                    <li key={p.path} className="oc-column-1__workspace-item">
+                      <button
+                        className={`oc-column-1__workspace-pick ${isCurrent ? "is-current" : ""}`}
+                        onClick={() => !isCurrent && handlePickProject(p.path)}
+                        disabled={isCurrent}
+                        title={p.path}
+                      >
+                        <Folder size={14} className="oc-column-1__workspace-item-icon" />
+                        <span className="oc-column-1__workspace-item-name">{p.name}</span>
+                        <span className="oc-column-1__workspace-item-path">{p.path}</span>
+                      </button>
+                      {!isCurrent && (
+                        <button
+                          className="oc-column-1__workspace-forget"
+                          onClick={(e) => handleForgetProject(e, p.path)}
+                          title="Remove from recent"
+                          aria-label="Remove from recent"
+                        >
+                          <X size={10} />
+                        </button>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            <button
+              className="oc-column-1__workspace-open"
+              onClick={handleOpenFolder}
+            >
+              <FolderPlus size={13} />
+              <span>Open Folder…</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {!collapsed && (

@@ -222,3 +222,18 @@ export async function openProjectFolder(): Promise<ProjectChangedPayload | null>
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<ProjectChangedPayload | null>("open_project_folder");
 }
+
+/**
+ * Phase 2-D: open a known folder by path (no dialog). Used by the
+ * recent-projects list. Throws if the path no longer exists so the UI
+ * can prune stale entries.
+ */
+export async function openProjectFolderPath(
+  path: string,
+): Promise<ProjectChangedPayload> {
+  if (!isTauriWebview()) {
+    throw new Error("Opening by path requires the Mac app");
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<ProjectChangedPayload>("open_project_folder_path", { path });
+}

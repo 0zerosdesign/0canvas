@@ -99,6 +99,41 @@ async fn open_project_folder(app: AppHandle) -> Result<Option<ProjectChanged>, S
     Ok(Some(payload))
 }
 
+/// Phase 2-D — open a specific folder path without showing the dialog.
+/// Used by the Workspace Manager's "recent projects" list. Emits the
+/// same `project-changed` event as `open_project_folder` so downstream
+/// wiring stays uniform.
+#[tauri::command]
+async fn open_project_folder_path(
+    app: AppHandle,
+    path: String,
+) -> Result<ProjectChanged, String> {
+    let folder_path = PathBuf::from(&path);
+    if !folder_path.exists() {
+        return Err(format!("folder does not exist: {}", path));
+    }
+    if !folder_path.is_dir() {
+        return Err(format!("not a directory: {}", path));
+    }
+
+    let state_app = app.clone();
+    let spawn_path = folder_path.clone();
+    let port = tauri::async_runtime::spawn_blocking(move || {
+        let state = state_app.state::<SidecarState>();
+        sidecar::spawn_engine(&state, &spawn_path)
+    })
+    .await
+    .map_err(|e| format!("spawn_blocking join: {}", e))??;
+
+    let payload = ProjectChanged {
+        root: folder_path.to_string_lossy().into_owned(),
+        port,
+    };
+    app.emit("project-changed", payload.clone())
+        .map_err(|e| format!("emit project-changed: {}", e))?;
+    Ok(payload)
+}
+
 /// Resolve the initial project root. Cases in priority order:
 ///
 /// 1. `cargo tauri dev` launches with CWD = `<repo>/src-tauri`; walk up one
@@ -215,6 +250,7 @@ pub fn run() {
             get_engine_port,
             get_engine_root,
             open_project_folder,
+            open_project_folder_path,
             localhost::discover_localhost_services,
             env_files::list_env_files,
             env_files::save_env_file,

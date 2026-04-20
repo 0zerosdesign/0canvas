@@ -27,6 +27,8 @@ import { Column1Nav } from "./shell/column1-nav";
 import { Column2Workspace } from "./shell/column2-workspace";
 import { onProjectChanged } from "./native/tauri-events";
 import { getSetting, setSetting } from "./native/settings";
+import { rememberProject } from "./native/recent-projects";
+import { invoke } from "@tauri-apps/api/core";
 import "./shell/app-shell.css";
 
 const CHATS_STORAGE_KEY = "chats-v1";
@@ -121,8 +123,22 @@ function ChatsPersistence() {
 function ReloadOnProjectChange() {
   useEffect(() => {
     let unlisten: (() => void) | null = null;
+
+    // Seed the recent-projects list with whatever the engine is pointed
+    // at right now (Finder launch, CWD default, etc.) so the dropdown
+    // has at least one entry on first run.
+    (async () => {
+      try {
+        const root = await invoke<string | null>("get_engine_root");
+        if (root) rememberProject(root);
+      } catch {
+        /* not running under Tauri, or engine not ready yet */
+      }
+    })();
+
     onProjectChanged((payload) => {
       console.log("[0canvas] project changed", payload);
+      rememberProject(payload.root);
       window.location.reload();
     }).then((fn) => {
       unlisten = fn;
