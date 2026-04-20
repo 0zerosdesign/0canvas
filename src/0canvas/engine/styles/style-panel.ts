@@ -28,7 +28,7 @@ ${S} .oc-style-prop-value {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 ${S} .oc-style-swatch {
-  width: 14px; height: 14px; border-radius: 3px;
+  width: 14px; height: 14px; border-radius: 4px;
   border: 1px solid var(--color--border--on-surface-1); display: inline-block;
   vertical-align: middle; margin-right: 6px;
 }
@@ -69,7 +69,7 @@ ${S} .oc-style-tag-badge {
 ${S} .oc-style-class-badge {
   font-size: 10px; color: var(--color--text--on-surface-variant);
   background: var(--color--surface--1); padding: 2px 6px;
-  border-radius: 3px; border: 1px solid var(--color--border--on-surface-0);
+  border-radius: 4px; border: 1px solid var(--color--border--on-surface-0);
   font-family: var(--font-mono);
 }
 ${S} .oc-style-class-overflow { font-size: 10px; color: var(--color--text--muted); }

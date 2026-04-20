@@ -200,7 +200,7 @@ ${S} *:focus-visible { outline: 2px solid var(--color--outline--focus); outline-
 /* ── Scrollbar ── */
 ${S} ::-webkit-scrollbar { width: 6px; height: 6px; }
 ${S} ::-webkit-scrollbar-track { background: transparent; }
-${S} ::-webkit-scrollbar-thumb { background: var(--color--surface--2); border-radius: 3px; }
+${S} ::-webkit-scrollbar-thumb { background: var(--color--surface--2); border-radius: 4px; }
 ${S} ::-webkit-scrollbar-thumb:hover { background: var(--color--border--on-surface-2); }
 
 /* ── Animations ── */
@@ -644,7 +644,7 @@ ${S} .oc-page-tabs {
 }
 ${S} .oc-page-tab {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 5px 10px;
+  padding: 6px 10px;
   background: transparent; border: none; border-radius: 6px;
   color: var(--color--text--muted);
   font-size: 12px; font-weight: 500;
@@ -768,7 +768,7 @@ ${S} .oc-toolbar-group.is-pill-sm {
 ${S} .oc-toolbar-divider { width: 1px; height: 20px; background: var(--color--border--on-surface-0); }
 ${S} .oc-toolbar-btn {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 5px 10px; border-radius: 6px;
+  padding: 6px 10px; border-radius: 6px;
   font-size: 12px; font-weight: 450; color: var(--color--text--muted);
   background: transparent; border: none; cursor: pointer;
   transition: all 0.15s ease; white-space: nowrap;
@@ -811,7 +811,7 @@ ${S} .oc-toolbar-conn-dot {
 ${S} .oc-toolbar-dropdown {
   position: absolute; top: 100%; left: 0; margin-top: 6px;
   background: var(--color--surface--floor); border: 1px solid var(--color--border--on-surface-0);
-  border-radius: 10px; box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+  border-radius: 8px; box-shadow: 0 12px 32px rgba(0,0,0,0.5);
   z-index: 100; overflow: hidden;
 }
 ${S} .oc-toolbar-dropdown-inputrow {
@@ -852,7 +852,7 @@ ${S} .oc-toolbar-project-dot.is-unsaved { background: var(--color--status--warni
 ${S} .oc-toolbar-project-input {
   width: 100px; padding: 1px 4px;
   background: var(--color--surface--1); border: 1px solid var(--color--border--on-surface-1);
-  border-radius: 3px; color: var(--color--text--on-surface);
+  border-radius: 4px; color: var(--color--text--on-surface);
   font-size: 12px; outline: none;
 }
 ${S} .oc-toolbar-project-name {
@@ -925,7 +925,7 @@ ${S} .oc-panel-empty {
 }
 ${S} .oc-panel-btn {
   display: inline-flex; align-items: center; gap: 4px;
-  padding: 4px 8px; border-radius: 5px;
+  padding: 4px 8px; border-radius: 6px;
   font-size: 11px; color: var(--color--text--muted);
   background: transparent; border: none; cursor: pointer;
   transition: background 120ms ease, color 120ms ease;
@@ -959,7 +959,7 @@ ${S} .oc-layers-row.is-hovered-element {
 ${S} .oc-layers-tag-icon {
   width: 14px; height: 14px; display: flex;
   align-items: center; justify-content: center;
-  font-size: 10px; font-weight: 700; border-radius: 3px;
+  font-size: 10px; font-weight: 700; border-radius: 4px;
   flex-shrink: 0;
 }
 ${S} .oc-layers-toggle {
@@ -976,7 +976,7 @@ ${S} .oc-layers-row:hover .oc-layers-actions { display: flex; }
 ${S} .oc-layers-action-btn {
   width: 18px; height: 18px; display: flex;
   align-items: center; justify-content: center;
-  border-radius: 3px; cursor: pointer; color: var(--color--text--disabled);
+  border-radius: 4px; cursor: pointer; color: var(--color--text--disabled);
   background: transparent; border: none;
 }
 ${S} .oc-layers-action-btn:hover { background: rgba(255,255,255,0.06); color: var(--color--text--on-surface-variant); }
@@ -1009,7 +1009,7 @@ ${S} .oc-style-prop-value {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 ${S} .oc-style-swatch {
-  width: 14px; height: 14px; border-radius: 3px;
+  width: 14px; height: 14px; border-radius: 4px;
   border: 1px solid var(--color--border--on-surface-1); display: inline-block;
   vertical-align: middle; margin-right: 6px;
 }
@@ -1050,7 +1050,7 @@ ${S} .oc-style-tag-badge {
 ${S} .oc-style-class-badge {
   font-size: 10px; color: var(--color--text--on-surface-variant);
   background: var(--color--surface--1); padding: 1px 5px;
-  border-radius: 3px; border: 1px solid var(--color--border--on-surface-0);
+  border-radius: 4px; border: 1px solid var(--color--border--on-surface-0);
   font-family: var(--font-mono); max-width: 80px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
@@ -1178,7 +1178,7 @@ ${S} .oc-source-chrome {
   display: flex; align-items: center; gap: 8px;
   padding: 8px 12px; background: var(--color--surface--0);
   border-bottom: 1px solid var(--color--border--on-surface-0);
-  border-radius: 10px 10px 0 0; user-select: none;
+  border-radius: 8px 10px 0 0; user-select: none;
 }
 ${S} .oc-source-traffic-dot { width: 10px; height: 10px; border-radius: 50%; }
 ${S} .oc-source-url {
@@ -1199,7 +1199,7 @@ ${S} .oc-source-badge {
   position: absolute; top: -2px; right: -2px;
   display: flex; align-items: center; justify-content: center;
   min-width: 14px; height: 14px; padding: 0 3px;
-  border-radius: 7px;
+  border-radius: 8px;
   background: var(--color--surface--floor); color: var(--color--text--on-surface);
   font-size: 6px; font-weight: 700; line-height: 1;
   pointer-events: none; box-sizing: border-box;
@@ -1216,7 +1216,7 @@ ${S} .oc-source-btn-group.has-items {
   gap: 0;
 }
 ${S} .oc-source-btn-group.has-items .oc-source-btn {
-  border-radius: 7px 0 0 7px;
+  border-radius: 8px 0 0 7px;
 }
 ${S} .oc-source-btn-group.has-items .oc-source-send-btn {
   border-radius: 0 7px 7px 0;
@@ -1256,7 +1256,7 @@ ${S} .oc-resize-zone {
 
 /* Visible handle bar — thin bar inside the grab zone */
 ${S} .oc-resize-handle {
-  border-radius: 3px;
+  border-radius: 4px;
   background: var(--color--border--on-surface-1);
   pointer-events: none;
   transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
@@ -1322,7 +1322,7 @@ ${S} .oc-variant-action-btn:hover { background: var(--color--surface--1); color:
 
 /* ── Agent Panel ───────────────────────────────────────────── */
 ${S} .oc-agent-ide-card {
-  padding: 12px; border-radius: 10px;
+  padding: 12px; border-radius: 8px;
   border: 1px solid var(--color--border--on-surface-0);
   background: var(--color--surface--0); margin-bottom: 8px;
   transition: border-color 0.15s ease;
@@ -1399,7 +1399,7 @@ ${S} .oc-agent-btn-primary.is-disabled {
   background: var(--color--surface--1); color: var(--color--text--disabled); cursor: default;
 }
 ${S} .oc-agent-mcp-card {
-  padding: 16px; border: 1px solid var(--color--border--on-surface-0); border-radius: 10px;
+  padding: 16px; border: 1px solid var(--color--border--on-surface-0); border-radius: 8px;
   background: var(--color--surface--0); margin-bottom: 12px;
 }
 ${S} .oc-agent-mcp-url {
@@ -1410,7 +1410,7 @@ ${S} .oc-agent-mcp-desc {
   font-size: 11px; color: var(--color--text--muted); margin-bottom: 12px;
 }
 ${S} .oc-agent-setup-card {
-  padding: 12px; border: 1px solid var(--color--border--on-surface-0); border-radius: 10px;
+  padding: 12px; border: 1px solid var(--color--border--on-surface-0); border-radius: 8px;
   background: var(--color--surface--0);
 }
 ${S} .oc-agent-setup-title { font-size: 11px; color: var(--color--text--muted); margin-bottom: 8px; }
@@ -1539,7 +1539,7 @@ ${S} .oc-inline-edit-actions { display: flex; gap: 6px; }
 ${S} .oc-inline-edit-accept,
 ${S} .oc-inline-edit-reject {
   display: flex; align-items: center; gap: 4px;
-  padding: 5px 10px; border-radius: 6px; border: none;
+  padding: 6px 10px; border-radius: 6px; border: none;
   font-size: 12px; cursor: pointer; font-family: var(--font-sans);
 }
 ${S} .oc-inline-edit-accept { background: var(--color--status--success); color: #fff; }
@@ -1946,7 +1946,7 @@ ${S} .oc-theme-value-cell {
 }
 ${S} .oc-theme-color-swatch {
   width: 16px; height: 16px; flex-shrink: 0;
-  border-radius: 3px;
+  border-radius: 4px;
   border: 1px solid var(--color--border--on-surface-1);
 }
 ${S} .oc-theme-color-swatch.is-clickable {
@@ -1983,7 +1983,7 @@ ${S} .oc-theme-color-picker-wrap {
 ${S} .oc-theme-syntax-badge {
   display: inline-flex; align-items: center;
   font-size: 10px; font-weight: 600;
-  padding: 1px 5px; border-radius: 3px;
+  padding: 1px 5px; border-radius: 4px;
   background: var(--color--surface--2);
   color: var(--color--text--on-surface-variant);
 }
@@ -2025,7 +2025,7 @@ ${S} .oc-color-picker {
   width: 240px; padding: 10px;
   background: var(--color--surface--1);
   border: 1px solid var(--color--border--on-surface-1);
-  border-radius: 10px;
+  border-radius: 8px;
   box-shadow: 0 12px 32px var(--color--shadow--overlay);
 }
 ${S} .oc-color-picker-header {
@@ -2361,8 +2361,8 @@ ${S} .oc-theme-mode-header-info {
 }
 ${S} .oc-theme-mode-badge {
   display: inline-flex; align-items: center; justify-content: center;
-  min-width: 18px; height: 18px; padding: 0 5px;
-  border-radius: 9px; font-size: 10px; font-weight: 700;
+  min-width: 18px; height: 18px; padding: 0 6px;
+  border-radius: 9999px; font-size: 10px; font-weight: 700;
   background: var(--color--base--primary); color: var(--color--text--on-primary);
 }
 ${S} .oc-theme-mode-body {
@@ -2412,7 +2412,7 @@ ${S} .oc-theme-mode-search-clear {
   display: flex; align-items: center; justify-content: center;
   width: 16px; height: 16px; border: none;
   background: var(--color--surface--2); color: var(--color--text--muted);
-  border-radius: 3px; cursor: pointer;
+  border-radius: 4px; cursor: pointer;
 }
 
 /* ── Token list ── */
@@ -2434,10 +2434,10 @@ ${S} .oc-theme-mode-token-row:hover {
 }
 ${S} .oc-theme-mode-token-swatch {
   width: 14px; height: 14px; flex-shrink: 0;
-  border-radius: 3px; border: 1px solid var(--color--border--on-surface-1);
+  border-radius: 4px; border: 1px solid var(--color--border--on-surface-1);
 }
 ${S} .oc-theme-mode-token-swatch.is-small {
-  width: 10px; height: 10px; border-radius: 2px;
+  width: 10px; height: 10px; border-radius: 4px;
 }
 ${S} .oc-theme-mode-token-name {
   font-family: 'Fira Code', monospace;
@@ -2571,7 +2571,7 @@ ${S} .oc-tw-group-label {
 ${S} .oc-tw-chips { display: flex; flex-wrap: wrap; gap: 3px; }
 ${S} .oc-tw-chip {
   display: inline-flex; align-items: center; gap: 2px;
-  padding: 1px 5px; border-radius: 3px; font-size: 10px;
+  padding: 1px 5px; border-radius: 4px; font-size: 10px;
   font-family: var(--font-mono); background: var(--color--surface--1);
   border: 1px solid var(--color--border--on-surface-1);
   color: var(--color--text--on-surface);
@@ -2581,7 +2581,7 @@ ${S} .oc-tw-chip-text { max-width: 100px; overflow: hidden; text-overflow: ellip
 ${S} .oc-tw-chip-remove {
   display: flex; align-items: center; justify-content: center;
   width: 12px; height: 12px; border: none; background: transparent;
-  color: var(--color--text--muted); cursor: pointer; border-radius: 2px;
+  color: var(--color--text--muted); cursor: pointer; border-radius: 4px;
   padding: 0;
 }
 ${S} .oc-tw-chip-remove:hover { background: rgba(239,68,68,0.2); color: #ef4444; }
@@ -2627,7 +2627,7 @@ ${S} .oc-tw-suggestion-prop {
 
 ${S} .oc-breakpoint-badge {
   font-size: 10px; font-weight: 600; text-transform: uppercase;
-  padding: 1px 6px; border-radius: 3px; letter-spacing: 0.3px;
+  padding: 1px 6px; border-radius: 4px; letter-spacing: 0.3px;
   background: rgba(234,179,8,0.15); color: #eab308;
 }
 ${S} .oc-style-swatch-clickable { cursor: pointer; }
@@ -2650,7 +2650,7 @@ ${S} .oc-color-editor-status {
   display: flex; align-items: center; gap: 6px;
 }
 ${S} .oc-color-editor-badge {
-  font-size: 10px; padding: 1px 6px; border-radius: 3px;
+  font-size: 10px; padding: 1px 6px; border-radius: 4px;
 }
 ${S} .oc-badge-writing { color: var(--color--text--on-surface-variant); }
 ${S} .oc-badge-error { color: #ef4444; }
@@ -2697,7 +2697,7 @@ ${S} .oc-spacing-middle {
   display: flex; align-items: stretch; justify-content: center;
 }
 ${S} .oc-spacing-value {
-  cursor: pointer; padding: 1px 4px; border-radius: 3px;
+  cursor: pointer; padding: 1px 4px; border-radius: 4px;
   transition: background 0.15s;
 }
 ${S} .oc-spacing-value:hover { background: rgba(255,255,255,0.08); }
@@ -2706,7 +2706,7 @@ ${S} .oc-spacing-padding { color: #4caf50; }
 ${S} .oc-spacing-input {
   width: 36px; text-align: center; padding: 1px 2px;
   background: var(--color--surface--0); border: 1px solid var(--color--outline--focus);
-  border-radius: 3px; color: var(--color--text--on-surface);
+  border-radius: 4px; color: var(--color--text--on-surface);
   font-size: 11px; font-family: var(--font-mono); outline: none;
 }
 
@@ -2780,7 +2780,7 @@ ${S} .oc-feedback-item-header {
 }
 ${S} .oc-feedback-badge {
   font-size: 10px; font-weight: 600; text-transform: uppercase;
-  padding: 1px 6px; border-radius: 3px; letter-spacing: 0.3px;
+  padding: 1px 6px; border-radius: 4px; letter-spacing: 0.3px;
   background: var(--color--surface--2); color: var(--color--text--on-surface-variant);
 }
 ${S} .oc-feedback-badge[data-intent="fix"] { background: rgba(239,68,68,0.15); color: #ef4444; }
@@ -2821,7 +2821,7 @@ ${S} .oc-editor-value {
 
 /* ── Segmented Control ── */
 ${S} .oc-segmented {
-  display: inline-flex; border-radius: 5px; overflow: hidden;
+  display: inline-flex; border-radius: 6px; overflow: hidden;
   border: 1px solid var(--color--border--on-surface-1);
   background: var(--color--surface--1);
 }
@@ -2857,14 +2857,14 @@ ${S} .oc-num-row { display: flex; align-items: center; gap: 2px; }
 ${S} .oc-num-input {
   flex: 1; min-width: 0; width: 100%;
   background: var(--color--surface--0); border: 1px solid var(--color--outline--focus);
-  border-radius: 3px; padding: 2px 4px;
+  border-radius: 4px; padding: 2px 4px;
   color: var(--color--text--on-surface);
   font-size: 10px; font-family: var(--font-mono); outline: none;
   text-align: center;
 }
 ${S} .oc-num-value {
   flex: 1; text-align: center; cursor: pointer;
-  padding: 2px 4px; border-radius: 3px;
+  padding: 2px 4px; border-radius: 4px;
   font-size: 10px; font-family: var(--font-mono);
   color: var(--color--text--on-surface);
   background: var(--color--surface--1);
@@ -2873,7 +2873,7 @@ ${S} .oc-num-value {
 ${S} .oc-num-value:hover { border-color: var(--color--border--on-surface-1); }
 ${S} .oc-num-unit {
   background: var(--color--surface--1); border: 1px solid var(--color--border--on-surface-1);
-  border-radius: 3px; padding: 2px 2px;
+  border-radius: 4px; padding: 2px 2px;
   color: var(--color--text--muted); font-size: 10px; outline: none;
   cursor: pointer;
 }
@@ -2890,7 +2890,7 @@ ${S} .oc-slider-label {
 ${S} .oc-slider-row { display: flex; align-items: center; gap: 6px; }
 ${S} .oc-slider-track {
   flex: 1; height: 4px; -webkit-appearance: none; appearance: none;
-  border-radius: 2px; outline: none; cursor: pointer;
+  border-radius: 4px; outline: none; cursor: pointer;
 }
 ${S} .oc-slider-track::-webkit-slider-thumb {
   -webkit-appearance: none; width: 12px; height: 12px;
@@ -2927,14 +2927,14 @@ ${S} .oc-align-grid {
 }
 ${S} .oc-align-grid-row { display: flex; gap: 3px; }
 ${S} .oc-align-dot {
-  width: 16px; height: 16px; border-radius: 3px;
+  width: 16px; height: 16px; border-radius: 4px;
   border: 1.5px solid var(--color--border--on-surface-1);
   background: transparent; cursor: pointer;
   transition: all 0.12s; position: relative;
 }
 ${S} .oc-align-dot::after {
   content: ""; position: absolute; inset: 3px;
-  border-radius: 1px; background: var(--color--text--muted);
+  border-radius: 4px; background: var(--color--text--muted);
   opacity: 0.3;
 }
 ${S} .oc-align-dot:hover { border-color: var(--color--text--on-surface-variant); }
@@ -2971,7 +2971,7 @@ ${S} .oc-radius-preview-label {
   color: var(--color--text--muted);
 }
 ${S} .oc-radius-value {
-  cursor: pointer; padding: 2px 6px; border-radius: 3px;
+  cursor: pointer; padding: 2px 6px; border-radius: 4px;
   font-size: 10px; font-family: var(--font-mono);
   color: var(--color--text--on-surface);
   background: var(--color--surface--1);
@@ -2981,7 +2981,7 @@ ${S} .oc-radius-value:hover { border-color: var(--color--border--on-surface-1); 
 ${S} .oc-radius-input {
   width: 36px; text-align: center; padding: 2px;
   background: var(--color--surface--0); border: 1px solid var(--color--outline--focus);
-  border-radius: 3px; color: var(--color--text--on-surface);
+  border-radius: 4px; color: var(--color--text--on-surface);
   font-size: 10px; font-family: var(--font-mono); outline: none;
 }
 
@@ -3012,7 +3012,7 @@ ${S} .oc-ai-context-badge {
   color: var(--color--text--on-surface-variant);
   background: rgba(255,255,255,0.04);
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: 9999px;
   border: none;
   display: inline-block; max-width: 100%;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -3099,7 +3099,7 @@ ${S} .oc-ai-input {
   flex: 1;
   background: var(--color--surface--1);
   border: 1px solid transparent;
-  border-radius: 10px; padding: 10px 14px;
+  border-radius: 8px; padding: 10px 14px;
   color: var(--color--text--on-surface); font-size: 13px;
   outline: none; min-width: 0;
   transition: border-color 120ms ease, background 120ms ease;
@@ -3114,7 +3114,7 @@ ${S} .oc-ai-input:disabled { opacity: 0.5; }
 
 ${S} .oc-ai-send-btn {
   display: flex; align-items: center; justify-content: center;
-  width: 36px; height: 36px; border: none; border-radius: 10px;
+  width: 36px; height: 36px; border: none; border-radius: 8px;
   background: var(--color--base--primary);
   color: white;
   cursor: pointer; transition: background 120ms ease;
@@ -3153,7 +3153,7 @@ ${S} .oc-chat-headerbtn {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 4px 8px 4px 10px;
   background: rgba(255,255,255,0.04);
-  border: none; border-radius: 999px;
+  border: none; border-radius: 9999px;
   color: var(--color--text--on-surface);
   font-family: inherit; font-size: 12px; font-weight: 500;
   cursor: pointer;
@@ -3164,7 +3164,7 @@ ${S} .oc-chat-headerbtn-caret { color: var(--color--text--muted); }
 ${S} .oc-chat-iconbtn {
   display: inline-flex; align-items: center; justify-content: center;
   width: 28px; height: 26px;
-  background: transparent; border: none; border-radius: 7px;
+  background: transparent; border: none; border-radius: 8px;
   color: var(--color--text--muted);
   cursor: pointer;
   transition: background 120ms ease, color 120ms ease;
@@ -3242,7 +3242,7 @@ ${S} .oc-slash-footer {
 ${S} .oc-chat-composer-card {
   background: var(--color--surface--1);
   border: 1px solid rgba(255,255,255,0.05);
-  border-radius: 14px;
+  border-radius: 12px;
   transition: border-color 120ms ease;
   overflow: hidden;
 }
@@ -3269,7 +3269,7 @@ ${S} .oc-chat-composer-toolbar {
 ${S} .oc-chat-toolbar-pill {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 4px 8px;
-  background: transparent; border: none; border-radius: 7px;
+  background: transparent; border: none; border-radius: 8px;
   color: var(--color--text--on-surface-variant);
   font-family: inherit; font-size: 11px; font-weight: 500;
   cursor: pointer;
@@ -3300,7 +3300,7 @@ ${S} .oc-chat-toolbar-iconbtn:hover {
 }
 ${S} .oc-chat-skill-chip {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 18px; height: 18px; border-radius: 5px;
+  width: 18px; height: 18px; border-radius: 6px;
   background: rgba(59,130,246,0.18);
   color: var(--color--text--primary-light);
   font-size: 10px; font-weight: 700;
@@ -3317,7 +3317,7 @@ ${S} .oc-chat-skill-menu {
   z-index: 30;
   background: var(--color--surface--1);
   border: 1px solid var(--color--border--on-surface-1);
-  border-radius: 10px;
+  border-radius: 8px;
   box-shadow: var(--shadow-lg);
   padding: 4px;
   display: flex; flex-direction: column; gap: 1px;
@@ -3410,7 +3410,7 @@ ${S} .oc-chat-token-dot {
 /* ── AI Applied Changes ── */
 ${S} .oc-ai-applied {
   display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
-  margin-top: 8px; padding: 6px 8px; border-radius: 5px;
+  margin-top: 8px; padding: 6px 8px; border-radius: 6px;
   background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2);
   font-size: 10px; color: #22c55e;
 }
@@ -3422,7 +3422,7 @@ ${S} .oc-ai-context-none { opacity: 0.5; }
 ${S} .oc-ai-applied-prop {
   font-family: var(--font-mono); font-size: 10px;
   background: rgba(34,197,94,0.1); padding: 1px 5px;
-  border-radius: 3px; color: #22c55e;
+  border-radius: 4px; color: #22c55e;
 }
 
 /* ── AI Diff View (C2: Accept/Reject Per Property) ── */
@@ -3447,7 +3447,7 @@ ${S} .oc-ai-diff-row {
   line-height: 1.4; min-width: 0;
 }
 ${S} .oc-ai-diff-row:hover {
-  background: var(--color--surface--2); border-radius: 3px;
+  background: var(--color--surface--2); border-radius: 4px;
 }
 ${S} .oc-ai-diff-check {
   width: 12px; height: 12px; flex-shrink: 0;
@@ -3498,7 +3498,7 @@ ${S} .oc-ai-diff-reject {
 }
 
 ${S} .oc-ai-provider-tag {
-  font-size: 10px; padding: 3px 8px; border-radius: 999px;
+  font-size: 10px; padding: 3px 8px; border-radius: 9999px;
   background: rgba(255,255,255,0.05);
   color: var(--color--text--on-surface-variant);
   font-weight: 500;
@@ -3564,7 +3564,7 @@ ${S} .oc-ai-hint {
 ${S} .oc-ai-hint code {
   font-family: var(--font-mono); font-size: 10px;
   background: var(--color--surface--2); padding: 1px 5px;
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 ${S} .oc-ai-field {
@@ -3578,21 +3578,21 @@ ${S} .oc-ai-field-value {
   color: var(--color--text--muted); margin-left: 4px;
 }
 ${S} .oc-ai-field-input {
-  padding: 6px 10px; border-radius: 5px;
+  padding: 6px 10px; border-radius: 6px;
   border: 1px solid var(--color--border--on-surface-1);
   background: var(--color--surface--1); color: var(--color--text--on-surface);
   font-size: 12px; font-family: var(--font-mono); outline: none;
 }
 ${S} .oc-ai-field-input:focus { border-color: var(--color--outline--focus); }
 ${S} .oc-ai-field-select {
-  padding: 6px 10px; border-radius: 5px;
+  padding: 6px 10px; border-radius: 6px;
   border: 1px solid var(--color--border--on-surface-1);
   background: var(--color--surface--1); color: var(--color--text--on-surface);
   font-size: 12px; outline: none; cursor: pointer;
 }
 ${S} .oc-ai-field-range {
   width: 100%; height: 4px; -webkit-appearance: none; appearance: none;
-  background: var(--color--surface--2); border-radius: 2px; outline: none;
+  background: var(--color--surface--2); border-radius: 4px; outline: none;
 }
 ${S} .oc-ai-field-range::-webkit-slider-thumb {
   -webkit-appearance: none; width: 14px; height: 14px;
@@ -3652,7 +3652,7 @@ ${S} .oc-debug-table th {
 ${S} .oc-debug-table td code {
   font-family: var(--font-mono); font-size: 11px;
   background: var(--color--surface--1); padding: 2px 6px;
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 /* ── Token Suggestions Dropdown ── */
@@ -3661,7 +3661,7 @@ ${S} .oc-token-suggest {
 }
 ${S} .oc-token-suggest-trigger {
   background: none; border: 1px solid var(--color--border--on-surface-1);
-  border-radius: 3px; width: 16px; height: 16px; display: flex;
+  border-radius: 4px; width: 16px; height: 16px; display: flex;
   align-items: center; justify-content: center; cursor: pointer;
   color: var(--color--text--muted); padding: 0;
   transition: border-color 0.15s, color 0.15s;
@@ -3697,7 +3697,7 @@ ${S} .oc-token-suggest-item:hover {
   background: var(--color--surface--1);
 }
 ${S} .oc-token-suggest-swatch {
-  width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0;
+  width: 12px; height: 12px; border-radius: 4px; flex-shrink: 0;
   border: 1px solid var(--color--border--on-surface-1);
 }
 ${S} .oc-token-suggest-name {
@@ -3713,7 +3713,7 @@ ${S} .oc-autocomplete-dropdown {
   position: absolute; top: 100%; left: 0; right: 0; z-index: 100;
   margin-top: 2px; background: var(--color--surface--0);
   border: 1px solid var(--color--border--on-surface-1);
-  border-radius: 5px; box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+  border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.35);
   overflow: hidden; max-height: 156px; overflow-y: auto;
 }
 ${S} .oc-autocomplete-item {
@@ -3775,7 +3775,7 @@ ${S} .oc-ai-toggle-desc {
 }
 ${S} .oc-toggle-switch {
   position: relative; width: 36px; height: 20px; flex-shrink: 0;
-  border-radius: 10px; border: 1px solid var(--color--border--on-surface-1);
+  border-radius: 8px; border: 1px solid var(--color--border--on-surface-1);
   background: var(--color--surface--1); cursor: pointer;
   transition: background 0.2s, border-color 0.2s;
   padding: 0;

@@ -102,7 +102,7 @@ ${S} .oc-ai-tile {
   padding: 14px 16px;
   background: var(--color--surface--1);
   border: 1px solid var(--color--border--on-surface-1);
-  border-radius: 10px;
+  border-radius: 8px;
   color: var(--color--text--on-surface);
   font-size: 13px; font-weight: 500;
   cursor: pointer;
@@ -130,7 +130,7 @@ ${S} .oc-ai-auth-tabs {
   padding: 4px;
   background: var(--color--surface--1);
   border: 1px solid var(--color--border--on-surface-1);
-  border-radius: 10px;
+  border-radius: 8px;
 }
 ${S} .oc-ai-auth-tab {
   display: inline-flex; align-items: center; justify-content: center;
@@ -160,7 +160,7 @@ ${S} .oc-ai-auth-panel {
   display: flex; flex-direction: column; gap: 10px;
   padding: 14px 16px;
   border: 1px solid var(--color--border--on-surface-1);
-  border-radius: 10px;
+  border-radius: 8px;
   background: var(--color--surface--1);
 }
 ${S} .oc-ai-auth-panel.is-info {
@@ -191,7 +191,7 @@ ${S} .oc-ai-auth-icon {
   display: inline-flex; align-items: center; justify-content: center;
   width: 26px; height: 26px;
   background: transparent; border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   color: var(--color--text--muted);
   cursor: pointer;
 }
@@ -223,7 +223,7 @@ ${S} .oc-ai-card {
   padding: 14px 16px;
   background: var(--color--surface--1);
   border: 1px solid var(--color--border--on-surface-1);
-  border-radius: 10px;
+  border-radius: 8px;
   display: flex; flex-direction: column; gap: 12px;
 }
 ${S} .oc-ai-card-head {

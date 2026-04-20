@@ -174,6 +174,6 @@ ${S} *:focus-visible { outline: 2px solid var(--color--outline--focus); outline-
 /* ── Scrollbar ── */
 ${S} ::-webkit-scrollbar { width: 6px; height: 6px; }
 ${S} ::-webkit-scrollbar-track { background: transparent; }
-${S} ::-webkit-scrollbar-thumb { background: var(--color--surface--2); border-radius: 3px; }
+${S} ::-webkit-scrollbar-thumb { background: var(--color--surface--2); border-radius: 4px; }
 ${S} ::-webkit-scrollbar-thumb:hover { background: var(--color--border--on-surface-2); }
 `;

@@ -43,7 +43,7 @@ ${S} .oc-page-tabs {
 }
 ${S} .oc-page-tab {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 5px 10px;
+  padding: 6px 10px;
   background: transparent; border: none; border-radius: 6px;
   color: var(--color--text--muted);
   font-size: 12px; font-weight: 500;
@@ -146,7 +146,7 @@ ${S} .oc-layers-row.is-hovered-element {
 ${S} .oc-layers-tag-icon {
   width: 14px; height: 14px; display: flex;
   align-items: center; justify-content: center;
-  font-size: 10px; font-weight: 700; border-radius: 3px;
+  font-size: 10px; font-weight: 700; border-radius: 4px;
   flex-shrink: 0;
 }
 ${S} .oc-layers-toggle {
@@ -163,7 +163,7 @@ ${S} .oc-layers-row:hover .oc-layers-actions { display: flex; }
 ${S} .oc-layers-action-btn {
   width: 18px; height: 18px; display: flex;
   align-items: center; justify-content: center;
-  border-radius: 3px; cursor: pointer; color: var(--color--text--disabled);
+  border-radius: 4px; cursor: pointer; color: var(--color--text--disabled);
   background: transparent; border: none;
 }
 ${S} .oc-layers-action-btn:hover { background: rgba(255,255,255,0.06); color: var(--color--text--on-surface-variant); }

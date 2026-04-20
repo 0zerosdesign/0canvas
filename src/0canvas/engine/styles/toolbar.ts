@@ -26,7 +26,7 @@ ${S} .oc-toolbar-group.is-pill-sm {
 ${S} .oc-toolbar-divider { width: 1px; height: 20px; background: var(--color--border--on-surface-0); }
 ${S} .oc-toolbar-btn {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 5px 10px; border-radius: 6px;
+  padding: 6px 10px; border-radius: 6px;
   font-size: 12px; font-weight: 450; color: var(--color--text--muted);
   background: transparent; border: none; cursor: pointer;
   transition: all 0.15s ease; white-space: nowrap;
@@ -69,7 +69,7 @@ ${S} .oc-toolbar-conn-dot {
 ${S} .oc-toolbar-dropdown {
   position: absolute; top: 100%; left: 0; margin-top: 6px;
   background: var(--color--surface--floor); border: 1px solid var(--color--border--on-surface-0);
-  border-radius: 10px; box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+  border-radius: 8px; box-shadow: 0 12px 32px rgba(0,0,0,0.5);
   z-index: 100; overflow: hidden;
 }
 ${S} .oc-toolbar-dropdown-inputrow {
@@ -110,7 +110,7 @@ ${S} .oc-toolbar-project-dot.is-unsaved { background: var(--color--status--warni
 ${S} .oc-toolbar-project-input {
   width: 100px; padding: 1px 4px;
   background: var(--color--surface--1); border: 1px solid var(--color--border--on-surface-1);
-  border-radius: 3px; color: var(--color--text--on-surface);
+  border-radius: 4px; color: var(--color--text--on-surface);
   font-size: 12px; outline: none;
 }
 ${S} .oc-toolbar-project-name {

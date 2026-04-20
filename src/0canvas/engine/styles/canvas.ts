@@ -8,7 +8,7 @@ ${S} .oc-source-chrome {
   display: flex; align-items: center; gap: 8px;
   padding: 8px 12px; background: var(--color--surface--0);
   border-bottom: 1px solid var(--color--border--on-surface-0);
-  border-radius: 10px 10px 0 0; user-select: none;
+  border-radius: 8px 10px 0 0; user-select: none;
 }
 ${S} .oc-source-traffic-dot { width: 10px; height: 10px; border-radius: 50%; }
 ${S} .oc-source-url {
@@ -29,7 +29,7 @@ ${S} .oc-source-badge {
   position: absolute; top: -2px; right: -2px;
   display: flex; align-items: center; justify-content: center;
   min-width: 14px; height: 14px; padding: 0 3px;
-  border-radius: 7px;
+  border-radius: 8px;
   background: var(--color--surface--floor); color: var(--color--text--on-surface);
   font-size: 6px; font-weight: 700; line-height: 1;
   pointer-events: none; box-sizing: border-box;
@@ -46,7 +46,7 @@ ${S} .oc-source-btn-group.has-items {
   gap: 0;
 }
 ${S} .oc-source-btn-group.has-items .oc-source-btn {
-  border-radius: 7px 0 0 7px;
+  border-radius: 8px 0 0 7px;
 }
 ${S} .oc-source-btn-group.has-items .oc-source-send-btn {
   border-radius: 0 7px 7px 0;
@@ -86,7 +86,7 @@ ${S} .oc-resize-zone {
 
 /* Visible handle bar — thin bar inside the grab zone */
 ${S} .oc-resize-handle {
-  border-radius: 3px;
+  border-radius: 4px;
   background: var(--color--border--on-surface-1);
   pointer-events: none;
   transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;

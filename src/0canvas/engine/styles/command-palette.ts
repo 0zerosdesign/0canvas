@@ -110,7 +110,7 @@ ${S} .oc-inline-edit-actions {
 ${S} .oc-inline-edit-accept,
 ${S} .oc-inline-edit-reject {
   display: flex; align-items: center; gap: 4px;
-  padding: 5px 10px; border-radius: 6px; border: none;
+  padding: 6px 10px; border-radius: 6px; border: none;
   font-size: 12px; cursor: pointer; font-family: var(--font-sans);
 }
 ${S} .oc-inline-edit-accept {

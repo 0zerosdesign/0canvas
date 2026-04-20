@@ -5,7 +5,7 @@
 export const agentPanelCSS = (S: string) => `
 /* ── Agent Panel ───────────────────────────────────────────── */
 ${S} .oc-agent-ide-card {
-  padding: 12px; border-radius: 10px;
+  padding: 12px; border-radius: 8px;
   border: 1px solid var(--color--border--on-surface-0);
   background: var(--color--surface--0); margin-bottom: 8px;
   transition: border-color 0.15s ease;
@@ -82,7 +82,7 @@ ${S} .oc-agent-btn-primary.is-disabled {
   background: var(--color--surface--1); color: var(--color--text--disabled); cursor: default;
 }
 ${S} .oc-agent-mcp-card {
-  padding: 16px; border: 1px solid var(--color--border--on-surface-0); border-radius: 10px;
+  padding: 16px; border: 1px solid var(--color--border--on-surface-0); border-radius: 8px;
   background: var(--color--surface--0); margin-bottom: 12px;
 }
 ${S} .oc-agent-mcp-url {
@@ -93,7 +93,7 @@ ${S} .oc-agent-mcp-desc {
   font-size: 11px; color: var(--color--text--muted); margin-bottom: 12px;
 }
 ${S} .oc-agent-setup-card {
-  padding: 12px; border: 1px solid var(--color--border--on-surface-0); border-radius: 10px;
+  padding: 12px; border: 1px solid var(--color--border--on-surface-0); border-radius: 8px;
   background: var(--color--surface--0);
 }
 ${S} .oc-agent-setup-title { font-size: 11px; color: var(--color--text--muted); margin-bottom: 8px; }

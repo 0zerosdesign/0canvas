@@ -27,8 +27,22 @@
  *   700 only for strong micro emphasis (badges, KBD chips).
  *   Hover/active = tinted background, not a ring.
  *
- * Spacing: 4px/8px/12px/16px rhythm. Section gaps 12–16px,
- *          item gaps 2–4px.
+ * Spacing (Pass 3):
+ *   Padding — buttons 6x10 / 6x12 / 8x12 / 10x14, rows 10x12 / 10x14,
+ *             panels 12x14 / 14x16, dialogs 16 / 20 / 24.
+ *             Chip micro-padding (1-3px vertical, 5-8px horizontal)
+ *             is intentional fine-grain and kept as-is.
+ *   Gap     — 2 / 4 / 6 / 8 / 10 / 12 / 14 / 16, never odd values.
+ *   Section — 12-16px between sections, 2-4px between items.
+ *
+ * Radius (Pass 3) — the only radius values allowed:
+ *    4px     small (chips, badges, swatches, scrollbar)
+ *    6px     default (buttons, tabs, inputs, menu items)
+ *    8px     cards, menus, elevated surfaces
+ *   12px     modals, command palette, hero cards
+ *   50%      circles (status dots, avatars)
+ *   9999px   pills (branch chip, tag pill, segmented)
+ *
  * Icons:   16px for nav, 14px for inline, 12px for micro.
  * ────────────────────────────────────────────────────────── */
 
@@ -145,7 +159,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 7px 10px;
+  padding: 8px 10px;
   background: transparent;
   border: none;
   border-radius: 6px;
@@ -211,7 +225,7 @@
   z-index: 20;
   background: var(--color--surface--1);
   border: 1px solid var(--color--border--on-surface-1);
-  border-radius: 10px;
+  border-radius: 8px;
   box-shadow: var(--shadow-lg);
   padding: 4px;
   display: flex;
@@ -320,7 +334,7 @@
   margin-right: 4px;
   background: transparent;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   color: var(--color--text--muted);
   cursor: pointer;
   opacity: 0;
@@ -340,7 +354,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 12px;
+  padding: 10px 12px;
   margin-top: 4px;
   background: transparent;
   border: none;
@@ -388,7 +402,7 @@
   justify-content: center;
   min-width: 18px;
   height: 16px;
-  padding: 0 5px;
+  padding: 0 6px;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0;
@@ -420,7 +434,7 @@
   padding: 6px 8px;
   background: transparent;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   color: var(--color--text--on-surface);
   font-size: 12px;
   text-align: left;
@@ -499,10 +513,10 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 8px;
+  padding: 6px 8px;
   background: transparent;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   color: var(--color--text--on-surface);
   font-size: 12px;
   font-weight: 500;
@@ -542,8 +556,8 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 8px;
-  border-radius: 5px;
+  padding: 6px 8px;
+  border-radius: 6px;
   color: var(--color--text--on-surface-variant);
   font-size: 12px;
   cursor: pointer;
@@ -638,7 +652,7 @@
   padding: 4px;
   background: var(--color--surface--1);
   border: 1px solid var(--color--border--on-surface-1);
-  border-radius: 10px;
+  border-radius: 8px;
   box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
@@ -717,7 +731,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 10px;
+  padding: 6px 10px;
   background: transparent;
   border: none;
   border-radius: 6px;
@@ -896,7 +910,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 8px 5px 10px;
+  padding: 6px 8px 5px 10px;
   background: transparent;
   border: none;
   border-radius: 6px 6px 0 0;
@@ -927,7 +941,7 @@
   height: 16px;
   background: transparent;
   border: none;
-  border-radius: 3px;
+  border-radius: 4px;
   color: var(--color--text--muted);
   cursor: pointer;
   padding: 0;
@@ -947,7 +961,7 @@
   height: 24px;
   background: transparent;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   color: var(--color--text--muted);
   cursor: pointer;
   margin-left: 2px;
@@ -1040,7 +1054,7 @@
 }
 
 .oc-env-panel__file {
-  padding: 5px 10px;
+  padding: 6px 10px;
   background: transparent;
   border: none;
   border-radius: 6px;
@@ -1067,10 +1081,10 @@
   display: inline-flex;
   align-items: center;
   color: var(--color--text--muted);
-  padding: 5px 8px;
+  padding: 6px 8px;
   background: transparent;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   cursor: pointer;
   transition: background 120ms ease, color 120ms ease;
 }
@@ -1156,7 +1170,7 @@
   height: 26px;
   background: transparent;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   color: var(--color--text--muted);
   cursor: pointer;
   transition: background 120ms ease, color 120ms ease;
@@ -1281,7 +1295,7 @@
   font-weight: 500;
   color: var(--color--text--muted);
   background: rgba(255, 255, 255, 0.05);
-  padding: 2px 7px;
+  padding: 2px 8px;
   border-radius: 8px;
   letter-spacing: 0.02em;
 }
@@ -1305,7 +1319,7 @@
   height: 26px;
   background: transparent;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   color: var(--color--text--muted);
   cursor: pointer;
   transition: background 120ms ease, color 120ms ease;
@@ -1351,7 +1365,7 @@
   align-items: center;
   gap: 6px;
   padding: 4px 6px;
-  border-radius: 5px;
+  border-radius: 6px;
   transition: background 120ms ease;
 }
 
@@ -1512,10 +1526,10 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 10px;
+  padding: 6px 10px;
   background: rgba(37, 99, 235, 0.12);
   color: var(--color--text--primary-light);
-  border-radius: 14px;
+  border-radius: 9999px;
   font-size: 12px;
   font-weight: 500;
   font-family: var(--font-firacode);
@@ -1543,7 +1557,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 5px 10px;
+  padding: 6px 10px;
   background: var(--color--surface--1);
   color: var(--color--text--on-surface);
   border: none;
@@ -1578,11 +1592,11 @@
   align-items: center;
   justify-content: center;
   min-width: 16px;
-  padding: 0 5px;
+  padding: 0 6px;
   height: 14px;
   background: rgba(0, 0, 0, 0.25);
   color: inherit;
-  border-radius: 7px;
+  border-radius: 8px;
   font-size: 10px;
   font-weight: 600;
 }
@@ -1595,7 +1609,7 @@
   height: 26px;
   background: transparent;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   color: var(--color--text--muted);
   cursor: pointer;
   transition: background 120ms ease, color 120ms ease;
@@ -1639,7 +1653,7 @@
   letter-spacing: 0;
   font-family: inherit;
   padding: 3px 8px;
-  border-radius: 5px;
+  border-radius: 6px;
   transition: background 120ms ease, color 120ms ease;
 }
 
@@ -1669,7 +1683,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 14px;
+  padding: 6px 14px;
   font-size: 12px;
   transition: background 120ms ease;
 }
@@ -1689,7 +1703,7 @@
   color: var(--color--text--muted);
   cursor: pointer;
   padding: 0;
-  border-radius: 3px;
+  border-radius: 4px;
   transition: color 120ms ease;
 }
 
@@ -1740,7 +1754,7 @@
   height: 24px;
   background: transparent;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   color: var(--color--text--muted);
   cursor: pointer;
   transition: background 120ms ease, color 120ms ease;
@@ -1892,7 +1906,7 @@
   z-index: 30;
   background: var(--color--surface--1);
   border: 1px solid var(--color--border--on-surface-1);
-  border-radius: 10px;
+  border-radius: 8px;
   box-shadow: var(--shadow-lg);
   padding: 6px;
   display: flex;
@@ -1995,7 +2009,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 8px;
+  padding: 8px 8px;
   margin-top: 2px;
   background: rgba(37, 99, 235, 0.08);
   border: 1px dashed rgba(37, 99, 235, 0.3);
@@ -2074,7 +2088,7 @@
   padding: 3px 8px;
   background: transparent;
   border: 1px solid var(--color--border--on-surface-0);
-  border-radius: 5px;
+  border-radius: 6px;
   color: var(--color--text--muted);
   font-size: 11px;
   font-family: inherit;
@@ -2169,7 +2183,7 @@
   padding: 6px 10px;
   background: transparent;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   color: var(--color--text--on-surface);
   font-size: 12px;
   text-align: left;
@@ -2407,7 +2421,7 @@
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: 8px;
   background: var(--color--surface--1);
   border: 1px solid var(--color--border--on-surface-1);
   min-width: 0;
@@ -2578,7 +2592,7 @@
   max-width: calc(100vw - 32px);
   background: var(--color--surface--1);
   border: 1px solid var(--color--border--on-surface-1);
-  border-radius: 14px;
+  border-radius: 12px;
   box-shadow: var(--shadow-lg);
   padding: 20px;
   display: flex;
