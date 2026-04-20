@@ -79,12 +79,6 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
       action: () => { if (state.themeMode) dispatch({ type: "TOGGLE_THEME_MODE" }); dispatch({ type: "SET_DESIGN_MODE", mode: "style" }); },
     });
     cmds.push({
-      id: "mode-ai",
-      label: "Switch to AI Mode",
-      category: "Modes",
-      action: () => { if (state.themeMode) dispatch({ type: "TOGGLE_THEME_MODE" }); dispatch({ type: "SET_DESIGN_MODE", mode: "ai" }); },
-    });
-    cmds.push({
       id: "mode-theme",
       label: "Toggle Theme Mode",
       category: "Modes",

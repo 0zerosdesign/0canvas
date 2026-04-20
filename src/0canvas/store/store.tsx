@@ -111,7 +111,7 @@ export type VariantData = {
 
 export type AppView = "onboarding" | "workspace";
 export type WorkspacePage = "design" | "themes" | "settings";
-export type DesignMode = "style" | "feedback" | "ai";
+export type DesignMode = "style" | "feedback";
 export type Breakpoint = "desktop" | "laptop" | "tablet" | "mobile";
 
 export const BREAKPOINT_WIDTHS: Record<Breakpoint, number> = {

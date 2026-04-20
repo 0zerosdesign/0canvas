@@ -33,7 +33,6 @@ import { VariantCanvas } from "../canvas/variant-canvas";
 import { AppSidebar } from "../panels/app-sidebar";
 import { ThemesPage } from "../themes/themes-page";
 import { ThemeModePanel } from "../themes/theme-mode-panel";
-import { AIChatPanel } from "../panels/ai-chat-panel";
 import { CommandPalette } from "../panels/command-palette";
 import { InlineEdit } from "../panels/inline-edit";
 import { VisualDiff } from "../panels/visual-diff";
@@ -463,8 +462,6 @@ export function EngineWorkspace({ onClose }: { onClose?: () => void }) {
                 <div className="oc-panel-slot" style={{ width: style.width }}>
                   {state.designMode === "style" ? (
                     <StylePanel />
-                  ) : state.designMode === "ai" ? (
-                    <AIChatPanel />
                   ) : (
                     /* Feedback panel */
                     <div className="oc-panel">

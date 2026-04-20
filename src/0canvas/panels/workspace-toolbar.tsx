@@ -4,7 +4,6 @@ import {
   Droplets,
   MessageCircle,
   PenTool,
-  Sparkles,
   ChevronDown,
   Save,
   Trash2,
@@ -120,12 +119,6 @@ export function WorkspaceToolbar({ onNavigate }: WorkspaceToolbarProps = {}) {
           label="Style"
           active={!state.themeMode && state.designMode === "style"}
           onClick={() => { if (state.themeMode) dispatch({ type: "TOGGLE_THEME_MODE" }); dispatch({ type: "SET_DESIGN_MODE", mode: "style" }); }}
-        />
-        <ToolbarBtn
-          icon={<Sparkles size={14} />}
-          label="AI"
-          active={!state.themeMode && state.designMode === "ai"}
-          onClick={() => { if (state.themeMode) dispatch({ type: "TOGGLE_THEME_MODE" }); dispatch({ type: "SET_DESIGN_MODE", mode: "ai" }); }}
         />
         <ToolbarBtn
           icon={<Droplets size={14} />}
