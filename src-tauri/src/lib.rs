@@ -21,6 +21,7 @@
 //
 // ──────────────────────────────────────────────────────────
 
+mod localhost;
 mod sidecar;
 
 use sidecar::SidecarState;
@@ -208,6 +209,7 @@ pub fn run() {
             get_engine_port,
             get_engine_root,
             open_project_folder,
+            localhost::discover_localhost_services,
         ])
         .setup(|app| {
             // Spawn the engine before the webview tries to connect. If it

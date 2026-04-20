@@ -14,8 +14,27 @@ export type ProjectChangedPayload = {
   port: number;
 };
 
+export type LocalhostService = {
+  port: number;
+  url: string;
+  kind: "dev-server" | "database" | "engine" | "unknown";
+  label: string;
+};
+
 function isTauriWebview(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+}
+
+/**
+ * Probe common dev-server / database / engine ports on 127.0.0.1 and
+ * return whatever responded. Safe to call repeatedly; each call takes
+ * roughly 100–200 ms even on a cold machine (closed TCP ports return
+ * "connection refused" instantly; open ones complete the connect).
+ */
+export async function discoverLocalhostServices(): Promise<LocalhostService[]> {
+  if (!isTauriWebview()) return [];
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<LocalhostService[]>("discover_localhost_services");
 }
 
 /**
