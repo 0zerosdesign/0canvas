@@ -1,5 +1,18 @@
 # Overlay Engine
 
+> **🚧 Partially stale (2026-04-20).** In the Mac app, "overlay" means
+> **Column 3** — the engine workspace lives inside a native column,
+> not as a portal on `document.body`. No FAB toggle button, no
+> `data-0canvas=portal` injected div. The `<ZeroCanvas />` component
+> described below is still shipped for the npm distribution channel
+> (V2); the Mac app instead mounts `<EngineWorkspace />` directly
+> inside `<div className="oc-column-3">`. Command palette (Cmd+/) and
+> inline edit (Cmd+K) still work identically.
+>
+> See [../README.md](../README.md).
+
+---
+
 The Overlay Engine is the root component and runtime that mounts the entire 0canvas design workspace as a floating overlay on top of any web page. It is the primary consumer-facing API of the package.
 
 ## Source Files

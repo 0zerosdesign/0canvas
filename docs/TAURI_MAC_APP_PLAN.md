@@ -1,5 +1,14 @@
 # 0canvas → Tauri Mac App (Mac-only, browser overlay sunset)
 
+> **📌 Status (2026-04-20):** This is the execution plan behind
+> [PRODUCT_VISION_V3.md](PRODUCT_VISION_V3.md). Phases 0, 1A, 1B, 1C,
+> 2, and 4 (WIP) have shipped to `main`. Phase 3 partly shipped
+> (`git2-rs` git panel is done; clone flow, worktrees, conflict UX
+> still pending). Phase 5 (signed distribution) is gated on completion
+> of Streams 2-5 in the V3 TODO. Each phase below carries a ✅/🚧/⏳
+> marker and the date/commit where possible. See §TODO at bottom for
+> the current work queue.
+
 ## Context
 
 **Decision (locked):** 0canvas becomes a Mac-only native app built on Tauri. The existing npm browser-overlay (`@zerosdesign/0canvas`) is sunsetted. The VS Code extension stays frozen. All future development targets one surface: a direct-download Mac app that designers install to edit production code visually with AI.
@@ -372,7 +381,7 @@ Merged to `main` in two commits:
 
 **Exit criteria:** `pnpm dev` in the current repo shows every feature in the parity contract working; no IDB used; no Vite plugin used; clean codebase ready to be wrapped in Tauri.
 
-### Phase 1A — Tauri Shell + Sidecar + Column 3 parity (2–3 weeks)
+### Phase 1A — Tauri Shell + Sidecar + Column 3 parity ✅ SHIPPED
 
 **Goal:** "it's a Mac app." All existing 0canvas functionality runs inside Column 3 of the three-column layout, wrapped in a Tauri window.
 
@@ -395,7 +404,7 @@ Merged to `main` in two commits:
 - Sidecar auto-restarts on crash; no zombie Node processes on app quit
 - Open a folder → engine discovers framework + CSS files → overlay reflects them
 
-### Phase 1B — Column 1 Navigation + Column 2 Chat tab (2 weeks)
+### Phase 1B — Column 1 Navigation + Column 2 Chat tab ✅ SHIPPED (1B-a..d)
 
 **Goal:** the left nav works, and the agent chat lives in its proper home (Column 2, not floating).
 
@@ -414,7 +423,8 @@ Merged to `main` in two commits:
 - Send a message → streams back, applies edits (same as today's overlay)
 - Collapse Column 1 → icon rail; uncollapse restores
 
-### Phase 1C — Column 2 Dev Tools: Terminal + Git + Env + Todo (3–4 weeks)
+### Phase 1C — Column 2 Dev Tools: Terminal + Git + Env + Todo ✅ SHIPPED
+(Phase 1C-Git commit `ae71af0`, Terminal/Env/Todo earlier in 1C)
 
 **Goal:** Column 2's full tab set is functional.
 
@@ -430,7 +440,15 @@ Merged to `main` in two commits:
 - Env: add `TEST_VAR=hello` → saves to `.env.local` → verify via `cat .env.local` in terminal
 - Todo: agent says "add a task: refactor theme panel" → `.0canvas/todo.md` gets the line → UI shows it
 
-### Phase 2 — Native Upgrades That Solve Current Pain Points (1.5–2 weeks)
+### Phase 2 — Native Upgrades That Solve Current Pain Points ✅ SHIPPED (2-A..2-F)
+
+Commits on `main`:
+- `4c6f09e` 2-A: fix Column 3 / Column 2 Chat styling
+- `a2c2582` 2-B: route overlay AI flows into Column 2 chat
+- `497fd2a` 2-C: macOS keychain for API keys
+- `8d68d23` 2-D: Workspace Manager (recent projects dropdown)
+- `e787e10` 2-E: Settings page multi-section sidebar + real API Keys tab
+- `426c86a` 2-F: deep link handler + native notifications
 
 **Goal:** deliver the promised Mac-app advantages that are impossible in a browser.
 
@@ -443,7 +461,12 @@ Merged to `main` in two commits:
 
 **Exit criteria:** opening a cloned repo, theme.css edits flow both ways without manual upload; workspace manager shows recent projects; API keys persist through app restart via keychain; Settings page is fully navigable with all tabs functional.
 
-### Phase 3 — Git UX Polish + Designer-Safe Flow (2–3 weeks)
+### Phase 3 — Git UX Polish + Designer-Safe Flow 🚧 PARTIAL
+
+Shipped: `git2-rs` backend + visual diff panel (Phase 1C-Git).
+Not yet shipped: clone flow, worktree commands, PR button, merge
+conflict UX, power-user inline affordances (fuzzy branch search,
+revert/reset from commit log). See §TODO.
 
 **Goal:** the designer-friendly git layer on top of the raw git2 plumbing already shipped in Phase 1C.
 
@@ -458,7 +481,19 @@ Merged to `main` in two commits:
 
 **Exit criteria:** designer pastes GitHub URL, clones, edits button color, clicks Save, sees commit on GitHub (happy path < 30s). Conflict scenario: two branches modified same variable → agent resolves with user approval.
 
-### Phase 4 — AI: Claude SDK + CLI Subprocess + Skills + Worktree Agents (3–4 weeks)
+### Phase 4 — AI: Claude SDK + CLI Subprocess + Skills + Worktree Agents 🚧 WIP (SHIPPED TO MAIN)
+
+Shipped in commit `f29af21` (Phase 4 WIP bundle):
+- `src-tauri/src/ai_cli.rs` — subprocess bridge for `claude` / `codex`
+- `src-tauri/src/skills.rs` — markdown skills loader
+- `src/0canvas/lib/ai-cli.ts` — AsyncGenerator streaming bridge
+- `src/0canvas/lib/anthropic.ts` — direct Messages API streaming
+- `src/shell/mission-panel.tsx` — Mission Control dashboard
+- 5 skills in `skills/`: audit-contrast, clone-design, generate-variants, migrate-tokens, theme-propagation
+
+Not yet shipped: worktree orchestration (the killer parallel-agent
+feature), prompt caching with `cache_control`, per-skill tool
+allowlists. See §TODO.
 
 **Goal:** BYO-subscription AI with designer-specific skills and parallel-agent exploration.
 
@@ -481,7 +516,7 @@ Merged to `main` in two commits:
 - "Generate 3 variants" creates 3 worktrees, 3 parallel agents, 3 live-rendered variants on canvas; pick merges one, discards others
 - Skills picker shows all shipped skills; user can add `skills/custom.md` and it appears without rebuild
 
-### Phase 5 — Distribution Polish (2 weeks)
+### Phase 5 — Distribution Polish ⏳ NOT STARTED
 
 **This is the only phase that requires the paid Apple Developer ID.** All prior phases use ad-hoc/dev signing and don't cost anything.
 
@@ -501,9 +536,29 @@ Merged to `main` in two commits:
 3. Homebrew cask install works as alternative path
 4. Deep links open the app from browser/other apps
 
-### Phase 6 — Windows/Linux (post-v0.1, future)
+### Phase 6 — Windows/Linux (post-v0.1, future) ⏳
 
 Tauri cross-compiles. Re-evaluate after Mac v0.1 is shipping and stable (3+ months post-launch).
+
+---
+
+## Design System Lock-In — Passes 1-5 ✅ SHIPPED
+
+Not part of the original phase plan but executed 2026-04-20 to make
+the shipped UI internally consistent before Phase 5 distribution.
+
+| Pass | Scope | Commit |
+|---|---|---|
+| 1 | Surface & border token unification (col 1/2 → `floor`, canvas → `surface--0`, all borders → `border--on-surface-0`) | `f951eff` |
+| 2 | Typography scale lock-in (5 canonical sizes: 10/11/12/13/15 + 18 page h1) | `9ae0d80` |
+| 3 | Spacing & radius lock-in (5 radii: 4/6/8/12/9999; odd-number paddings snapped) | `6863bdc` |
+| 4 | Settings into the 3-column shell (no more fullscreen takeover) | `241132d` |
+| 5 | Primitive vocabulary (`.oc-btn`, `.oc-input`, `.oc-card`) + legacy focus/disabled normalization | `c3c915c` |
+
+Full scale documented at the top of
+[src/shell/app-shell.css](src/shell/app-shell.css). New code should
+use the primitives; existing per-feature classes migrate as features
+are touched.
 
 ---
 
@@ -640,3 +695,74 @@ Yes — and the Mac-only decision actually makes this *easier*, not harder. By d
 - Broadened audience (solo developers, not just designers) is ~10× the addressable market vs a designer-only tool
 
 **The net:** meaningfully longer to v0.1, but the product that ships is a credible design-first Mac IDE — not a hobby-project overlay in a window.
+
+---
+
+## TODO — What's Left to Reach Phase 5
+
+Cross-reference with [PRODUCT_VISION_V3.md §15](PRODUCT_VISION_V3.md#15-todo--fine-tuning-needed).
+The streams below are the working queue between now and Phase 5
+distribution; each maps to one (or more) V3 TODO items.
+
+### Phase 3 completion
+
+- [ ] Clone flow in workspace manager (paste GitHub URL → `git_clone` → open).
+- [ ] `git_worktree_add` / `_remove` / `_list` Tauri commands.
+- [ ] Commit message auto-suggest from `EngineCache` changed selectors.
+- [ ] Visual diff file-level tab (rendered previews of changed components).
+- [ ] "Open PR on GitHub" button → `shell::open` compare URL.
+- [ ] Power-user git affordances: fuzzy branch search, revert/reset
+      right-click, expandable commit log.
+- [ ] Merge conflict UX: "Keep mine / Keep theirs / Resolve with agent".
+- [ ] Safety rails: confirm Discard Changes, opt-in force-push.
+
+### Phase 4 completion
+
+- [ ] Prompt caching with `cache_control: {type:"ephemeral"}` on
+      system prompt + tool defs in both `anthropic.ts` and the CLI bridge.
+- [ ] Per-skill allowlisted MCP tool sets (currently every skill gets
+      all tools).
+- [ ] Worktree parallel agents — the killer differentiator.
+      `worktree.rs` + `generate-variants` skill wiring.
+- [ ] Mission Control live wiring: active agents list, pending diffs,
+      token/cost meter should update in real time (currently static).
+- [ ] `/commands` stub entries (`/explore`, `/agents`, `/plugins`,
+      `/mcp`) either implemented or removed.
+
+### Streams 2-5 (from PRODUCT_VISION_V3 §15)
+
+- [ ] **Stream 2**: Remove `designMode: "ai"` from Col 3 (Col 2
+      owns AI per Decision 8).
+- [ ] **Stream 3**: Project grouping in Col 1 — chats nested under
+      project folders, chat schema adds `projectRoot`, per-project
+      isolation.
+- [ ] **Stream 4**: Per-project context routing — git/terminal/env/
+      todo/preview URL/skills all scoped to active project, clean
+      switching with no webview reload.
+- [ ] **Stream 5**: Chat composer polish — two-level model picker,
+      per-chat thinking effort persistence, inline branch create,
+      permission-mode guardrails, live context indicator, implemented
+      commands, skills drawer.
+
+### Phase 5 prerequisites (blockers for distribution)
+
+- [ ] Apple Developer ID enrolled ($99/yr).
+- [ ] Icon assets: app icon, DMG background, Finder icons at all sizes.
+- [ ] Code-signing certificate installed in Keychain.
+- [ ] `tauri.conf.json` signing identity configured.
+- [ ] Auto-update signing key generated + manifest hosting plan
+      (GitHub Pages or Releases).
+- [ ] Privacy-policy + terms-of-service landing page copy.
+- [ ] Sunset banner wording for the final npm release.
+
+### Codebase hygiene (non-blocking but owed)
+
+- [ ] Delete unused `.text-\[Npx\]` utility classes (dead).
+- [ ] Primitive migration: each `.oc-foo-btn` → `.oc-btn oc-btn--*`
+      as features are touched; delete duplicate CSS.
+- [ ] Consolidate hover-tint (half the codebase uses 0.03, half 0.04).
+- [ ] Icon-size audit — snap every `size={…}` to 14 / 16 / 18.
+- [ ] Focus-visible on `.oc-input` and `.oc-card` (currently only
+      `.oc-btn` has it).
+- [ ] Legacy engine bridge code: what's still needed for npm
+      distribution vs dead inside the Tauri app.

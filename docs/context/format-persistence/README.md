@@ -1,5 +1,12 @@
 # Module: .0c File Format & Persistence
 
+> **🚧 Partially stale (2026-04-20).** The `.0c` schema below is still
+> current. The "IndexedDB primary" paragraphs are obsolete — the Mac
+> app is file-first via `src/native/storage.ts`. IDB is only used for
+> ephemeral UI state. See [../README.md](../README.md) for full status.
+
+---
+
 > **Source files:**
 > - `src/0canvas/format/oc-project.ts` -- schema, validation, migration, conversion
 > - `src/0canvas/format/oc-project-store.ts` -- IndexedDB + filesystem sync

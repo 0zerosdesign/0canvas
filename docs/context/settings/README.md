@@ -1,5 +1,14 @@
 # Settings
 
+> **🚧 Partially stale (2026-04-20).** The Settings page now lives
+> *inside Column 3* (Pass 4), not as a fullscreen takeover, and uses
+> horizontal section tabs (Back / General / AI Models / API Keys /
+> Appearance / MCP / Debug) instead of a 240px vertical sidebar.
+> API keys are backed by the macOS Keychain via
+> `src-tauri/src/secrets.rs`. See [../README.md](../README.md).
+
+---
+
 ## Overview
 
 The Settings page provides configuration for AI providers and IDE/agent connections. It is accessed via the app sidebar navigation (activePage = "settings") and replaces the main canvas view with a two-column settings layout.

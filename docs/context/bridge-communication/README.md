@@ -1,5 +1,19 @@
 # WebSocket Bridge Communication
 
+> **🚧 Partially stale (2026-04-20).** The engine ↔ webview WebSocket
+> described here is still current (Col 3 uses it). Two changes since
+> this was written:
+> 1. The engine is now launched by `src-tauri/src/sidecar.rs`, not by
+>    `src/vite-plugin.ts`. Port discovery goes through the Tauri
+>    command `get_engine_port`.
+> 2. Col 2 chat does NOT go through this WebSocket; it uses
+>    `ai_cli.rs` (subprocess) or `anthropic.ts` / `openai.ts` (direct
+>    HTTPS). The WebSocket is engine-specific.
+>
+> See [../README.md](../README.md).
+
+---
+
 > `src/0canvas/bridge/messages.ts` -- message types
 > `src/0canvas/bridge/ws-client.ts` -- browser WebSocket client
 > `src/0canvas/bridge/use-bridge.tsx` -- React hooks

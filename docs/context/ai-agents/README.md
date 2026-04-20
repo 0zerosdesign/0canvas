@@ -1,5 +1,15 @@
 # AI Chat Panel
 
+> **🚧 Partially stale (2026-04-20).** AIChatPanel is no longer mounted
+> as a right-panel in Column 3; it now lives in Column 2 as the primary
+> AI surface per V3 Decision 8. The "AI designMode" path is being
+> deleted (Stream 2). Supporting modules added since: `lib/anthropic.ts`
+> (direct API streaming), `lib/ai-cli.ts` (subprocess bridge for
+> `claude` / `codex` CLIs). The inline-edit flow ([inline-edit.md](inline-edit.md))
+> is still correct. See [../README.md](../README.md).
+
+---
+
 > `src/0canvas/panels/ai-chat-panel.tsx`
 > Supporting module: `src/0canvas/lib/openai.ts`
 

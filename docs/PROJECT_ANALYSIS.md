@@ -1,7 +1,21 @@
 # 0canvas (ZeroCanvas) — Complete Project Analysis & Documentation
 
+> **⚠️ PARTIAL STATUS (2026-04-20):** This document was written for the
+> V1/V2 browser-overlay era. Sections 1-10 (module breakdown, engine
+> architecture, state management, MCP integration, tech stack) **still
+> accurately describe the engine code that now lives inside Column 3**
+> of the Tauri Mac app (`src/0canvas/**` + `src/engine/**`). Sections
+> 11-13 (status / limitations / roadmap) are SUPERSEDED by V3.
+> For the current product truth read:
+> - [PRODUCT_VISION_V3.md](PRODUCT_VISION_V3.md) — the vision
+> - [TAURI_MAC_APP_PLAN.md](TAURI_MAC_APP_PLAN.md) — the execution plan
+> A rewrite that covers the full Mac-app surface (Col 1 + Col 2 +
+> Rust backend + 3-column shell) is in the §TODO at the bottom.
+
+---
+
 > **Package:** `@zerosdesign/0canvas`
-> **Version:** 0.0.5
+> **Version:** 0.0.5 (npm — legacy channel; see V3)
 > **License:** MIT
 > **Repository:** `0zerosdesign/0canvas`
 > **Original Design:** [Figma Design File](https://www.figma.com/design/pHn0A8C25STCmSniuSFuQp/Design-Collaboration-Tool)
@@ -574,3 +588,77 @@ All core features listed in Section 6 are implemented and functional:
 
 *Analysis completed on 2026-04-02*
 *Source: `0zerosdesign/0canvas` repository — full codebase review*
+
+---
+
+## TODO — Rewrite / Extend for the Mac App Era
+
+This document's module breakdown (§5), state management (§7), data
+formats (§8), and MCP integration (§9) still accurately describe the
+engine code that lives under [src/0canvas/](src/0canvas/) and
+[src/engine/](src/engine/). What's missing, as of 2026-04-20:
+
+### New surfaces to document
+
+- [ ] **[src/shell/](src/shell/) — the Tauri shell (Col 1 + Col 2).**
+      Includes `column1-nav.tsx`, `column2-workspace.tsx`, and the six
+      Col-2 panel components (ai-chat, git, terminal, env, todo,
+      mission). Should get its own §Shell Modules section parallel to
+      the current §5.
+- [ ] **[src-tauri/src/](src-tauri/src/) — the Rust backend.**
+      3,062 LOC across 10 modules (`ai_cli`, `css_files`, `env_files`,
+      `git`, `localhost`, `secrets`, `sidecar`, `skills`, `todo`,
+      `lib`). Needs a §Rust Backend section with file-by-file
+      responsibilities matching V3 §7.
+- [ ] **[src/native/](src/native/) — the Tauri bridge.**
+      `storage.ts`, `settings.ts`, `secrets.ts`, `tauri-events.ts`,
+      `recent-projects.ts`. Parallel to the old `bridge/` section.
+- [ ] **Sidecar lifecycle** — the Node engine launched by
+      `sidecar.rs`, its `get_engine_port` command, and the
+      `project-changed` event that webviews listen for. Not the same
+      as V1's "bridge" WebSocket (still used, but now a grandchild of
+      Tauri).
+
+### Sections to update
+
+- [ ] §2 "What This Project Does" — add the three-column shell
+      description; the product is no longer "a browser overlay."
+- [ ] §3 "How It Works" — the cold-start flow is now `Tauri window
+      opens → sidecar.rs launches Node engine → webview loads React
+      shell → Col 3 connects via WebSocket`. Not `Ctrl+Shift+D`.
+- [ ] §4 "Project Architecture" — insert the 3-column diagram from
+      V3 §2.
+- [ ] §6 "Feature Inventory" — add: Git (13 ops), Terminal, Env,
+      Todo, Mission, Skills, Deep Link, Keychain. Mark MCP Settings
+      Page items as removed per V3 Decision 3.
+- [ ] §7 "State Management" — document the Col-2 chats store
+      (threads, activeChatId, provider/model/effort) that's new
+      since the overlay.
+- [ ] §9 "MCP Integration" — clarify that MCP is still exposed by
+      the engine for *external* AI tools (Cursor, Claude Code), but
+      Col 2's chat uses the direct `ai_cli` / `anthropic` paths, not
+      MCP. These are two separate AI surfaces.
+- [ ] §10 "Technology Stack" — add Tauri, `git2-rs`,
+      `security-framework`, `tauri-plugin-pty`, `tauri-plugin-deep-link`,
+      `tauri-plugin-notification`, xterm.js.
+- [ ] §11 "Project Status" — SUPERSEDED. Replace with pointer to
+      V3 §13 (the actual roadmap state).
+- [ ] §12 "Known Limitations" — most of the V1 limitations
+      (IndexedDB, Web APIs, MCP port conflict) are gone with the Mac
+      app. Rewrite with the *current* limitations (no Windows/Linux
+      build, no cloud sync, no multiplayer, no mobile preview in the
+      iframe-based canvas).
+- [ ] §13 "Future Roadmap" — SUPERSEDED. Point at V3 §13 +
+      `TAURI_MAC_APP_PLAN.md` for the phased plan.
+
+### Decision
+
+The ~33KB of V1 content is *mostly still correct for the engine
+layer*. Rather than duplicate it into a brand-new file, the plan is:
+
+1. Keep this file as the *engine-layer reference*.
+2. Let `PRODUCT_VISION_V3.md` own the app-wide vision.
+3. Let `TAURI_MAC_APP_PLAN.md` own the phase plan.
+4. Execute the bullets above as a single rewrite pass when Stream 1.5
+   (per-module context docs) also needs updating — both audits
+   overlap heavily.
