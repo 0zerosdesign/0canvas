@@ -3287,6 +3287,53 @@ ${S} .oc-ai-save-btn {
   transition: opacity 0.15s; margin-top: 12px;
 }
 ${S} .oc-ai-save-btn:hover { opacity: 0.85; }
+${S} .oc-ai-save-btn:disabled { opacity: 0.55; cursor: default; }
+${S} .oc-ai-save-btn.is-compact {
+  width: auto; padding: 6px 14px; font-size: 11px; margin-top: 0;
+}
+
+/* ── Phase 2-E settings panels ── */
+${S} .oc-settings-panel { padding: 16px; }
+${S} .oc-settings-panel p.oc-ai-hint { margin-top: 0; }
+
+${S} .oc-ai-field-hint {
+  display: block; margin-top: 4px;
+  font-size: 11px; color: var(--color--text--muted);
+  line-height: 1.4;
+}
+
+${S} .oc-api-keys__row {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color--border--on-surface-0);
+}
+${S} .oc-api-keys__row:last-of-type { border-bottom: none; }
+${S} .oc-api-keys__row .oc-ai-field { flex: 1; margin-bottom: 0; }
+${S} .oc-api-keys__row-actions {
+  display: flex; flex-direction: column; align-items: flex-end;
+  gap: 4px; padding-top: 20px;
+}
+${S} .oc-api-keys__notice {
+  font-size: 10px; color: var(--color--text--muted);
+}
+
+${S} .oc-debug-table {
+  width: 100%; border-collapse: collapse; margin-top: 12px;
+  font-size: 12px;
+}
+${S} .oc-debug-table th,
+${S} .oc-debug-table td {
+  padding: 6px 10px; text-align: left;
+  border-bottom: 1px solid var(--color--border--on-surface-0);
+}
+${S} .oc-debug-table th {
+  font-weight: 500; color: var(--color--text--muted); width: 150px;
+}
+${S} .oc-debug-table td code {
+  font-family: var(--font-mono); font-size: 11px;
+  background: var(--color--surface--1); padding: 2px 6px;
+  border-radius: 3px;
+}
 
 /* ── Token Suggestions Dropdown ── */
 ${S} .oc-token-suggest {
