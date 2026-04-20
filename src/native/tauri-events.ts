@@ -92,6 +92,76 @@ export async function saveTodoFile(raw: string): Promise<void> {
   return invoke<void>("save_todo_file", { raw });
 }
 
+// ── Git ───────────────────────────────────────────────────
+
+export type GitFileStatus = {
+  path: string;
+  kind:
+    | "added"
+    | "modified"
+    | "deleted"
+    | "renamed"
+    | "typechange"
+    | "conflicted"
+    | "untracked";
+  staged: boolean;
+};
+
+export type GitStatus = {
+  branch: string | null;
+  headSha: string | null;
+  ahead: number;
+  behind: number;
+  hasUpstream: boolean;
+  unstaged: GitFileStatus[];
+  staged: GitFileStatus[];
+};
+
+export type GitCommit = {
+  sha: string;
+  shortSha: string;
+  summary: string;
+  author: string;
+  timestamp: number;
+};
+
+export type GitBranch = {
+  name: string;
+  isHead: boolean;
+  isRemote: boolean;
+};
+
+export type GitDiff = {
+  path: string;
+  text: string;
+  truncated: boolean;
+};
+
+async function gitInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
+  if (!isTauriWebview()) throw new Error("Git requires the Mac app");
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<T>(cmd, args);
+}
+
+export const git = {
+  status: () => gitInvoke<GitStatus>("git_status"),
+  stageFile: (path: string) => gitInvoke<void>("git_stage_file", { path }),
+  unstageFile: (path: string) => gitInvoke<void>("git_unstage_file", { path }),
+  stageAll: () => gitInvoke<void>("git_stage_all"),
+  unstageAll: () => gitInvoke<void>("git_unstage_all"),
+  commit: (message: string) =>
+    gitInvoke<{ sha: string; summary: string }>("git_commit", { message }),
+  push: () => gitInvoke<void>("git_push"),
+  pull: () => gitInvoke<void>("git_pull"),
+  diffFile: (path: string, staged: boolean) =>
+    gitInvoke<GitDiff>("git_diff_file", { path, staged }),
+  logRecent: (limit = 10) =>
+    gitInvoke<GitCommit[]>("git_log_recent", { limit }),
+  branchList: () => gitInvoke<GitBranch[]>("git_branch_list"),
+  branchSwitch: (name: string) =>
+    gitInvoke<void>("git_branch_switch", { name }),
+};
+
 /**
  * Subscribe to the Rust-emitted `project-changed` event (fired when the
  * user picks a new folder via File > Open Folder). Returns an unsubscribe

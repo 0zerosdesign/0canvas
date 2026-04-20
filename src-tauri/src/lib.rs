@@ -22,6 +22,7 @@
 // ──────────────────────────────────────────────────────────
 
 mod env_files;
+mod git;
 mod localhost;
 mod sidecar;
 mod todo;
@@ -217,6 +218,18 @@ pub fn run() {
             env_files::save_env_file,
             todo::load_todo_file,
             todo::save_todo_file,
+            git::git_status,
+            git::git_stage_file,
+            git::git_unstage_file,
+            git::git_stage_all,
+            git::git_unstage_all,
+            git::git_commit,
+            git::git_push,
+            git::git_pull,
+            git::git_diff_file,
+            git::git_log_recent,
+            git::git_branch_list,
+            git::git_branch_switch,
         ])
         .setup(|app| {
             // Spawn the engine before the webview tries to connect. If it

@@ -24,6 +24,7 @@ import { AIChatPanel } from "../0canvas/panels/ai-chat-panel";
 import { TerminalPanel } from "./terminal-panel";
 import { EnvPanel } from "./env-panel";
 import { TodoPanel } from "./todo-panel";
+import { GitPanel } from "./git-panel";
 
 type TabId = "chat" | "git" | "terminal" | "env" | "todo";
 
@@ -39,12 +40,7 @@ const TABS: Array<{
   { id: "todo", label: "Todo", icon: ListChecks },
 ];
 
-const TAB_PLACEHOLDERS: Partial<Record<TabId, { title: string; body: string }>> = {
-  git: {
-    title: "Git",
-    body: "Phase 1C-Git — git2-rs via Tauri IPC. Branch, stage, commit, push, pull.",
-  },
-};
+const TAB_PLACEHOLDERS: Partial<Record<TabId, { title: string; body: string }>> = {};
 
 export function Column2Workspace() {
   const [activeTab, setActiveTab] = useState<TabId>("chat");
@@ -75,13 +71,16 @@ export function Column2Workspace() {
           activeTab === "chat" ? "is-chat" : ""
         } ${activeTab === "terminal" ? "is-terminal" : ""} ${
           activeTab === "env" ? "is-env" : ""
-        } ${activeTab === "todo" ? "is-todo" : ""}`}
+        } ${activeTab === "todo" ? "is-todo" : ""} ${
+          activeTab === "git" ? "is-git" : ""
+        }`}
         role="tabpanel"
       >
         {activeTab === "chat" && <AIChatPanel />}
         {activeTab === "terminal" && <TerminalPanel />}
         {activeTab === "env" && <EnvPanel />}
         {activeTab === "todo" && <TodoPanel />}
+        {activeTab === "git" && <GitPanel />}
         {(() => {
           const p = TAB_PLACEHOLDERS[activeTab];
           return p ? (
