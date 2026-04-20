@@ -204,6 +204,7 @@ fn build_app_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_pty::init())
         .manage(SidecarState::new())
         .invoke_handler(tauri::generate_handler![
             get_engine_port,

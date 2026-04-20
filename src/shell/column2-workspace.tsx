@@ -21,6 +21,7 @@ import {
   ListChecks,
 } from "lucide-react";
 import { AIChatPanel } from "../0canvas/panels/ai-chat-panel";
+import { TerminalPanel } from "./terminal-panel";
 
 type TabId = "chat" | "git" | "terminal" | "env" | "todo";
 
@@ -39,19 +40,15 @@ const TABS: Array<{
 const TAB_PLACEHOLDERS: Partial<Record<TabId, { title: string; body: string }>> = {
   git: {
     title: "Git",
-    body: "Phase 1C — git2-rs via Tauri IPC. Branch, stage, commit, push, pull.",
-  },
-  terminal: {
-    title: "Terminal",
-    body: "Phase 1C — tauri-plugin-pty + xterm.js. Shell in your project root.",
+    body: "Phase 1C-Git — git2-rs via Tauri IPC. Branch, stage, commit, push, pull.",
   },
   env: {
     title: "Env",
-    body: "Phase 1C — native-fs .env editor with masked values and Add Variable.",
+    body: "Phase 1C-Env — native-fs .env editor with masked values and Add Variable.",
   },
   todo: {
     title: "Todo",
-    body: "Phase 1C — markdown-backed at .0canvas/todo.md, agent-editable.",
+    body: "Phase 1C-Todo — markdown-backed at .0canvas/todo.md, agent-editable.",
   },
 };
 
@@ -82,22 +79,20 @@ export function Column2Workspace() {
       <div
         className={`oc-column-2__body ${
           activeTab === "chat" ? "is-chat" : ""
-        }`}
+        } ${activeTab === "terminal" ? "is-terminal" : ""}`}
         role="tabpanel"
       >
-        {activeTab === "chat" ? (
-          <AIChatPanel />
-        ) : (
-          (() => {
-            const p = TAB_PLACEHOLDERS[activeTab];
-            return p ? (
-              <div className="oc-column-2__placeholder">
-                <h2>{p.title}</h2>
-                <p>{p.body}</p>
-              </div>
-            ) : null;
-          })()
-        )}
+        {activeTab === "chat" && <AIChatPanel />}
+        {activeTab === "terminal" && <TerminalPanel />}
+        {(() => {
+          const p = TAB_PLACEHOLDERS[activeTab];
+          return p ? (
+            <div className="oc-column-2__placeholder">
+              <h2>{p.title}</h2>
+              <p>{p.body}</p>
+            </div>
+          ) : null;
+        })()}
       </div>
     </section>
   );

@@ -404,6 +404,43 @@
   min-height: 0;
 }
 
+/* Terminal tab: xterm needs zero-padding full-bleed area; its own scroll
+ * is inside the canvas. */
+.oc-column-2__body.is-terminal {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--oc-bg, #0f0f0f);
+}
+
+.oc-terminal {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--oc-bg, #0f0f0f);
+}
+
+.oc-terminal__error {
+  padding: 10px 14px;
+  font-size: 11px;
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.08);
+  border-bottom: 1px solid rgba(255, 107, 107, 0.2);
+}
+
+.oc-terminal__host {
+  flex: 1;
+  min-height: 0;
+  padding: 8px 10px 4px;
+  cursor: text;
+}
+
+.oc-terminal__host .xterm .xterm-viewport {
+  background: transparent;
+}
+
 .oc-column-2__placeholder {
   max-width: 360px;
   display: flex;
