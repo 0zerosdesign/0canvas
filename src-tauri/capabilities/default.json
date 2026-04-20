@@ -1,9 +1,10 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Phase 1A-1 baseline capabilities. Expanded per sub-phase as features land.",
+  "description": "Phase 1A-2 capabilities. Expanded per sub-phase as features land.",
   "windows": ["main"],
   "permissions": [
-    "core:default"
+    "core:default",
+    "dialog:default"
   ]
 }

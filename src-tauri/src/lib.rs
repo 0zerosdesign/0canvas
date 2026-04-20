@@ -24,11 +24,22 @@
 mod sidecar;
 
 use sidecar::SidecarState;
+use serde::Serialize;
 use std::path::PathBuf;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem, Submenu},
-    Manager, WindowEvent,
+    AppHandle, Emitter, Manager, WindowEvent,
 };
+use tauri_plugin_dialog::DialogExt;
+
+/// Shape emitted to the webview whenever the active project root changes.
+/// The frontend's BridgeProvider listens for `project-changed` to reconnect
+/// the WebSocket against the new engine (same port, different cwd/root).
+#[derive(Clone, Serialize)]
+struct ProjectChanged {
+    root: String,
+    port: u16,
+}
 
 #[tauri::command]
 fn get_engine_port(state: tauri::State<'_, SidecarState>) -> Option<u16> {
@@ -40,6 +51,46 @@ fn get_engine_root(state: tauri::State<'_, SidecarState>) -> Option<String> {
     state
         .current_root()
         .map(|p| p.to_string_lossy().into_owned())
+}
+
+/// Open the system directory picker; if the user picks a folder, restart the
+/// engine rooted there and emit `project-changed` to the webview.
+#[tauri::command]
+async fn open_project_folder(app: AppHandle) -> Result<Option<ProjectChanged>, String> {
+    // The dialog plugin's pick_folder is callback-based; bridge it to an
+    // async channel so we can await the user's selection inside a command.
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    app.dialog().file().pick_folder(move |result| {
+        let _ = tx.send(result);
+    });
+    let selection = rx.await.map_err(|e| e.to_string())?;
+
+    let Some(folder) = selection else {
+        // User cancelled the dialog — not an error, just nothing happened.
+        return Ok(None);
+    };
+    let folder_path = folder
+        .into_path()
+        .map_err(|e| format!("invalid folder path: {}", e))?;
+
+    // Run the (blocking) spawn_engine off the async runtime so we don't
+    // stall the Tauri command worker while Node boots.
+    let state_app = app.clone();
+    let spawn_path = folder_path.clone();
+    let port = tauri::async_runtime::spawn_blocking(move || {
+        let state = state_app.state::<SidecarState>();
+        sidecar::spawn_engine(&state, &spawn_path)
+    })
+    .await
+    .map_err(|e| format!("spawn_blocking join: {}", e))??;
+
+    let payload = ProjectChanged {
+        root: folder_path.to_string_lossy().into_owned(),
+        port,
+    };
+    app.emit("project-changed", payload.clone())
+        .map_err(|e| format!("emit project-changed: {}", e))?;
+    Ok(Some(payload))
 }
 
 /// Resolve the initial project root. In `cargo tauri dev` the CWD is
@@ -82,12 +133,11 @@ fn build_app_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result
         "File",
         true,
         &[
-            // Phase 1A-2c replaces this placeholder with a real Open Folder dialog.
             &MenuItem::with_id(
                 app,
                 "open_folder",
                 "Open Folder…",
-                false, // disabled until 1A-2c lands
+                true,
                 Some("CmdOrCtrl+O"),
             )?,
             &PredefinedMenuItem::separator(app)?,
@@ -136,8 +186,13 @@ fn build_app_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .manage(SidecarState::new())
-        .invoke_handler(tauri::generate_handler![get_engine_port, get_engine_root])
+        .invoke_handler(tauri::generate_handler![
+            get_engine_port,
+            get_engine_root,
+            open_project_folder,
+        ])
         .setup(|app| {
             // Spawn the engine before the webview tries to connect. If it
             // fails we log and continue — the webview will simply show a
@@ -151,6 +206,20 @@ pub fn run() {
 
             let menu = build_app_menu(app.handle())?;
             app.set_menu(menu)?;
+
+            // File > Open Folder… click → run the same command the webview
+            // can invoke directly, so there's one code path for both entry
+            // points.
+            app.on_menu_event(|app_handle, event| {
+                if event.id() == "open_folder" {
+                    let handle = app_handle.clone();
+                    tauri::async_runtime::spawn(async move {
+                        if let Err(err) = open_project_folder(handle).await {
+                            eprintln!("[0canvas] open_folder menu error: {}", err);
+                        }
+                    });
+                }
+            });
 
             Ok(())
         })

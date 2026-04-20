@@ -80,7 +80,20 @@ export function SourceNode({ id, data, selected }: NodeProps) {
   const [isResizing, setIsResizing] = useState(false);
   const [activePreset, setActivePreset] = useState<string>("Laptop");
 
-  const iframeSrc = typeof window !== "undefined" ? window.location.href : "";
+  // Prefer the project's configured dev-server URL. Fall back to
+  // window.location.href only if it clearly isn't pointing at 0canvas
+  // itself (npm-overlay legacy mode — 0canvas was injected into the host
+  // app, so the host URL was the right preview target). In the Mac app
+  // the webview's own origin IS 0canvas, so recursing into an iframe of
+  // ourselves is never correct.
+  const iframeSrc = (() => {
+    const projectUrl = state.project?.devServerUrl;
+    if (projectUrl && projectUrl.length > 0) return projectUrl;
+    if (typeof window === "undefined") return "";
+    const isMacApp = "__TAURI_INTERNALS__" in window;
+    if (isMacApp) return "";
+    return window.location.href;
+  })();
 
   // ── Apply dimensions to the ReactFlow node ──────────────
 
@@ -593,8 +606,29 @@ export function SourceNode({ id, data, selected }: NodeProps) {
         }}
       >
         <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+          {/* No dev server configured — Mac app Phase 1A-2c state.
+              Phase 1B adds an editable URL pill + LOCALHOST auto-discovery so
+              this placeholder resolves to a real preview automatically. */}
+          {!iframeSrc && (
+            <div style={{
+              position: "absolute", inset: 0, display: "flex",
+              flexDirection: "column", alignItems: "center", justifyContent: "center",
+              background: "var(--color--surface--0)", zIndex: 3,
+              padding: "24px 40px", textAlign: "center",
+            }}>
+              <Monitor style={{ width: 28, height: 28, color: "var(--color--text--muted)", marginBottom: 12 }} />
+              <p style={{ color: "var(--color--text--primary)", fontSize: 13, margin: 0, fontWeight: 500 }}>
+                No preview server configured
+              </p>
+              <p style={{ color: "var(--color--text--muted)", fontSize: 11, margin: "6px 0 0", maxWidth: 420, lineHeight: 1.55 }}>
+                Start your project's dev server (e.g. <code style={{ fontFamily: "var(--oc-font-mono, monospace)" }}>pnpm dev</code>).
+                Phase 1B wires the URL bar and localhost auto-discovery so this shows up automatically.
+              </p>
+            </div>
+          )}
+
           {/* Loading */}
-          {!iframeLoaded && !iframeError && (
+          {iframeSrc && !iframeLoaded && !iframeError && (
             <div style={{
               position: "absolute", inset: 0, display: "flex",
               flexDirection: "column", alignItems: "center", justifyContent: "center",

@@ -53,3 +53,4 @@ testing/
 # Publish workflow temp files
 package.figma.json
 package.figmamake.json
+*.bun-build

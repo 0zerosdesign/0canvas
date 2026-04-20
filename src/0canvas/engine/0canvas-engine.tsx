@@ -94,11 +94,17 @@ export function AutoConnect({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!state.project) {
+      // In Mac-app mode the webview's own URL (window.location.origin) is
+      // 0canvas itself, not a user project — using it as the preview src
+      // causes the source-node iframe to render 0canvas inside 0canvas.
+      // Start with no URL and let the user pick one (manual input in the
+      // toolbar, or Phase 1B's LOCALHOST auto-discovery).
+      const isMacApp = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
       dispatch({
         type: "CONNECT_PROJECT",
         project: {
           name: document.title || "Current Page",
-          devServerUrl: window.location.origin,
+          devServerUrl: isMacApp ? "" : window.location.origin,
           framework: "Engine Mode",
           status: "connected",
         },

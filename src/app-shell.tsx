@@ -24,6 +24,7 @@ import { AutoConnect, EngineWorkspace } from "./0canvas/engine/0canvas-engine";
 import { injectStyles } from "./0canvas/engine/0canvas-styles";
 import { Column1Nav } from "./shell/column1-nav";
 import { Column2Workspace } from "./shell/column2-workspace";
+import { onProjectChanged } from "./native/tauri-events";
 import "./shell/app-shell.css";
 
 // Inject the existing 0canvas overlay CSS exactly once at module load.
@@ -44,12 +45,36 @@ function ForceDesignPageOnBoot() {
   return null;
 }
 
+/**
+ * When the user picks a new project folder via File > Open Folder, the Rust
+ * side respawns the engine and emits `project-changed`. Phase 1A-2c uses
+ * the simplest possible refresh: reload the webview so Column 3's workspace
+ * re-reads the new project's .0c files from scratch. Phase 1B replaces this
+ * with in-place state swap via the Workspace Manager route.
+ */
+function ReloadOnProjectChange() {
+  useEffect(() => {
+    let unlisten: (() => void) | null = null;
+    onProjectChanged((payload) => {
+      console.log("[0canvas] project changed", payload);
+      window.location.reload();
+    }).then((fn) => {
+      unlisten = fn;
+    });
+    return () => {
+      unlisten?.();
+    };
+  }, []);
+  return null;
+}
+
 export function AppShell() {
   return (
     <WorkspaceProvider>
       <BridgeProvider>
         <AutoConnect>
           <ForceDesignPageOnBoot />
+          <ReloadOnProjectChange />
           <div className="oc-app">
             <Column1Nav />
             <Column2Workspace />
