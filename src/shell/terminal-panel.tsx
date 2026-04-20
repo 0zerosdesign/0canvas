@@ -43,28 +43,32 @@ async function resolveProjectRoot(): Promise<string | undefined> {
   }
 }
 
+// Desaturated palette — ANSI hues stay distinguishable (so `ls`, git
+// log, grep output still parses visually) but everything's pulled
+// back so the terminal chrome reads as quiet grey alongside the rest
+// of the Mac shell instead of a neon-coloured island.
 const TERMINAL_THEME = {
-  background: "#131313",
-  foreground: "#e6e6e6",
-  cursor: "#3b82f6",
-  cursorAccent: "#131313",
-  selectionBackground: "rgba(59, 130, 246, 0.3)",
-  black: "#1a1a1a",
-  red: "#ff6b6b",
-  green: "#50e3c2",
-  yellow: "#f5a623",
-  blue: "#3b82f6",
-  magenta: "#8b5cf6",
-  cyan: "#50e3c2",
-  white: "#e6e6e6",
-  brightBlack: "#666",
-  brightRed: "#ff6b6b",
-  brightGreen: "#50e3c2",
-  brightYellow: "#f5a623",
-  brightBlue: "#3b82f6",
-  brightMagenta: "#8b5cf6",
-  brightCyan: "#50e3c2",
-  brightWhite: "#fff",
+  background: "#0a0a0a",
+  foreground: "#d4d4d4",
+  cursor: "#a3a3a3",
+  cursorAccent: "#0a0a0a",
+  selectionBackground: "rgba(255, 255, 255, 0.12)",
+  black: "#0a0a0a",
+  red: "#c4807d",
+  green: "#a3c094",
+  yellow: "#c9b173",
+  blue: "#8aa8c8",
+  magenta: "#b298c0",
+  cyan: "#8fb8b8",
+  white: "#d4d4d4",
+  brightBlack: "#737373",
+  brightRed: "#d89995",
+  brightGreen: "#b8d2a8",
+  brightYellow: "#d9c485",
+  brightBlue: "#a0bcd8",
+  brightMagenta: "#c4acd0",
+  brightCyan: "#a0c8c8",
+  brightWhite: "#fafafa",
 };
 
 // ── Single session (xterm + pty) ──────────────────────────

@@ -29,6 +29,7 @@ import {
   Folder,
   FolderOpen,
   FolderPlus,
+  GitBranch,
   MessageSquare,
   Trash2,
   X,
@@ -38,12 +39,15 @@ import {
   discoverLocalhostServices,
   openProjectFolder,
   openProjectFolderPath,
+  git,
+  openClonedProject,
   type LocalhostService,
 } from "../native/tauri-events";
 import { getSetting, setSetting } from "../native/settings";
 import {
   loadRecentProjects,
   forgetProject,
+  rememberProject,
   type RecentProject,
 } from "../native/recent-projects";
 
@@ -351,6 +355,15 @@ export function Column1Nav() {
     }
   };
 
+  // Phase 3-F — clone modal state lives at this level so the button in
+  // the workspace dropdown can open it while the menu closes normally.
+  const [showClone, setShowClone] = useState(false);
+
+  const handleOpenClone = () => {
+    workspaceMenu.setOpen(false);
+    setShowClone(true);
+  };
+
   const handleForgetProject = (e: React.MouseEvent, path: string) => {
     e.stopPropagation();
     forgetProject(path);
@@ -363,8 +376,8 @@ export function Column1Nav() {
       aria-label="Navigation"
       data-collapsed={collapsed}
     >
-      <div className="oc-column-1__header">
-        <div className="oc-column-1__brand">
+      <div className="oc-column-1__header" data-tauri-drag-region>
+        <div className="oc-column-1__brand" data-tauri-drag-region>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 2L2 7l10 5 10-5-10-5z" />
             <path d="M2 17l10 5 10-5" />
@@ -462,6 +475,13 @@ export function Column1Nav() {
             >
               <FolderPlus size={13} />
               <span>Open Folder…</span>
+            </button>
+            <button
+              className="oc-column-1__workspace-open"
+              onClick={handleOpenClone}
+            >
+              <GitBranch size={13} />
+              <span>Clone from URL…</span>
             </button>
           </div>
         )}
@@ -603,6 +623,117 @@ export function Column1Nav() {
           {!collapsed && <span>Profile</span>}
         </button>
       </footer>
+      {showClone && <CloneModal onClose={() => setShowClone(false)} />}
     </aside>
+  );
+}
+
+// ── Phase 3-F — clone modal ───────────────────────────────
+//
+// Minimal form: URL + destination folder. The destination must not
+// already exist (libgit2 clones into an empty path). We default the
+// folder name from the URL's last segment when the user pastes the
+// URL first. On success we rememberProject() + openClonedProject()
+// so the app swaps into the newly cloned repo immediately.
+
+function defaultFolderNameFrom(url: string): string {
+  const trimmed = url.trim().replace(/\.git$/i, "");
+  const parts = trimmed.split(/[\\/:]/).filter(Boolean);
+  return parts[parts.length - 1] ?? "";
+}
+
+function CloneModal({ onClose }: { onClose: () => void }) {
+  const [url, setUrl] = useState("");
+  const [dest, setDest] = useState("");
+  const [userEditedDest, setUserEditedDest] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !busy) onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [busy, onClose]);
+
+  useEffect(() => {
+    if (userEditedDest) return;
+    const name = defaultFolderNameFrom(url);
+    setDest(name ? `/Users/${"{"}you${"}"}/Projects/${name}` : "");
+  }, [url, userEditedDest]);
+
+  const handleClone = async () => {
+    setErr(null);
+    const trimmedUrl = url.trim();
+    const trimmedDest = dest.trim();
+    if (!trimmedUrl) {
+      setErr("Enter a git URL.");
+      return;
+    }
+    if (!trimmedDest.startsWith("/")) {
+      setErr("Destination must be an absolute path starting with /.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const cloned = await git.clone(trimmedUrl, trimmedDest);
+      rememberProject(cloned);
+      await openClonedProject(cloned);
+      // openClonedProject emits project-changed → the shell reloads.
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="oc-clone-modal-backdrop" onClick={onClose}>
+      <div className="oc-clone-modal" onClick={(e) => e.stopPropagation()}>
+        <h2>Clone a repository</h2>
+        <label>
+          Git URL
+          <input
+            autoFocus
+            placeholder="https://github.com/owner/repo.git"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            disabled={busy}
+          />
+        </label>
+        <label>
+          Destination folder (absolute path)
+          <input
+            placeholder="/Users/you/Projects/repo"
+            value={dest}
+            onChange={(e) => {
+              setUserEditedDest(true);
+              setDest(e.target.value);
+            }}
+            disabled={busy}
+          />
+        </label>
+        {busy && (
+          <p className="oc-clone-modal__progress">Cloning… this can take a while.</p>
+        )}
+        {err && <div className="oc-clone-modal__err">{err}</div>}
+        <div className="oc-clone-modal__actions">
+          <button
+            className="oc-git__btn"
+            onClick={onClose}
+            disabled={busy}
+          >
+            Cancel
+          </button>
+          <button
+            className="oc-git__btn is-primary"
+            onClick={handleClone}
+            disabled={busy || !url.trim() || !dest.trim()}
+          >
+            {busy ? "Cloning…" : "Clone"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

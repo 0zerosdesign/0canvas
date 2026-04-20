@@ -120,15 +120,31 @@ export const BREAKPOINT_WIDTHS: Record<Breakpoint, number> = {
   tablet: 768,
   mobile: 375,
 };
-export type AiProvider = "chatgpt" | "openai" | "ide";
+// Phase 4 introduces the CLI-subprocess backends. Legacy values
+// ("chatgpt" / "openai" / "ide") stay in the union so existing
+// saved settings round-trip — loadAiSettings() migrates them to
+// the new values on read.
+export type AiProvider =
+  | "claude"
+  | "codex"
+  // legacy, kept for backward-compat on reload
+  | "chatgpt"
+  | "openai"
+  | "ide";
+
+export type AiAuthMethod = "subscription" | "api-key";
+export type AiThinkingEffort = "low" | "medium" | "high" | "xhigh";
 
 export type AiSettings = {
   provider: AiProvider;
+  authMethod: AiAuthMethod;
   proxyUrl: string;
   apiKey: string;
   model: string;
   temperature: number;
   autoSendFeedback: boolean;
+  thinkingEffort: AiThinkingEffort;
+  agentTeams: boolean;
 };
 export type ViewMode = "canvas" | "fullscreen";
 

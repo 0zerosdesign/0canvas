@@ -27,9 +27,13 @@ tauri-plugin-dialog = "2"
 tauri-plugin-pty = "0.2"
 tauri-plugin-deep-link = "2"
 tauri-plugin-notification = "2"
-tokio = { version = "1", features = ["sync"] }
+tokio = { version = "1", features = ["sync", "io-util", "process", "rt"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# Phase 4 — probe whether the user has `claude` / `codex` CLI installed
+# before trying to spawn them. Better error than "No such file or
+# directory" bubbling up from ENOENT.
+which = "6"
 # Git operations — libgit2 bindings. Bring HTTPS via the system libcurl
 # + credential helper so the user's existing `git` auth (osxkeychain,
 # ssh-agent) works without re-credentialing through 0canvas.

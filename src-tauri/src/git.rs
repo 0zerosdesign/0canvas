@@ -13,16 +13,21 @@
 // ~/.git-credentials), we inherit it. Phase 3 adds GitHub
 // Device-Flow OAuth for the "I don't have git set up" path.
 //
-// Out of scope for this phase (Phase 3):
+// Phase 3 additions layered on top of the Phase 1C plumbing:
+//   - commit message auto-suggest
+//   - remote URL + "Open PR" helper
+//   - discard file changes (Safety Affordances)
+//   - file contents at HEAD (Visual Diff v2)
 //   - clone from URL
-//   - create + push new branch with --set-upstream
-//   - conflict resolution UI
-//   - worktree commands (Phase 4)
+//   - worktree add / list / remove
+//   - conflict listing + keep-mine / keep-theirs resolve
+//   - revert / reset-hard commit actions
 // ──────────────────────────────────────────────────────────
 
 use git2::{
-    build::CheckoutBuilder, BranchType, Config, Cred, FetchOptions, PushOptions,
-    RemoteCallbacks, Repository, Status, StatusOptions, Time,
+    build::{CheckoutBuilder, RepoBuilder},
+    BranchType, Config, Cred, FetchOptions, PushOptions, RemoteCallbacks, Repository, ResetType,
+    Status, StatusOptions, Time,
 };
 use serde::Serialize;
 use std::path::{Path, PathBuf};
@@ -626,5 +631,519 @@ pub fn git_branch_delete(
         return Err("cannot delete the currently checked-out branch".into());
     }
     branch.delete().map_err(|e| format!("delete: {}", e))?;
+    Ok(())
+}
+
+// ── Phase 3-A · Commit message auto-suggest ────────────────
+//
+// Heuristic: summarise the staged changes in one line (verb + top
+// paths + count), leave blank lines, then bullet each file. The UI
+// still lets the user edit before commit — this is a starting point,
+// not a decision.
+
+/// Group paths by their first segment, e.g.:
+///   src/shell/git-panel.tsx          → "src"
+///   docs/TAURI_MAC_APP_PLAN.md       → "docs"
+///   theme.css                        → "theme.css"
+fn top_segment(path: &str) -> &str {
+    path.split('/').next().unwrap_or(path)
+}
+
+#[tauri::command]
+pub fn git_suggest_commit_message(
+    state: tauri::State<'_, SidecarState>,
+) -> Result<String, String> {
+    let root = root_from_state(&state)?;
+    let repo = open_repo(&root)?;
+
+    // Staged files only — that's what's actually about to be committed.
+    let mut opts = StatusOptions::new();
+    opts.include_untracked(false);
+    let statuses = repo
+        .statuses(Some(&mut opts))
+        .map_err(|e| format!("statuses: {}", e))?;
+
+    let mut added: Vec<String> = Vec::new();
+    let mut modified: Vec<String> = Vec::new();
+    let mut deleted: Vec<String> = Vec::new();
+    let mut renamed: Vec<String> = Vec::new();
+
+    for entry in statuses.iter() {
+        let s = entry.status();
+        let path = entry.path().unwrap_or("").to_string();
+        if path.is_empty() {
+            continue;
+        }
+        if s.contains(Status::INDEX_NEW) {
+            added.push(path);
+        } else if s.contains(Status::INDEX_MODIFIED) {
+            modified.push(path);
+        } else if s.contains(Status::INDEX_DELETED) {
+            deleted.push(path);
+        } else if s.contains(Status::INDEX_RENAMED) {
+            renamed.push(path);
+        }
+    }
+
+    let total = added.len() + modified.len() + deleted.len() + renamed.len();
+    if total == 0 {
+        return Ok(String::new());
+    }
+
+    // Verb: prefer the dominant kind, fall back to "Update".
+    let verb = if added.len() == total {
+        "Add"
+    } else if deleted.len() == total {
+        "Remove"
+    } else if modified.len() == total {
+        "Update"
+    } else {
+        "Update"
+    };
+
+    // Subject line: verb + up to 3 top-level segments.
+    let all: Vec<&String> = added
+        .iter()
+        .chain(modified.iter())
+        .chain(deleted.iter())
+        .chain(renamed.iter())
+        .collect();
+    let mut segments: Vec<&str> = all.iter().map(|p| top_segment(p)).collect();
+    segments.sort();
+    segments.dedup();
+    let segment_str = if segments.len() > 3 {
+        format!("{} and more", segments[..3].join(", "))
+    } else {
+        segments.join(", ")
+    };
+
+    let subject = if total == 1 {
+        let only = all[0];
+        format!("{} {}", verb, only)
+    } else {
+        format!("{} {} ({} files)", verb, segment_str, total)
+    };
+
+    // Body: bullet list of files, grouped.
+    let mut body = String::new();
+    let groups: &[(&str, &Vec<String>)] = &[
+        ("Added", &added),
+        ("Modified", &modified),
+        ("Deleted", &deleted),
+        ("Renamed", &renamed),
+    ];
+    for (label, paths) in groups {
+        if paths.is_empty() {
+            continue;
+        }
+        body.push_str(&format!("\n{}:\n", label));
+        for p in *paths {
+            body.push_str(&format!("- {}\n", p));
+        }
+    }
+
+    if body.is_empty() {
+        Ok(subject)
+    } else {
+        Ok(format!("{}\n{}", subject, body))
+    }
+}
+
+// ── Phase 3-B · Remote URL ─────────────────────────────────
+//
+// Returns the normalised https URL of `origin`, or None when there
+// is no remote. SSH URLs (git@github.com:owner/repo.git) are
+// rewritten to https form so the UI can build `/compare/...` links
+// directly.
+
+fn normalise_remote_url(raw: &str) -> String {
+    let trimmed = raw.trim();
+    let stripped = trimmed.strip_suffix(".git").unwrap_or(trimmed);
+    if let Some(rest) = stripped.strip_prefix("git@") {
+        // git@github.com:owner/repo  →  https://github.com/owner/repo
+        if let Some((host, path)) = rest.split_once(':') {
+            return format!("https://{}/{}", host, path);
+        }
+    }
+    if let Some(rest) = stripped.strip_prefix("ssh://git@") {
+        // ssh://git@github.com/owner/repo
+        return format!("https://{}", rest);
+    }
+    stripped.to_string()
+}
+
+#[tauri::command]
+pub fn git_remote_url(state: tauri::State<'_, SidecarState>) -> Result<Option<String>, String> {
+    let root = root_from_state(&state)?;
+    let repo = open_repo(&root)?;
+    let remote = match repo.find_remote("origin") {
+        Ok(r) => r,
+        Err(_) => return Ok(None),
+    };
+    Ok(remote.url().map(normalise_remote_url))
+}
+
+// ── Phase 3-C · Discard file changes ───────────────────────
+//
+// "Discard changes" for a single path — checks out HEAD's version.
+// For untracked files we just delete them from disk.
+
+#[tauri::command]
+pub fn git_discard_file(
+    state: tauri::State<'_, SidecarState>,
+    path: String,
+) -> Result<(), String> {
+    let root = root_from_state(&state)?;
+    let repo = open_repo(&root)?;
+
+    let mut opts = StatusOptions::new();
+    opts.include_untracked(true).recurse_untracked_dirs(true);
+    let statuses = repo
+        .statuses(Some(&mut opts))
+        .map_err(|e| format!("statuses: {}", e))?;
+
+    let is_untracked = statuses
+        .iter()
+        .any(|e| e.path() == Some(path.as_str()) && e.status().contains(Status::WT_NEW));
+
+    if is_untracked {
+        let abs = root.join(&path);
+        if abs.exists() {
+            std::fs::remove_file(&abs)
+                .map_err(|e| format!("remove {}: {}", path, e))?;
+        }
+        return Ok(());
+    }
+
+    let mut builder = CheckoutBuilder::new();
+    builder.force().path(&path);
+    repo.checkout_head(Some(&mut builder))
+        .map_err(|e| format!("checkout_head({}): {}", path, e))?;
+    Ok(())
+}
+
+// ── Phase 3-E · File contents at HEAD (for Visual Diff v2) ──
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileVersion {
+    pub path: String,
+    pub exists: bool,
+    pub content: Option<String>,
+}
+
+#[tauri::command]
+pub fn git_file_at_head(
+    state: tauri::State<'_, SidecarState>,
+    path: String,
+) -> Result<FileVersion, String> {
+    let root = root_from_state(&state)?;
+    let repo = open_repo(&root)?;
+
+    let head_tree = match repo.head() {
+        Ok(r) => r.peel_to_tree().map_err(|e| e.to_string())?,
+        Err(_) => {
+            return Ok(FileVersion {
+                path,
+                exists: false,
+                content: None,
+            })
+        }
+    };
+
+    let entry = match head_tree.get_path(Path::new(&path)) {
+        Ok(e) => e,
+        Err(_) => {
+            return Ok(FileVersion {
+                path,
+                exists: false,
+                content: None,
+            })
+        }
+    };
+    let obj = entry.to_object(&repo).map_err(|e| e.to_string())?;
+    let blob = obj.as_blob().ok_or_else(|| "not a blob".to_string())?;
+    let content = String::from_utf8_lossy(blob.content()).to_string();
+    Ok(FileVersion {
+        path,
+        exists: true,
+        content: Some(content),
+    })
+}
+
+// ── Phase 3-F · Clone ──────────────────────────────────────
+
+#[tauri::command]
+pub fn git_clone(url: String, destination: String) -> Result<String, String> {
+    let dest = PathBuf::from(&destination);
+    if dest.exists() {
+        return Err(format!("destination already exists: {}", destination));
+    }
+    if let Some(parent) = dest.parent() {
+        if !parent.exists() {
+            return Err(format!("parent folder does not exist: {}", parent.display()));
+        }
+    }
+
+    let mut cb = make_remote_callbacks();
+    // Progress is best-effort; ignore transfer_progress failures.
+    cb.transfer_progress(|_| true);
+
+    let mut fo = FetchOptions::new();
+    fo.remote_callbacks(cb);
+
+    let mut builder = RepoBuilder::new();
+    builder.fetch_options(fo);
+    builder
+        .clone(&url, &dest)
+        .map_err(|e| format!("clone: {}", e))?;
+    Ok(dest.to_string_lossy().into_owned())
+}
+
+// ── Phase 3-G · Worktrees ──────────────────────────────────
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorktreeInfo {
+    pub name: String,
+    pub path: String,
+    pub is_current: bool,
+}
+
+#[tauri::command]
+pub fn git_worktree_list(
+    state: tauri::State<'_, SidecarState>,
+) -> Result<Vec<WorktreeInfo>, String> {
+    let root = root_from_state(&state)?;
+    let repo = open_repo(&root)?;
+    let names = repo
+        .worktrees()
+        .map_err(|e| format!("worktrees: {}", e))?;
+    let current = repo.workdir().map(|p| p.to_path_buf());
+    let mut out = Vec::new();
+    for name in names.iter().flatten() {
+        let wt = match repo.find_worktree(name) {
+            Ok(w) => w,
+            Err(_) => continue,
+        };
+        let path = wt.path().to_path_buf();
+        let is_current = current.as_ref().map(|c| c == &path).unwrap_or(false);
+        out.push(WorktreeInfo {
+            name: name.to_string(),
+            path: path.to_string_lossy().into_owned(),
+            is_current,
+        });
+    }
+    Ok(out)
+}
+
+#[tauri::command]
+pub fn git_worktree_add(
+    state: tauri::State<'_, SidecarState>,
+    name: String,
+    path: String,
+    branch: Option<String>,
+) -> Result<String, String> {
+    let root = root_from_state(&state)?;
+    let repo = open_repo(&root)?;
+    let dest = PathBuf::from(&path);
+    if dest.exists() {
+        return Err(format!("path already exists: {}", path));
+    }
+
+    // Attach to an existing branch when given, else libgit2 creates one
+    // named after the worktree at the current HEAD.
+    let mut opts = git2::WorktreeAddOptions::new();
+    let reference = branch
+        .as_ref()
+        .and_then(|b| repo.find_reference(&format!("refs/heads/{}", b)).ok());
+    if let Some(ref r) = reference {
+        opts.reference(Some(r));
+    }
+    repo.worktree(&name, &dest, Some(&opts))
+        .map_err(|e| format!("worktree add: {}", e))?;
+    Ok(dest.to_string_lossy().into_owned())
+}
+
+#[tauri::command]
+pub fn git_worktree_remove(
+    state: tauri::State<'_, SidecarState>,
+    name: String,
+) -> Result<(), String> {
+    let root = root_from_state(&state)?;
+    let repo = open_repo(&root)?;
+    let wt = repo
+        .find_worktree(&name)
+        .map_err(|e| format!("find_worktree({}): {}", name, e))?;
+    // Best-effort pruning. libgit2's prune refuses if the worktree is
+    // still considered valid; remove the directory first, then prune.
+    let path = wt.path().to_path_buf();
+    if path.exists() {
+        std::fs::remove_dir_all(&path)
+            .map_err(|e| format!("remove_dir_all({}): {}", path.display(), e))?;
+    }
+    let mut prune = git2::WorktreePruneOptions::new();
+    prune.valid(true).working_tree(true);
+    wt.prune(Some(&mut prune))
+        .map_err(|e| format!("prune: {}", e))?;
+    Ok(())
+}
+
+// ── Phase 3-H · Conflicts ──────────────────────────────────
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConflictFile {
+    pub path: String,
+    pub has_ours: bool,
+    pub has_theirs: bool,
+}
+
+#[tauri::command]
+pub fn git_conflict_list(
+    state: tauri::State<'_, SidecarState>,
+) -> Result<Vec<ConflictFile>, String> {
+    let root = root_from_state(&state)?;
+    let repo = open_repo(&root)?;
+    let index = repo.index().map_err(|e| e.to_string())?;
+    if !index.has_conflicts() {
+        return Ok(Vec::new());
+    }
+    let mut out = Vec::new();
+    let conflicts = index
+        .conflicts()
+        .map_err(|e| format!("conflicts: {}", e))?;
+    for entry in conflicts {
+        let c = entry.map_err(|e| e.to_string())?;
+        let pick_path = c
+            .our
+            .as_ref()
+            .or(c.their.as_ref())
+            .or(c.ancestor.as_ref());
+        let Some(p) = pick_path else { continue };
+        let path = String::from_utf8_lossy(&p.path).to_string();
+        out.push(ConflictFile {
+            path,
+            has_ours: c.our.is_some(),
+            has_theirs: c.their.is_some(),
+        });
+    }
+    Ok(out)
+}
+
+fn resolve_conflict(repo: &Repository, path: &str, theirs: bool) -> Result<(), String> {
+    let mut index = repo.index().map_err(|e| e.to_string())?;
+    let mut blob_oid: Option<git2::Oid> = None;
+    {
+        let conflicts = index
+            .conflicts()
+            .map_err(|e| format!("conflicts: {}", e))?;
+        for entry in conflicts {
+            let c = entry.map_err(|e| e.to_string())?;
+            let pick = if theirs { c.their.as_ref() } else { c.our.as_ref() };
+            if let Some(e) = pick {
+                let entry_path = String::from_utf8_lossy(&e.path);
+                if entry_path == path {
+                    blob_oid = Some(e.id);
+                    break;
+                }
+            }
+        }
+    }
+    let oid = blob_oid.ok_or_else(|| {
+        format!(
+            "no {} version found for {}",
+            if theirs { "theirs" } else { "ours" },
+            path
+        )
+    })?;
+    let blob = repo.find_blob(oid).map_err(|e| e.to_string())?;
+    let root = repo.workdir().ok_or_else(|| "no workdir".to_string())?;
+    let abs = root.join(path);
+    if let Some(parent) = abs.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("create_dir_all: {}", e))?;
+    }
+    std::fs::write(&abs, blob.content())
+        .map_err(|e| format!("write {}: {}", abs.display(), e))?;
+
+    index
+        .remove_path(Path::new(path))
+        .map_err(|e| format!("remove_path: {}", e))?;
+    index
+        .add_path(Path::new(path))
+        .map_err(|e| format!("add_path: {}", e))?;
+    index.write().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn git_resolve_file_ours(
+    state: tauri::State<'_, SidecarState>,
+    path: String,
+) -> Result<(), String> {
+    let root = root_from_state(&state)?;
+    let repo = open_repo(&root)?;
+    resolve_conflict(&repo, &path, false)
+}
+
+#[tauri::command]
+pub fn git_resolve_file_theirs(
+    state: tauri::State<'_, SidecarState>,
+    path: String,
+) -> Result<(), String> {
+    let root = root_from_state(&state)?;
+    let repo = open_repo(&root)?;
+    resolve_conflict(&repo, &path, true)
+}
+
+// ── Phase 3-D · Right-click commit actions ─────────────────
+
+#[tauri::command]
+pub fn git_revert_commit(
+    state: tauri::State<'_, SidecarState>,
+    sha: String,
+) -> Result<String, String> {
+    let root = root_from_state(&state)?;
+    let repo = open_repo(&root)?;
+    let oid = git2::Oid::from_str(&sha).map_err(|e| format!("bad sha: {}", e))?;
+    let commit = repo.find_commit(oid).map_err(|e| e.to_string())?;
+    repo.revert(&commit, None)
+        .map_err(|e| format!("revert: {}", e))?;
+    Ok(format!("Reverted {}", &sha[..sha.len().min(7)]))
+}
+
+#[tauri::command]
+pub fn git_reset_hard(
+    state: tauri::State<'_, SidecarState>,
+    sha: String,
+) -> Result<(), String> {
+    let root = root_from_state(&state)?;
+    let repo = open_repo(&root)?;
+    let oid = git2::Oid::from_str(&sha).map_err(|e| format!("bad sha: {}", e))?;
+    let obj = repo
+        .find_object(oid, None)
+        .map_err(|e| format!("find_object: {}", e))?;
+    repo.reset(&obj, ResetType::Hard, Some(CheckoutBuilder::new().force()))
+        .map_err(|e| format!("reset --hard: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn git_push_force(state: tauri::State<'_, SidecarState>) -> Result<(), String> {
+    let root = root_from_state(&state)?;
+    let repo = open_repo(&root)?;
+    let branch = current_branch_name(&repo)?;
+    let mut remote = repo
+        .find_remote("origin")
+        .map_err(|e| format!("find_remote origin: {}", e))?;
+
+    let mut opts = PushOptions::new();
+    opts.remote_callbacks(make_remote_callbacks());
+
+    let refspec = format!("+refs/heads/{}:refs/heads/{}", branch, branch);
+    remote
+        .push(&[refspec.as_str()], Some(&mut opts))
+        .map_err(|e| format!("force push: {}", e))?;
     Ok(())
 }

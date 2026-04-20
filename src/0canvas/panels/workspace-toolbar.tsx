@@ -81,9 +81,9 @@ export function WorkspaceToolbar({ onNavigate }: WorkspaceToolbarProps = {}) {
   }, [dispatch]);
 
   return (
-    <div className="oc-toolbar">
+    <div className="oc-toolbar" data-tauri-drag-region>
       {/* Left: Logo + Project */}
-      <div className="oc-toolbar-section">
+      <div className="oc-toolbar-section" data-tauri-drag-region>
         <div className="oc-toolbar-logo">
           <div className="oc-toolbar-logo-icon">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color--surface--0)" strokeWidth="2.5">

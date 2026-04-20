@@ -9,11 +9,20 @@
 // ──────────────────────────────────────────────────────────
 
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Send, Bot, User, Loader2, Sparkles, Square, Check, AlertCircle, Undo2, ArrowRight, X } from "lucide-react";
-import { useWorkspace, findElement } from "../store/store";
+import {
+  Send, Bot, User, Loader2, Sparkles, Square, Check, AlertCircle,
+  Undo2, ArrowRight, X, FolderOpen, ChevronDown, MoreHorizontal,
+  GitBranch, Eye, Plus, Image as ImageIcon,
+  Compass, Users, Plug, Clock, FileText, MessageCircle,
+  Brain, LogIn, Search,
+  type LucideIcon,
+} from "lucide-react";
+import { useWorkspace, findElement, type AiThinkingEffort } from "../store/store";
 import { useBridge } from "../bridge/use-bridge";
 import type { BridgeMessage } from "../bridge/messages";
-import { streamChat, isAiConfigured, type OpenAIMessage } from "../lib/openai";
+import { streamChat, isAiConfigured, saveAiSettings, type OpenAIMessage } from "../lib/openai";
+import { runCliLogin } from "../lib/ai-cli";
+import { listSkills, type Skill } from "../../native/tauri-events";
 import { applyStyle, flashElement } from "../inspector";
 import { ScrollArea } from "../ui/scroll-area";
 
@@ -82,6 +91,272 @@ property: value;
 \`\`\`
 
 The system auto-applies these to the selected element. Be concise.`;
+
+// ── Slash commands (Phase 4) ─────────────────────────────
+//
+// Triggered when the input starts with `/`. Arrow keys navigate,
+// Enter selects, Esc closes. Each command either performs a side
+// effect (and clears the input) or expands into a placeholder the
+// user can continue typing on top of.
+
+type SlashCommand = {
+  id: string;
+  label: string;
+  description: string;
+  icon: LucideIcon;
+  // When the user picks this command: either run a side effect and
+  // return the new input text, or return a placeholder string to
+  // seed the textarea with.
+  action: (ctx: SlashCommandContext) => Promise<string> | string;
+};
+
+type SlashCommandContext = {
+  provider: "claude" | "codex" | "other";
+  cycleEffort: () => AiThinkingEffort;
+  clearChat: () => void;
+};
+
+const SLASH_COMMANDS: SlashCommand[] = [
+  {
+    id: "explore",
+    label: "/explore",
+    description: "Browse community resources",
+    icon: Compass,
+    action: () => "Show me what I can do with 0canvas.",
+  },
+  {
+    id: "agents",
+    label: "/agents",
+    description: "Show available agents",
+    icon: Users,
+    action: () => "List all available agents.",
+  },
+  {
+    id: "skills",
+    label: "/skills",
+    description: "Show available skills",
+    icon: Sparkles,
+    action: () => "List all installed skills.",
+  },
+  {
+    id: "plugins",
+    label: "/plugins",
+    description: "Show installed plugins",
+    icon: Plug,
+    action: () => "List installed plugins.",
+  },
+  {
+    id: "mcp",
+    label: "/mcp",
+    description: "View MCP server status",
+    icon: Plug,
+    action: () => "Show MCP server status.",
+  },
+  {
+    id: "rewind",
+    label: "/rewind",
+    description: "Rewind to a previous checkpoint",
+    icon: Clock,
+    action: () => "Rewind to the last checkpoint.",
+  },
+  {
+    id: "spec",
+    label: "/spec",
+    description: "Create a spec sheet",
+    icon: FileText,
+    action: () => "Create a spec sheet for: ",
+  },
+  {
+    id: "interview",
+    label: "/interview",
+    description: "0canvas interviews you to understand the task",
+    icon: MessageCircle,
+    action: () => "Interview me about what I'm trying to build.",
+  },
+  {
+    id: "thinking",
+    label: "/thinking",
+    description: "Cycle thinking effort",
+    icon: Brain,
+    action: (ctx) => {
+      const next = ctx.cycleEffort();
+      return `Thinking effort set to ${next}.`;
+    },
+  },
+  {
+    id: "model",
+    label: "/model",
+    description: "Change the AI model",
+    icon: Search,
+    action: () => "/model ",
+  },
+  {
+    id: "auth",
+    label: "/auth",
+    description: "Sign in with Claude Pro / ChatGPT Pro",
+    icon: LogIn,
+    action: async (ctx) => {
+      const cli = ctx.provider === "codex" ? "codex" : "claude";
+      try {
+        await runCliLogin(cli);
+      } catch {
+        /* user will see error via Terminal */
+      }
+      return "";
+    },
+  },
+  {
+    id: "login",
+    label: "/login",
+    description: "Sign in with Claude Pro / ChatGPT Pro",
+    icon: LogIn,
+    action: async (ctx) => {
+      const cli = ctx.provider === "codex" ? "codex" : "claude";
+      try {
+        await runCliLogin(cli);
+      } catch {
+        /* user will see error via Terminal */
+      }
+      return "";
+    },
+  },
+  {
+    id: "clear",
+    label: "/clear",
+    description: "Clear this conversation",
+    icon: X,
+    action: (ctx) => {
+      ctx.clearChat();
+      return "";
+    },
+  },
+];
+
+function SlashMenu({
+  query,
+  selectedIndex,
+  onSelectIndex,
+  onPick,
+}: {
+  query: string;
+  selectedIndex: number;
+  onSelectIndex: (i: number) => void;
+  onPick: (cmd: SlashCommand) => void;
+}) {
+  const matches = filterSlashCommands(query);
+  if (matches.length === 0) return null;
+  return (
+    <div className="oc-slash-menu" role="listbox">
+      {matches.map((cmd, i) => (
+        <button
+          key={cmd.id}
+          role="option"
+          aria-selected={i === selectedIndex}
+          className={`oc-slash-item ${i === selectedIndex ? "is-active" : ""}`}
+          onMouseEnter={() => onSelectIndex(i)}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            onPick(cmd);
+          }}
+        >
+          <code className="oc-slash-label">{cmd.label}</code>
+          <span className="oc-slash-desc">{cmd.description}</span>
+        </button>
+      ))}
+      <div className="oc-slash-footer">
+        <span>↑↓ navigate</span>
+        <span>Enter select</span>
+        <span>Esc close</span>
+      </div>
+    </div>
+  );
+}
+
+function filterSlashCommands(query: string): SlashCommand[] {
+  const q = query.toLowerCase().replace(/^\//, "");
+  if (!q) return SLASH_COMMANDS;
+  return SLASH_COMMANDS.filter((c) =>
+    c.label.slice(1).toLowerCase().startsWith(q),
+  );
+}
+
+// ── Skill pill (Phase 4-H) ───────────────────────────────
+//
+// Clickable toolbar chip that opens a dropdown of available skills.
+// When a skill is active it shows that skill's name; otherwise shows
+// a neutral "Skills" label.
+
+function SkillPillButton({
+  skills,
+  selected,
+  onSelect,
+}: {
+  skills: Skill[];
+  selected: Skill | null;
+  onSelect: (s: Skill | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDoc, true);
+    return () => document.removeEventListener("mousedown", onDoc, true);
+  }, [open]);
+
+  return (
+    <div ref={rootRef} className="oc-chat-skill-root">
+      <button
+        className="oc-chat-toolbar-pill is-skill"
+        title={selected ? `Skill: ${selected.name}` : "Pick a skill"}
+        onClick={() => setOpen((v) => !v)}
+        type="button"
+      >
+        <span className="oc-chat-skill-chip">
+          <Sparkles size={10} />
+        </span>
+        <span>{selected?.name ?? "Skills"}</span>
+        <ChevronDown size={10} className="oc-chat-toolbar-caret" />
+      </button>
+      {open && (
+        <div className="oc-chat-skill-menu">
+          {skills.length === 0 ? (
+            <p className="oc-chat-skill-empty">
+              No skills yet. Add markdown files under{" "}
+              <code>skills/</code> in your project root.
+            </p>
+          ) : (
+            skills.map((s) => (
+              <button
+                key={s.id}
+                className={`oc-chat-skill-item ${
+                  selected?.id === s.id ? "is-active" : ""
+                }`}
+                onClick={() => {
+                  onSelect(selected?.id === s.id ? null : s);
+                  setOpen(false);
+                }}
+                type="button"
+              >
+                <span className="oc-chat-skill-item-name">{s.name}</span>
+                {s.description && (
+                  <span className="oc-chat-skill-item-desc">
+                    {s.description}
+                  </span>
+                )}
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── Diff View: per-property accept/reject ────────────────
 
@@ -159,6 +434,18 @@ export function AIChatPanel() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
+  // Phase 4 slash palette. Open whenever the input line starts with "/".
+  const [slashIndex, setSlashIndex] = useState(0);
+  const slashOpen = input.startsWith("/") && !streaming;
+  const slashMatches = slashOpen ? filterSlashCommands(input) : [];
+  // Phase 4 skills — loaded once on mount. `selectedSkill` is the
+  // currently-active skill chip; its body is prepended to the system
+  // prompt for the next turn.
+  const [skills, setSkills] = useState<Skill[]>([]);
+  const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
+  useEffect(() => {
+    listSkills().then(setSkills).catch(() => setSkills([]));
+  }, []);
   const [variantHistory, setVariantHistory] = useState<{ html: string; css: string }[]>([]);
   const [pendingCssChanges, setPendingCssChanges] = useState<PendingCssChange[] | null>(null);
   const [pendingVariant, setPendingVariant] = useState<PendingVariantRewrite | null>(null);
@@ -510,8 +797,14 @@ Styles:\n${Object.entries(selectedElement.styles)
         const controller = new AbortController();
         abortRef.current = controller;
 
+        // Prepend the active skill's body to the system prompt so the
+        // agent takes on the skill's persona + rules for this turn.
+        const skillPrefix = selectedSkill
+          ? `# Skill: ${selectedSkill.name}\n\n${selectedSkill.body}\n\n---\n\n`
+          : "";
+
         const openaiMessages: OpenAIMessage[] = [
-          { role: "system", content: systemPrompt + contextBlock },
+          { role: "system", content: skillPrefix + systemPrompt + contextBlock },
           ...messages.filter((m) => !m.pending).map((m) => ({
             role: m.role as "user" | "assistant", content: m.content,
           })),
@@ -635,65 +928,41 @@ Styles:\n${Object.entries(selectedElement.styles)
     setStreaming(false);
   }, []);
 
-  const providerLabel = aiSettings.provider === "chatgpt" ? "ChatGPT" : aiSettings.provider === "openai" ? "OpenAI" : "IDE";
+  const activeChatTitle =
+    state.chats.find((c) => c.id === state.activeChatId)?.title ?? "Chat";
+  const providerIconTint =
+    aiSettings.provider === "openai" ? "var(--green-500)"
+    : aiSettings.provider === "chatgpt" ? "var(--green-500)"
+    : "var(--orange-400)";
 
   return (
-    <div className="oc-panel" data-0canvas="ai-chat">
-      {/* Header */}
-      <div className="oc-panel-header">
-        <div className="oc-ai-header">
-          <Sparkles size={14} className="oc-ai-icon" />
-          <span className="oc-panel-title">AI</span>
-          <span className="oc-ai-provider-tag">{providerLabel}</span>
-        </div>
-        <div className="oc-ai-header-actions">
+    <div className="oc-panel oc-chat" data-0canvas="ai-chat">
+      {/* Header — chat title, Open dropdown, diff badge, menu */}
+      <div className="oc-chat-header">
+        <span className="oc-chat-title">{activeChatTitle}</span>
+        <div className="oc-chat-header-actions">
+          <button className="oc-chat-headerbtn" title="Open project folder / terminal">
+            <FolderOpen size={13} />
+            <span>Open</span>
+            <ChevronDown size={11} className="oc-chat-headerbtn-caret" />
+          </button>
           {variantHistory.length > 0 && (
-            <button className="oc-panel-btn" onClick={handleUndo} title="Undo last AI change">
-              <Undo2 size={12} />
+            <button className="oc-chat-iconbtn" onClick={handleUndo} title="Undo last AI change">
+              <Undo2 size={13} />
             </button>
           )}
-          <span className="oc-ai-provider-tag">{aiSettings.model}</span>
+          <button className="oc-chat-iconbtn" title="More">
+            <MoreHorizontal size={14} />
+          </button>
         </div>
-      </div>
-
-      {/* Context badge */}
-      <div className="oc-ai-context">
-        {hasVariant && activeVariant ? (
-          <span className="oc-ai-context-badge oc-ai-context-variant">
-            Variant: {activeVariant.name} ({activeVariant.sourceType})
-          </span>
-        ) : selectedElement ? (
-          <span className="oc-ai-context-badge">
-            &lt;{selectedElement.tag}&gt; {selectedElement.selector}
-          </span>
-        ) : (
-          <span className="oc-ai-context-badge oc-ai-context-none">
-            No element or variant selected
-          </span>
-        )}
       </div>
 
       {/* Messages */}
-      <ScrollArea className="oc-panel-body">
+      <ScrollArea className="oc-panel-body oc-chat-body">
         <div className="oc-ai-messages" ref={scrollRef}>
           {messages.length === 0 && (
-            <div className="oc-ai-empty">
-              <Bot size={24} className="oc-ai-empty-icon" />
-              {hasVariant ? (
-                <>
-                  <p>Redesign this variant with AI.</p>
-                  <p className="oc-ai-empty-hint">
-                    Try: "make it minimal and dark", "redesign as a pricing card", "add a gradient background"
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p>Select an element or variant.</p>
-                  <p className="oc-ai-empty-hint">
-                    Fork a component into a variant, then ask AI to redesign it.
-                  </p>
-                </>
-              )}
+            <div className="oc-chat-empty">
+              <p className="oc-chat-empty-title">Send a message to start</p>
             </div>
           )}
 
@@ -787,26 +1056,183 @@ Styles:\n${Object.entries(selectedElement.styles)
         </div>
       )}
 
-      {/* Input */}
-      <div className="oc-ai-input-row">
-        <input
-          className="oc-ai-input"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-          placeholder={hasVariant ? "Redesign this variant..." : "Select a variant or element"}
-          disabled={streaming}
-          data-0canvas="ai-input"
-        />
-        {streaming ? (
-          <button className="oc-ai-send-btn oc-ai-stop-btn" onClick={handleStop} title="Stop">
-            <Square size={12} />
-          </button>
-        ) : (
-          <button className="oc-ai-send-btn" onClick={() => handleSend()} disabled={!input.trim()} title="Send">
-            <Send size={14} />
-          </button>
+      {/* Composer — input card with toolbar underneath */}
+      <div className="oc-chat-composer">
+        {slashOpen && slashMatches.length > 0 && (
+          <SlashMenu
+            query={input}
+            selectedIndex={Math.min(slashIndex, slashMatches.length - 1)}
+            onSelectIndex={setSlashIndex}
+            onPick={async (cmd) => {
+              const ctx: SlashCommandContext = {
+                provider:
+                  aiSettings.provider === "claude" || aiSettings.provider === "codex"
+                    ? aiSettings.provider
+                    : "other",
+                cycleEffort: () => {
+                  const order: AiThinkingEffort[] = ["low", "medium", "high", "xhigh"];
+                  const idx = order.indexOf(aiSettings.thinkingEffort);
+                  const next = order[(idx + 1) % order.length];
+                  const updated = { ...aiSettings, thinkingEffort: next };
+                  saveAiSettings(updated);
+                  dispatch({ type: "SET_AI_SETTINGS", settings: updated });
+                  return next;
+                },
+                clearChat: () => setMessages([]),
+              };
+              const result = await cmd.action(ctx);
+              setInput(typeof result === "string" ? result : "");
+              setSlashIndex(0);
+            }}
+          />
         )}
+        <div className="oc-chat-composer-card">
+          <textarea
+            className="oc-chat-composer-input"
+            value={input}
+            onChange={(e) => {
+              setInput(e.target.value);
+              setSlashIndex(0);
+            }}
+            onKeyDown={(e) => {
+              if (slashOpen && slashMatches.length > 0) {
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setSlashIndex((i) => (i + 1) % slashMatches.length);
+                  return;
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setSlashIndex((i) => (i - 1 + slashMatches.length) % slashMatches.length);
+                  return;
+                }
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  const pick = slashMatches[Math.min(slashIndex, slashMatches.length - 1)];
+                  const ctx: SlashCommandContext = {
+                    provider:
+                      aiSettings.provider === "claude" ||
+                      aiSettings.provider === "codex"
+                        ? aiSettings.provider
+                        : "other",
+                    cycleEffort: () => {
+                      const order: AiThinkingEffort[] = [
+                        "low",
+                        "medium",
+                        "high",
+                        "xhigh",
+                      ];
+                      const idx = order.indexOf(aiSettings.thinkingEffort);
+                      const next = order[(idx + 1) % order.length];
+                      const updated = { ...aiSettings, thinkingEffort: next };
+                      saveAiSettings(updated);
+                      dispatch({ type: "SET_AI_SETTINGS", settings: updated });
+                      return next;
+                    },
+                    clearChat: () => setMessages([]),
+                  };
+                  Promise.resolve(pick.action(ctx)).then((result) => {
+                    setInput(typeof result === "string" ? result : "");
+                    setSlashIndex(0);
+                  });
+                  return;
+                }
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  setInput("");
+                  return;
+                }
+              }
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            placeholder='Type your message… "/" for commands, "@" for files'
+            disabled={streaming}
+            rows={1}
+            data-0canvas="ai-input"
+          />
+          <div className="oc-chat-composer-toolbar">
+            <button
+              className="oc-chat-toolbar-pill"
+              title={`Model: ${aiSettings.model}`}
+              type="button"
+            >
+              <Sparkles size={12} style={{ color: providerIconTint }} />
+              <ChevronDown size={10} className="oc-chat-toolbar-caret" />
+            </button>
+            <button
+              className="oc-chat-toolbar-pill"
+              title="Thinking effort"
+              type="button"
+            >
+              <span>High</span>
+              <ChevronDown size={10} className="oc-chat-toolbar-caret" />
+            </button>
+            <button className="oc-chat-toolbar-iconbtn" title="Attach" type="button">
+              <Plus size={14} />
+            </button>
+            <button className="oc-chat-toolbar-iconbtn" title="Attach image" type="button">
+              <ImageIcon size={13} />
+            </button>
+            <SkillPillButton
+              skills={skills}
+              selected={selectedSkill}
+              onSelect={setSelectedSkill}
+            />
+            {selectedSkill && (
+              <button
+                className="oc-chat-toolbar-iconbtn"
+                title={`Clear skill (${selectedSkill.name})`}
+                onClick={() => setSelectedSkill(null)}
+                type="button"
+              >
+                <X size={12} />
+              </button>
+            )}
+            <div className="oc-chat-toolbar-spacer" />
+            {streaming ? (
+              <button
+                className="oc-chat-send is-stop"
+                onClick={handleStop}
+                title="Stop"
+                type="button"
+              >
+                <Square size={11} />
+              </button>
+            ) : (
+              <button
+                className="oc-chat-send"
+                onClick={() => handleSend()}
+                disabled={!input.trim()}
+                title="Send"
+                type="button"
+              >
+                <ArrowRight size={13} />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Footer — branch pill, plan-only, token meter */}
+      <div className="oc-chat-footer">
+        <button className="oc-chat-footer-pill" title="Active branch" type="button">
+          <GitBranch size={11} />
+          <span>main</span>
+          <ChevronDown size={10} className="oc-chat-toolbar-caret" />
+        </button>
+        <button className="oc-chat-footer-pill" title="Plan mode" type="button">
+          <Eye size={11} />
+          <span>Plan Only</span>
+          <ChevronDown size={10} className="oc-chat-toolbar-caret" />
+        </button>
+        <div className="oc-chat-footer-spacer" />
+        <span className="oc-chat-token-meter" title="Context usage">
+          <span className="oc-chat-token-dot" />
+          0%
+        </span>
       </div>
     </div>
   );

@@ -21,14 +21,17 @@
 //
 // ──────────────────────────────────────────────────────────
 
+mod ai_cli;
 mod css_files;
 mod env_files;
 mod git;
 mod localhost;
 mod secrets;
 mod sidecar;
+mod skills;
 mod todo;
 
+use ai_cli::AiCliState;
 use sidecar::SidecarState;
 use serde::Serialize;
 use std::path::PathBuf;
@@ -51,6 +54,33 @@ struct ProjectChanged {
 #[tauri::command]
 fn get_engine_port(state: tauri::State<'_, SidecarState>) -> Option<u16> {
     state.current_port()
+}
+
+/// Open an external URL in the user's default browser. Used by Phase 3's
+/// "Open PR on GitHub" button and similar affordances. Scoped to http(s)
+/// only so a rogue caller can't spawn `open -a ...` style actions.
+#[tauri::command]
+fn shell_open_url(url: String) -> Result<(), String> {
+    let lower = url.to_ascii_lowercase();
+    if !(lower.starts_with("http://") || lower.starts_with("https://")) {
+        return Err("only http(s) URLs are allowed".into());
+    }
+    std::process::Command::new("open")
+        .arg(&url)
+        .spawn()
+        .map_err(|e| format!("open: {}", e))?;
+    Ok(())
+}
+
+/// Spawn the engine sidecar against a freshly-cloned repository and emit
+/// `project-changed`. Used by the Phase 3-F clone flow — the UI invokes
+/// `git_clone`, then hands the path here to finalise.
+#[tauri::command]
+async fn open_cloned_project(
+    app: AppHandle,
+    path: String,
+) -> Result<ProjectChanged, String> {
+    open_project_folder_path(app, path).await
 }
 
 #[tauri::command]
@@ -302,6 +332,7 @@ pub fn run() {
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_notification::init())
         .manage(SidecarState::new())
+        .manage(AiCliState::new())
         .invoke_handler(tauri::generate_handler![
             get_engine_port,
             get_engine_root,
@@ -329,6 +360,29 @@ pub fn run() {
             git::git_branch_switch,
             git::git_branch_create,
             git::git_branch_delete,
+            git::git_suggest_commit_message,
+            git::git_remote_url,
+            git::git_discard_file,
+            git::git_file_at_head,
+            git::git_clone,
+            git::git_worktree_list,
+            git::git_worktree_add,
+            git::git_worktree_remove,
+            git::git_conflict_list,
+            git::git_resolve_file_ours,
+            git::git_resolve_file_theirs,
+            git::git_revert_commit,
+            git::git_reset_hard,
+            git::git_push_force,
+            shell_open_url,
+            open_cloned_project,
+            ai_cli::ai_cli_check,
+            ai_cli::ai_cli_is_authenticated,
+            ai_cli::ai_cli_cancel,
+            ai_cli::ai_cli_run_login,
+            ai_cli::claude_spawn,
+            ai_cli::codex_spawn,
+            skills::skills_list,
             secrets::keychain_set,
             secrets::keychain_get,
             secrets::keychain_delete,

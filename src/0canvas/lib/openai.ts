@@ -10,16 +10,16 @@
 //
 // ──────────────────────────────────────────────────────────
 
-export type AiProvider = "chatgpt" | "openai" | "ide";
-
-export interface AiSettings {
-  provider: AiProvider;
-  proxyUrl: string;
-  apiKey: string;
-  model: string;
-  temperature: number;
-  autoSendFeedback: boolean;
-}
+// The full provider + settings types now live in store.tsx (Phase 4
+// added auth method + thinking effort + agent teams). Re-exported
+// here so the rest of this module reads as before.
+export type {
+  AiProvider,
+  AiSettings,
+  AiAuthMethod,
+  AiThinkingEffort,
+} from "../store/store";
+import type { AiSettings } from "../store/store";
 
 export interface OpenAIMessage {
   role: "system" | "user" | "assistant";
@@ -35,12 +35,17 @@ export interface StreamOptions {
 const STORAGE_KEY = "0canvas-ai-settings";
 
 export const DEFAULT_AI_SETTINGS: AiSettings = {
-  provider: "ide",
+  // Phase 4 default: Claude via subprocess (the user's own `claude login`).
+  // If the CLI isn't installed the settings UI surfaces the fallback.
+  provider: "claude",
+  authMethod: "subscription",
   proxyUrl: "http://127.0.0.1:10531",
   apiKey: "",
   model: "gpt-4o",
   temperature: 0.7,
   autoSendFeedback: false,
+  thinkingEffort: "high",
+  agentTeams: false,
 };
 
 export const AVAILABLE_MODELS = [
@@ -102,24 +107,36 @@ export function loadAiSettings(): AiSettings {
  * localStorage from an old build, migrate it to keychain before
  * returning — one-time cleanup so no secret stays in plaintext.
  */
+/** Map the active provider to the keychain slot holding its key. */
+async function keySlotFor(provider: AiSettings["provider"]) {
+  const { SECRET_ACCOUNTS } = await import("../../native/secrets");
+  return provider === "claude"
+    ? SECRET_ACCOUNTS.ANTHROPIC_API_KEY
+    : SECRET_ACCOUNTS.OPENAI_API_KEY;
+}
+
 export async function hydrateAiApiKey(settings: AiSettings): Promise<AiSettings> {
   const { getSecret, setSecret, SECRET_ACCOUNTS } = await import(
     "../../native/secrets"
   );
-  let apiKey = (await getSecret(SECRET_ACCOUNTS.OPENAI_API_KEY)) ?? "";
+  const slot = await keySlotFor(settings.provider);
+  let apiKey = (await getSecret(slot)) ?? "";
 
-  // One-shot migration from the old localStorage blob.
+  // One-shot migration from the old localStorage blob. The legacy
+  // path only ever stored an OpenAI key, so move it into that slot
+  // regardless of the current provider.
   if (!apiKey) {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed.apiKey === "string" && parsed.apiKey) {
-          apiKey = parsed.apiKey;
-          await setSecret(SECRET_ACCOUNTS.OPENAI_API_KEY, apiKey);
-          // Rewrite localStorage without the key.
+          await setSecret(SECRET_ACCOUNTS.OPENAI_API_KEY, parsed.apiKey);
           const { apiKey: _, ...rest } = parsed as Partial<AiSettings>;
           localStorage.setItem(STORAGE_KEY, JSON.stringify(rest));
+          // Re-read the slot for the current provider — the migrated
+          // key only matches when provider is codex / openai.
+          apiKey = (await getSecret(slot)) ?? "";
         }
       }
     } catch {
@@ -130,24 +147,31 @@ export async function hydrateAiApiKey(settings: AiSettings): Promise<AiSettings>
   return { ...settings, apiKey };
 }
 
+/**
+ * Persist the non-secret settings to localStorage. API keys are
+ * managed directly by the Settings → AI Models UI (per-provider
+ * slot in the macOS keychain) so we deliberately strip `apiKey`
+ * here — otherwise switching provider would clobber the other
+ * provider's key with whatever is currently in the field.
+ */
 export async function saveAiSettings(settings: AiSettings): Promise<void> {
-  // Persist non-secret fields to localStorage, secret to keychain.
-  const { apiKey, ...rest } = settings;
+  const { apiKey: _ignored, ...rest } = settings;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(rest));
-  const { setSecret, deleteSecret, SECRET_ACCOUNTS } = await import(
-    "../../native/secrets"
-  );
-  if (apiKey) {
-    await setSecret(SECRET_ACCOUNTS.OPENAI_API_KEY, apiKey);
-  } else {
-    await deleteSecret(SECRET_ACCOUNTS.OPENAI_API_KEY);
-  }
 }
 
 export function isAiConfigured(settings: AiSettings): boolean {
+  // Phase 4: claude / codex via subscription rely on the user's own
+  // `claude login` / `codex login`, so we can't verify until we try
+  // to spawn them — optimistically return true and let the subprocess
+  // report ENOENT if the CLI is missing.
+  if (settings.provider === "claude" || settings.provider === "codex") {
+    if (settings.authMethod === "subscription") return true;
+    return !!settings.apiKey;
+  }
+  // Legacy paths kept for rollback safety.
   if (settings.provider === "chatgpt") return !!settings.proxyUrl;
   if (settings.provider === "openai") return !!settings.apiKey;
-  return true; // IDE mode always "configured"
+  return true;
 }
 
 // ── Streaming dispatcher ─────────────────────────────────
@@ -155,12 +179,43 @@ export function isAiConfigured(settings: AiSettings): boolean {
 export async function* streamChat(options: StreamOptions): AsyncGenerator<string> {
   const { settings, messages, signal } = options;
 
+  // Phase 4 CLI-subprocess backends. The CLIs own their own chat state,
+  // so we flatten the message list into a single prompt: the most
+  // recent user message, with prior turns prepended as context. Proper
+  // multi-turn resume lands alongside the Mission Control tab.
+  if (settings.provider === "claude" || settings.provider === "codex") {
+    if (settings.authMethod === "subscription") {
+      const { streamCli } = await import("./ai-cli");
+      const prompt = flattenMessages(messages);
+      yield* streamCli(settings.provider, prompt, settings, signal);
+      return;
+    }
+    // API-key mode for codex → OpenAI Chat Completions (same backend).
+    if (settings.provider === "codex") {
+      yield* streamChatCompletions(
+        "https://api.openai.com/v1/chat/completions",
+        settings.apiKey,
+        settings.model,
+        messages,
+        settings.temperature,
+        signal,
+      );
+      return;
+    }
+    // API-key mode for claude → Anthropic Messages API (streaming).
+    if (settings.provider === "claude") {
+      const { streamAnthropic } = await import("./anthropic");
+      yield* streamAnthropic(settings, messages, signal);
+      return;
+    }
+  }
+
+  // Legacy providers (kept so pre-Phase-4 settings still work).
   if (settings.provider === "chatgpt") {
-    // Use Chat Completions endpoint via proxy (more reliable than Responses API)
     const base = settings.proxyUrl.replace(/\/+$/, "");
     yield* streamChatCompletions(
       `${base}/v1/chat/completions`,
-      "", // no API key needed for proxy
+      "",
       settings.model,
       messages,
       settings.temperature,
@@ -176,6 +231,16 @@ export async function* streamChat(options: StreamOptions): AsyncGenerator<string
       signal,
     );
   }
+}
+
+function flattenMessages(messages: OpenAIMessage[]): string {
+  // For CLI providers the agent maintains its own conversation; we
+  // only feed forward the latest user message plus any system prompt.
+  const system = messages.find((m) => m.role === "system");
+  const latest = [...messages].reverse().find((m) => m.role === "user");
+  if (!latest) return "";
+  if (system) return `${system.content}\n\n${latest.content}`;
+  return latest.content;
 }
 
 // ── ChatGPT Proxy (Responses API) ────────────────────────

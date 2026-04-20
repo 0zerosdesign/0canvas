@@ -19,6 +19,7 @@ import {
   TerminalSquare,
   KeyRound,
   ListChecks,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { AIChatPanel } from "../0canvas/panels/ai-chat-panel";
@@ -26,9 +27,10 @@ import { TerminalPanel } from "./terminal-panel";
 import { EnvPanel } from "./env-panel";
 import { TodoPanel } from "./todo-panel";
 import { GitPanel } from "./git-panel";
+import { MissionPanel } from "./mission-panel";
 import { useWorkspace } from "../0canvas/store/store";
 
-type TabId = "chat" | "git" | "terminal" | "env" | "todo";
+type TabId = "chat" | "git" | "terminal" | "env" | "todo" | "mission";
 
 const TABS: Array<{
   id: TabId;
@@ -40,6 +42,7 @@ const TABS: Array<{
   { id: "terminal", label: "Terminal", icon: TerminalSquare },
   { id: "env", label: "Env", icon: KeyRound },
   { id: "todo", label: "Todo", icon: ListChecks },
+  { id: "mission", label: "Mission", icon: Sparkles },
 ];
 
 const TAB_PLACEHOLDERS: Partial<Record<TabId, { title: string; body: string }>> = {};
@@ -80,7 +83,7 @@ export function Column2Workspace() {
 
   return (
     <section className="oc-column-2" aria-label="Agent Workspace">
-      <nav className="oc-column-2__tabs" role="tablist">
+      <nav className="oc-column-2__tabs" role="tablist" data-tauri-drag-region>
         {TABS.map(({ id, label, icon: Icon }, idx) => {
           const isActive = activeTab === id;
           return (
@@ -106,7 +109,7 @@ export function Column2Workspace() {
           activeTab === "env" ? "is-env" : ""
         } ${activeTab === "todo" ? "is-todo" : ""} ${
           activeTab === "git" ? "is-git" : ""
-        }`}
+        } ${activeTab === "mission" ? "is-mission" : ""}`}
         role="tabpanel"
       >
         {/* AIChatPanel's CSS is scoped under [data-0canvas-root]
@@ -121,6 +124,7 @@ export function Column2Workspace() {
         {activeTab === "env" && <EnvPanel />}
         {activeTab === "todo" && <TodoPanel />}
         {activeTab === "git" && <GitPanel />}
+        {activeTab === "mission" && <MissionPanel />}
         {(() => {
           const p = TAB_PLACEHOLDERS[activeTab];
           return p ? (

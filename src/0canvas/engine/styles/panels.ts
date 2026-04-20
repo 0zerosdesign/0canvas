@@ -28,58 +28,38 @@ ${S} .oc-close-btn {
 }
 ${S} .oc-close-btn:hover { color: var(--color--text--on-surface); border-color: var(--color--border--on-surface-2); }
 
-/* ── App Shell (sidebar + page) ────────────────────────────── */
+/* ── App Shell (page tabs + page) ──────────────────────────── */
 ${S} .oc-app-shell {
-  height: 100%; display: flex; overflow: hidden;
+  height: 100%; display: flex; flex-direction: column; overflow: hidden;
 }
 
-/* ── Sidebar ──────────────────────────────────────────────── */
-${S} .oc-sidebar {
-  width: 48px; flex-shrink: 0; height: 100%;
-  display: flex; flex-direction: column;
-  align-items: center;
+/* ── Page tabs (horizontal — Design / Themes) ─────────────── */
+${S} .oc-page-tabs {
+  display: flex; align-items: center; gap: 2px;
+  padding: 10px 10px 4px;
+  flex-shrink: 0;
   background: var(--color--surface--floor);
-  border-right: 1px solid var(--color--border--on-surface-0);
-  padding: 8px 0;
-  box-sizing: border-box;
+  border-bottom: 1px solid var(--color--border--on-surface-0);
 }
-${S} .oc-sidebar-top {
-  display: flex; flex-direction: column;
-  align-items: center; gap: 2px;
-}
-${S} .oc-sidebar-bottom {
-  margin-top: auto;
-  display: flex; flex-direction: column;
-  align-items: center; gap: 4px;
-  padding-bottom: 4px;
-}
-${S} .oc-sidebar-btn {
-  width: 36px; height: 36px;
-  display: flex; align-items: center; justify-content: center;
-  border: none; background: transparent;
+${S} .oc-page-tab {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px;
+  background: transparent; border: none; border-radius: 6px;
   color: var(--color--text--muted);
-  border-radius: 8px; cursor: pointer;
-  transition: all 0.15s ease;
+  font-size: 12px; font-weight: 500;
+  cursor: pointer; white-space: nowrap;
+  font-family: inherit;
+  transition: background 120ms ease, color 120ms ease;
 }
-${S} .oc-sidebar-btn:hover {
+${S} .oc-page-tab:hover {
   color: var(--color--text--on-surface);
-  background: var(--color--surface--1);
+  background: rgba(255, 255, 255, 0.03);
 }
-${S} .oc-sidebar-btn.is-active {
+${S} .oc-page-tab.is-active {
   color: var(--color--text--on-surface);
-  background: var(--color--surface--2);
+  background: rgba(255, 255, 255, 0.06);
 }
-${S} .oc-sidebar-divider {
-  width: 24px; height: 1px;
-  background: var(--color--border--on-surface-0);
-  margin: 4px 0;
-}
-${S} .oc-sidebar-logo {
-  width: 36px; height: 36px;
-  display: flex; align-items: center; justify-content: center;
-  color: var(--color--text--disabled);
-  opacity: 0.5;
-}
+${S} .oc-page-tab--close { margin-right: 4px; }
 
 /* ── Workspace ───────────────────────────────────────────── */
 ${S} .oc-workspace {

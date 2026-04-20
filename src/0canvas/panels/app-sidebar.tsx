@@ -1,6 +1,11 @@
 import React from "react";
-import { PenTool, Palette, Settings, X } from "lucide-react";
+import { PenTool, Palette, X, type LucideIcon } from "lucide-react";
 import { useWorkspace, type WorkspacePage } from "../store/store";
+
+const TABS: Array<{ id: WorkspacePage; label: string; icon: LucideIcon }> = [
+  { id: "design", label: "Design", icon: PenTool },
+  { id: "themes", label: "Themes", icon: Palette },
+];
 
 export function AppSidebar({ onClose }: { onClose?: () => void }) {
   const { state, dispatch } = useWorkspace();
@@ -10,57 +15,33 @@ export function AppSidebar({ onClose }: { onClose?: () => void }) {
   };
 
   return (
-    <div className="oc-sidebar" data-0canvas="sidebar">
-      {/* Top icons */}
-      <div className="oc-sidebar-top">
-        {onClose && (
-          <>
-            <button
-              className="oc-sidebar-btn"
-              onClick={onClose}
-              title="Close 0canvas"
-            >
-              <X size={18} />
-            </button>
-            <div className="oc-sidebar-divider" />
-          </>
-        )}
-
+    <nav className="oc-page-tabs" role="tablist" data-0canvas="sidebar" data-tauri-drag-region>
+      {onClose && (
         <button
-          className={`oc-sidebar-btn ${state.activePage === "design" ? "is-active" : ""}`}
-          onClick={() => setPage("design")}
-          title="Design"
+          className="oc-page-tab oc-page-tab--close"
+          onClick={onClose}
+          title="Close 0canvas"
         >
-          <PenTool size={18} />
+          <X size={14} />
         </button>
+      )}
 
-        <button
-          className={`oc-sidebar-btn ${state.activePage === "themes" ? "is-active" : ""}`}
-          onClick={() => setPage("themes")}
-          title="Themes"
-        >
-          <Palette size={18} />
-        </button>
-
-        <button
-          className={`oc-sidebar-btn ${state.activePage === "settings" ? "is-active" : ""}`}
-          onClick={() => setPage("settings")}
-          title="Settings"
-        >
-          <Settings size={18} />
-        </button>
-      </div>
-
-      {/* Bottom: logo */}
-      <div className="oc-sidebar-bottom">
-        <div className="oc-sidebar-logo" title="0canvas">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 2L2 7l10 5 10-5-10-5z" />
-            <path d="M2 17l10 5 10-5" />
-            <path d="M2 12l10 5 10-5" />
-          </svg>
-        </div>
-      </div>
-    </div>
+      {TABS.map(({ id, label, icon: Icon }) => {
+        const isActive = state.activePage === id;
+        return (
+          <button
+            key={id}
+            role="tab"
+            aria-selected={isActive}
+            className={`oc-page-tab ${isActive ? "is-active" : ""}`}
+            onClick={() => setPage(id)}
+            title={label}
+          >
+            <Icon size={14} />
+            <span>{label}</span>
+          </button>
+        );
+      })}
+    </nav>
   );
 }

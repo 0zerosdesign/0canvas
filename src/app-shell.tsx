@@ -25,6 +25,7 @@ import { AutoConnect, EngineWorkspace } from "./0canvas/engine/0canvas-engine";
 import { injectStyles } from "./0canvas/engine/0canvas-styles";
 import { Column1Nav } from "./shell/column1-nav";
 import { Column2Workspace } from "./shell/column2-workspace";
+import { SettingsPage } from "./0canvas/panels/settings-page";
 import { onProjectChanged } from "./native/tauri-events";
 import { getSetting, setSetting } from "./native/settings";
 import { rememberProject } from "./native/recent-projects";
@@ -150,6 +151,36 @@ function ReloadOnProjectChange() {
   return null;
 }
 
+/**
+ * Settings is a full-page destination — not a column-3 tab. When
+ * activePage === "settings" we cover the 3-column shell entirely and
+ * render SettingsPage at the viewport root. The page provides its own
+ * "Back to app" control that flips activePage back to "design".
+ */
+function ShellRouter() {
+  const { state } = useWorkspace();
+  if (state.activePage === "settings") {
+    return (
+      <div className="oc-settings-fullscreen" data-0canvas-root="">
+        <SettingsPage />
+      </div>
+    );
+  }
+  return (
+    <div className="oc-app">
+      <Column1Nav />
+      <Column2Workspace />
+      <div className="oc-column-3" data-0canvas-root="">
+        {/* data-0canvas-root scopes the engine's injected CSS
+            (all rules are prefixed with [data-0canvas-root]).
+            onClose is omitted — the Mac app has no overlay
+            to close, so AppSidebar's X button is hidden. */}
+        <EngineWorkspace />
+      </div>
+    </div>
+  );
+}
+
 export function AppShell() {
   return (
     <WorkspaceProvider>
@@ -159,17 +190,7 @@ export function AppShell() {
           <HydrateAiApiKey />
           <ReloadOnProjectChange />
           <ChatsPersistence />
-          <div className="oc-app">
-            <Column1Nav />
-            <Column2Workspace />
-            <div className="oc-column-3" data-0canvas-root="">
-              {/* data-0canvas-root scopes the engine's injected CSS
-                  (all rules are prefixed with [data-0canvas-root]).
-                  onClose is omitted — the Mac app has no overlay
-                  to close, so AppSidebar's X button is hidden. */}
-              <EngineWorkspace />
-            </div>
-          </div>
+          <ShellRouter />
         </AutoConnect>
       </BridgeProvider>
     </WorkspaceProvider>

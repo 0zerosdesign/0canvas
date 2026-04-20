@@ -31,7 +31,6 @@ import { WorkspaceToolbar } from "../panels/workspace-toolbar";
 import { StylePanel } from "../panels/style-panel";
 import { VariantCanvas } from "../canvas/variant-canvas";
 import { AppSidebar } from "../panels/app-sidebar";
-import { SettingsPage } from "../panels/settings-page";
 import { ThemesPage } from "../themes/themes-page";
 import { ThemeModePanel } from "../themes/theme-mode-panel";
 import { AIChatPanel } from "../panels/ai-chat-panel";
@@ -515,10 +514,10 @@ export function EngineWorkspace({ onClose }: { onClose?: () => void }) {
             )}
           </div>
         </div>
-      ) : state.activePage === "themes" ? (
-        <ThemesPage />
       ) : (
-        <SettingsPage />
+        /* Settings is rendered full-screen at the shell level
+           (see ShellRouter in app-shell.tsx); it never mounts here. */
+        <ThemesPage />
       )}
 
       {/* ── Global overlays ──────────────────────────────── */}

@@ -169,6 +169,24 @@ export async function writeCssFile(path: string, content: string): Promise<void>
   return invoke<void>("write_css_file", { path, content });
 }
 
+export type GitFileVersion = {
+  path: string;
+  exists: boolean;
+  content: string | null;
+};
+
+export type GitConflict = {
+  path: string;
+  hasOurs: boolean;
+  hasTheirs: boolean;
+};
+
+export type GitWorktree = {
+  name: string;
+  path: string;
+  isCurrent: boolean;
+};
+
 export const git = {
   status: () => gitInvoke<GitStatus>("git_status"),
   stageFile: (path: string) => gitInvoke<void>("git_stage_file", { path }),
@@ -179,6 +197,7 @@ export const git = {
     gitInvoke<{ sha: string; summary: string }>("git_commit", { message }),
   push: () => gitInvoke<void>("git_push"),
   pull: () => gitInvoke<void>("git_pull"),
+  pushForce: () => gitInvoke<void>("git_push_force"),
   diffFile: (path: string, staged: boolean) =>
     gitInvoke<GitDiff>("git_diff_file", { path, staged }),
   logRecent: (limit = 10) =>
@@ -190,7 +209,72 @@ export const git = {
     gitInvoke<void>("git_branch_create", { name, checkout }),
   branchDelete: (name: string) =>
     gitInvoke<void>("git_branch_delete", { name }),
+  // Phase 3 additions
+  suggestCommitMessage: () =>
+    gitInvoke<string>("git_suggest_commit_message"),
+  remoteUrl: () => gitInvoke<string | null>("git_remote_url"),
+  discardFile: (path: string) =>
+    gitInvoke<void>("git_discard_file", { path }),
+  fileAtHead: (path: string) =>
+    gitInvoke<GitFileVersion>("git_file_at_head", { path }),
+  clone: (url: string, destination: string) =>
+    gitInvoke<string>("git_clone", { url, destination }),
+  worktreeList: () => gitInvoke<GitWorktree[]>("git_worktree_list"),
+  worktreeAdd: (name: string, path: string, branch: string | null) =>
+    gitInvoke<string>("git_worktree_add", { name, path, branch }),
+  worktreeRemove: (name: string) =>
+    gitInvoke<void>("git_worktree_remove", { name }),
+  conflictList: () => gitInvoke<GitConflict[]>("git_conflict_list"),
+  resolveOurs: (path: string) =>
+    gitInvoke<void>("git_resolve_file_ours", { path }),
+  resolveTheirs: (path: string) =>
+    gitInvoke<void>("git_resolve_file_theirs", { path }),
+  revertCommit: (sha: string) =>
+    gitInvoke<string>("git_revert_commit", { sha }),
+  resetHard: (sha: string) => gitInvoke<void>("git_reset_hard", { sha }),
 };
+
+// ── Skills (Phase 4) ─────────────────────────────────────
+
+export type Skill = {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  body: string;
+  path: string;
+};
+
+export async function listSkills(): Promise<Skill[]> {
+  if (!isTauriWebview()) return [];
+  const { invoke } = await import("@tauri-apps/api/core");
+  try {
+    return await invoke<Skill[]>("skills_list");
+  } catch {
+    return [];
+  }
+}
+
+/** Open an external http(s) URL in the user's default browser. */
+export async function shellOpenUrl(url: string): Promise<void> {
+  if (!isTauriWebview()) {
+    window.open(url, "_blank", "noopener,noreferrer");
+    return;
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke<void>("shell_open_url", { url });
+}
+
+/** Phase 3-F: finalize a clone by handing the destination to the sidecar. */
+export async function openClonedProject(
+  path: string,
+): Promise<ProjectChangedPayload> {
+  if (!isTauriWebview()) {
+    throw new Error("Clone requires the Mac app");
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<ProjectChangedPayload>("open_cloned_project", { path });
+}
 
 /**
  * Subscribe to the Rust-emitted `project-changed` event (fired when the
