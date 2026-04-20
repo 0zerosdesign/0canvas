@@ -143,6 +143,32 @@ async function gitInvoke<T>(cmd: string, args?: Record<string, unknown>): Promis
   return invoke<T>(cmd, args);
 }
 
+// ── CSS file picker / read / write (Themes page two-way sync) ──
+
+export type CssFile = {
+  path: string;
+  name: string;
+  content: string;
+};
+
+export async function pickCssFile(): Promise<CssFile | null> {
+  if (!isTauriWebview()) return null;
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<CssFile | null>("pick_css_file");
+}
+
+export async function readCssFile(path: string): Promise<string> {
+  if (!isTauriWebview()) throw new Error("Native fs requires the Mac app");
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<string>("read_css_file", { path });
+}
+
+export async function writeCssFile(path: string, content: string): Promise<void> {
+  if (!isTauriWebview()) throw new Error("Native fs requires the Mac app");
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<void>("write_css_file", { path, content });
+}
+
 export const git = {
   status: () => gitInvoke<GitStatus>("git_status"),
   stageFile: (path: string) => gitInvoke<void>("git_stage_file", { path }),

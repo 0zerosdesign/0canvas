@@ -21,6 +21,7 @@
 //
 // ──────────────────────────────────────────────────────────
 
+mod css_files;
 mod env_files;
 mod git;
 mod localhost;
@@ -218,6 +219,9 @@ pub fn run() {
             env_files::save_env_file,
             todo::load_todo_file,
             todo::save_todo_file,
+            css_files::pick_css_file,
+            css_files::read_css_file,
+            css_files::write_css_file,
             git::git_status,
             git::git_stage_file,
             git::git_unstage_file,

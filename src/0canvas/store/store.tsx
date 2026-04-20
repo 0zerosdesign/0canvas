@@ -153,7 +153,11 @@ export type ThemeColumn = {
 export type ThemeFile = {
   id: string;
   name: string;          // filename, e.g. "variables.css"
-  handle: FileSystemFileHandle | null; // File System Access API handle for two-way sync
+  // In the Mac app we keep an absolute path; the browser-only File
+  // System Access API handle stays around for the legacy dev harness.
+  // One of the two must be set.
+  handle: FileSystemFileHandle | null;
+  path: string | null;
   content: string;       // raw CSS content
   tokens: DesignToken[];
   themes: ThemeColumn[];

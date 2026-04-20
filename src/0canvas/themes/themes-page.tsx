@@ -36,32 +36,93 @@ import { useWorkspace, type DesignToken, type ThemeColumn, type ThemeFile, type 
 import { parseCSSTokens, applyTokensToSource, parsePastedCSS, detectSyntax } from "./css-token-parser";
 import { ColorPicker } from "./color-picker";
 import { ScrollArea } from "../ui/scroll-area";
+import { useBridge } from "../bridge/use-bridge";
+import {
+  pickCssFile,
+  readCssFile,
+  writeCssFile,
+} from "../../native/tauri-events";
 
 // ── File picker ──────────────────────────────────────────
 
-async function pickCSSFile(): Promise<{ handle: FileSystemFileHandle; content: string; name: string } | null> {
+type PickedCssFile =
+  | { kind: "tauri"; path: string; name: string; content: string }
+  | { kind: "fsa"; handle: FileSystemFileHandle; name: string; content: string };
+
+function isTauriWebview(): boolean {
+  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+}
+
+async function pickCSSFile(): Promise<PickedCssFile | null> {
+  if (isTauriWebview()) {
+    const file = await pickCssFile();
+    if (!file) return null;
+    return { kind: "tauri", path: file.path, name: file.name, content: file.content };
+  }
   try {
-    const [handle] = await (window as any).showOpenFilePicker({
+    const [handle] = await (window as unknown as {
+      showOpenFilePicker: (o: unknown) => Promise<FileSystemFileHandle[]>;
+    }).showOpenFilePicker({
       types: [{ description: "CSS files", accept: { "text/css": [".css"] } }],
       multiple: false,
     });
     const file = await handle.getFile();
     const content = await file.text();
-    return { handle, content, name: file.name };
+    return { kind: "fsa", handle, name: file.name, content };
   } catch {
     return null; // user cancelled
   }
 }
 
-async function writeToFile(handle: FileSystemFileHandle, content: string): Promise<boolean> {
-  try {
-    const writable = await (handle as any).createWritable();
-    await writable.write(content);
-    await writable.close();
-    return true;
-  } catch {
-    return false;
+/** Re-read the backing file (Mac: native fs, browser: FSA handle). */
+async function readBackingContent(file: ThemeFile): Promise<string | null> {
+  if (file.path) {
+    try {
+      return await readCssFile(file.path);
+    } catch {
+      return null;
+    }
   }
+  if (file.handle) {
+    try {
+      const f = await file.handle.getFile();
+      return await f.text();
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+/** Write the new CSS source back to whichever backing the file has. */
+async function writeBackingContent(
+  file: ThemeFile,
+  content: string,
+): Promise<boolean> {
+  if (file.path) {
+    try {
+      await writeCssFile(file.path, content);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  if (file.handle) {
+    try {
+      const writable = await (file.handle as unknown as {
+        createWritable: () => Promise<{
+          write: (data: string) => Promise<void>;
+          close: () => Promise<void>;
+        }>;
+      }).createWritable();
+      await writable.write(content);
+      await writable.close();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  return false;
 }
 
 // ── Syntax icon ──────────────────────────────────────────
@@ -434,7 +495,8 @@ export function ThemesPage() {
     const themeFile: ThemeFile = {
       id: fileId,
       name: result.name,
-      handle: result.handle,
+      handle: result.kind === "fsa" ? result.handle : null,
+      path: result.kind === "tauri" ? result.path : null,
       content: result.content,
       tokens,
       themes: themes.length > 0 ? themes : [{ id: "default", name: "Default", isDefault: true }],
@@ -445,39 +507,68 @@ export function ThemesPage() {
 
   // ── Two-way sync: watch file for external IDE changes ──
   const isSyncingToFile = useRef(false);
+  const lastSelfWriteAt = useRef(0);
+  const bridge = useBridge();
+
+  const syncFromFile = useCallback(async () => {
+    if (isSyncingToFile.current) return;
+    if (!activeFile) return;
+    const content = await readBackingContent(activeFile);
+    if (content === null) return;
+    if (content === activeFile.content) return;
+    const { tokens, themes } = parseCSSTokens(content);
+    dispatch({
+      type: "UPDATE_THEME_FILE",
+      id: activeFile.id,
+      updates: { content },
+    });
+    dispatch({
+      type: "SET_THEME_TOKENS",
+      fileId: activeFile.id,
+      tokens,
+      themes: themes.length > 0 ? themes : activeFile.themes,
+    });
+  }, [activeFile, dispatch]);
 
   useEffect(() => {
-    if (!activeFile?.handle) return;
+    if (!activeFile) return;
 
-    const syncFromFile = async () => {
-      // Don't read while we're writing
-      if (isSyncingToFile.current) return;
-      if (!activeFile.handle) return;
-      try {
-        const file = await activeFile.handle.getFile();
-        const content = await file.text();
-        if (content !== activeFile.content) {
-          const { tokens, themes } = parseCSSTokens(content);
-          dispatch({ type: "UPDATE_THEME_FILE", id: activeFile.id, updates: { content } });
-          dispatch({ type: "SET_THEME_TOKENS", fileId: activeFile.id, tokens, themes: themes.length > 0 ? themes : activeFile.themes });
-        }
-      } catch { /* file may be unavailable */ }
-    };
+    // In the Mac app we already have @parcel/watcher running in the
+    // engine; CSS_FILE_CHANGED messages arrive via the bridge when any
+    // CSS file in the project root changes. Listen for the one we're
+    // editing and re-read on demand — no polling, instant sync.
+    if (activeFile.path && bridge) {
+      const unsub = bridge.on("CSS_FILE_CHANGED", (msg) => {
+        const changed = (msg as unknown as { filePath?: string; file?: string }).filePath
+          ?? (msg as unknown as { file?: string }).file;
+        if (!changed || !activeFile.path) return;
+        if (!activeFile.path.endsWith(changed) && activeFile.path !== changed) return;
+        // Ignore the echo of our own just-written file for ~800 ms.
+        if (Date.now() - lastSelfWriteAt.current < 800) return;
+        void syncFromFile();
+      });
+      return () => unsub();
+    }
 
-    syncIntervalRef.current = setInterval(syncFromFile, 1000);
-    return () => {
-      if (syncIntervalRef.current) clearInterval(syncIntervalRef.current);
-    };
-  }, [activeFile?.id, activeFile?.handle, activeFile?.content, dispatch]);
+    // Browser fallback: File System Access API has no watch, so poll.
+    if (activeFile.handle) {
+      syncIntervalRef.current = setInterval(syncFromFile, 1000);
+      return () => {
+        if (syncIntervalRef.current) clearInterval(syncIntervalRef.current);
+      };
+    }
+  }, [activeFile?.id, activeFile?.path, activeFile?.handle, bridge, syncFromFile]);
 
   // ── Sync tokens back to file (manual) ──
   // Uses surgical update: only modifies custom property values,
   // preserves ALL other CSS content (imports, rules, animations, etc.)
   const syncToFile = useCallback(async () => {
-    if (!activeFile?.handle) return;
+    if (!activeFile) return;
+    if (!activeFile.path && !activeFile.handle) return;
     isSyncingToFile.current = true;
+    lastSelfWriteAt.current = Date.now();
     const newSource = applyTokensToSource(activeFile.content, activeFile.tokens, activeFile.themes);
-    const ok = await writeToFile(activeFile.handle, newSource);
+    const ok = await writeBackingContent(activeFile, newSource);
     if (ok) {
       dispatch({ type: "UPDATE_THEME_FILE", id: activeFile.id, updates: { content: newSource, lastSynced: Date.now() } });
     }
