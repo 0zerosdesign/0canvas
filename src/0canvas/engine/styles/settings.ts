@@ -11,6 +11,7 @@ ${S} .oc-settings-page {
 }
 ${S} .oc-settings-nav {
   width: 240px; flex-shrink: 0; height: 100%;
+  background: var(--color--surface--floor);
   border-right: 1px solid var(--color--border--on-surface-0);
   padding: 16px 12px;
   overflow-y: auto;
@@ -145,12 +146,12 @@ ${S} .oc-ai-auth-tab:hover {
   color: var(--color--text--on-surface);
 }
 ${S} .oc-ai-auth-tab.is-active.is-info {
-  color: #60a5fa;
+  color: var(--color--text--primary-light);
   background: rgba(37, 99, 235, 0.12);
   border-color: rgba(37, 99, 235, 0.35);
 }
 ${S} .oc-ai-auth-tab.is-active.is-success {
-  color: #34d399;
+  color: var(--color--text--success);
   background: rgba(16, 185, 129, 0.12);
   border-color: rgba(16, 185, 129, 0.35);
 }
@@ -175,8 +176,8 @@ ${S} .oc-ai-auth-panel-head {
   color: var(--color--text--on-surface);
   font-size: 13px;
 }
-${S} .oc-ai-auth-panel.is-info .oc-ai-auth-panel-head { color: #60a5fa; }
-${S} .oc-ai-auth-panel.is-success .oc-ai-auth-panel-head { color: #34d399; }
+${S} .oc-ai-auth-panel.is-info .oc-ai-auth-panel-head { color: var(--color--text--primary-light); }
+${S} .oc-ai-auth-panel.is-success .oc-ai-auth-panel-head { color: var(--color--text--success); }
 ${S} .oc-ai-auth-row {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   color: var(--color--text--on-surface);
@@ -207,15 +208,15 @@ ${S} .oc-ai-chip {
 }
 ${S} .oc-ai-chip.is-info {
   background: rgba(37, 99, 235, 0.14);
-  color: #60a5fa;
+  color: var(--color--text--primary-light);
 }
 ${S} .oc-ai-chip.is-success {
   background: rgba(16, 185, 129, 0.14);
-  color: #34d399;
+  color: var(--color--text--success);
 }
 ${S} .oc-ai-chip.is-warn {
   background: rgba(245, 158, 11, 0.14);
-  color: #fbbf24;
+  color: var(--color--text--warning);
 }
 
 ${S} .oc-ai-card {
@@ -332,7 +333,7 @@ ${S} .oc-ai-saved-toast {
   align-self: flex-end;
   padding: 4px 10px;
   background: rgba(16, 185, 129, 0.14);
-  color: #34d399;
+  color: var(--color--text--success);
   border-radius: 8px;
   font-size: 11px;
 }

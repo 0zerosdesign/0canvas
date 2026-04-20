@@ -28,9 +28,7 @@
   font-family: var(--font-sans);
   font-size: 13px;
   color: var(--color--text--on-surface);
-  /* Column 1 owns the app background. Column 2 and Column 3 paint
-   * their own lighter surfaces on top for the hierarchy. */
-  background: #000;
+  background: var(--color--surface--floor);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -43,7 +41,8 @@
   flex: 0 0 248px;
   display: flex;
   flex-direction: column;
-  background: #000;
+  background: var(--color--surface--floor);
+  border-right: 1px solid var(--color--border--on-surface-0);
   padding: 10px 10px 12px;
   gap: 14px;
   overflow: hidden;
@@ -685,9 +684,8 @@
   flex: 0 0 440px;
   display: flex;
   flex-direction: column;
-  /* One step lighter than Column 1 so the agent workspace reads as
-   * the "foreground" area while nav recedes into the background. */
-  background: #141414;
+  background: var(--color--surface--floor);
+  border-right: 1px solid var(--color--border--on-surface-0);
   overflow: hidden;
 }
 
@@ -2103,7 +2101,7 @@
 .oc-git__preview-frame {
   width: 100%;
   height: 180px;
-  background: #1a1a1a;
+  background: var(--color--surface--0);
   border: 1px solid var(--color--border--on-surface-0);
   border-radius: 6px;
 }
@@ -2425,15 +2423,15 @@
 
 .oc-mission__card.is-info .oc-mission__card-icon {
   background: rgba(37, 99, 235, 0.12);
-  color: #60a5fa;
+  color: var(--color--text--primary-light);
 }
 .oc-mission__card.is-success .oc-mission__card-icon {
   background: rgba(16, 185, 129, 0.14);
-  color: #34d399;
+  color: var(--color--text--success);
 }
 .oc-mission__card.is-danger .oc-mission__card-icon {
   background: rgba(239, 68, 68, 0.14);
-  color: #f87171;
+  color: var(--color--text--critical-light);
 }
 
 .oc-mission__card-body {
@@ -2537,15 +2535,15 @@
 
 .oc-mission__chip.is-info {
   background: rgba(37, 99, 235, 0.14);
-  color: #60a5fa;
+  color: var(--color--text--primary-light);
 }
 .oc-mission__chip.is-success {
   background: rgba(16, 185, 129, 0.14);
-  color: #34d399;
+  color: var(--color--text--success);
 }
 .oc-mission__chip.is-danger {
   background: rgba(239, 68, 68, 0.14);
-  color: #f87171;
+  color: var(--color--text--critical-light);
 }
 
 /* ============================================================
@@ -2630,7 +2628,7 @@
 }
 
 .oc-login-modal__steps li.is-done {
-  color: #34d399;
+  color: var(--color--text--success);
 }
 
 .oc-login-modal__steps li.is-pending .oc-login-modal__dot {
@@ -2640,7 +2638,7 @@
 }
 
 .oc-login-modal__steps li.is-done .oc-login-modal__dot {
-  background: #34d399;
+  background: var(--color--status--success);
 }
 
 .oc-login-modal__dot {
@@ -2674,7 +2672,7 @@
   background: rgba(16, 185, 129, 0.1);
   border: 1px solid rgba(16, 185, 129, 0.3);
   border-radius: 8px;
-  color: #34d399;
+  color: var(--color--text--success);
   font-size: 12px;
 }
 
