@@ -34,7 +34,7 @@ ${S} .oc-toolbar-btn {
 ${S} .oc-toolbar-btn:hover { background: rgba(255,255,255,0.04); color: var(--color--text--on-surface); }
 ${S} .oc-toolbar-btn.is-active { background: var(--color--surface--1); color: var(--color--text--on-surface); }
 ${S} .oc-toolbar-badge {
-  font-size: 9px; font-weight: 600;
+  font-size: 10px; font-weight: 600;
   background: rgba(255,255,255,0.1); color: var(--color--text--on-surface);
   padding: 1px 5px; border-radius: 4px; line-height: 14px;
 }
@@ -118,7 +118,7 @@ ${S} .oc-toolbar-project-name {
   text-overflow: ellipsis; white-space: nowrap; color: var(--color--text--on-surface);
 }
 ${S} .oc-toolbar-project-unsaved {
-  font-size: 9px; color: var(--color--status--warning); font-style: italic;
+  font-size: 10px; color: var(--color--status--warning); font-style: italic;
 }
 ${S} .oc-toolbar-project-save-btn {
   flex: 1; display: flex; align-items: center; justify-content: center;
@@ -146,7 +146,7 @@ ${S} .oc-toolbar-project-item.is-active .oc-toolbar-project-item-name {
   color: var(--color--text--primary);
 }
 ${S} .oc-toolbar-project-item-meta {
-  font-size: 9px; color: var(--color--text--disabled); margin-top: 2px;
+  font-size: 10px; color: var(--color--text--disabled); margin-top: 2px;
 }
 ${S} .oc-toolbar-project-delete {
   background: none; border: none; cursor: pointer;

@@ -2,21 +2,34 @@
  * 0canvas Mac App — Three-Column Shell
  * ──────────────────────────────────────────────────────────
  *
- * Aesthetic rules (Clonk-inspired):
- *  1. Hierarchy via background, not borders.
- *     Column 1 = darkest (surface--floor)
- *     Column 2 = slightly lighter (surface--0)
- *     Elevated items (menus, dropdowns) = one step higher again.
- *  2. Borders only where structure demands it — between columns,
- *     between major sections. Never around individual list items.
- *  3. Hover/active = tinted background, not a ring.
- *  4. Type scale: 13px base / 12px controls / 11px meta /
- *     10px overline. Weight 500 for labels, 600 for headings,
- *     700 only for strong emphasis.
- *  5. Spacing: 4px/8px/12px/16px rhythm. Section gaps 12–16px,
- *     item gaps 2–4px.
- *  6. Icons: 16px for nav, 14px for inline, 12px for micro.
- *     Muted by default; primary tint when active.
+ * Surface hierarchy (Pass 1):
+ *   Chrome   (nav, tab bars, toolbars) → --color--surface--floor
+ *   Content  (canvas, body)            → --color--surface--0
+ *   Elevated (cards, menus, hover)     → --color--surface--1
+ *   Emphasis (active, selected)        → --color--surface--2
+ *   Separators                         → --color--border--on-surface-0
+ *
+ * Type scale (Pass 2) — the only font-sizes that should appear
+ * in this file or in the engine stylesheets:
+ *   10px  overline / tiny badges (weight 600, uppercase, 0.05em tracking)
+ *   11px  metadata, hints, subtitles, timestamps
+ *   12px  controls — buttons, menu items, tabs, chips (weight 500)
+ *   13px  body — list rows, input text, default readable text
+ *   15px  headings — panel titles, card titles, modal heads (weight 600)
+ *   18px  page titles (settings h1 only)
+ * Exceptions, scoped and intentional:
+ *   6px   micro badge text inside 14x14 source-button overlay
+ *   14px  icon font-size (lucide SVGs sized via font-size)
+ *   16px  icon font-size inside 20x20 buttons (close, expand)
+ *
+ * Weight/color rules:
+ *   400 body / 500 labels & controls / 600 headings & overline /
+ *   700 only for strong micro emphasis (badges, KBD chips).
+ *   Hover/active = tinted background, not a ring.
+ *
+ * Spacing: 4px/8px/12px/16px rhythm. Section gaps 12–16px,
+ *          item gaps 2–4px.
+ * Icons:   16px for nav, 14px for inline, 12px for micro.
  * ────────────────────────────────────────────────────────── */
 
 .oc-app {
@@ -91,7 +104,7 @@
 }
 
 .oc-column-1__brand-name {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
@@ -2364,7 +2377,7 @@
   align-items: center;
   gap: 6px;
   margin: 0;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
 }
 
@@ -2450,7 +2463,7 @@
 }
 
 .oc-mission__card-value {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--color--text--on-surface);
   white-space: nowrap;
@@ -2579,7 +2592,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .oc-login-modal__head strong {

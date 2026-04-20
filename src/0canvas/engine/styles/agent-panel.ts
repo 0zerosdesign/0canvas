@@ -120,5 +120,5 @@ ${S} .oc-agent-log-summary { font-size: 11px; }
 ${S} .oc-agent-log-summary.is-sent { color: var(--color--text--primary); }
 ${S} .oc-agent-log-summary.is-received { color: var(--color--status--success); }
 ${S} .oc-agent-log-summary.is-default { color: var(--color--text--muted); }
-${S} .oc-agent-log-method { font-size: 9px; color: var(--color--text--disabled); }
+${S} .oc-agent-log-method { font-size: 10px; color: var(--color--text--disabled); }
 `;

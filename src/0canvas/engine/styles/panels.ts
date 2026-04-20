@@ -146,7 +146,7 @@ ${S} .oc-layers-row.is-hovered-element {
 ${S} .oc-layers-tag-icon {
   width: 14px; height: 14px; display: flex;
   align-items: center; justify-content: center;
-  font-size: 9px; font-weight: 700; border-radius: 3px;
+  font-size: 10px; font-weight: 700; border-radius: 3px;
   flex-shrink: 0;
 }
 ${S} .oc-layers-toggle {

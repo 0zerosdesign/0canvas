@@ -120,7 +120,7 @@ ${S} .oc-inline-edit-reject {
   background: var(--color--surface--1); color: var(--color--text--on-surface-variant);
 }
 ${S} .oc-inline-edit-action-kbd {
-  font-size: 9px; opacity: 0.7; font-family: var(--font-mono);
+  font-size: 10px; opacity: 0.7; font-family: var(--font-mono);
 }
 ${S} .oc-inline-edit-error {
   display: flex; align-items: center; gap: 8px;
@@ -168,7 +168,7 @@ ${S} .oc-vdiff-header {
 }
 ${S} .oc-vdiff-header-left { display: flex; align-items: center; gap: 10px; }
 ${S} .oc-vdiff-title {
-  font-size: 14px; font-weight: 600; color: var(--color--text--on-surface);
+  font-size: 15px; font-weight: 600; color: var(--color--text--on-surface);
 }
 ${S} .oc-vdiff-variant-name {
   font-size: 12px; color: var(--color--text--muted);

@@ -60,7 +60,7 @@ ${S} .oc-style-boxmodel-content {
   border-radius: 4px; padding: 8px;
 }
 ${S} .oc-style-boxmodel-content-label { font-size: 11px; color: #2196f3; }
-${S} .oc-style-boxmodel-dim { font-size: 9px; opacity: 0.6; margin-left: 4px; }
+${S} .oc-style-boxmodel-dim { font-size: 10px; opacity: 0.6; margin-left: 4px; }
 ${S} .oc-style-tag-badge {
   font-size: 12px; color: var(--color--text--primary);
   background: rgba(37,99,235,0.09); padding: 2px 8px;

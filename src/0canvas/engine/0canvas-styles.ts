@@ -776,7 +776,7 @@ ${S} .oc-toolbar-btn {
 ${S} .oc-toolbar-btn:hover { background: rgba(255,255,255,0.04); color: var(--color--text--on-surface); }
 ${S} .oc-toolbar-btn.is-active { background: var(--color--surface--1); color: var(--color--text--on-surface); }
 ${S} .oc-toolbar-badge {
-  font-size: 9px; font-weight: 600;
+  font-size: 10px; font-weight: 600;
   background: rgba(255,255,255,0.1); color: var(--color--text--on-surface);
   padding: 1px 5px; border-radius: 4px; line-height: 14px;
 }
@@ -860,7 +860,7 @@ ${S} .oc-toolbar-project-name {
   text-overflow: ellipsis; white-space: nowrap; color: var(--color--text--on-surface);
 }
 ${S} .oc-toolbar-project-unsaved {
-  font-size: 9px; color: var(--color--status--warning); font-style: italic;
+  font-size: 10px; color: var(--color--status--warning); font-style: italic;
 }
 ${S} .oc-toolbar-project-save-btn {
   flex: 1; display: flex; align-items: center; justify-content: center;
@@ -888,7 +888,7 @@ ${S} .oc-toolbar-project-item.is-active .oc-toolbar-project-item-name {
   color: var(--color--text--primary);
 }
 ${S} .oc-toolbar-project-item-meta {
-  font-size: 9px; color: var(--color--text--disabled); margin-top: 2px;
+  font-size: 10px; color: var(--color--text--disabled); margin-top: 2px;
 }
 ${S} .oc-toolbar-project-delete {
   background: none; border: none; cursor: pointer;
@@ -959,7 +959,7 @@ ${S} .oc-layers-row.is-hovered-element {
 ${S} .oc-layers-tag-icon {
   width: 14px; height: 14px; display: flex;
   align-items: center; justify-content: center;
-  font-size: 9px; font-weight: 700; border-radius: 3px;
+  font-size: 10px; font-weight: 700; border-radius: 3px;
   flex-shrink: 0;
 }
 ${S} .oc-layers-toggle {
@@ -1041,14 +1041,14 @@ ${S} .oc-style-boxmodel-content {
   border-radius: 4px; padding: 8px;
 }
 ${S} .oc-style-boxmodel-content-label { font-size: 11px; color: #2196f3; }
-${S} .oc-style-boxmodel-dim { font-size: 9px; opacity: 0.6; margin-left: 4px; }
+${S} .oc-style-boxmodel-dim { font-size: 10px; opacity: 0.6; margin-left: 4px; }
 ${S} .oc-style-tag-badge {
   font-size: 12px; color: var(--color--text--primary);
   background: rgba(37,99,235,0.09); padding: 2px 8px;
   border-radius: 4px; font-family: var(--font-mono);
 }
 ${S} .oc-style-class-badge {
-  font-size: 9px; color: var(--color--text--on-surface-variant);
+  font-size: 10px; color: var(--color--text--on-surface-variant);
   background: var(--color--surface--1); padding: 1px 5px;
   border-radius: 3px; border: 1px solid var(--color--border--on-surface-0);
   font-family: var(--font-mono); max-width: 80px;
@@ -1437,7 +1437,7 @@ ${S} .oc-agent-log-summary { font-size: 11px; }
 ${S} .oc-agent-log-summary.is-sent { color: var(--color--text--primary); }
 ${S} .oc-agent-log-summary.is-received { color: var(--color--status--success); }
 ${S} .oc-agent-log-summary.is-default { color: var(--color--text--muted); }
-${S} .oc-agent-log-method { font-size: 9px; color: var(--color--text--disabled); }
+${S} .oc-agent-log-method { font-size: 10px; color: var(--color--text--disabled); }
 
 /* ── Command Palette ───────────────────────────────────────── */
 ${S} .oc-cmd-overlay {
@@ -1544,7 +1544,7 @@ ${S} .oc-inline-edit-reject {
 }
 ${S} .oc-inline-edit-accept { background: var(--color--status--success); color: #fff; }
 ${S} .oc-inline-edit-reject { background: var(--color--surface--1); color: var(--color--text--on-surface-variant); }
-${S} .oc-inline-edit-action-kbd { font-size: 9px; opacity: 0.7; font-family: var(--font-mono); }
+${S} .oc-inline-edit-action-kbd { font-size: 10px; opacity: 0.7; font-family: var(--font-mono); }
 ${S} .oc-inline-edit-error {
   display: flex; align-items: center; gap: 8px; padding: 10px 14px; font-size: 13px;
 }
@@ -1583,7 +1583,7 @@ ${S} .oc-vdiff-header {
   flex-shrink: 0;
 }
 ${S} .oc-vdiff-header-left { display: flex; align-items: center; gap: 10px; }
-${S} .oc-vdiff-title { font-size: 14px; font-weight: 600; color: var(--color--text--on-surface); }
+${S} .oc-vdiff-title { font-size: 15px; font-weight: 600; color: var(--color--text--on-surface); }
 ${S} .oc-vdiff-variant-name {
   font-size: 12px; color: var(--color--text--muted);
   padding: 2px 8px; border-radius: 4px; background: var(--color--surface--1);
@@ -2304,7 +2304,7 @@ ${S} .oc-theme-dialog-field input {
   background: var(--color--surface--0);
   border: 1px solid var(--color--border--on-surface-1);
   border-radius: 8px; color: var(--color--text--on-surface);
-  font-size: 14px; outline: none;
+  font-size: 13px; outline: none;
 }
 ${S} .oc-theme-dialog-field input:focus {
   border-color: var(--color--base--primary);
@@ -2327,7 +2327,7 @@ ${S} .oc-theme-dialog-actions {
 ${S} .oc-theme-dialog-btn {
   flex: 1; padding: 10px 16px;
   border: none; border-radius: 8px;
-  font-size: 14px; font-weight: 600;
+  font-size: 13px; font-weight: 600;
   cursor: pointer; transition: background 0.15s ease;
 }
 ${S} .oc-theme-dialog-btn.is-secondary {
@@ -2420,7 +2420,7 @@ ${S} .oc-theme-mode-token-list {
   max-height: 280px; overflow-y: auto;
 }
 ${S} .oc-theme-mode-group-label {
-  font-size: 9px; font-weight: 700; text-transform: uppercase;
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
   letter-spacing: 0.06em; color: var(--color--text--disabled);
   padding: 4px 0 2px;
 }
@@ -2445,7 +2445,7 @@ ${S} .oc-theme-mode-token-name {
   flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 ${S} .oc-theme-mode-token-value {
-  font-size: 9px; color: var(--color--text--disabled);
+  font-size: 10px; color: var(--color--text--disabled);
   font-family: 'Fira Code', monospace; flex-shrink: 0;
 }
 
@@ -2503,11 +2503,11 @@ ${S} .oc-theme-mode-change-detail {
   margin-top: 2px; min-width: 0; overflow: hidden;
 }
 ${S} .oc-theme-mode-change-prop {
-  font-size: 9px; color: var(--color--text--muted);
+  font-size: 10px; color: var(--color--text--muted);
   font-family: 'Fira Code', monospace;
 }
 ${S} .oc-theme-mode-change-token {
-  font-size: 9px; color: var(--color--text--primary-light);
+  font-size: 10px; color: var(--color--text--primary-light);
   font-family: 'Fira Code', monospace;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
@@ -2565,13 +2565,13 @@ ${S} .oc-style-search-input::placeholder { color: var(--color--text--muted); }
 ${S} .oc-tw-editor { padding: 4px 0; }
 ${S} .oc-tw-group { margin-bottom: 6px; }
 ${S} .oc-tw-group-label {
-  font-size: 9px; font-weight: 600; text-transform: uppercase;
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
   letter-spacing: 0.4px; display: block; margin-bottom: 3px;
 }
 ${S} .oc-tw-chips { display: flex; flex-wrap: wrap; gap: 3px; }
 ${S} .oc-tw-chip {
   display: inline-flex; align-items: center; gap: 2px;
-  padding: 1px 5px; border-radius: 3px; font-size: 9px;
+  padding: 1px 5px; border-radius: 3px; font-size: 10px;
   font-family: var(--font-mono); background: var(--color--surface--1);
   border: 1px solid var(--color--border--on-surface-1);
   color: var(--color--text--on-surface);
@@ -2622,11 +2622,11 @@ ${S} .oc-tw-suggestion {
 ${S} .oc-tw-suggestion:hover { background: rgba(255,255,255,0.04); }
 ${S} .oc-tw-suggestion-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
 ${S} .oc-tw-suggestion-prop {
-  margin-left: auto; font-size: 9px; color: var(--color--text--muted);
+  margin-left: auto; font-size: 10px; color: var(--color--text--muted);
 }
 
 ${S} .oc-breakpoint-badge {
-  font-size: 9px; font-weight: 600; text-transform: uppercase;
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
   padding: 1px 6px; border-radius: 3px; letter-spacing: 0.3px;
   background: rgba(234,179,8,0.15); color: #eab308;
 }
@@ -2680,7 +2680,7 @@ ${S} .oc-spacing-content {
 }
 ${S} .oc-spacing-content-label { font-size: 10px; color: #2196f3; }
 ${S} .oc-spacing-box-label {
-  font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px;
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;
   position: absolute; top: 2px; left: 6px; opacity: 0.6;
 }
 ${S} .oc-spacing-cell {
@@ -2779,7 +2779,7 @@ ${S} .oc-feedback-item-header {
   display: flex; gap: 4px; margin-bottom: 4px;
 }
 ${S} .oc-feedback-badge {
-  font-size: 9px; font-weight: 600; text-transform: uppercase;
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
   padding: 1px 6px; border-radius: 3px; letter-spacing: 0.3px;
   background: var(--color--surface--2); color: var(--color--text--on-surface-variant);
 }
@@ -2826,7 +2826,7 @@ ${S} .oc-segmented {
   background: var(--color--surface--1);
 }
 ${S} .oc-segmented-sm .oc-segmented-btn {
-  padding: 3px 6px; font-size: 9px; min-width: 0;
+  padding: 3px 6px; font-size: 10px; min-width: 0;
 }
 ${S} .oc-segmented-md .oc-segmented-btn {
   padding: 4px 8px; font-size: 10px;
@@ -2850,7 +2850,7 @@ ${S} .oc-segmented-btn.is-active {
 /* ── NumberInputWithUnit ── */
 ${S} .oc-num-field { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 ${S} .oc-num-label {
-  font-size: 9px; color: var(--color--text--muted);
+  font-size: 10px; color: var(--color--text--muted);
   text-transform: uppercase; letter-spacing: 0.4px;
 }
 ${S} .oc-num-row { display: flex; align-items: center; gap: 2px; }
@@ -2874,17 +2874,17 @@ ${S} .oc-num-value:hover { border-color: var(--color--border--on-surface-1); }
 ${S} .oc-num-unit {
   background: var(--color--surface--1); border: 1px solid var(--color--border--on-surface-1);
   border-radius: 3px; padding: 2px 2px;
-  color: var(--color--text--muted); font-size: 9px; outline: none;
+  color: var(--color--text--muted); font-size: 10px; outline: none;
   cursor: pointer;
 }
 ${S} .oc-num-unit-label {
-  font-size: 9px; color: var(--color--text--muted); padding: 0 2px;
+  font-size: 10px; color: var(--color--text--muted); padding: 0 2px;
 }
 
 /* ── SliderInput ── */
 ${S} .oc-slider-field { display: flex; flex-direction: column; gap: 2px; }
 ${S} .oc-slider-label {
-  font-size: 9px; color: var(--color--text--muted);
+  font-size: 10px; color: var(--color--text--muted);
   text-transform: uppercase; letter-spacing: 0.4px;
 }
 ${S} .oc-slider-row { display: flex; align-items: center; gap: 6px; }
@@ -2967,7 +2967,7 @@ ${S} .oc-radius-preview {
   display: flex; align-items: center; justify-content: center;
 }
 ${S} .oc-radius-preview-label {
-  font-size: 9px; font-family: var(--font-mono);
+  font-size: 10px; font-family: var(--font-mono);
   color: var(--color--text--muted);
 }
 ${S} .oc-radius-value {
@@ -3182,7 +3182,7 @@ ${S} .oc-chat-empty {
   padding: 64px 24px;
 }
 ${S} .oc-chat-empty-title {
-  margin: 0; font-size: 14px; font-weight: 500;
+  margin: 0; font-size: 15px; font-weight: 500;
   color: var(--color--text--muted);
   letter-spacing: -0.005em;
 }
@@ -3303,7 +3303,7 @@ ${S} .oc-chat-skill-chip {
   width: 18px; height: 18px; border-radius: 5px;
   background: rgba(59,130,246,0.18);
   color: var(--color--text--primary-light);
-  font-size: 9px; font-weight: 700;
+  font-size: 10px; font-weight: 700;
   font-family: var(--font-firacode);
 }
 ${S} .oc-chat-toolbar-spacer { flex: 1; }
@@ -3420,7 +3420,7 @@ ${S} .oc-ai-context-variant {
 }
 ${S} .oc-ai-context-none { opacity: 0.5; }
 ${S} .oc-ai-applied-prop {
-  font-family: var(--font-mono); font-size: 9px;
+  font-family: var(--font-mono); font-size: 10px;
   background: rgba(34,197,94,0.1); padding: 1px 5px;
   border-radius: 3px; color: #22c55e;
 }
@@ -3521,12 +3521,12 @@ ${S} .oc-ai-settings .oc-settings-section-title:first-child { margin-top: 0; }
  * reads less technical. "Connect a provider" feels like a heading,
  * not a label. */
 ${S} .oc-ai-settings > .oc-settings-section-title {
-  font-size: 16px; font-weight: 600;
+  font-size: 15px; font-weight: 600;
   text-transform: none; letter-spacing: 0;
   margin-bottom: 0;
 }
 ${S} .oc-ai-auth .oc-settings-section-title {
-  font-size: 14px; font-weight: 500;
+  font-size: 15px; font-weight: 500;
   text-transform: none; letter-spacing: 0;
   margin: 0;
   color: var(--color--text--on-surface);
@@ -3678,7 +3678,7 @@ ${S} .oc-token-suggest-dropdown {
   overflow: hidden;
 }
 ${S} .oc-token-suggest-header {
-  font-size: 9px; font-weight: 600; text-transform: uppercase;
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
   letter-spacing: 0.5px; color: var(--color--text--muted);
   padding: 6px 8px 4px; border-bottom: 1px solid var(--color--border--on-surface-0);
 }
@@ -3689,7 +3689,7 @@ ${S} .oc-token-suggest-item {
   display: flex; align-items: center; gap: 6px;
   width: 100%; padding: 4px 8px; border: none;
   background: none; cursor: pointer; text-align: left;
-  font-size: 9px; font-family: var(--font-mono);
+  font-size: 10px; font-family: var(--font-mono);
   color: var(--color--text--on-surface);
   transition: background 0.1s;
 }
