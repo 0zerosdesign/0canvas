@@ -134,6 +134,7 @@ export type AiProvider =
 
 export type AiAuthMethod = "subscription" | "api-key";
 export type AiThinkingEffort = "low" | "medium" | "high" | "xhigh";
+export type AiPermissionMode = "plan" | "ask" | "auto-edit" | "full";
 
 export type AiSettings = {
   provider: AiProvider;
@@ -144,6 +145,10 @@ export type AiSettings = {
   temperature: number;
   autoSendFeedback: boolean;
   thinkingEffort: AiThinkingEffort;
+  /** Default permission mode for new chats. Individual chats may
+   *  override this; for now the composer reads/writes this global
+   *  default — per-chat override is in the Stream 5 TODO. */
+  permissionMode: AiPermissionMode;
   agentTeams: boolean;
 };
 export type ViewMode = "canvas" | "fullscreen";

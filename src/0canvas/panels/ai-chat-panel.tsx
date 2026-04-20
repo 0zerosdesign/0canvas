@@ -17,7 +17,7 @@ import {
   Brain, LogIn, Search,
   type LucideIcon,
 } from "lucide-react";
-import { useWorkspace, findElement, type AiThinkingEffort } from "../store/store";
+import { useWorkspace, findElement, type AiThinkingEffort, type AiPermissionMode } from "../store/store";
 import { useBridge } from "../bridge/use-bridge";
 import type { BridgeMessage } from "../bridge/messages";
 import { streamChat, isAiConfigured, saveAiSettings, type OpenAIMessage } from "../lib/openai";
@@ -277,6 +277,118 @@ function filterSlashCommands(query: string): SlashCommand[] {
   if (!q) return SLASH_COMMANDS;
   return SLASH_COMMANDS.filter((c) =>
     c.label.slice(1).toLowerCase().startsWith(q),
+  );
+}
+
+// Effort label mapping for the Adaptive Thinking pill.
+function effortLabel(e: AiThinkingEffort): string {
+  switch (e) {
+    case "low": return "Low";
+    case "medium": return "Medium";
+    case "high": return "High";
+    case "xhigh": return "xHigh";
+  }
+}
+
+// Permission-mode label mapping for the Permission pill.
+function permissionLabel(p: AiPermissionMode): string {
+  switch (p) {
+    case "plan": return "Plan Only";
+    case "ask": return "Ask First";
+    case "auto-edit": return "Auto Edit";
+    case "full": return "Full Access";
+  }
+}
+
+// ── Simple dropdown pill (Stream 5) ──────────────────────
+//
+// Shared pill-with-dropdown primitive used by the Effort and
+// Permission Mode pills on the chat composer. Keeps keyboard + click-
+// outside handling in one place so future pills (Model picker, Branch
+// switcher) can adopt the same shape.
+
+type DropdownItem<T extends string> = {
+  value: T;
+  label: string;
+  hint?: string;
+};
+
+function DropdownPill<T extends string>({
+  label,
+  title,
+  icon,
+  items,
+  value,
+  onChange,
+  className,
+}: {
+  label: string;
+  title: string;
+  icon?: React.ReactNode;
+  items: DropdownItem<T>[];
+  value: T;
+  onChange: (v: T) => void;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc, true);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc, true);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div ref={rootRef} className={`oc-chat-dropdown-root ${className ?? ""}`}>
+      <button
+        className="oc-chat-toolbar-pill"
+        title={title}
+        onClick={() => setOpen((v) => !v)}
+        type="button"
+      >
+        {icon}
+        <span>{label}</span>
+        <ChevronDown size={10} className="oc-chat-toolbar-caret" />
+      </button>
+      {open && (
+        <div className="oc-chat-dropdown-menu">
+          {items.map((item) => (
+            <button
+              key={item.value}
+              className={`oc-chat-dropdown-item ${
+                item.value === value ? "is-active" : ""
+              }`}
+              onClick={() => {
+                onChange(item.value);
+                setOpen(false);
+              }}
+              type="button"
+            >
+              <span className="oc-chat-dropdown-item-label">{item.label}</span>
+              {item.hint && (
+                <span className="oc-chat-dropdown-item-hint">{item.hint}</span>
+              )}
+              {item.value === value && (
+                <Check size={12} className="oc-chat-dropdown-item-check" />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -1162,14 +1274,23 @@ Styles:\n${Object.entries(selectedElement.styles)
               <Sparkles size={12} style={{ color: providerIconTint }} />
               <ChevronDown size={10} className="oc-chat-toolbar-caret" />
             </button>
-            <button
-              className="oc-chat-toolbar-pill"
-              title="Thinking effort"
-              type="button"
-            >
-              <span>High</span>
-              <ChevronDown size={10} className="oc-chat-toolbar-caret" />
-            </button>
+            <DropdownPill<AiThinkingEffort>
+              title="Adaptive thinking"
+              label={effortLabel(aiSettings.thinkingEffort)}
+              icon={<Brain size={11} />}
+              value={aiSettings.thinkingEffort}
+              items={[
+                { value: "low", label: "Low", hint: "Quick answers" },
+                { value: "medium", label: "Medium", hint: "Balanced" },
+                { value: "high", label: "High", hint: "Thorough" },
+                { value: "xhigh", label: "xHigh", hint: "Long-horizon" },
+              ]}
+              onChange={(v) => {
+                const updated = { ...aiSettings, thinkingEffort: v };
+                saveAiSettings(updated);
+                dispatch({ type: "SET_AI_SETTINGS", settings: updated });
+              }}
+            />
             <button className="oc-chat-toolbar-iconbtn" title="Attach" type="button">
               <Plus size={14} />
             </button>
@@ -1223,11 +1344,24 @@ Styles:\n${Object.entries(selectedElement.styles)
           <span>main</span>
           <ChevronDown size={10} className="oc-chat-toolbar-caret" />
         </button>
-        <button className="oc-chat-footer-pill" title="Plan mode" type="button">
-          <Eye size={11} />
-          <span>Plan Only</span>
-          <ChevronDown size={10} className="oc-chat-toolbar-caret" />
-        </button>
+        <DropdownPill<AiPermissionMode>
+          title="Permission mode"
+          label={permissionLabel(aiSettings.permissionMode)}
+          icon={<Eye size={11} />}
+          value={aiSettings.permissionMode}
+          className="is-footer"
+          items={[
+            { value: "full", label: "Full Access", hint: "Auto-approve everything" },
+            { value: "auto-edit", label: "Auto Edit", hint: "Auto-approve reads + file edits" },
+            { value: "ask", label: "Ask First", hint: "Prompt before writes & commands" },
+            { value: "plan", label: "Plan Only", hint: "Read-only, no writes or commands" },
+          ]}
+          onChange={(v) => {
+            const updated = { ...aiSettings, permissionMode: v };
+            saveAiSettings(updated);
+            dispatch({ type: "SET_AI_SETTINGS", settings: updated });
+          }}
+        />
         <div className="oc-chat-footer-spacer" />
         <span className="oc-chat-token-meter" title="Context usage">
           <span className="oc-chat-token-dot" />

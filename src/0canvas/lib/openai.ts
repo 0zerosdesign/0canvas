@@ -45,6 +45,7 @@ export const DEFAULT_AI_SETTINGS: AiSettings = {
   temperature: 0.7,
   autoSendFeedback: false,
   thinkingEffort: "high",
+  permissionMode: "plan",
   agentTeams: false,
 };
 

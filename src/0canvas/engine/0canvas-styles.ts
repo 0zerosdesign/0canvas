@@ -3303,6 +3303,47 @@ ${S} .oc-chat-skill-empty code {
   font-family: var(--font-firacode); font-size: 10px;
 }
 
+/* ── Generic chat dropdown pill (Stream 5) ───────────────── */
+${S} .oc-chat-dropdown-root { position: relative; }
+${S} .oc-chat-dropdown-menu {
+  position: absolute;
+  bottom: calc(100% + 6px); left: 0;
+  min-width: 220px; max-width: 320px;
+  z-index: 30;
+  background: var(--color--surface--1);
+  border: 1px solid var(--color--border--on-surface-1);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+  padding: 4px;
+  display: flex; flex-direction: column; gap: 1px;
+}
+${S} .oc-chat-dropdown-root.is-footer .oc-chat-dropdown-menu {
+  bottom: calc(100% + 6px); left: 0; right: auto;
+}
+${S} .oc-chat-dropdown-item {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 8px 10px;
+  background: transparent; border: none;
+  border-radius: 6px;
+  color: var(--color--text--on-surface);
+  font-family: inherit; text-align: left;
+  cursor: pointer;
+  position: relative;
+}
+${S} .oc-chat-dropdown-item:hover { background: rgba(255, 255, 255, 0.06); }
+${S} .oc-chat-dropdown-item.is-active {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--color--text--primary-light);
+}
+${S} .oc-chat-dropdown-item-label { font-size: 13px; font-weight: 500; }
+${S} .oc-chat-dropdown-item-hint {
+  font-size: 11px; color: var(--color--text--muted);
+}
+${S} .oc-chat-dropdown-item-check {
+  position: absolute; right: 10px; top: 10px;
+  color: var(--color--text--primary-light);
+}
+
 ${S} .oc-chat-send {
   display: inline-flex; align-items: center; justify-content: center;
   width: 26px; height: 26px;
