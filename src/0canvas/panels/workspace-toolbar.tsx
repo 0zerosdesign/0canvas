@@ -12,12 +12,15 @@ import {
   Upload,
 } from "lucide-react";
 import { useWorkspace, OCProject } from "../store/store";
-import { saveProject, getAllProjects, deleteProject as dbDeleteProject, type StoredProject } from "../db/variant-db";
 import {
+  saveProject,
+  getAllProjects,
+  deleteProject as dbDeleteProject,
+  type StoredProject,
   downloadProjectFile,
   importProjectFile,
   buildCurrentProjectFile,
-} from "../format/oc-project-store";
+} from "../../native/storage";
 import { projectFileToState } from "../format/oc-project";
 
 interface WorkspaceToolbarProps {

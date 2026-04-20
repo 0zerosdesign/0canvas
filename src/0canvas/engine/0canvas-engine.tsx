@@ -47,7 +47,7 @@ import {
   importProjectFile,
   buildCurrentProjectFile,
   setBridgeSender,
-} from "../format/oc-project-store";
+} from "../../native/storage";
 
 // ── Props ──────────────────────────────────────────────────
 

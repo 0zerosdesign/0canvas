@@ -18,7 +18,7 @@ import { useWorkspace, VariantData } from "../store/store";
 import { SourceNode, type SourceNodeData } from "./source-node";
 import { VariantNode, type VariantNodeData } from "./variant-node";
 import { capturePageSnapshot, captureComponentSnapshot, getElementOuterHTML, pushVariantToMain as domPushToMain, setInspectionTarget, rebuildElementMap, buildElementTree } from "../inspector";
-import { saveVariant, deleteVariant as dbDeleteVariant } from "../db/variant-db";
+import { saveVariant, deleteVariant as dbDeleteVariant } from "../../native/storage";
 import { copyToClipboard } from "../utils/clipboard";
 
 const NODE_TYPES: NodeTypes = {

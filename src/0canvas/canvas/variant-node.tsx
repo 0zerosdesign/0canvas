@@ -161,8 +161,8 @@ ${ruleLines.join("\n")}</style>
 
     startInspect((elId, el) => {
       dispatch({ type: "SELECT_ELEMENT", id: elId, source: "inspect" });
-      const doc = iframe.contentDocument || document;
-      const win = doc.defaultView || window;
+      const win = el.ownerDocument.defaultView;
+      if (!win) return;
       const computed = win.getComputedStyle(el);
       const styles: Record<string, string> = {};
       const props = [

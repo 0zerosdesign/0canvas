@@ -4,7 +4,7 @@ import {
   downloadProjectFile,
   importProjectFile,
   buildCurrentProjectFile,
-} from "../format/oc-project-store";
+} from "../../native/storage";
 import { projectFileToState } from "../format/oc-project";
 import { copyToClipboard } from "../utils/clipboard";
 

@@ -28,6 +28,7 @@ import { TailwindEditor } from "../editors/tailwind-editor";
 import { detectTailwindClasses } from "../lib/tailwind";
 import { SliderInput } from "../editors/controls";
 import { useStyleChange } from "../bridge/use-bridge";
+import { getSetting, setSetting } from "../../native/settings";
 import { applyStyle, flashElement } from "../inspector";
 import { getAutocompleteSuggestions } from "../lib/css-properties";
 
@@ -582,12 +583,9 @@ export function StylePanel() {
   const [searchQuery, setSearchQuery] = useState("");
 
   // ── Focus Mode ──
-  const [focusMode, setFocusMode] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem("oc-style-focus-mode");
-      return saved !== null ? saved === "true" : true;
-    } catch { return true; }
-  });
+  const [focusMode, setFocusMode] = useState<boolean>(() =>
+    getSetting<boolean>("style-focus-mode", true)
+  );
   // In focus mode: only one section open at a time (null = all collapsed)
   // In free mode: track each section independently
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
@@ -598,7 +596,7 @@ export function StylePanel() {
   const toggleFocusMode = useCallback(() => {
     setFocusMode((prev) => {
       const next = !prev;
-      try { localStorage.setItem("oc-style-focus-mode", String(next)); } catch {}
+      setSetting("style-focus-mode", next);
       // When switching to focus mode, pick the first expanded section (or null)
       if (next) {
         setExpandedSection((currentFocus) => {

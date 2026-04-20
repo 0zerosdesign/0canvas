@@ -2,9 +2,14 @@
 // Target — Shared mutable state for the inspection target
 // ──────────────────────────────────────────────────────────
 //
-// "Target document" = the document being inspected.
-// Either iframe.contentDocument (package mode) or
-// window.document (dev mode).
+// "Target document" = the iframe document currently being
+// inspected (source preview or a variant). In the Mac app
+// there is always an iframe — the main window.document is
+// the Tauri app chrome, never an inspection surface.
+//
+// Defaults to window.document as a safety fallback for early
+// init races before any iframe has mounted; callers in that
+// window do not try to inspect the chrome.
 
 let targetDoc: Document = document;
 let targetIframe: HTMLIFrameElement | null = null;
