@@ -7,13 +7,14 @@
   "scripts": {
     "build:engine": "tsup",
     "watch:engine": "tsup --watch",
+    "build:sidecar": "node scripts/build-sidecar.mjs",
     "dev": "vite",
     "test:ui": "vite",
     "build:ui": "vite build",
     "serve:engine": "node dist-engine/cli.js",
     "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:dev": "pnpm build:sidecar && tauri dev",
+    "tauri:build": "pnpm build:sidecar && pnpm build:ui && tauri build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

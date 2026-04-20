@@ -26,7 +26,9 @@ export function BridgeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const client = new CanvasBridgeClient();
     clientRef.current = client;
-    client.connect();
+    client.connect().catch((err) => {
+      console.warn("[0canvas] initial connect failed:", err);
+    });
     forceUpdate((n) => n + 1);
     return () => {
       client.dispose();

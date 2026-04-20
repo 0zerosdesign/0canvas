@@ -49,29 +49,69 @@ impl SidecarState {
     }
 }
 
-/// Resolve where `dist-engine/cli.js` lives relative to the running binary.
+/// Resolve the Bun-compiled engine binary at runtime.
 ///
-/// Dev: `<repo>/src-tauri/target/debug/zerocanvas` → walk up 3 dirs → `<repo>/dist-engine/cli.js`.
-/// Release (Phase 1A-3 replaces this logic with a bundled sidecar binary).
-fn locate_engine_script() -> Result<PathBuf, String> {
+/// Layout differs between the dev tree and the bundled .app:
+///
+/// Dev:     `<repo>/src-tauri/binaries/0canvas-engine-<triple>`
+///          (kept with the triple suffix — `pnpm build:sidecar` writes
+///          the exact name Tauri expects to find for `externalBin`)
+///
+/// Release: `<App>.app/Contents/MacOS/0canvas-engine`
+///          (Tauri STRIPS the `-<triple>` suffix during bundling on macOS
+///          and Linux; Windows keeps it plus `.exe`. Ask me how I learned
+///          this the hard way.)
+///
+/// We try every reasonable combination in release-first, dev-fallback
+/// order so a mis-located binary fails with a clear error rather than
+/// a silent "engine never connects" bug.
+fn locate_engine_binary() -> Result<PathBuf, String> {
+    let triple = match std::env::consts::ARCH {
+        "aarch64" => "aarch64-apple-darwin",
+        "x86_64" => "x86_64-apple-darwin",
+        other => return Err(format!("unsupported arch: {}", other)),
+    };
+
     let exe = std::env::current_exe().map_err(|e| format!("current_exe: {}", e))?;
-    let mut dir = exe
+    let exe_dir = exe
         .parent()
         .ok_or_else(|| "current_exe has no parent".to_string())?
         .to_path_buf();
-    // .../src-tauri/target/debug  ->  .../src-tauri/target  ->  .../src-tauri  ->  .../
-    for _ in 0..3 {
-        dir.pop();
+
+    // Order matters: check the release layout first because in a bundled
+    // .app the dev path happens to NOT exist (exe_dir is inside the .app,
+    // walking up doesn't reach <repo>/src-tauri/binaries).
+    let candidates: [PathBuf; 3] = [
+        // Release: .app/Contents/MacOS/0canvas-engine  (triple stripped)
+        exe_dir.join("0canvas-engine"),
+        // Also handle the pre-strip name in case Tauri behavior changes
+        exe_dir.join(format!("0canvas-engine-{}", triple)),
+        // Dev: <repo>/src-tauri/binaries/0canvas-engine-<triple>
+        //      exe_dir is <repo>/src-tauri/target/debug → pop twice to src-tauri
+        {
+            let mut d = exe_dir.clone();
+            d.pop();
+            d.pop();
+            d.push("binaries");
+            d.push(format!("0canvas-engine-{}", triple));
+            d
+        },
+    ];
+
+    for candidate in &candidates {
+        if candidate.exists() {
+            return Ok(candidate.clone());
+        }
     }
-    let candidate = dir.join("dist-engine").join("cli.js");
-    if candidate.exists() {
-        Ok(candidate)
-    } else {
-        Err(format!(
-            "dist-engine/cli.js not found at {:?}. Run `pnpm build:engine` first.",
-            candidate
-        ))
-    }
+
+    Err(format!(
+        "engine binary not found. Tried:\n{}\nRun `pnpm build:sidecar` first.",
+        candidates
+            .iter()
+            .map(|p| format!("  {:?}", p))
+            .collect::<Vec<_>>()
+            .join("\n")
+    ))
 }
 
 /// Spawn the engine with `project_root` as its working directory.
@@ -84,14 +124,13 @@ pub fn spawn_engine(state: &SidecarState, project_root: &Path) -> Result<u16, St
     }
     *state.port.lock().unwrap() = None;
 
-    let engine_js = locate_engine_script()?;
+    let engine_bin = locate_engine_binary()?;
 
     // Remove any stale port file so we know the new one is genuinely written.
     let port_file = project_root.join(".0canvas").join(".port");
     let _ = fs::remove_file(&port_file);
 
-    let child = Command::new("node")
-        .arg(&engine_js)
+    let child = Command::new(&engine_bin)
         .arg("serve")
         .arg("--root")
         .arg(project_root)

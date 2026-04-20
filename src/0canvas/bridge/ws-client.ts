@@ -3,10 +3,13 @@
 // ──────────────────────────────────────────────────────────
 //
 // Connects to the 0canvas engine on localhost.
-// Port resolution order:
-//   1. window.__0CANVAS_PORT__ — injected by Tauri shell at startup
-//   2. fallback: 24193 (engine default)
+// Port resolution order (first match wins):
+//   1. window.__0CANVAS_PORT__   — direct eval from Rust, if present
+//   2. Tauri command get_engine_port — source of truth in the Mac app
+//   3. hardcoded 24193           — plain browser dev harness fallback
 //
+// The Tauri command path handles the common case where the engine
+// retries onto 24194–24200 because 24193 was taken by a stale process.
 // ──────────────────────────────────────────────────────────
 
 import type { BridgeMessage } from "./messages";
@@ -14,15 +17,34 @@ import { createMessageId } from "./messages";
 
 const DEFAULT_ENGINE_PORT = 24193;
 
-function resolveEnginePort(): number {
-  if (typeof window !== "undefined") {
-    const injected = (window as unknown as { __0CANVAS_PORT__?: number }).__0CANVAS_PORT__;
-    if (typeof injected === "number" && Number.isFinite(injected) && injected > 0) {
-      return injected;
+/**
+ * Resolve the engine port exactly once per page load. The result is
+ * cached in-module so the reconnect timer doesn't re-hit Tauri on
+ * every retry. Safe to call in both Tauri and plain-browser modes.
+ */
+const enginePortPromise: Promise<number> = (async () => {
+  if (typeof window === "undefined") return DEFAULT_ENGINE_PORT;
+
+  const injected = (window as unknown as { __0CANVAS_PORT__?: number })
+    .__0CANVAS_PORT__;
+  if (typeof injected === "number" && Number.isFinite(injected) && injected > 0) {
+    return injected;
+  }
+
+  if ("__TAURI_INTERNALS__" in window) {
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      const port = await invoke<number | null>("get_engine_port");
+      if (typeof port === "number" && port > 0) return port;
+    } catch (err) {
+      // Fall through to default — any Tauri error should degrade
+      // gracefully rather than brick the WebSocket bridge.
+      console.warn("[0canvas] get_engine_port failed:", err);
     }
   }
+
   return DEFAULT_ENGINE_PORT;
-}
+})();
 
 export type ConnectionStatus = "disconnected" | "connecting" | "connected";
 
@@ -51,11 +73,14 @@ export class CanvasBridgeClient {
     return this._engineConnected;
   }
 
-  connect(): void {
+  async connect(): Promise<void> {
     if (this._disposed) return;
     if (this.ws?.readyState === WebSocket.OPEN) return;
 
-    const wsUrl = `ws://localhost:${resolveEnginePort()}/ws`;
+    const port = await enginePortPromise;
+    if (this._disposed) return;
+
+    const wsUrl = `ws://localhost:${port}/ws`;
     this.setStatus("connecting");
 
     let ws: WebSocket;
@@ -203,7 +228,9 @@ export class CanvasBridgeClient {
     if (this.reconnectTimer) return;
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
-      this.connect();
+      this.connect().catch((err) => {
+        console.warn("[0canvas] reconnect failed:", err);
+      });
     }, 2000);
   }
 }

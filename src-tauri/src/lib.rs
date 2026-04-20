@@ -93,17 +93,33 @@ async fn open_project_folder(app: AppHandle) -> Result<Option<ProjectChanged>, S
     Ok(Some(payload))
 }
 
-/// Resolve the initial project root. In `cargo tauri dev` the CWD is
-/// `<repo>/src-tauri`; we walk up one directory so the engine operates on
-/// the repo itself. Phase 1A-2c replaces this with the folder the user
-/// picks via the Open Folder dialog.
+/// Resolve the initial project root. Cases in priority order:
+///
+/// 1. `cargo tauri dev` launches with CWD = `<repo>/src-tauri`; walk up one
+///    so the engine operates on the repo itself (Phase 1A-1/1A-2 workflow).
+/// 2. `open 0canvas.app` from Finder launches with CWD = `/`; indexing `/`
+///    is useless and slow. Fall back to `$HOME` — the user will replace it
+///    via Cmd+O on first use.
+/// 3. Anywhere else (e.g. `./0canvas.app/Contents/MacOS/zerocanvas`), use
+///    the CWD as-is because the launcher probably meant something by it.
 fn default_project_root() -> PathBuf {
     let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+
+    // Dev-tree heuristic
     if cwd.file_name().map(|n| n == "src-tauri").unwrap_or(false) {
-        cwd.parent().map(|p| p.to_path_buf()).unwrap_or(cwd)
-    } else {
-        cwd
+        return cwd.parent().map(|p| p.to_path_buf()).unwrap_or(cwd);
     }
+
+    // Launched from Finder / Dock → CWD is filesystem root, which is
+    // never a sensible project directory. Fall back to $HOME so the
+    // engine has a bounded, readable tree until the user opens a folder.
+    if cwd == PathBuf::from("/") {
+        if let Ok(home) = std::env::var("HOME") {
+            return PathBuf::from(home);
+        }
+    }
+
+    cwd
 }
 
 fn build_app_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result<Menu<R>> {
