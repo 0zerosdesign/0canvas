@@ -1,0 +1,11 @@
+# Rust build output
+target/
+
+# Tauri generated
+gen/
+icons/*.png
+icons/*.icns
+icons/*.ico
+
+# macOS
+.DS_Store

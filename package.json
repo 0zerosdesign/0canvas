@@ -9,7 +9,11 @@
     "watch:engine": "tsup --watch",
     "dev": "vite",
     "test:ui": "vite",
-    "serve:engine": "node dist/cli.js"
+    "build:ui": "vite build",
+    "serve:engine": "node dist-engine/cli.js",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
@@ -32,6 +36,7 @@
   "devDependencies": {
     "@tailwindcss/cli": "^4.0.0",
     "@tailwindcss/vite": "^4.2.2",
+    "@tauri-apps/cli": "^2.1.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@types/ws": "^8.18.1",

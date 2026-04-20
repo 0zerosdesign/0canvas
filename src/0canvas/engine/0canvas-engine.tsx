@@ -89,7 +89,7 @@ const POSITION_STYLES: Record<
 // ── Auto-connect wrapper ───────────────────────────────────
 // Sets up the project connection in engine mode (no onboarding)
 
-function AutoConnect({ children }: { children: React.ReactNode }) {
+export function AutoConnect({ children }: { children: React.ReactNode }) {
   const { state, dispatch } = useWorkspace();
 
   useEffect(() => {
@@ -310,7 +310,7 @@ function useResizable(initial: number, min: number, max: number) {
 // Mirrors the same panel arrangement as the docs site workspace
 // but without any navigation links.
 
-function EngineWorkspace({ onClose }: { onClose: () => void }) {
+export function EngineWorkspace({ onClose }: { onClose: () => void }) {
   const { state, dispatch } = useWorkspace();
   const bridge = useBridge();
   const iframeNavRef = React.useRef<((route: string) => void) | null>(null);

@@ -15,6 +15,7 @@ export default defineConfig([
     splitting: false,
     sourcemap: true,
     clean: true,
+    outDir: "dist-engine",
     platform: "node",
     target: "node18",
     external: [

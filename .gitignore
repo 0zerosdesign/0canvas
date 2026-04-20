@@ -4,10 +4,15 @@ node_modules/
 
 # Build output
 dist/
+dist-engine/
 lib/
 *.tgz
 out/
 *.tsbuildinfo
+
+# Tauri Rust build output
+src-tauri/target/
+src-tauri/gen/
 
 # IDE / Editor
 .vscode/
