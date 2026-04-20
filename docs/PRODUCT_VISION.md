@@ -1,11 +1,22 @@
 # 0canvas Product Vision & Architecture Plan
 
+> **⚠️ SUPERSEDED — kept for historical reference only.**
+> This document describes the V1 vision (VS Code extension + browser
+> overlay). It was replaced by V2 (npm engine, 2026-04-15) and then
+> by V3 ([PRODUCT_VISION_V3.md](PRODUCT_VISION_V3.md), 2026-04-20 —
+> native Tauri Mac app). Read V3 for the current product vision. This
+> file remains in the repo because some of the CSS-resolution and
+> selector-indexing architecture described here still holds.
+
+---
+
 > **An agentic design tool that lets designers work visually on production code.**
 > Pull, design, push — no coding required.
 
-**Version:** 1.1
+**Version:** 1.1 (SUPERSEDED)
 **Date:** 2026-04-12
 **Updated:** 2026-04-12
+**Superseded by:** PRODUCT_VISION_V2.md (2026-04-15), then V3 (2026-04-20)
 **Author:** Zeros Design
 
 ---

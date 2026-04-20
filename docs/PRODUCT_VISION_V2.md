@@ -1,5 +1,14 @@
 # 0canvas Product Vision V2 — The Universal Design Engine
 
+> **⚠️ SUPERSEDED by [PRODUCT_VISION_V3.md](PRODUCT_VISION_V3.md) on
+> 2026-04-20.** V3 pivots to a native Tauri Mac app as the primary
+> distribution. V2's npm engine + browser overlay remains alive as a
+> secondary distribution channel and is still accurate for that surface,
+> but the app, the shell, and the overall vision are V3's shape now.
+> Read V3 first; treat V2 as historical + npm-only reference.
+
+---
+
 > **One install. One command. A design tool appears on your app.**
 > No extensions. No plugins. No configuration. It just works.
 
@@ -7,6 +16,7 @@
 **Date:** 2026-04-15
 **Author:** Zeros Design
 **Supersedes:** PRODUCT_VISION.md (V1.1, 2026-04-12)
+**Superseded by:** PRODUCT_VISION_V3.md (V3.0, 2026-04-20)
 
 ---
 
