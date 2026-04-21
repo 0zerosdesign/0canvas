@@ -1,0 +1,50 @@
+{
+  "$schema": "https://zeros.design/schemas/oc-project-v1.json",
+  "schemaVersion": 1,
+  "project": {
+    "id": "proj-1776779470219",
+    "name": "Untitled",
+    "createdAt": "2026-04-21T13:51:10.947Z",
+    "updatedAt": "2026-04-21T13:51:10.946Z",
+    "revision": 1
+  },
+  "workspace": {
+    "root": ".",
+    "entryFiles": [
+      "src/main.tsx"
+    ],
+    "framework": "unknown",
+    "pathAliases": {
+      "@": "src"
+    }
+  },
+  "breakpoints": {
+    "desktop": 1280,
+    "laptop": 1024,
+    "tablet": 768,
+    "mobile": 390
+  },
+  "variables": {},
+  "pages": [
+    {
+      "id": "page_main",
+      "name": "Untitled",
+      "route": "/",
+      "source": {
+        "html": "",
+        "styles": "",
+        "assets": []
+      },
+      "layers": []
+    }
+  ],
+  "variants": [],
+  "history": {
+    "checkpoints": [],
+    "lastCheckpointAt": null
+  },
+  "integrity": {
+    "hash": "",
+    "generator": "0canvas@0.0.0"
+  }
+}
