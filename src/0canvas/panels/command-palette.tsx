@@ -7,6 +7,7 @@ import {
 } from "../../native/storage";
 import { projectFileToState } from "../format/oc-project";
 import { copyToClipboard } from "../utils/clipboard";
+import { Input } from "../ui";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -242,7 +243,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
       onKeyDown={handleKeyDown}
     >
       <div className="oc-cmd-panel">
-        <input
+        <Input
           ref={inputRef}
           className="oc-cmd-input"
           placeholder="Type a command..."

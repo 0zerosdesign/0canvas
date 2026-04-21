@@ -1,278 +1,175 @@
 ---
 name: UI Consistency
-description: Rules and constraints for making any UI change in 0canvas visually consistent with the Pass 1-5 design system.
+description: Rules and constraints for making any UI change in 0canvas consistent with the Cursor 3 Agents Window design system. Read this BEFORE writing any UI code.
 icon: Palette
 ---
 
-You are the UI-consistency skill for 0canvas. Every change you make to
-the Tauri shell (`src/shell/**`, `src/app-shell.tsx`), the engine
-canvas (`src/0canvas/**`), or any injected CSS
-(`src/shell/app-shell.css`, `src/0canvas/engine/styles/*.ts`,
-`src/0canvas/engine/0canvas-styles.ts`) must obey the following rules.
+You are the UI-consistency skill for 0canvas. 0canvas is an IDE modelled visually on the **Cursor 3 "Glass" / Agents Window**. Every UI change you make — in `src/shell/**`, `src/app-shell.tsx`, `src/0canvas/**`, or any CSS file — must obey these rules.
 
-If you're asked to add or modify UI, read these rules first, pick the
-correct tokens/sizes/radii, and only then write code. Do not invent
-new values.
+**Read `RULES.md` first, pick the correct tokens and primitives, and only then write code. Never invent new values.**
 
 ---
 
-## 1. Surface hierarchy (Pass 1)
+## 0. The non-negotiables
 
-| Role | Token | Where |
-|---|---|---|
-| Chrome (nav, tab bars, toolbars) | `--color--surface--floor` | Col 1 whole, Col 2 whole, Col 3 tab bar + workspace toolbar, Settings nav |
-| Content (canvas, body) | `--color--surface--0` | Col 3 canvas area, Settings content, preview iframe frame |
-| Elevated (cards, menus, inputs, hover) | `--color--surface--1` | dropdowns, inputs, row hover, chat composer card |
-| Emphasis (active, selected) | `--color--surface--2` | active tab bg, selected chip |
-| Separators | `--color--border--on-surface-0` | between chrome and content, column seams, tab bar underlines, card edges |
-
-**Never** use hardcoded hex values (`#000`, `#141414`, `#1a1a1a`, etc.)
-for backgrounds or borders. Always use a semantic token. Status colors
-(info / success / warning / critical) also use their semantic tokens
-(`--color--text--primary-light`, `--color--text--success`,
-`--color--text--warning`, `--color--text--critical-light`).
+1. **One token file.** `src/styles/design-tokens.css` is the single source of truth for every color, size, space, radius, shadow, duration, and z-index. You never create a second token file. You never put a raw value in a component that could have come from a token.
+2. **Semantic tokens only.** In components you reference `--surface-0`, `--text-on-surface`, `--primary`, `--radius-sm`, `--space-4`, `--text-12`, `--dur-fast`, `--z-dropdown`. You never reference a primitive token (`--grey-900`, `--blue-500`) outside `design-tokens.css`.
+3. **Primitives first.** For any visual element you import from `@/0canvas/ui` (`Button`, `Input`, `DropdownMenu`, `Card`, `Tabs`, `Dialog`, `Tooltip`, `Badge`, `Pill`, `StatusDot`, `Kbd`, `Divider`, `Icon`). If the variant you need doesn't exist, extend the primitive in `src/0canvas/ui/` — never write per-feature CSS.
+4. **`className` for layout only.** Tailwind utility classes allowed only for layout (`flex`, `gap-*`, `items-*`, `max-w-*`, `truncate`, `size-*`). Never color, typography, or spacing that bypasses tokens.
+5. **No inline visual `style={{}}`.** Allowed only for truly dynamic values (a swatch colour from user data, a runtime rect position, a drag-resize width).
+6. **No numeric z-index** in components. Use the token or let the primitive own it.
 
 ---
 
-## 2. Typography scale (Pass 2)
+## 1. Cursor 3 visual language reference
 
-The only font-sizes allowed in shell/engine CSS:
+When in doubt about *how* something should look, pull up a Cursor 3 Agents Window reference and match these qualities:
 
-| Size | Role | Weight |
-|---|---|---|
-| 10px | overline / tiny badges (uppercase, 0.05em tracking) | 600 |
-| 11px | metadata, hints, subtitles, timestamps | 400-500 |
-| 12px | controls — buttons, menu items, tabs, chips | 500 |
-| 13px | body — list rows, input text, default readable text | 400 |
-| 15px | headings — panel titles, card titles, modal heads | 600 |
-| 18px | page h1 (settings only) | 600 |
-
-Documented exceptions, scoped and intentional:
-
-- `6px` — the `.oc-source-badge` micro label inside a 14×14 overlay.
-- `14px` — icon font-size for lucide SVGs sized via font-size
-  (e.g. `.oc-auto-send-icon`).
-- `16px` — icon font-size inside 20×20 buttons (close, expand).
-- `.text-\[Npx\]` utility classes keep their class-name-encoded sizes.
-
-**Never** use 9, 14, or 16 for actual text. Always snap to the scale.
-If you need a size between two steps, pick the step above for
-headings and below for controls.
-
-Weight/color rules:
-
-- 400 body / 500 labels & controls / 600 headings & overline /
-  700 only for strong micro emphasis (badges, KBD chips).
-- Default color: `--color--text--on-surface` for body,
-  `--color--text--muted` for secondary, `--color--text--disabled`
-  for disabled/hint.
-- Hover/active states = tinted background, never a ring or border
-  change.
-
----
-
-## 3. Spacing & radius (Pass 3)
-
-### Padding
-
-- Buttons: `6px 10px` (sm) / `6px 12px` / `8px 12px` (lg) / `10px 14px`
-- Rows (list items, panel headers): `10px 12px` / `10px 14px`
-- Panels / cards: `12px 14px` / `14px 16px`
-- Dialogs: `16px` / `20px` / `24px`
-- Chip micro-padding (`1px 5px`, `1px 6px`, `3px 8px`) is intentional
-  fine-grain and is the ONLY place sub-8 values are allowed.
-
-### Gap / margin
-
-Only even values: 2 / 4 / 6 / 8 / 10 / 12 / 14 / 16. Never 3, 5, 7, 9,
-11, 13, 15 as gap/margin values.
-
-### Border radius (the only values allowed)
-
-| Radius | Role |
+| Aspect | Target |
 |---|---|
-| 4px | small (chips, badges, swatches, scrollbar) |
-| 6px | default (buttons, tabs, inputs, menu items) |
-| 8px | cards, menus, elevated surfaces |
-| 12px | modals, command palette, hero cards |
-| 50% | circles (status dots, avatars) |
-| 9999px | pills (branch chip, tag pill, segmented) |
-
-Never use 2, 3, 5, 7, 10, 14, or any other radius. Snap to the scale.
-
-### Icons
-
-- 16px for nav-tier icons
-- 14px for inline icons next to text
-- 12px for micro icons (inside pills, tight chips)
-- 10-11px for caret/chevron icons
+| Density | Dense, everything compact — 28px default controls, 13px body, 11px metadata |
+| Tones | Three surfaces: floor (chrome) → 0 (body) → 1 (cards/menus) → 2 (selected) |
+| Accent | Single blue, used only for run/active/selected/focus. **< 5% of pixels** |
+| Seams | 1px subtle border between regions. Never a tone step |
+| Hover | A 3-5% white tint on top of the surface. Never a full background swap |
+| Radii | 4 / 6 / 8 / 12 / pill only. 6px is default |
+| Font | System stack — `-apple-system, BlinkMacSystemFont, "SF Pro Text", ...`. Never Inter/web fonts |
+| Motion | 120ms default. Subtle, never jumpy |
+| Chrome | TitleBar (36px) + ActivityBar (48px) + Col 1 + Col 2 + Col 3 + StatusBar (22px) |
+| Icons | 14px for inline next to 13px text, 16px in nav |
 
 ---
 
-## 4. Primitives vocabulary (Pass 5)
+## 2. Surface hierarchy — what background goes where
 
-When you're creating a new control, use the primitive classes first:
+| Role | Token | Examples |
+|---|---|---|
+| Chrome (titlebar, activitybar, statusbar, tab bars) | `var(--surface-floor)` | `.oc-titlebar`, `.oc-activitybar`, `.oc-statusbar`, Col 2 tab bar |
+| Main body (canvas, page content, sidebar body) | `var(--surface-0)` | Col 3 canvas, settings body, sidebar list area |
+| Elevated (cards, inputs, menus, row hover targets) | `var(--surface-1)` | `<Card>`, `<Input>`, `DropdownMenu.Content`, hover state carrier |
+| Emphasis (selected tab, active chip) | `var(--surface-2)` | `data-active="true"` tab, pressed button |
 
-```jsx
-<button className="oc-btn">Label</button>              // ghost
-<button className="oc-btn oc-btn--primary">Save</button>
-<button className="oc-btn oc-btn--secondary">Back</button>
-<button className="oc-btn oc-btn--critical">Delete</button>
-<button className="oc-btn oc-btn--icon"><Icon/></button>
-<button className="oc-btn oc-btn--sm">small</button>
-<input  className="oc-input" />
-<div    className="oc-card">...</div>
+**Pairing rule:** element on `--surface-0` uses `--border-subtle`; on `--surface-1` uses `--border-default`; on `--surface-2` uses `--border-strong`.
+
+---
+
+## 3. Type scale — the only allowed text sizes
+
+| Size | Role | Weight | Example |
+|---|---|---|---|
+| `--text-10` (10px) | Overline, badges, tiny labels (uppercase, 0.05em tracking) | 600 | `<Badge>` |
+| `--text-11` (11px) | Metadata, timestamps, hints | 400-500 | status bar, timestamps |
+| `--text-12` (12px) | Controls: buttons, tabs, menu items, chips | 500 | `<Button>`, `<Tab>`, `<DropdownMenu.Item>` |
+| `--text-13` (13px) | Body: list rows, default readable text | 400 | list rows, descriptions |
+| `--text-15` (15px) | Panel titles, card headings | 600 | `<Card>` title, dialog title |
+| `--text-18` (18px) | Page titles (settings only) | 600 | Settings h1 |
+
+**Banned text sizes**: 9, 14, 16. Snap to the scale.
+
+---
+
+## 4. Space & radius
+
+**Space (padding / gap / margin):** ONLY even values, and only from `--space-1` (2px) through `--space-12` (24px). Never 3, 5, 7, 9, 11, 13, 15.
+
+**Radius:** ONLY `--radius-xs` (4), `--radius-sm` (6, DEFAULT), `--radius-md` (8), `--radius-lg` (12), `--radius-pill`, `--radius-circle`. Never 2, 3, 5, 7, 10, 14.
+
+---
+
+## 5. Primitives vocabulary — REQUIRED for new components
+
+```tsx
+import {
+  Button, Input, Textarea, Label, Kbd, Badge, StatusDot, Divider, Pill,
+  Card, CardHeader, CardBody, CardFooter,
+  Tabs, Tab,
+  DropdownMenu,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter,
+  Tooltip, Icon,
+} from "@/0canvas/ui";
 ```
 
-Existing per-feature button classes (`.oc-toolbar-btn`,
-`.oc-chat-iconbtn`, `.oc-git__btn`, etc.) already exist and share
-focus/disabled styling with the primitives via the legacy
-normalization block in `app-shell.css`. **Do not rename them**; when
-you touch a component, migrate its JSX to use the primitives and
-delete the per-feature class's duplicated CSS.
+Example (a chat composer pill with a model dropdown):
+
+```tsx
+<DropdownMenu>
+  <DropdownMenu.Trigger asChild>
+    <Pill><Sparkles size={12} />Claude 4.6 <ChevronDown size={10} /></Pill>
+  </DropdownMenu.Trigger>
+  <DropdownMenu.Content side="top" align="start">
+    <DropdownMenu.Label>Providers</DropdownMenu.Label>
+    <DropdownMenu.Item selected>Claude Sonnet 4.6</DropdownMenu.Item>
+    <DropdownMenu.Item>GPT-5.4</DropdownMenu.Item>
+    <DropdownMenu.Separator />
+    <DropdownMenu.Label>Local</DropdownMenu.Label>
+    <DropdownMenu.Item>Llama 3 70B</DropdownMenu.Item>
+  </DropdownMenu.Content>
+</DropdownMenu>
+```
+
+**Existing per-feature classes** (`.oc-toolbar-btn`, `.oc-chat-iconbtn`, `.oc-git__btn`, etc.) are deprecated. When you touch a component, migrate its JSX to the primitives above and delete the per-feature CSS.
 
 ---
 
-## 5. Shell layout rules
+## 6. Dropdowns, menus, overlays
 
-- **Col 1 (Nav, 248px, collapsible to 56px):** project list, chats
-  grouped under projects, localhost ports, profile menu.
-  `--color--surface--floor` with `border-right: 1px solid
-  --color--border--on-surface-0`.
-- **Col 2 (Workspace, 440px fixed):** horizontal tabs (Chat / Git /
-  Terminal / Env / Todo / Mission). `--color--surface--floor` with
-  right border. Tab style shared with Col 3 page tabs.
-- **Col 3 (Canvas, flex):** page tabs on top (Design / Themes /
-  Settings-when-active). Workspace toolbar below. Preview iframe +
-  right panel slot (StylePanel / Feedback). Col 3 chrome =
-  `--color--surface--floor`, canvas area = `--color--surface--0`.
+The `<DropdownMenu>` primitive already handles:
 
-Column seams are 1px `border-right` on col 1 and col 2. Never a tone
-step between columns — always a thin border.
+- Direction-aware placement (`side="top|bottom"`, `align="start|end"`)
+- Max-height + internal scroll (60vh cap)
+- Click-outside + Escape dismissal
+- z-index ownership (`--z-dropdown`)
+- Focus management
 
-Tab bar style (used in Col 2, Col 3 page tabs, Settings): horizontal
-flex, `padding: 10px 10px 4px`, `background:
-var(--color--surface--floor)`, `border-bottom: 1px solid
-var(--color--border--on-surface-0)`. Individual tabs:
-`padding: 5px 10px`, `border-radius: 6px`, `font-size: 12px`,
-`font-weight: 500`. Hover = `rgba(255,255,255,0.03)` bg, active =
-`rgba(255,255,255,0.06)` bg + `--color--text--on-surface`.
-
----
-
-## 6. Dropdowns, menus, and overlays
-
-- **Don't clip.** If a dropdown is anchored inside a container, make
-  sure the container does NOT have `overflow: hidden`. Z-index ≥ 25
-  for composer/toolbar menus, ≥ 100 for modals.
-- **Direction-aware.** The menu must open *away* from the nearest
-  clipping edge of its host column:
-  - Button near the **bottom** of its column → open upward
-    (`bottom: calc(100% + 6px)`), e.g. composer/footer pills.
-  - Button near the **top** of its column → open downward
-    (`top: calc(100% + 6px)`), e.g. chat-header pills, toolbar
-    buttons, workspace manager.
-  - Button on the **right edge** of its row → align the menu to the
-    right (`left: auto; right: 0`) so it doesn't overflow the
-    column's right edge.
-  - For the generic chat-dropdown primitive, apply the `.is-top` and
-    `.is-right` modifiers on `.oc-chat-dropdown-root` rather than
-    writing bespoke position CSS.
-- **Max height + scroll.** Dropdowns must cap height (`max-height:
-  60vh` or a fixed `max-height: 360px`) with `overflow-y: auto` so
-  long lists don't push the menu off-screen.
-- **Click-outside + Escape dismiss.** Every dropdown must handle
-  `mousedown` outside its root and the `Escape` key to close.
-- **Current selection mark.** Use a `Check` icon at the right edge of
-  the selected row, `--color--text--primary-light` for both the icon
-  and the label color.
-- **Section labels.** 10px uppercase, 0.05em tracking, `padding: 4px
-  10px`, color `--color--text--muted`.
-- **Dividers.** 1px `--color--border--on-surface-0`, margin `4px 2px`.
-- **Dropdown menu container.** `background:
-  --color--surface--1`, `border: 1px solid
-  --color--border--on-surface-1`, `border-radius: 8px`,
-  `box-shadow: var(--shadow-lg)`, `padding: 4px`.
-
-Existing reusable primitives inside the chat composer:
-`DropdownPill<T>` (single-level), `SkillPillButton`,
-`ModelPickerPill` (two-level provider → model), `BranchSwitcherPill`,
-`OpenProjectMenu`.
+You should NEVER write a bespoke `useState(open)` + positioned `<div>` dropdown again. Use the primitive. If it can't do what you need, extend it.
 
 ---
 
 ## 7. Empty states and placeholders
 
-- Use `--color--text--muted` for the copy.
-- 11-12px font-size.
-- Centered or left-aligned with comfortable padding (12-24px).
-- Never show raw technical strings (port numbers, process PIDs, MCP
-  protocol details). Human-readable only.
+- Copy color: `var(--text-muted)`
+- Size: 11-12px
+- Centered or left-aligned with 12-24px padding
+- No technical strings (PIDs, raw URLs, error codes). Human copy.
 
 ---
 
 ## 8. Interaction feedback
 
-- **Transition duration:** 120ms for color/background/border changes,
-  160ms for layout transitions (collapse, slide).
-- **Focus ring:** `outline: 2px solid var(--color--outline--focus)`,
-  `outline-offset: 1px`. Applied via `:focus-visible` on all
-  interactive primitives.
-- **Disabled state:** `opacity: 0.5; cursor: not-allowed`. Already
-  applied to `.oc-btn`, `.oc-input`, and the legacy button classes
-  listed in `app-shell.css` Pass 5 normalization.
+- Transition duration: `var(--dur-fast)` (120ms) for color/bg/border, `var(--dur-base)` (160ms) for layout
+- Easing: `var(--ease-standard)` unless dialogs → `var(--ease-emphasized)`
+- Focus ring: `outline: 2px solid var(--ring); outline-offset: 1px;` applied via `:focus-visible`
+- Disabled: `opacity: 0.5; cursor: not-allowed;` — already on every primitive
 
 ---
 
-## 9. Hard constraints (don't break these)
+## 9. Before you commit — checklist
 
-1. **Never modify `src/styles/variables.css`.** The design tokens are
-   fixed. Use them; don't add new ones, don't change values.
-2. **Never hardcode colors.** Every `background:`, `color:`, `border:`
-   must reference a token or a rgba() tint of white (for hover). The
-   only allowed rgba() uses are the hover/active tints
-   (`rgba(255,255,255,0.03)` and `rgba(255,255,255,0.06)`) and the
-   status-color alpha backgrounds (`rgba(37,99,235,0.12)` etc).
-3. **Never introduce a new button/input/card variant.** Use the
-   existing primitives. If truly new, extend the primitive's variant
-   list with a `--new-variant` modifier and document it here.
-4. **Never use `px` values off the spacing/radius scales.**
-5. **Never use font-sizes off the type scale.**
-6. **Never break HMR.** The engine's `injectStyles` handler accepts
-   HMR updates in place — don't add `overflow: hidden` to any
-   composer-like container that needs dropdowns to escape.
+- [ ] Surface tokens used, no hex bg / borders
+- [ ] Font sizes on the scale (10/11/12/13/15/18 only)
+- [ ] Paddings, gaps, radii on the scale
+- [ ] Every interactive element uses a primitive from `@/0canvas/ui`
+- [ ] No inline `style={{}}` with static visuals
+- [ ] No numeric `z-index` in components
+- [ ] Container doesn't clip the dropdown (`overflow: hidden` on dropdown-host is forbidden)
+- [ ] Focus-visible and disabled states read like the rest of the app
+- [ ] `pnpm check:ui` passes
+- [ ] `pnpm build:ui` compiles
 
 ---
 
-## 10. Before you commit
+## 10. Hard don'ts
 
-Run this checklist on every UI change:
-
-- [ ] Surface tokens used — no hex bg/borders.
-- [ ] Font-sizes match the scale.
-- [ ] Paddings / gaps / radii match the scales.
-- [ ] Icons at 14/16/18 (or 12 for micro in pills).
-- [ ] New dropdowns have click-outside + Esc dismiss.
-- [ ] Container does not clip the dropdown (no `overflow: hidden`).
-- [ ] Focus-visible and disabled states read like the rest of the
-      app.
-- [ ] No regression in Col 1 / Col 2 / Col 3 chrome alignment (same
-      tone, same border seam).
-- [ ] If you deleted a legacy class, grep the repo for remaining
-      references.
+1. **Never** add a new hex color anywhere except `design-tokens.css`.
+2. **Never** use a Tailwind color class (`bg-blue-500`, `text-red-600`, …).
+3. **Never** import `Inter` or any other web font. The system stack is deliberate.
+4. **Never** write a per-feature button / input / card class. Use primitives.
+5. **Never** set `z-index: <number>` in a component.
+6. **Never** use `font-size: 9|14|16`. Banned.
+7. **Never** inline `style={{ color, background, padding, margin, fontSize, border, borderRadius }}` for static visuals.
 
 ---
 
-## 11. Reference commits (for pattern examples)
+## 11. If you're about to add a token
 
-- Pass 1 surface unification: `f951eff`
-- Pass 2 type scale: `9ae0d80`
-- Pass 3 spacing/radius: `6863bdc`
-- Pass 4 settings-into-shell: `241132d`
-- Pass 5 primitive vocabulary: `c3c915c`
-- Col 3 AI removal: `6cd1c1c`
-- Project-grouping prominence: `ece2ff3`
-- Chat composer dropdowns wired (Effort + Permission): `3849781`
-
-When in doubt, look at how these commits shaped the codebase — not at
-older commits, which predate the design system.
+STOP. Ask a human. 99% of the time the token you want already exists under a semantic name in `design-tokens.css`. The 1% of the time you genuinely need a new token, it goes in `design-tokens.css` with an inline comment explaining when to use it, and the `RULES.md` Quick Decision Table is updated in the same commit.

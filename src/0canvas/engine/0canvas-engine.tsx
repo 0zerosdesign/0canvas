@@ -24,6 +24,7 @@ import React, { useState, useEffect, useCallback, useRef, type MouseEvent as Rea
 import ReactDOM from "react-dom";
 import { WorkspaceProvider, useWorkspace } from "../store/store";
 import { ScrollArea } from "../ui/scroll-area";
+import { Button } from "../ui";
 import { BridgeProvider, useBridge } from "../bridge/use-bridge";
 import { injectStyles, removeStyles } from "./0canvas-styles";
 import { cleanup } from "../inspector";
@@ -135,7 +136,9 @@ function ToggleButton({
   onClick: () => void;
 }) {
   return (
-    <button
+    <Button
+      variant="primary"
+      size="icon"
       onClick={onClick}
       title={`Open ZeroCanvas (Ctrl+Shift+${shortcut.toUpperCase()})`}
       data-0canvas="toggle"
@@ -156,7 +159,7 @@ function ToggleButton({
         <path d="M2 17l10 5 10-5" />
         <path d="M2 12l10 5 10-5" />
       </svg>
-    </button>
+    </Button>
   );
 }
 
@@ -478,7 +481,7 @@ export function EngineWorkspace({ onClose }: { onClose?: () => void }) {
                             <p className="oc-style-sub-hint">Click elements in the preview to add annotations.</p>
                           </div>
                         ) : (
-                          <div style={{ padding: "4px 10px" }}>
+                          <div style={{ padding: "var(--space-2) var(--space-5)" }}>
                             {state.feedbackItems.map((item) => (
                               <div key={item.id} className="oc-feedback-item">
                                 <div className="oc-feedback-item-header">

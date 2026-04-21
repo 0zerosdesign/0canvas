@@ -33,6 +33,7 @@ import {
   isInspecting,
   highlightElement,
 } from "../inspector";
+import { Input } from "../ui";
 
 export type VariantNodeData = {
   variant: VariantData;
@@ -188,9 +189,9 @@ ${ruleLines.join("\n")}</style>
   }, [id, dims.h, updateNode]);
 
   const statusColor =
-    variant.status === "pushed" ? "var(--color--base--primary)" :
-    variant.status === "finalized" ? "var(--color--status--success)" :
-    variant.status === "sent" ? "var(--color--text--primary-light)" : "var(--color--surface--2)";
+    variant.status === "pushed" ? "var(--primary)" :
+    variant.status === "finalized" ? "var(--status-success)" :
+    variant.status === "sent" ? "var(--text-primary-light)" : "var(--surface-2)";
 
   const statusLabel =
     variant.status === "pushed" ? "Pushed" :
@@ -201,7 +202,7 @@ ${ruleLines.join("\n")}</style>
   const hasActiveSelection = !!state.selectedElementId && state.selectionSource === "inspect" && state.activeVariantId === variant.id;
   const iframeInteractive = inspecting || hasActiveSelection;
 
-  const borderColor = selected ? "var(--color--outline--on-background)" : variant.status === "finalized" ? "var(--color--status--success)" : undefined;
+  const borderColor = selected ? "var(--primary)" : variant.status === "finalized" ? "var(--status-success)" : undefined;
 
   return (
     <div
@@ -243,29 +244,18 @@ ${ruleLines.join("\n")}</style>
         {/* Left: name + status */}
         <div style={{ display: "flex", alignItems: "center", gap: 5, flex: 1, minWidth: 0 }}>
           {editing ? (
-            <input
+            <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
               onBlur={handleRename}
               onKeyDown={(e) => e.key === "Enter" && handleRename()}
               autoFocus
-              style={{
-                flex: 1,
-                padding: "2px 6px",
-                background: "var(--color--surface--0)",
-                border: "1px solid var(--color--border--on-surface-1)",
-                borderRadius: 4,
-                color: "var(--color--text--on-surface)",
-                fontSize: 10,
-                fontFamily: "inherit",
-                outline: "none",
-              }}
             />
           ) : (
             <span
               className="oc-variant-name"
               onDoubleClick={() => setEditing(true)}
-              style={{ fontSize: 10, cursor: "text" }}
+              style={{ fontSize: "var(--text-10)", cursor: "text" }}
               title="Double-click to rename"
             >
               {variant.name}
@@ -308,11 +298,11 @@ ${ruleLines.join("\n")}</style>
           <span
             style={{
               fontSize: 9,
-              color: isResizing ? "var(--color--text--primary)" : "var(--color--text--muted)",
+              color: isResizing ? "var(--text-primary)" : "var(--text-muted)",
               fontFamily: "var(--font-mono)",
               fontVariantNumeric: "tabular-nums",
               padding: "1px 4px",
-              background: isResizing ? "color-mix(in srgb, var(--color--base--primary) 10%, transparent)" : "transparent",
+              background: isResizing ? "color-mix(in srgb, var(--primary) 10%, transparent)" : "transparent",
               borderRadius: 3,
               transition: "all 0.15s",
             }}
@@ -330,7 +320,7 @@ ${ruleLines.join("\n")}</style>
             <GitFork style={{ width: 10, height: 10 }} />
           </VBtn>
           <VBtn onClick={handleCopyHtml} title="Copy HTML">
-            {copied ? <Check style={{ width: 10, height: 10, color: "var(--color--status--success)" }} /> : <Copy style={{ width: 10, height: 10 }} />}
+            {copied ? <Check style={{ width: 10, height: 10, color: "var(--status-success)" }} /> : <Copy style={{ width: 10, height: 10 }} />}
           </VBtn>
           {variant.status === "draft" && (
             <VBtn onClick={() => onFinalize(variant.id)} accent title="Finalize">
@@ -344,7 +334,7 @@ ${ruleLines.join("\n")}</style>
           )}
           {canPushToMain && (
             <VBtn onClick={() => onPushToMain(variant.id)} title="Push to Main">
-              <ArrowUpToLine style={{ width: 10, height: 10, color: "var(--color--text--primary)" }} />
+              <ArrowUpToLine style={{ width: 10, height: 10, color: "var(--text-primary)" }} />
             </VBtn>
           )}
           <VBtn onClick={() => onDelete(variant.id)} danger title="Delete">
@@ -361,12 +351,12 @@ ${ruleLines.join("\n")}</style>
           height: "100%",
           position: "relative",
           overflow: "hidden",
-          background: "#fff",
+          background: "var(--surface-inverted)",
           borderRadius: 0,
-          border: `${selected ? 2.5 : 1}px solid ${selected ? "var(--color--outline--on-background)" : "var(--color--border--on-surface-0)"}`,
+          border: `${selected ? 2.5 : 1}px solid ${selected ? "var(--primary)" : "var(--border-subtle)"}`,
           boxShadow: selected
-            ? "0 0 0 1px var(--color--outline--on-background), 0 4px 20px rgba(37,99,235,0.1)"
-            : "0 4px 20px rgba(0,0,0,0.25)",
+            ? "0 0 0 1px var(--primary), var(--shadow-md)"
+            : "var(--shadow-md)",
         }}
       >
         <iframe
@@ -384,11 +374,11 @@ ${ruleLines.join("\n")}</style>
           }}
         />
         {inspecting && (
-          <div style={{ position: "absolute", top: 6, left: "50%", transform: "translateX(-50%)", zIndex: 10, pointerEvents: "none" }}>
+          <div style={{ position: "absolute", top: 6, left: "50%", transform: "translateX(-50%)", zIndex: "var(--z-panel)", pointerEvents: "none" }}>
             <div style={{
-              display: "flex", alignItems: "center", gap: 4, padding: "3px 8px",
-              borderRadius: 5, background: "var(--color--base--primary)", color: "var(--color--text--on-primary)", fontSize: 9,
-              boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+              display: "flex", alignItems: "center", gap: "var(--space-2)", padding: "var(--space-1) var(--space-4)",
+              borderRadius: "var(--radius-sm)", background: "var(--primary)", color: "var(--primary-foreground)", fontSize: "var(--text-10)",
+              boxShadow: "var(--shadow-md)",
             }}>
               <Crosshair style={{ width: 10, height: 10 }} />
               Click to inspect
@@ -398,15 +388,15 @@ ${ruleLines.join("\n")}</style>
         {isResizing && (
           <div style={{
             position: "absolute", inset: 0, display: "flex", alignItems: "center",
-            justifyContent: "center", zIndex: 20, pointerEvents: "none",
-            background: "rgba(0,0,0,0.15)",
+            justifyContent: "center", zIndex: "var(--z-panel)", pointerEvents: "none",
+            background: "var(--backdrop-weak)",
           }}>
             <div style={{
-              padding: "6px 12px", borderRadius: 6, background: "var(--color--surface--0)",
-              border: "1px solid var(--color--border--on-surface-0)", boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+              padding: "var(--space-3) var(--space-6)", borderRadius: "var(--radius-sm)", background: "var(--surface-0)",
+              border: "1px solid var(--border-subtle)", boxShadow: "var(--shadow-lg)",
             }}>
               <span style={{
-                fontSize: 12, fontWeight: 600, color: "var(--color--text--primary)",
+                fontSize: 12, fontWeight: 600, color: "var(--text-primary)",
                 fontFamily: "var(--font-mono)",
                 fontVariantNumeric: "tabular-nums",
               }}>
@@ -440,9 +430,9 @@ function VBtn({ children, onClick, active, accent, danger, title }: {
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       title={title}
       style={{
-        ...(active ? { background: "var(--color--base--primary)", color: "var(--color--text--on-primary)", border: "1px solid var(--color--base--primary)" } : {}),
-        ...(danger && !active ? { color: "var(--color--status--critical)" } : {}),
-        ...(accent && !active ? { color: "var(--color--status--success)" } : {}),
+        ...(active ? { background: "var(--primary)", color: "var(--text-on-primary)", border: "1px solid var(--primary)" } : {}),
+        ...(danger && !active ? { color: "var(--status-critical)" } : {}),
+        ...(accent && !active ? { color: "var(--status-success)" } : {}),
       }}
     >
       {children}

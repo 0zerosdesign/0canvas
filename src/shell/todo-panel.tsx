@@ -25,6 +25,7 @@ import {
   type TodoFile,
   type TodoItem,
 } from "../native/tauri-events";
+import { Button, Input } from "../0canvas/ui";
 
 function isTauriWebview(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -183,13 +184,15 @@ export function TodoPanel() {
         </h3>
         <div className="oc-todo__header-actions">
           {saving && <span className="oc-todo__saving">saving…</span>}
-          <button
+          <Button
+            variant="ghost"
+            size="icon-sm"
             className="oc-todo__icon-btn"
             onClick={refresh}
             title="Reload from disk"
           >
             <RefreshCw size={12} />
-          </button>
+          </Button>
         </div>
       </header>
 
@@ -204,14 +207,16 @@ export function TodoPanel() {
           const line = lines[i] as LineModel & { kind: "todo" };
           return (
             <div key={i} className={`oc-todo__row ${line.done ? "is-done" : ""}`}>
-              <button
+              <Button
+                variant="ghost"
+                size="icon-sm"
                 className="oc-todo__check"
                 onClick={() => updateLine(i, { done: !line.done })}
                 title={line.done ? "Mark open" : "Mark done"}
               >
                 {line.done ? <CheckSquare size={14} /> : <Square size={14} />}
-              </button>
-              <input
+              </Button>
+              <Input
                 className="oc-todo__text"
                 value={line.text}
                 placeholder="task description"
@@ -226,22 +231,24 @@ export function TodoPanel() {
                   }
                 }}
               />
-              <button
+              <Button
+                variant="ghost"
+                size="icon-sm"
                 className="oc-todo__icon-btn is-danger"
                 onClick={() => removeLine(i)}
                 title="Delete task"
               >
                 <Trash2 size={12} />
-              </button>
+              </Button>
             </div>
           );
         })}
       </div>
 
       <footer className="oc-todo__footer">
-        <button className="oc-todo__add" onClick={addItem}>
+        <Button variant="outline" size="sm" onClick={addItem}>
           <Plus size={13} /> Add task
-        </button>
+        </Button>
         <span className="oc-todo__path">.0canvas/todo.md</span>
       </footer>
 

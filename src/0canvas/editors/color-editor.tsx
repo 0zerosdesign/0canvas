@@ -15,6 +15,7 @@ import { ColorPicker } from "../themes/color-picker";
 import { useStyleChange } from "../bridge/use-bridge";
 import { useWorkspace } from "../store/store";
 import { applyStyle } from "../inspector";
+import { Button } from "../ui";
 
 interface ColorEditorProps {
   elementId: string;
@@ -95,9 +96,9 @@ export function ColorEditor({
               <AlertCircle size={12} />
             </span>
           )}
-          <button onClick={onClose} className="oc-panel-btn" title="Close">
+          <Button variant="ghost" size="icon-sm" onClick={onClose} title="Close">
             <X size={14} />
-          </button>
+          </Button>
         </div>
       </div>
 

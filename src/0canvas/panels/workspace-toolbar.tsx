@@ -21,6 +21,7 @@ import {
   buildCurrentProjectFile,
 } from "../../native/storage";
 import { projectFileToState } from "../format/oc-project";
+import { Button, Input } from "../ui";
 
 interface WorkspaceToolbarProps {
   onNavigate?: (route: string) => void;
@@ -85,7 +86,7 @@ export function WorkspaceToolbar({ onNavigate }: WorkspaceToolbarProps = {}) {
       <div className="oc-toolbar-section" data-tauri-drag-region>
         <div className="oc-toolbar-logo">
           <div className="oc-toolbar-logo-icon">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color--surface--0)" strokeWidth="2.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--surface-0)" strokeWidth="2.5">
               <path d="M12 2L2 7l10 5 10-5-10-5z" />
               <path d="M2 17l10 5 10-5" />
               <path d="M2 12l10 5 10-5" />
@@ -167,7 +168,8 @@ function ToolbarBtn({
   onClick: () => void;
 }) {
   return (
-    <button
+    <Button
+      variant="ghost"
       onClick={onClick}
       className={`oc-toolbar-btn ${active ? "is-active" : ""}`}
     >
@@ -177,7 +179,7 @@ function ToolbarBtn({
         <span className="oc-toolbar-badge">{badge}</span>
       )}
       {dot && <span className="oc-toolbar-conn-dot" />}
-    </button>
+    </Button>
   );
 }
 
@@ -236,7 +238,7 @@ function ProjectSwitcher({
           className={`oc-toolbar-project-dot ${currentProject.saved ? "is-saved" : "is-unsaved"}`}
         />
         {editing ? (
-          <input
+          <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
             onBlur={handleRename}
@@ -257,19 +259,21 @@ function ProjectSwitcher({
         {!currentProject.saved && (
           <span className="oc-toolbar-project-unsaved">unsaved</span>
         )}
-        <ChevronDown size={10} style={{ opacity: 0.5, color: "var(--color--text--muted)" }} />
+        <ChevronDown size={10} style={{ opacity: 0.5, color: "var(--text-muted)" }} />
       </div>
 
       {open && (
         <div data-0canvas="project-dropdown" className="oc-toolbar-dropdown" style={{ width: 260 }}>
           <div className="oc-toolbar-dropdown-inputrow">
-            <button
+            <Button
+              variant="primary"
+              size="sm"
               onClick={(e) => { e.stopPropagation(); onSave(); setOpen(false); }}
               className="oc-toolbar-project-save-btn"
             >
               <Save size={12} />
               Save Project
-            </button>
+            </Button>
           </div>
 
           <div className="oc-toolbar-dropdown-list is-tall">
@@ -320,12 +324,14 @@ function ProjectItem({
         </div>
       </div>
       {!active && (
-        <button
+        <Button
+          variant="destructive"
+          size="icon-sm"
           onClick={(e) => { e.stopPropagation(); onDelete(); }}
           className="oc-toolbar-project-delete"
         >
           <Trash2 size={12} />
-        </button>
+        </Button>
       )}
     </div>
   );

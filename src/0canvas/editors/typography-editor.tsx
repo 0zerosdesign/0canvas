@@ -22,6 +22,7 @@ import {
 import { useStyleChange } from "../bridge/use-bridge";
 import { useWorkspace } from "../store/store";
 import { applyStyle } from "../inspector";
+import { Input } from "../ui";
 
 interface TypographyEditorProps {
   elementId: string;
@@ -98,7 +99,7 @@ function NumberInput({
     <div className="oc-typo-field" title={tooltip}>
       <span className="oc-typo-field-label">{label}</span>
       {editing ? (
-        <input
+        <Input
           autoFocus
           className="oc-typo-input"
           value={editValue}

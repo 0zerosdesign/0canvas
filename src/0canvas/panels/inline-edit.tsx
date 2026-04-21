@@ -12,6 +12,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useWorkspace, findElement } from "../store/store";
 import { getElementById } from "../inspector";
+import { Input } from "../ui";
 
 export function InlineEdit() {
   const { state, dispatch } = useWorkspace();
@@ -126,7 +127,7 @@ export function InlineEdit() {
             <path d="m15 5 3 3" />
           </svg>
         </div>
-        <input
+        <Input
           ref={inputRef}
           type="text"
           className="oc-inline-edit-input"

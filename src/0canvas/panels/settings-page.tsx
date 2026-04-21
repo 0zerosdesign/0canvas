@@ -30,6 +30,7 @@ import {
   type AiAuthMethod,
   type AiThinkingEffort,
 } from "../store/store";
+import { Button, Input } from "../ui";
 import { ScrollArea } from "../ui/scroll-area";
 import {
   loadAiSettings,
@@ -83,19 +84,23 @@ export function SettingsPage() {
   return (
     <div className="oc-settings-page">
       <nav className="oc-settings-tabs" role="tablist" data-tauri-drag-region>
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           className="oc-settings-tab oc-settings-tab--back"
           onClick={handleBack}
           title="Back to app"
         >
           <ArrowLeft size={14} />
           <span>Back</span>
-        </button>
+        </Button>
         {SECTIONS.map(({ id, label, icon: Icon }) => {
           const isActive = active === id;
           return (
-            <button
+            <Button
               key={id}
+              variant="ghost"
+              size="sm"
               role="tab"
               aria-selected={isActive}
               className={`oc-settings-tab ${isActive ? "is-active" : ""}`}
@@ -104,7 +109,7 @@ export function SettingsPage() {
             >
               <Icon size={14} />
               <span>{label}</span>
-            </button>
+            </Button>
           );
         })}
       </nav>
@@ -227,14 +232,15 @@ function AiSettingsPanel() {
 
       <div className="oc-ai-tiles">
         {PROVIDER_TILES.map(({ value, label, glyph }) => (
-          <button
+          <Button
             key={value}
+            variant="ghost"
             className={`oc-ai-tile ${activeProvider === value ? "is-active" : ""}`}
             onClick={() => updateField("provider", value)}
           >
             {glyph}
             <span className="oc-ai-tile-label">{label}</span>
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -258,14 +264,15 @@ function AiSettingsPanel() {
         </div>
         <div className="oc-ai-effort-row">
           {EFFORT_OPTIONS.map((opt) => (
-            <button
+            <Button
               key={opt.value}
+              variant="ghost"
               className={`oc-ai-effort ${settings.thinkingEffort === opt.value ? "is-active" : ""}`}
               onClick={() => updateField("thinkingEffort", opt.value)}
             >
               <span className="oc-ai-effort-label">{opt.label}</span>
               <span className="oc-ai-effort-hint">{opt.hint}</span>
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -391,7 +398,8 @@ function AuthMethodBlock({
       </div>
 
       <div className="oc-ai-auth-tabs">
-        <button
+        <Button
+          variant="ghost"
           className={`oc-ai-auth-tab ${
             settings.authMethod === "subscription" ? "is-active is-info" : ""
           }`}
@@ -399,8 +407,9 @@ function AuthMethodBlock({
         >
           <Sparkles size={13} />
           <span>{subscriptionLabel}</span>
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="ghost"
           className={`oc-ai-auth-tab ${
             settings.authMethod === "api-key" ? "is-active is-success" : ""
           }`}
@@ -408,7 +417,7 @@ function AuthMethodBlock({
         >
           <Key size={13} />
           <span>API Key</span>
-        </button>
+        </Button>
       </div>
 
       {settings.authMethod === "subscription" && (
@@ -438,25 +447,28 @@ function AuthMethodBlock({
               <span>
                 Signed in via <code>{cliName}</code> login
               </span>
-              <button
+              <Button
+                variant="ghost"
+                size="icon-sm"
                 className="oc-ai-auth-icon"
                 title={`Sign in again (runs \`${cliName} login\` in Terminal)`}
                 onClick={handleOpenLogin}
               >
                 <LogOutIcon size={13} />
-              </button>
+              </Button>
             </div>
           ) : cliInstalled && !authed ? (
             <div className="oc-ai-auth-row">
               <span>
                 <code>{cliName}</code> is installed but not signed in yet.
               </span>
-              <button
-                className="oc-ai-save-btn is-compact"
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={handleOpenLogin}
               >
                 Sign in with {subscriptionLabel}
-              </button>
+              </Button>
             </div>
           ) : (
             <div className="oc-ai-auth-install">
@@ -471,8 +483,9 @@ function AuthMethodBlock({
                 copy the command above or open the install docs:
               </p>
               <div className="oc-ai-auth-row">
-                <button
-                  className="oc-ai-save-btn is-compact"
+                <Button
+                  variant="primary"
+                  size="sm"
                   onClick={() =>
                     shellOpenUrl(
                       cliName === "claude"
@@ -482,14 +495,15 @@ function AuthMethodBlock({
                   }
                 >
                   Open install docs
-                </button>
-                <button
-                  className="oc-ai-save-btn is-compact is-ghost"
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={handleOpenLogin}
                   title="Runs the login command in Terminal — only works after the CLI is installed"
                 >
                   Try login anyway
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -513,20 +527,20 @@ function AuthMethodBlock({
             )}
           </div>
           <div className="oc-ai-auth-row">
-            <input
+            <Input
               type="password"
-              className="oc-ai-field-input"
               placeholder="sk-…"
               value={apiKeyDraft}
               onChange={(e) => setApiKeyDraft(e.target.value)}
               autoComplete="off"
             />
-            <button
-              className="oc-ai-save-btn is-compact"
+            <Button
+              variant="primary"
+              size="sm"
               onClick={handleSaveKey}
             >
               Save
-            </button>
+            </Button>
           </div>
           <p className="oc-ai-card-hint">
             Pay-per-use with API credits. Get your key from{" "}
@@ -654,13 +668,15 @@ function LoginModal({
         <div className="oc-login-modal__head">
           <Sparkles size={14} />
           <strong>Sign in with {subscriptionLabel}</strong>
-          <button
+          <Button
+            variant="ghost"
+            size="icon-sm"
             className="oc-ai-auth-icon"
             onClick={onClose}
             title="Close"
           >
             ×
-          </button>
+          </Button>
         </div>
         <p className="oc-login-modal__lead">
           Terminal opened and is running <code>{cliName} login</code>.
@@ -700,18 +716,20 @@ function LoginModal({
           </p>
         )}
         <div className="oc-login-modal__actions">
-          <button
-            className="oc-ai-save-btn is-compact is-ghost"
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={onClose}
           >
             Cancel
-          </button>
-          <button
-            className="oc-ai-save-btn is-compact"
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
             onClick={() => void Promise.resolve(onDone())}
           >
             {success ? "Done" : "I'm signed in"}
-          </button>
+          </Button>
         </div>
         <div className="oc-login-modal__footer">
           Poll {pollCount}
@@ -807,8 +825,7 @@ function ApiKeysPanel() {
         <div key={slot.account} className="oc-api-keys__row">
           <label className="oc-ai-field">
             <span className="oc-ai-field-label">{slot.label}</span>
-            <input
-              className="oc-ai-field-input"
+            <Input
               type="password"
               autoComplete="off"
               placeholder={loaded[slot.account] ? slot.placeholder : "Loading…"}
@@ -821,13 +838,14 @@ function ApiKeysPanel() {
             <span className="oc-ai-field-hint">{slot.hint}</span>
           </label>
           <div className="oc-api-keys__row-actions">
-            <button
-              className="oc-ai-save-btn is-compact"
+            <Button
+              variant="primary"
+              size="sm"
               disabled={savingAccount === slot.account}
               onClick={() => handleSave(slot.account)}
             >
               {savingAccount === slot.account ? "Saving…" : "Save"}
-            </button>
+            </Button>
             {notice?.account === slot.account && (
               <span className="oc-api-keys__notice">{notice.text}</span>
             )}

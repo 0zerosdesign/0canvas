@@ -36,6 +36,7 @@ import { useWorkspace, type DesignToken, type ThemeColumn, type ThemeFile, type 
 import { parseCSSTokens, applyTokensToSource, parsePastedCSS, detectSyntax } from "./css-token-parser";
 import { ColorPicker } from "./color-picker";
 import { ScrollArea } from "../ui/scroll-area";
+import { Button, Input, Textarea } from "../ui";
 import { useBridge } from "../bridge/use-bridge";
 import {
   pickCssFile,
@@ -201,7 +202,7 @@ function TokenValueCell({
       )}
 
       {editing ? (
-        <input
+        <Input
           ref={inputRef}
           className="oc-theme-value-input"
           value={localValue}
@@ -276,15 +277,15 @@ function VariableDetailPanel({
   return (
     <div ref={panelRef} className="oc-theme-detail-panel">
       <div className="oc-theme-detail-header">
-        <GripVertical size={14} style={{ color: "var(--color--text--disabled)" }} />
+        <GripVertical size={14} style={{ color: "var(--text-disabled)" }} />
         <span className="oc-theme-detail-title">{token.name}</span>
-        <button className="oc-theme-detail-close" onClick={onClose}><X size={14} /></button>
+        <Button variant="ghost" size="icon-sm" onClick={onClose}><X size={14} /></Button>
       </div>
 
       <div className="oc-theme-detail-body">
         <div className="oc-theme-detail-field">
           <label>Name</label>
-          <input
+          <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
             onBlur={handleSave}
@@ -330,7 +331,7 @@ function VariableDetailPanel({
 
         <div className="oc-theme-detail-field">
           <label>Description</label>
-          <input
+          <Input
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             onBlur={handleSave}
@@ -341,7 +342,9 @@ function VariableDetailPanel({
 
         <div className="oc-theme-detail-field is-row">
           <label>Inherits</label>
-          <button
+          <Button
+            variant="ghost"
+            size="icon-sm"
             className={`oc-theme-detail-checkbox ${inherits ? "is-checked" : ""}`}
             onClick={() => {
               setInherits(!inherits);
@@ -349,22 +352,24 @@ function VariableDetailPanel({
             }}
           >
             {inherits && <Check size={12} />}
-          </button>
+          </Button>
         </div>
       </div>
 
       <div className="oc-theme-detail-footer">
-        <button
-          className="oc-theme-detail-action"
+        <Button
+          variant="ghost"
+          size="icon-sm"
           onClick={() => {
             navigator.clipboard.writeText(`${token.name}: ${defaultValue};`);
           }}
           title="Copy"
         >
           <Copy size={14} />
-        </button>
-        <button
-          className="oc-theme-detail-action is-danger"
+        </Button>
+        <Button
+          variant="destructive"
+          size="icon-sm"
           onClick={() => {
             dispatch({ type: "DELETE_TOKENS", fileId, tokenNames: [token.name] });
             onClose();
@@ -372,7 +377,7 @@ function VariableDetailPanel({
           title="Delete"
         >
           <Trash2 size={14} />
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -397,29 +402,26 @@ function RenameDialog({
       <div className="oc-theme-dialog" onClick={(e) => e.stopPropagation()}>
         <div className="oc-theme-dialog-header">
           <span>Rename selection</span>
-          <button onClick={onClose}><X size={14} /></button>
+          <Button variant="ghost" size="icon-sm" onClick={onClose}><X size={14} /></Button>
         </div>
         <div className="oc-theme-dialog-body">
           <div className="oc-theme-dialog-field">
             <label>Prefix</label>
-            <input value={prefix} onChange={(e) => setPrefix(e.target.value)} placeholder="-" spellCheck={false} />
+            <Input value={prefix} onChange={(e) => setPrefix(e.target.value)} placeholder="-" spellCheck={false} />
           </div>
           <div className="oc-theme-dialog-field">
             <label>Suffix</label>
-            <input value={suffix} onChange={(e) => setSuffix(e.target.value)} placeholder="-" spellCheck={false} />
+            <Input value={suffix} onChange={(e) => setSuffix(e.target.value)} placeholder="-" spellCheck={false} />
           </div>
           <div className="oc-theme-dialog-preview">
             Preview: <code>--{prefix}variable-name{suffix}</code>
           </div>
         </div>
         <div className="oc-theme-dialog-actions">
-          <button className="oc-theme-dialog-btn is-secondary" onClick={onClose}>Cancel</button>
-          <button
-            className="oc-theme-dialog-btn is-primary"
-            onClick={() => { onRename(prefix, suffix); onClose(); }}
-          >
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button variant="primary" onClick={() => { onRename(prefix, suffix); onClose(); }}>
             Rename
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -453,9 +455,9 @@ function AddVariableDropdown({ onAdd }: { onAdd: (syntax: TokenSyntax) => void }
 
   return (
     <div ref={ref} className="oc-theme-add-var">
-      <button className="oc-theme-header-btn" onClick={() => setOpen(!open)} title="Add variable">
+      <Button variant="ghost" size="icon-sm" onClick={() => setOpen(!open)} title="Add variable">
         <Plus size={14} />
-      </button>
+      </Button>
       {open && (
         <div className="oc-theme-add-dropdown">
           {options.map((opt) => (
@@ -584,6 +586,7 @@ export function ThemesPage() {
     if (!activeFile) return;
     const defaultValues: Record<string, string> = {};
     for (const theme of activeFile.themes) {
+      // Default emitted into the user's theme file when adding a new color token. check:ui ignore-next
       defaultValues[theme.id] = syntax === "color" ? "#000000" : syntax === "number" ? "0" : "0px";
     }
     const name = `--new-variable-${Date.now()}`;
@@ -686,10 +689,10 @@ export function ThemesPage() {
           <div className="oc-themes-empty-desc">
             Select a CSS file to extract and manage design tokens.
           </div>
-          <button className="oc-themes-empty-btn" onClick={handlePickFile}>
+          <Button variant="primary" onClick={handlePickFile}>
             <FileCode size={16} />
             Select CSS File
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -708,55 +711,63 @@ export function ThemesPage() {
             >
               <FileCode size={12} />
               {f.name}
-              <button
+              <Button
+                variant="ghost"
+                size="icon-sm"
                 className="oc-themes-file-tab-close"
                 onClick={(e) => { e.stopPropagation(); dispatch({ type: "REMOVE_THEME_FILE", id: f.id }); }}
               >
                 <X size={10} />
-              </button>
+              </Button>
             </button>
           ))}
-          <button className="oc-themes-file-add" onClick={handlePickFile} title="Add CSS file">
+          <Button variant="ghost" size="icon-sm" onClick={handlePickFile} title="Add CSS file">
             <Plus size={14} />
-          </button>
+          </Button>
         </div>
 
         <div className="oc-themes-file-actions">
-          <button
-            className="oc-themes-action-btn"
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={() => setPasteMode(!pasteMode)}
             title="Paste CSS variables"
           >
             <ClipboardPaste size={14} />
-          </button>
-          <button
-            className="oc-themes-action-btn"
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={syncToFile}
             title="Sync to file"
           >
             <RefreshCw size={14} />
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Paste overlay */}
       {pasteMode && (
         <div className="oc-themes-paste-bar">
-          <textarea
+          <Textarea
             className="oc-themes-paste-input"
-            placeholder="Paste CSS variables here...&#10;&#10;--color-primary: #3B82F6;&#10;--spacing-md: 16px;"
+            // Placeholder TEXT (not an applied color). check:ui ignore-line
+            placeholder={
+              // Example CSS shown in a textarea placeholder (not an applied color). check:ui ignore-next
+              "Paste CSS variables here...\n\n--color-primary: #3B82F6;\n--spacing-md: 16px;"
+            }
             value={pasteText}
             onChange={(e) => setPasteText(e.target.value)}
             rows={5}
             autoFocus
           />
           <div className="oc-themes-paste-actions">
-            <button className="oc-theme-dialog-btn is-secondary" onClick={() => { setPasteMode(false); setPasteText(""); }}>
+            <Button variant="ghost" onClick={() => { setPasteMode(false); setPasteText(""); }}>
               Cancel
-            </button>
-            <button className="oc-theme-dialog-btn is-primary" onClick={handlePasteCSS}>
+            </Button>
+            <Button variant="primary" onClick={handlePasteCSS}>
               Import
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -765,26 +776,26 @@ export function ThemesPage() {
       <div className="oc-themes-toolbar">
         <div className="oc-themes-search">
           <Search size={14} />
-          <input
+          <Input
             placeholder="Search"
             value={themesState.searchQuery}
             onChange={(e) => dispatch({ type: "SET_THEME_SEARCH", query: e.target.value })}
             spellCheck={false}
           />
           {themesState.searchQuery && (
-            <button className="oc-themes-search-clear" onClick={() => dispatch({ type: "SET_THEME_SEARCH", query: "" })}>
+            <Button variant="ghost" size="icon-sm" onClick={() => dispatch({ type: "SET_THEME_SEARCH", query: "" })}>
               <X size={12} />
-            </button>
+            </Button>
           )}
         </div>
 
         {hasSelection && (
           <div className="oc-themes-selection-bar">
-            <button className="oc-themes-sel-btn" onClick={handleDeselectAll}>Deselect</button>
-            <button className="oc-themes-sel-btn" onClick={() => setRenameOpen(true)}>Rename</button>
-            <button className="oc-themes-sel-btn is-danger" onClick={handleBatchDelete}>
+            <Button variant="ghost" size="sm" onClick={handleDeselectAll}>Deselect</Button>
+            <Button variant="ghost" size="sm" onClick={() => setRenameOpen(true)}>Rename</Button>
+            <Button variant="destructive" size="icon-sm" onClick={handleBatchDelete}>
               <Trash2 size={12} />
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -813,14 +824,14 @@ export function ThemesPage() {
                     <div className="oc-themes-th-theme-inner">
                       {theme.name}
                       {theme.isDefault && <span className="oc-themes-default-badge">Default</span>}
-                      <button className="oc-themes-th-menu"><MoreHorizontal size={12} /></button>
+                      <Button variant="ghost" size="icon-sm"><MoreHorizontal size={12} /></Button>
                     </div>
                   </th>
                 ))}
                 <th className="oc-themes-th-add">
-                  <button className="oc-theme-header-btn" onClick={handleAddTheme} title="Add theme">
+                  <Button variant="ghost" size="icon-sm" onClick={handleAddTheme} title="Add theme">
                     <Plus size={14} />
-                  </button>
+                  </Button>
                 </th>
               </tr>
             </thead>

@@ -64,7 +64,7 @@ function ScrollBar({
       <ScrollAreaPrimitive.ScrollAreaThumb
         data-slot="scroll-area-thumb"
         style={{
-          background: "var(--color--surface--1)",
+          background: "var(--surface-1)",
           position: "relative",
           flex: "1 1 0%",
           borderRadius: "9999px",

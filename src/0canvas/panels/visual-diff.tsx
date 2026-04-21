@@ -10,6 +10,7 @@
 
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { X } from "lucide-react";
+import { Button } from "../ui";
 
 interface VisualDiffProps {
   /** The previous variant HTML/CSS (before the AI change) */
@@ -123,9 +124,9 @@ export function VisualDiff({
             <span className="oc-vdiff-title">Visual Diff</span>
             <span className="oc-vdiff-variant-name">{variantName}</span>
           </div>
-          <button className="oc-vdiff-close" onClick={onClose} title="Close (Esc)">
+          <Button variant="ghost" size="icon-sm" onClick={onClose} title="Close (Esc)">
             <X size={16} />
-          </button>
+          </Button>
         </div>
 
         {/* Comparison area */}

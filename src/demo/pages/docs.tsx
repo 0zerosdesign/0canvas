@@ -164,7 +164,7 @@ function CopyButton({ text }: { text: string }) {
       type="button"
     >
       {copied ? (
-        <Check className="h-4 w-4 text-[var(--color--status--success)]" />
+        <Check className="h-4 w-4 text-[var(--status-success)]" />
       ) : (
         <Copy className="h-4 w-4" />
       )}
@@ -178,7 +178,7 @@ function CodeBlock({ code, lang = "bash" }: { code: string; lang?: string }) {
       <div className="flex items-center justify-between px-4 pb-0 pt-4">
         <span className="demo-code-label">{lang}</span>
       </div>
-      <pre className="overflow-x-auto px-4 pb-4 pt-3 font-mono text-[12.5px] leading-7 text-[var(--color--text--on-surface)]">
+      <pre className="overflow-x-auto px-4 pb-4 pt-3 font-mono text-[12.5px] leading-7 text-[var(--text-on-surface)]">
         <code>{code}</code>
       </pre>
       <CopyButton text={code} />
@@ -199,12 +199,12 @@ function SectionHeading({
     <div className="mb-8 flex items-end justify-between gap-4">
       <div className="space-y-3">
         {eyebrow ? (
-          <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--color--text--muted)]">
+          <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
             {eyebrow}
           </p>
         ) : null}
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--color--border--on-surface-0)] bg-white/80 text-[var(--color--text--primary)] shadow-[0_10px_25px_rgba(121,95,63,0.08)]">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--border-subtle)] bg-white/80 text-[var(--text-primary)] shadow-[0_10px_25px_rgba(121,95,63,0.08)]">
             {icon}
           </div>
           <h2 className="text-[1.75rem] font-semibold tracking-[-0.03em] text-foreground">
@@ -262,7 +262,7 @@ function ShortcutGroup({
       <div className="space-y-1">
         {rows.map((row) => (
           <div
-            className="flex items-center justify-between border-b border-[var(--color--border--on-surface-0)] py-3 last:border-0"
+            className="flex items-center justify-between border-b border-[var(--border-subtle)] py-3 last:border-0"
             key={row.keys}
           >
             <span className="text-[0.9rem] text-muted-foreground">{row.action}</span>
@@ -281,7 +281,7 @@ function HeroPreview() {
       <div className="relative z-10 space-y-4">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="mb-2 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--color--text--muted)]">
+            <p className="mb-2 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
               Preview Surface
             </p>
             <h2 className="max-w-[14ch] text-[1.7rem] font-semibold leading-tight tracking-[-0.04em] text-foreground">
@@ -295,25 +295,25 @@ function HeroPreview() {
           <div className="demo-soft-card demo-card p-4">
             <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Eye className="h-4 w-4 text-[var(--color--text--primary)]" />
+                <Eye className="h-4 w-4 text-[var(--text-primary)]" />
                 <span className="text-[0.82rem] font-semibold text-foreground">
                   Inspect mode
                 </span>
               </div>
               <span className="demo-badge demo-badge-primary">Live DOM</span>
             </div>
-            <div className="rounded-[1rem] border border-[var(--color--border--on-surface-0)] bg-white/80 p-4">
-              <div className="mb-3 h-2 w-16 rounded-full bg-[var(--color--surface--2)]" />
+            <div className="rounded-[1rem] border border-[var(--border-subtle)] bg-white/80 p-4">
+              <div className="mb-3 h-2 w-16 rounded-full bg-[var(--surface-2)]" />
               <div className="mb-2 flex items-center gap-2">
-                <div className="h-9 w-9 rounded-xl bg-[var(--color--base--primary)]/12" />
+                <div className="h-9 w-9 rounded-xl bg-[var(--primary)]/12" />
                 <div className="new">
-                  <div className="h-2 w-28 rounded-full bg-[var(--color--surface--2)]" />
-                  <div className="h-2 w-16 rounded-full bg-[var(--color--surface--2)]" />
+                  <div className="h-2 w-28 rounded-full bg-[var(--surface-2)]" />
+                  <div className="h-2 w-16 rounded-full bg-[var(--surface-2)]" />
                 </div>
               </div>
               <div className="flex gap-2">
-                <div className="h-10 flex-1 rounded-2xl border border-[var(--color--border--on-surface-0)] bg-[var(--color--surface--1)]" />
-                <div className="h-10 w-16 rounded-2xl bg-[var(--color--base--primary)]/14" />
+                <div className="h-10 flex-1 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-1)]" />
+                <div className="h-10 w-16 rounded-2xl bg-[var(--primary)]/14" />
               </div>
             </div>
           </div>
@@ -327,23 +327,23 @@ function HeroPreview() {
                 </span>
               </div>
               <div className="space-y-2 new">
-                <div className="rounded-xl border border-[var(--color--border--on-surface-0)] bg-white/80 px-3 py-2 text-[0.78rem] text-muted-foreground">
-                  gap: <span className="font-mono text-[var(--color--text--primary)]">24px</span>
+                <div className="rounded-xl border border-[var(--border-subtle)] bg-white/80 px-3 py-2 text-[0.78rem] text-muted-foreground">
+                  gap: <span className="font-mono text-[var(--text-primary)]">24px</span>
                 </div>
-                <div className="rounded-xl border border-[var(--color--border--on-surface-0)] bg-white/80 px-3 py-2 text-[0.78rem] text-muted-foreground">
-                  radius: <span className="font-mono text-[var(--color--text--primary)]">20px</span>
+                <div className="rounded-xl border border-[var(--border-subtle)] bg-white/80 px-3 py-2 text-[0.78rem] text-muted-foreground">
+                  radius: <span className="font-mono text-[var(--text-primary)]">20px</span>
                 </div>
               </div>
             </div>
 
             <div className="demo-soft-card demo-card p-4">
               <div className="mb-3 flex items-center gap-2">
-                <Send className="h-4 w-4 text-[var(--color--status--success)]" />
+                <Send className="h-4 w-4 text-[var(--status-success)]" />
                 <span className="text-[0.82rem] font-semibold text-foreground">
                   Agent handoff
                 </span>
               </div>
-              <div className="rounded-xl border border-[var(--color--border--on-surface-0)] bg-white/80 p-3 text-[0.78rem] leading-6 text-muted-foreground">
+              <div className="rounded-xl border border-[var(--border-subtle)] bg-white/80 p-3 text-[0.78rem] leading-6 text-muted-foreground">
                 “Tighten hero spacing and mute the callout border.”
               </div>
             </div>
@@ -357,10 +357,10 @@ function HeroPreview() {
 export default function DocsPage() {
   return (
     <div className="demo-page min-h-screen bg-background">
-      <nav className="sticky top-0 z-50 border-b border-[var(--color--border--on-surface-0)] bg-[rgba(253,249,242,0.78)] backdrop-blur-xl">
+      <nav className="sticky top-0 z-50 border-b border-[var(--border-subtle)] bg-[rgba(253,249,242,0.78)] backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-[1120px] items-center justify-between px-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--color--base--primary)] text-white shadow-[0_14px_30px_rgba(33,104,105,0.24)]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--primary)] text-white shadow-[0_14px_30px_rgba(33,104,105,0.24)]">
               <Sparkles className="h-4 w-4" />
             </div>
             <div>
@@ -397,7 +397,7 @@ export default function DocsPage() {
             className="demo-card demo-reveal flex items-start gap-3 p-4 text-[#000]"
             style={{ animationDelay: "0.06s" }}
           >
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[var(--color--status--warning)]" />
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[var(--status-warning)]" />
             <div>
               <p className="mb-1 text-[0.95rem] font-semibold">
                 Not published to npm yet
@@ -457,7 +457,7 @@ export default function DocsPage() {
 
           <div className="demo-card mb-6 p-5">
             <p className="text-[0.95rem] leading-7 text-muted-foreground">
-              <strong className="text-[var(--color--text--primary)]">Use this until npm publishing is ready.</strong>{" "}
+              <strong className="text-[var(--text-primary)]">Use this until npm publishing is ready.</strong>{" "}
               Pull the package directly from the repository, then add the overlay to your app shell.
             </p>
           </div>
@@ -524,10 +524,10 @@ export default function DocsPage() {
                   {API_ROWS.map((row) => (
                     <tr key={row.prop}>
                       <td>
-                        <code className="font-mono text-[var(--color--text--primary)]">{row.prop}</code>
+                        <code className="font-mono text-[var(--text-primary)]">{row.prop}</code>
                       </td>
                       <td>
-                        <code className="font-mono text-[var(--color--status--warning)]">{row.type}</code>
+                        <code className="font-mono text-[var(--status-warning)]">{row.type}</code>
                       </td>
                       <td>
                         <code className="font-mono text-muted-foreground">{row.defaultValue}</code>
@@ -589,7 +589,7 @@ export default function DocsPage() {
                   </div>
                 </div>
 
-                <code className="block rounded-2xl border border-[var(--color--border--on-surface-0)] bg-white/75 px-3 py-3 font-mono text-[0.74rem] leading-6 text-[var(--color--text--primary)]">
+                <code className="block rounded-2xl border border-[var(--border-subtle)] bg-white/75 px-3 py-3 font-mono text-[0.74rem] leading-6 text-[var(--text-primary)]">
                   {ide.cmd}
                 </code>
               </div>
@@ -685,7 +685,7 @@ No server · No proxy · No iframe · Direct DOM inspection`}
               <div className="space-y-1">
                 {RUNTIME_DEPS.map((dep) => (
                   <div
-                    className="flex items-center justify-between border-b border-[var(--color--border--on-surface-0)] py-3 last:border-0"
+                    className="flex items-center justify-between border-b border-[var(--border-subtle)] py-3 last:border-0"
                     key={dep.name}
                   >
                     <code className="font-mono text-[0.8rem] text-foreground">{dep.name}</code>
@@ -702,7 +702,7 @@ No server · No proxy · No iframe · Direct DOM inspection`}
               <div className="space-y-1">
                 {PEER_DEPS.map((dep) => (
                   <div
-                    className="flex items-center justify-between border-b border-[var(--color--border--on-surface-0)] py-3 last:border-0"
+                    className="flex items-center justify-between border-b border-[var(--border-subtle)] py-3 last:border-0"
                     key={dep.name}
                   >
                     <code className="font-mono text-[0.8rem] text-foreground">{dep.name}</code>

@@ -49,6 +49,7 @@ import {
   type GitConflict,
 } from "../native/tauri-events";
 import { getSetting, setSetting } from "../native/settings";
+import { Button, Textarea } from "../0canvas/ui";
 
 const FORCE_PUSH_KEY = "git-allow-force-push";
 
@@ -108,6 +109,9 @@ function isCssPath(p: string): boolean {
 }
 
 function PreviewFrame({ css, label }: { css: string; label: string }) {
+  // Inline HTML for a sandboxed iframe — CSS custom properties from
+  // the parent document are not inherited, so literal colors are
+  // required here. check:ui ignore-next
   const html = `<!doctype html><html><head><style>${css}\nhtml,body{margin:0;padding:16px;font-family:system-ui,sans-serif;font-size:13px;color:#ddd;background:#1a1a1a}</style></head><body><div class="oc-preview-sample"><button class="oc-preview-btn">Sample</button><h3>Heading</h3><p>Paragraph of body text.</p></div></body></html>`;
   return (
     <div className="oc-git__preview">
@@ -151,20 +155,24 @@ function VisualDiff({ path, fallbackDiff }: {
   return (
     <div className="oc-git__visual">
       <div className="oc-git__visual-tabs">
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           className={`oc-git__visual-tab ${mode === "visual" ? "is-active" : ""}`}
           onClick={() => setMode("visual")}
           title="Rendered before/after"
         >
           <Eye size={11} /> Visual
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
           className={`oc-git__visual-tab ${mode === "text" ? "is-active" : ""}`}
           onClick={() => setMode("text")}
           title="Raw text diff"
         >
           <FileText size={11} /> Text
-        </button>
+        </Button>
       </div>
       {mode === "text" && fallbackDiff && <DiffView diff={fallbackDiff} />}
       {mode === "visual" && err && (
@@ -205,35 +213,38 @@ function FileRow({
   return (
     <div className={`oc-git__file ${expanded ? "is-expanded" : ""}`}>
       <div className="oc-git__file-header">
-        <button
-          className="oc-git__caret"
+        <Button
+          variant="ghost"
+          size="icon-sm"
           onClick={onToggle}
           title={expanded ? "Hide diff" : "Show diff"}
         >
           {expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-        </button>
+        </Button>
         <FileKindIcon kind={file.kind} />
         <span className="oc-git__file-path" title={file.path}>
           {file.path}
         </span>
         {onDiscard && (
-          <button
-            className="oc-git__file-action"
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={onDiscard}
             disabled={busy}
             title="Discard changes"
           >
             <Trash2 size={12} />
-          </button>
+          </Button>
         )}
-        <button
-          className="oc-git__file-action"
+        <Button
+          variant="ghost"
+          size="icon-sm"
           onClick={onStageToggle}
           disabled={busy}
           title={file.staged ? "Unstage" : "Stage"}
         >
           {file.staged ? <Minus size={12} /> : <Plus size={12} />}
-        </button>
+        </Button>
       </div>
       {expanded && (
         <VisualDiff path={file.path} fallbackDiff={diff} />
@@ -301,7 +312,7 @@ function BranchMenu({
 
   return (
     <div className="oc-git__branch-menu-root" ref={rootRef}>
-      <button
+      <Button
         className="oc-git__branch"
         onClick={() => setOpen((v) => !v)}
         title={`Branch: ${current} — click to switch`}
@@ -309,7 +320,7 @@ function BranchMenu({
         <GitBranch size={13} />
         <span>{current}</span>
         <ChevronDown size={11} />
-      </button>
+      </Button>
       {open && (
         <div className="oc-git__branch-menu">
           <input
@@ -424,13 +435,15 @@ function CommitRow({
       <code className="oc-git__commit-sha">{commit.shortSha}</code>
       <span className="oc-git__commit-summary">{commit.summary}</span>
       <span className="oc-git__commit-author">{commit.author}</span>
-      <button
+      <Button
+        variant="ghost"
+        size="icon-sm"
         className="oc-git__commit-more"
         onClick={() => setOpen((v) => !v)}
         title="Commit actions"
       >
         <MoreHorizontal size={12} />
-      </button>
+      </Button>
       {open && (
         <div className="oc-git__commit-menu">
           <button onClick={() => { onCopySha(); setOpen(false); }}>
@@ -757,9 +770,9 @@ export function GitPanel() {
           Run <code>git init</code> in the Terminal tab to start tracking
           changes.
         </p>
-        <button className="oc-git__refresh-btn" onClick={() => refresh()}>
+        <Button variant="outline" size="sm" onClick={() => refresh()}>
           <RefreshCw size={12} /> Retry
-        </button>
+        </Button>
       </div>
     );
   }
@@ -784,8 +797,9 @@ export function GitPanel() {
         <div className="oc-git__remote">
           {status.hasUpstream ? (
             <>
-              <button
-                className="oc-git__btn"
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={handlePull}
                 disabled={busy || status.behind === 0}
                 title={
@@ -799,9 +813,10 @@ export function GitPanel() {
                 {status.behind > 0 && (
                   <span className="oc-git__badge">{status.behind}</span>
                 )}
-              </button>
-              <button
-                className="oc-git__btn is-primary"
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={handlePush}
                 disabled={busy || status.ahead === 0}
                 title={
@@ -815,27 +830,29 @@ export function GitPanel() {
                 {status.ahead > 0 && (
                   <span className="oc-git__badge">{status.ahead}</span>
                 )}
-              </button>
+              </Button>
               {allowForcePush && (
-                <button
-                  className="oc-git__btn is-danger"
+                <Button
+                  variant="destructive"
+                  size="sm"
                   onClick={handleForcePush}
                   disabled={busy}
                   title="Force-push (overrides remote)"
                 >
                   <ArrowUpFromLine size={12} />
                   <span>Force</span>
-                </button>
+                </Button>
               )}
               {prUrl && (
-                <button
-                  className="oc-git__btn"
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={handleOpenPr}
                   title="Open a PR on GitHub"
                 >
                   <ExternalLink size={12} />
                   <span>Open PR</span>
-                </button>
+                </Button>
               )}
             </>
           ) : (
@@ -843,13 +860,14 @@ export function GitPanel() {
               no upstream
             </span>
           )}
-          <button
-            className="oc-git__icon-btn"
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={() => refresh()}
             title="Refresh"
           >
             <RefreshCw size={12} />
-          </button>
+          </Button>
         </div>
       </header>
 
@@ -868,22 +886,24 @@ export function GitPanel() {
                 <span className="oc-git__file-path" title={c.path}>
                   {c.path}
                 </span>
-                <button
-                  className="oc-git__btn"
+                <Button
+                  variant="ghost"
+                  size="sm"
                   disabled={busy || !c.hasOurs}
                   onClick={() => handleResolveOurs(c.path)}
                   title="Keep mine (ours)"
                 >
                   Keep mine
-                </button>
-                <button
-                  className="oc-git__btn"
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   disabled={busy || !c.hasTheirs}
                   onClick={() => handleResolveTheirs(c.path)}
                   title="Keep theirs"
                 >
                   Keep theirs
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
@@ -901,13 +921,14 @@ export function GitPanel() {
             <span className="oc-git__section-count">{status.unstaged.length}</span>
           </span>
           {status.unstaged.length > 0 && (
-            <button
-              className="oc-git__section-action"
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={handleStageAll}
               disabled={busy}
             >
               Stage all
-            </button>
+            </Button>
           )}
         </div>
         {status.unstaged.length === 0 ? (
@@ -940,13 +961,14 @@ export function GitPanel() {
             <span className="oc-git__section-count">{status.staged.length}</span>
           </span>
           {status.staged.length > 0 && (
-            <button
-              className="oc-git__section-action"
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={handleUnstageAll}
               disabled={busy}
             >
               Unstage all
-            </button>
+            </Button>
           )}
         </div>
         {status.staged.length === 0 ? (
@@ -973,18 +995,18 @@ export function GitPanel() {
 
       <section className="oc-git__commit">
         <div className="oc-git__commit-head">
-          <button
-            className="oc-git__btn"
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handleSuggest}
             disabled={suggesting || status.staged.length === 0}
             title="Suggest a commit message from the staged changes"
           >
             <Sparkles size={12} />
             <span>{suggesting ? "Suggesting…" : "Suggest"}</span>
-          </button>
+          </Button>
         </div>
-        <textarea
-          className="oc-git__message"
+        <Textarea
           placeholder={
             status.staged.length === 0
               ? "Stage some changes, then describe what you changed…"
@@ -1006,13 +1028,14 @@ export function GitPanel() {
               ? `${totalChanges} changed file${totalChanges === 1 ? "" : "s"}`
               : "Clean working tree"}
           </span>
-          <button
-            className="oc-git__btn is-primary"
+          <Button
+            variant="primary"
+            size="sm"
             onClick={handleCommit}
             disabled={busy || !message.trim() || status.staged.length === 0}
           >
             Commit
-          </button>
+          </Button>
         </div>
         <label className="oc-git__toggle">
           <input
@@ -1031,13 +1054,14 @@ export function GitPanel() {
         <div className="oc-git__section-header">
           <span>Recent commits</span>
           {commits.length >= logLimit && (
-            <button
-              className="oc-git__section-action"
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={loadMoreLog}
               disabled={busy}
             >
               Show more
-            </button>
+            </Button>
           )}
         </div>
         {commits.length === 0 ? (

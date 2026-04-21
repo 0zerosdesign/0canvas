@@ -3,6 +3,7 @@
 // ──────────────────────────────────────────────────────────
 
 import React, { useState, useRef, useCallback, useEffect } from "react";
+import { Button, Input } from "../ui";
 
 // ── Color conversion helpers ─────────────────────────────
 
@@ -185,13 +186,13 @@ export function ColorPicker({ value, tokenName, onChange, onClose }: ColorPicker
     <div ref={containerRef} className="oc-color-picker" onClick={(e) => e.stopPropagation()}>
       <div className="oc-color-picker-header">
         <span className="oc-color-picker-name">{tokenName}</span>
-        <button className="oc-color-picker-close" onClick={onClose}>&times;</button>
+        <Button variant="ghost" size="icon-sm" onClick={onClose}>&times;</Button>
       </div>
 
       {/* Hex input */}
       <div className="oc-color-picker-hex-row">
         <div className="oc-color-picker-swatch" style={{ background: currentColor }} />
-        <input
+        <Input
           className="oc-color-picker-hex-input"
           value={hexInput}
           onChange={handleHexChange}
@@ -205,7 +206,7 @@ export function ColorPicker({ value, tokenName, onChange, onClose }: ColorPicker
         className="oc-color-picker-area"
         onMouseDown={slArea.onMouseDown}
         style={{
-          background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, ${pureHueColor})`,
+          background: `linear-gradient(to top, var(--surface-absolute), transparent), linear-gradient(to right, var(--surface-absolute-inverted), ${pureHueColor})`,
         }}
       >
         <div
@@ -245,7 +246,7 @@ export function ColorPicker({ value, tokenName, onChange, onClose }: ColorPicker
       <div className="oc-color-picker-values">
         <div className="oc-color-picker-value-group">
           <label>Hue</label>
-          <input
+          <Input
             type="number" min="0" max="360"
             value={hue}
             onChange={(e) => { const v = parseInt(e.target.value) || 0; setHue(v); emitChange(v, sat, light, alpha); }}
@@ -253,7 +254,7 @@ export function ColorPicker({ value, tokenName, onChange, onClose }: ColorPicker
         </div>
         <div className="oc-color-picker-value-group">
           <label>Saturation</label>
-          <input
+          <Input
             type="number" min="0" max="100"
             value={sat}
             onChange={(e) => { const v = parseInt(e.target.value) || 0; setSat(v); emitChange(hue, v, light, alpha); }}
@@ -261,7 +262,7 @@ export function ColorPicker({ value, tokenName, onChange, onClose }: ColorPicker
         </div>
         <div className="oc-color-picker-value-group">
           <label>Lightness</label>
-          <input
+          <Input
             type="number" min="0" max="100" step="0.1"
             value={light}
             onChange={(e) => { const v = parseFloat(e.target.value) || 0; setLight(v); emitChange(hue, sat, v, alpha); }}
@@ -269,7 +270,7 @@ export function ColorPicker({ value, tokenName, onChange, onClose }: ColorPicker
         </div>
         <div className="oc-color-picker-value-group">
           <label>Alpha</label>
-          <input
+          <Input
             type="number" min="0" max="1" step="0.01"
             value={alpha}
             onChange={(e) => { const v = parseFloat(e.target.value) || 0; setAlpha(v); emitChange(hue, sat, light, v); }}

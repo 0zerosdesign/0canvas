@@ -7,6 +7,7 @@ import { X, Plus, Search } from "lucide-react";
 import { detectTailwindClasses, classifyTailwindClass, COMMON_TAILWIND_CLASSES, type TailwindCategory } from "../lib/tailwind";
 import { useWorkspace } from "../store/store";
 import { useBridge } from "../bridge/use-bridge";
+import { Button, Input } from "../ui";
 
 interface TailwindEditorProps {
   elementId: string;
@@ -25,15 +26,22 @@ const CATEGORY_LABELS: Record<TailwindCategory, string> = {
   other: "Other",
 };
 
+// CATEGORY_COLORS — distinct hues for the 8 Tailwind category chips
+// in the editor. These are intentionally hex literals (not tokens)
+// because we concatenate an alpha suffix like `CATEGORY_COLORS[c] + "40"`
+// to compute a 25%-opacity border in string form — impossible with
+// CSS custom properties. The hex values deliberately mirror the
+// primitive scales in design-tokens.css (blue-500, green-500,
+// purple-500, yellow-500, red-500, cyan-500, purple-500, grey-500).
 const CATEGORY_COLORS: Record<TailwindCategory, string> = {
-  layout: "#3b82f6",
-  spacing: "#22c55e",
-  sizing: "#a855f7",
-  typography: "#f59e0b",
-  color: "#ef4444",
-  border: "#06b6d4",
-  effects: "#8b5cf6",
-  other: "#6b7280",
+  layout:     "#3B82F6", // --blue-500
+  spacing:    "#10B981", // --green-500 / --status-success
+  sizing:     "#8B5CF6", // --purple-500
+  typography: "#F59E0B", // --yellow-500 / --status-warning
+  color:      "#EF4444", // --red-500 / --status-critical
+  border:     "#06B6D4", // --cyan-500
+  effects:    "#8B5CF6", // --purple-500
+  other:      "#737373", // --grey-500 / --text-muted
 };
 
 export function TailwindEditor({ elementId, selector, classes }: TailwindEditorProps) {
@@ -119,13 +127,15 @@ export function TailwindEditor({ elementId, selector, classes }: TailwindEditorP
             {classList.map((cls) => (
               <span key={cls} className="oc-tw-chip" style={{ borderColor: CATEGORY_COLORS[category] + "40" }}>
                 <span className="oc-tw-chip-text">{cls}</span>
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
                   className="oc-tw-chip-remove"
                   onClick={() => removeClass(cls)}
                   title={`Remove ${cls}`}
                 >
                   <X size={9} />
-                </button>
+                </Button>
               </span>
             ))}
           </div>
@@ -135,7 +145,7 @@ export function TailwindEditor({ elementId, selector, classes }: TailwindEditorP
       {/* Non-Tailwind classes (display only) */}
       {other.length > 0 && (
         <div className="oc-tw-group">
-          <span className="oc-tw-group-label" style={{ color: "#6b7280" }}>Custom</span>
+          <span className="oc-tw-group-label" style={{ color: "var(--text-muted)" }}>Custom</span>
           <div className="oc-tw-chips">
             {other.map((cls) => (
               <span key={cls} className="oc-tw-chip oc-tw-chip-custom">
@@ -151,7 +161,7 @@ export function TailwindEditor({ elementId, selector, classes }: TailwindEditorP
         <div className="oc-tw-add-area">
           <div className="oc-tw-search-row">
             <Search size={11} className="oc-tw-search-icon" />
-            <input
+            <Input
               ref={inputRef}
               className="oc-tw-search-input"
               value={search}
@@ -175,24 +185,25 @@ export function TailwindEditor({ elementId, selector, classes }: TailwindEditorP
               {suggestions.map((s) => {
                 const info = classifyTailwindClass(s);
                 return (
-                  <button
+                  <Button
                     key={s}
+                    variant="ghost"
                     className="oc-tw-suggestion"
                     onClick={() => addClass(s)}
                   >
                     <span className="oc-tw-suggestion-dot" style={{ background: CATEGORY_COLORS[info.category] }} />
                     <span>{s}</span>
                     <span className="oc-tw-suggestion-prop">{info.property}</span>
-                  </button>
+                  </Button>
                 );
               })}
             </div>
           )}
         </div>
       ) : (
-        <button className="oc-tw-add-btn" onClick={() => setShowAdd(true)}>
+        <Button variant="outline" size="sm" onClick={() => setShowAdd(true)}>
           <Plus size={11} /> Add class
-        </button>
+        </Button>
       )}
     </div>
   );

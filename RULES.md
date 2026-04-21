@@ -1,6 +1,8 @@
 # 0canvas Development Rules
 
-> These rules MUST be followed by all contributors — human and AI — when developing this project.
+> These rules MUST be followed by every contributor — human **and** AI — working on this project. They exist to keep the UI consistent, top-class, and Cursor-like. Breaking them is treated as a failing review.
+
+Target visual language: **Cursor 3 "Glass" / Agents Window** — minimal, small, dense, subtle, classy. Flat chrome, three surface tones, one blue accent used sparingly.
 
 ---
 
@@ -14,20 +16,26 @@ Every file MUST be placed in the correct folder:
 | DOM inspector | `/src/0canvas/inspector/` |
 | Canvas components | `/src/0canvas/canvas/` |
 | Panel components | `/src/0canvas/panels/` |
+| Editors (style panel) | `/src/0canvas/editors/` |
+| Themes system | `/src/0canvas/themes/` |
 | .0c file format | `/src/0canvas/format/` |
 | State management | `/src/0canvas/store/` |
 | Database/IndexedDB | `/src/0canvas/db/` |
-| Utilities | `/src/0canvas/utils/` |
-| UI primitives | `/src/0canvas/ui/` |
+| Utilities & libs | `/src/0canvas/lib/`, `/src/0canvas/utils/` |
+| **UI primitives (atoms + molecules + organisms)** | `/src/0canvas/ui/` |
+| ACP bridge | `/src/0canvas/acp/` |
 | MCP server | `/src/mcp/` |
-| Design tokens | `/src/styles/` |
-| Demo app pages | `/src/demo/pages/` |
-| Demo app styles | `/src/demo/styles/` |
+| **Design tokens (ONE file)** | `/src/styles/design-tokens.css` |
+| App shell (Tauri window chrome) | `/src/shell/` |
+| Tauri native bridge | `/src/native/` |
+| Demo pages | `/src/demo/` |
 | Documentation | `/docs/` |
+| Skills | `/skills/` |
 | Scripts | `/scripts/` |
 
-NEVER put component code inside page files (import them instead).
+NEVER put component code inside page files (import them).
 NEVER put styling logic inside utility files.
+NEVER put a new primitive outside `/src/0canvas/ui/`.
 
 ---
 
@@ -41,21 +49,11 @@ NEVER put styling logic inside utility files.
 // ============================================
 
 // --- IMPORTS ---
-
-// --- TYPES (component-specific) ---
-// Every prop MUST have a comment
-
-// --- VARIABLES (internal state) ---
-// Each useState MUST have a comment explaining its purpose
-
-// --- WORKFLOWS (functions) ---
-// Each function MUST have a comment explaining what it does
-
-// --- EVENT HANDLERS ---
-// Each handler MUST have a comment explaining when it fires
-
-// --- RENDER ---
-// Clean HTML structure with CSS classes
+// --- TYPES ---          (each prop commented)
+// --- STATE ---          (each useState commented)
+// --- WORKFLOWS ---      (each function commented)
+// --- EVENT HANDLERS --- (each handler commented)
+// --- RENDER ---         (only primitives + layout classes)
 ```
 
 ---
@@ -70,356 +68,275 @@ NEVER put styling logic inside utility files.
 // ============================================
 
 // --- IMPORTS ---
-
-// --- TYPES (page-specific) ---
-
-// --- VARIABLES (useState declarations) ---
-// Each variable MUST have a comment explaining its purpose
-
-// --- WORKFLOWS (functions) ---
-// Each workflow MUST have a comment explaining what it does
-
+// --- TYPES ---
+// --- STATE ---
+// --- WORKFLOWS ---
 // --- EVENT HANDLERS ---
-
 // --- RENDER ---
-// Clean HTML structure with CSS classes
 ```
 
 ---
 
-## Rule 4: CSS and Styling Rules
+## Rule 4: Design Tokens (ONE source of truth)
 
-### Token Architecture
+### 4.1 — One file
 
-The design token system has two layers — **primitives** and **semantics**:
+There is exactly ONE design-token file: **`/src/styles/design-tokens.css`**. No other CSS file defines tokens. Never create `tokens/foo.css` or split the tokens across files.
 
-```
-Primitive tokens      →   Semantic tokens       →   Component styles
---grey-800: #262626       --color--surface--1        background: var(--color--surface--1)
---blue-600: #2563EB       --color--base--primary     background: var(--color--base--primary)
-```
+### 4.2 — Semantic tokens only in components
 
-- The ONLY token definition file is `/src/styles/variables.css`
-- ALL UI across the entire application MUST use **semantic tokens**, not primitives
-- NO hardcoded hex color values allowed anywhere in component code
-- Primitive tokens (`--grey-800`, `--blue-600`, etc.) are the low-level palette — they exist ONLY to be referenced by semantic tokens
-- Component code MUST use semantic tokens (`--color--surface--1`, `--color--text--muted`, etc.)
+Components MUST reference **semantic** tokens (`--surface-0`, `--text-on-surface`, `--primary`, `--radius-sm`, `--space-4`, `--text-12`, `--dur-fast`, `--z-dropdown`, etc.). Components MUST NEVER reference **primitive** tokens (`--grey-900`, `--blue-500`) directly.
 
-### Semantic Token System
+### 4.3 — Banned values in component code
 
-The naming follows **surface / on-surface** convention:
-- **Surface** tokens are for backgrounds (where content sits)
-- **On-surface** tokens are for foreground (text, borders, icons that sit ON a surface)
+| Banned | Use instead |
+|---|---|
+| Hex colors (`#171717`, `#10B981`, …) outside `design-tokens.css` | Semantic token |
+| Raw rgba literals, EXCEPT the documented `--tint-*` tokens | Documented tint token |
+| `font-size: 9|14|16px` (and any value not in the type scale) | `var(--text-10|11|12|13|15|18)` |
+| `border-radius: 2|3|5|7|10|14|16|20px` | `var(--radius-xs|sm|md|lg|pill)` |
+| Odd margin / gap values (3, 5, 7, 9, 11, 13, 15) | Closest even `var(--space-N)` |
+| Arbitrary numeric `z-index` | `var(--z-chrome|panel|dropdown|modal|toast)` |
+| Tailwind color classes (`bg-blue-500`, `text-red-600`, `border-gray-700`, …) | Semantic token via CSS or primitive component |
+| `font-family: "Inter"` or any web font | `var(--font-ui)` (system stack) or `var(--font-mono)` |
 
-Each surface level has paired foreground tokens. If a panel uses `surface--0` as its background, its borders use `border--on-surface-0` and its text uses `text--on-surface`.
+### 4.4 — Adding a token
 
-### Surface Tokens (Backgrounds)
+If no semantic token fits, STOP. Do not invent. Either:
+1. Find the nearest existing semantic token, or
+2. Open a PR that adds a new semantic token to `design-tokens.css` **and** updates the matching section of this file and `skills/ui-consistency.md`.
 
-Use these for all `background`, `background-color` properties:
+---
 
-| Token | Resolves To | When To Use |
-|-------|------------|-------------|
-| `--color--surface--floor` | `--grey-950` | Deepest surfaces — toolbar, overlay backdrops, command palette |
-| `--color--surface--0` | `--grey-900` | Main app background, canvas, cards, panels |
-| `--color--surface--1` | `--grey-800` | Elevated surfaces — inputs, hover states, badges, code blocks |
-| `--color--surface--2` | `--grey-700` | Secondary elevated — active states, scrollbar thumbs |
-| `--color--surface--absolute` | `black` | Pure black (rare) |
-| `--color--surface--inverted` | `--grey-200` | Light background for inverted elements (logos on dark) |
+## Rule 11: Primitive-first (the shadcn rule)
 
-```
-Depth order (darkest → lightest):
-  floor → 0 → 1 → 2
-```
+Every visual element uses a component from `/src/0canvas/ui/`. Per-feature classes that duplicate primitive behavior are forbidden in new code.
 
-### Text Tokens (Foreground — text, icons)
+| Need | Primitive |
+|---|---|
+| Button | `<Button variant="…" size="…">` |
+| Icon-only button | `<Button variant="ghost" size="icon">` |
+| Text input / password / number | `<Input type="…">` |
+| Multi-line input | `<Textarea>` |
+| Label above a form control | `<Label>` |
+| Dropdown / select / menu | `<DropdownMenu>` (with `.Trigger`, `.Content`, `.Item`, `.Label`, `.Separator`) |
+| Tabs | `<Tabs>` or `<Tab>` |
+| Card | `<Card>` / `<CardHeader>` / `<CardBody>` / `<CardFooter>` |
+| Dialog / modal | `<Dialog>` and friends |
+| Tooltip | `<Tooltip label="…">` |
+| Chip / compact control | `<Pill>` |
+| Badge / tag | `<Badge variant="…">` |
+| Status dot | `<StatusDot status="…">` |
+| Keyboard chip | `<Kbd>` |
+| Divider | `<Divider orientation="…">` |
+| Icon wrapper | `<Icon as={Lucide} size="sm|md|lg">` |
 
-Use these for all `color` properties on text and icons:
+If a primitive is missing, extend `/src/0canvas/ui/` first — **never** write per-feature CSS. A variant missing? Add it to the existing primitive with a new `variant` prop value and document it here.
 
-| Token | Resolves To | When To Use |
-|-------|------------|-------------|
-| `--color--text--on-surface` | `--grey-200` | Primary text, headings, active labels |
-| `--color--text--on-surface-variant` | `--grey-400` | Secondary text, panel titles, labels |
-| `--color--text--muted` | `--grey-500` | Muted text, placeholders, inactive items |
-| `--color--text--disabled` | `--grey-600` | Disabled text, very dim metadata |
-| `--color--text--hint` | `--grey-700` | Hint text, barely visible labels |
-| `--color--text--on-primary` | `--grey-50` | Text on blue/colored backgrounds (buttons) |
-| `--color--text--primary` | `--blue-600` | Accent text — links, active tabs, tag names |
-| `--color--text--primary-light` | `--blue-400` | Lighter primary accent text |
+---
 
-```
-Brightness order (brightest → dimmest):
-  on-primary → on-surface → on-surface-variant → muted → disabled → hint
-```
+## Rule 12: `className` is for layout only (the shadcn rule)
 
-### Border Tokens (Foreground — borders, dividers)
+`className` may contain Tailwind layout utilities: `flex`, `grid`, `gap-*`, `items-*`, `justify-*`, `max-w-*`, `min-h-*`, `mx-auto`, `overflow-*`, `truncate`, `w-full`, `h-full`, `size-*`. Anything visual — color, typography, spacing, radius, shadow, border — must come from a primitive or a token.
 
-Use these for all `border-color`, `border` shorthand, and divider backgrounds:
+### Banned patterns
 
-| Token | Resolves To | When To Use |
-|-------|------------|-------------|
-| `--color--border--on-surface-0` | `--grey-800` | Subtle borders — panel edges, card outlines, dividers |
-| `--color--border--on-surface-1` | `--grey-700` | Visible borders — hover states, input focus, resize lines |
-| `--color--border--on-surface-2` | `--grey-600` | Emphasized borders — active inputs, strong separators |
+```tsx
+// ❌ Tailwind colors / typography / spacing
+<div className="bg-blue-500 text-white p-4 rounded-lg">…</div>
 
-**Pairing rule:** Match border number to the surface it sits on:
-- Element on `surface--0` → border `on-surface-0`
-- Element on `surface--1` → border `on-surface-1`
+// ❌ Overriding primitive visuals
+<Button className="bg-red-600 text-white">Delete</Button>
 
-### Primary / Action Tokens
-
-Use these for interactive elements with brand color:
-
-| Token | Resolves To | When To Use |
-|-------|------------|-------------|
-| `--color--base--primary` | `--blue-600` | Primary button background, active indicators |
-| `--color--base--primary-hover` | `--blue-700` | Primary button hover |
-| `--color--base--primary-light` | `--blue-500` | Lighter primary (secondary actions) |
-| `--color--outline--focus` | `--blue-500` | Focus rings, focus-visible outlines |
-| `--color--outline--on-background` | `--blue-600` | Selected borders, active tab underlines |
-
-### Status Tokens
-
-Use these for status indicators, badges, and alert states:
-
-| Token | Resolves To | When To Use |
-|-------|------------|-------------|
-| `--color--status--success` | `--green-500` | Success dots, connected badges, copy confirmation |
-| `--color--status--warning` | `--yellow-500` | Warning badges, unsaved indicators |
-| `--color--status--critical` | `--red-500` | Error badges, delete buttons, blocking severity |
-| `--color--status--info` | `--blue-500` | Info indicators |
-| `--color--status--connecting` | `--orange-500` | Connecting/pending states |
-| `--color--text--critical-light` | `--red-400` | Lighter error text (hover delete) |
-
-### Syntax Highlighting Tokens
-
-Use these for code display and CSS property rendering:
-
-| Token | Resolves To | When To Use |
-|-------|------------|-------------|
-| `--color--syntax--comment` | `--grey-400` | Code comments |
-| `--color--syntax--selector` | `--green-500` | CSS selectors |
-| `--color--syntax--property` | `--blue-300` | CSS property names |
-| `--color--syntax--value` | `--orange-400` | CSS values |
-
-### Primitive Palettes (reserved)
-
-Primitive tokens (`--grey-*`, `--blue-*`, etc.) are ONLY used inside semantic token definitions in `variables.css`. Component code must NEVER reference them directly.
-
-Other palettes (purple, pink, teal, orange, cyan, indigo, fuchsia, lime) are reserved for:
-- Annotation color differentiation
-- Tag/element type colors in layers panel
-- Data visualization
-- Syntax highlighting (via semantic tokens)
-- NOT for general UI backgrounds, text, or borders
-
-### How To Apply — Quick Decision Guide
-
-```
-Need a background?     → --color--surface--{floor|0|1|2}
-Need text color?       → --color--text--{on-surface|muted|disabled|primary}
-Need a border?         → --color--border--on-surface-{0|1|2}
-Need a blue button?    → bg: --color--base--primary, text: --color--text--on-primary
-Need a status dot?     → --color--status--{success|warning|critical}
-Need focus ring?       → --color--outline--focus
-Need selected border?  → --color--outline--on-background
+// ❌ Inline style for static visuals
+<p style={{ color: "#aaa", fontSize: 14 }}>…</p>
 ```
 
-### Example: Building a Panel
+### Correct
 
-```css
-.oc-panel {
-  background: var(--color--surface--floor);       /* deepest surface */
-}
-.oc-panel-header {
-  border-bottom: 1px solid var(--color--border--on-surface-0);
-  color: var(--color--text--on-surface);          /* primary text */
-}
-.oc-panel-title {
-  color: var(--color--text--on-surface-variant);  /* secondary text */
-}
-.oc-panel-input {
-  background: var(--color--surface--1);           /* elevated input */
-  border: 1px solid var(--color--border--on-surface-0);
-  color: var(--color--text--on-surface);
-}
-.oc-panel-input:focus {
-  border-color: var(--color--outline--on-background); /* blue focus */
-}
-.oc-panel-btn-primary {
-  background: var(--color--base--primary);        /* blue button */
-  color: var(--color--text--on-primary);          /* white text */
-}
-.oc-panel-btn-primary:hover {
-  background: var(--color--base--primary-hover);
-}
-.oc-panel-muted {
-  color: var(--color--text--muted);               /* dim label */
-}
-.oc-panel-status.is-connected {
-  color: var(--color--status--success);           /* green dot */
-}
+```tsx
+<div className="flex items-center gap-2">
+  <Badge variant="primary">New</Badge>
+  <Button variant="destructive">Delete</Button>
+</div>
 ```
 
-### Styling Method
+---
 
-- Use CSS classes (not inline `style={{}}`) for all static styles
-- Use proper class names: `.oc-toolbar-btn`, `.oc-layers-row`
-- State classes: `.is-active`, `.is-selected`, `.when-expanded`, `.when-loading`
-- Let CSS `:hover` and `:focus` handle interactive states (no `useState(hovered)`)
-- Tailwind utility classes are permitted ONLY for layout: `flex`, `grid`, `gap-*`, `items-center`, etc.
-- NEVER use Tailwind for colors, typography, or visual styling
+## Rule 13: Cursor density
 
-### Class Naming Convention
+- **Control heights** ≤ 32px (`--h-control-sm|md|lg`). No 40+ unless onboarding hero.
+- **Body text** 13px (`--text-13`). **Metadata** 11px. **Controls** 12px. **Headings** 15px panel / 18px page. No other text sizes.
+- **Accent discipline**: the primary blue (`--primary`, `--tint-primary-soft`, `--ring`) should appear on **< 5%** of pixels on any given screen. If it decorates more than a button, an active tab underline, and a focus ring — too much.
+- **Flat chrome**: three surface tones (`--surface-floor`, `--surface-0`, `--surface-1`), optional `--surface-2` for selected. No gradients in chrome.
+- **1px seams**, not tone steps, between columns. Always `--border-subtle`.
+- **Hover** = a tint (`--tint-hover`). Never change the whole background or add a border on hover.
 
-```
-.oc-{component}-{element}
-.oc-{component}-{element}.is-{state}
-.oc-{component}-{element}:hover
-.oc-{component}-{element}:focus
-```
+---
 
-Examples:
-```css
-.oc-toolbar { }
-.oc-toolbar-btn { }
-.oc-toolbar-btn:hover { }
-.oc-toolbar-btn.is-active { }
-.oc-panel-header { }
-.oc-layers-row { }
-.oc-layers-row.is-selected { }
-.oc-layers-row.when-expanded { }
-```
+## Rule 14: No inline visual styles
+
+`style={{}}` may ONLY be used for values that cannot be expressed as a class:
+
+- A swatch background sourced from user data (`style={{ background: user.color }}`)
+- An element position computed at runtime (`style={{ top: rect.y, left: rect.x }}`)
+- A dynamic width that comes from a resize handle (`style={{ width: dims.w }}`)
+
+`style={{}}` MUST NEVER contain static values for: `background`, `color`, `padding`, `margin`, `fontSize`, `fontWeight`, `fontFamily`, `border`, `borderRadius`, `boxShadow`, `zIndex`, or `width/height` for things that aren't being dragged.
+
+If you're tempted to inline a static value, add a class instead.
+
+---
+
+## Rule 15: No manual `z-index`
+
+Overlays use the primitives — `<DropdownMenu>`, `<Dialog>`, `<Tooltip>`, `<Popover>` — which already own the right z-layer via `--z-dropdown|modal|toast`. Writing `z-index: 999` or `z-index: 50` anywhere in a component is a bug.
+
+If you need a new layer, add a token (`--z-foo`) to `design-tokens.css`, document it, and use it.
 
 ---
 
 ## Rule 5: Variable Documentation
 
-Every `useState` variable MUST have a comment above it:
-
-```tsx
-// Tracks the currently selected element ID in the layers tree
-const [selectedId, setSelectedId] = useState<string | null>(null);
-
-// Controls whether the style panel is expanded
-const [expanded, setExpanded] = useState<boolean>(true);
-```
+Every `useState` / `useRef` MUST have a one-line comment above it explaining what it holds. Every prop in an interface MUST have a comment.
 
 ---
 
 ## Rule 6: Workflow Documentation
 
-Every function/workflow MUST have a comment block:
+Every function or workflow MUST have a block comment:
 
 ```tsx
 // WORKFLOW: handleForkPage
-// TRIGGERED BY: Fork button click in source node
-// WHAT IT DOES:
-// 1. Captures current page HTML/CSS snapshot
-// 2. Creates a new variant with the snapshot
-// 3. Adds variant node to the canvas
-// 4. Dispatches ADD_VARIANT action to store
-function handleForkPage() {
-  // ...
-}
+// TRIGGERED BY: Fork button click
+// WHAT IT DOES: 1. …  2. …  3. …
 ```
 
 ---
 
 ## Rule 7: Clean HTML Structure
 
-JSX must be readable with semantic elements and proper class names:
+Prefer primitives + semantic tags. Never reach for `<div>` where a primitive exists.
 
 ```tsx
-// GOOD - Readable, semantic, proper classes
-<div className="oc-panel">
-  <header className="oc-panel-header">
-    <h3 className="oc-panel-title">Layers</h3>
-    <button className="oc-panel-close">...</button>
-  </header>
-  <section className="oc-panel-body">
-    {elements.map(el => (
-      <div key={el.id} className={`oc-layers-row ${selected === el.id ? 'is-selected' : ''}`}>
-        ...
-      </div>
+// GOOD
+<Card>
+  <CardHeader>Layers</CardHeader>
+  <CardBody>
+    {elements.map((el) => (
+      <button
+        key={el.id}
+        className="oc-layers-row"
+        data-selected={selected === el.id ? "true" : "false"}
+      >…</button>
     ))}
-  </section>
-</div>
+  </CardBody>
+</Card>
 
-// BAD - Unclear divs, inline styles
-<div style={{ background: '#0a0a0a', padding: 10 }}>
-  <div style={{ display: 'flex' }}>
-    <div style={{ color: '#888' }}>Layers</div>
-  </div>
-</div>
+// BAD
+<div style={{ background: "#141414", padding: 10 }}>…</div>
 ```
 
 ---
 
 ## Rule 8: Component Props
 
-Component props should be named clearly:
-
-```tsx
-// GOOD - Clear attribute names
-<VariantNode
-  variant={variantData}
-  isSelected={selectedId === variant.id}
-  onFork={handleFork}
-  onDelete={handleDelete}
-/>
-
-// BAD - Unclear props
-<VariantNode d={data} s={true} f={fn} />
-```
+Props must be named clearly. Lean on shadcn conventions: `variant`, `size`, `asChild`, `onOpenChange`, `selected`, `disabled`, `loading`.
 
 ---
 
-## Rule 9: npm Package CSS Delivery
+## Rule 9: npm Package CSS Delivery (engine)
 
-The 0canvas app is an npm package. CSS is delivered via runtime injection:
-
-- All component styles live in `src/0canvas/engine/0canvas-styles.ts`
-- Styles are scoped under `[data-0canvas-root]` to prevent consumer conflicts
-- `injectStyles()` creates a `<style>` element in `document.head`
-- `removeStyles()` cleans up on unmount
-- NEVER rely on consumers importing external CSS files
+The 0canvas engine ships as an npm package; its CSS is injected at runtime from `src/0canvas/engine/0canvas-styles.ts`. Engine styles MUST reference the same semantic tokens as the shell (no duplicate palette). Engine styles are scoped under `[data-0canvas-root]`.
 
 ---
 
 ## Rule 10: Keep It Simple
 
-- No complex abstractions
-- No unnecessary state management libraries
-- React `useState` + `useEffect` is sufficient
-- If a designer can't understand the code structure, simplify it
-- Code comments should explain "why", not just "what"
-- Prefer CSS `:hover`/`:focus` over JavaScript event handlers for styling
+- No complex abstractions for their own sake.
+- React `useState` + `useEffect` is enough for state in a component.
+- If a designer can't read the JSX, simplify.
+- Comments explain **why**, never **what**.
+- Prefer CSS `:hover` / `:focus-visible` over JS handlers for styling.
 
 ---
 
-## Quick Reference: Token → Code Mapping
+## Quick Decision Table — "I need X → use Y"
 
-| Purpose | Semantic Token | CSS Usage |
-|---------|---------------|-----------|
-| App background | `--color--surface--0` | `background: var(--color--surface--0)` |
-| Card/input bg | `--color--surface--1` | `background: var(--color--surface--1)` |
-| Primary text | `--color--text--on-surface` | `color: var(--color--text--on-surface)` |
-| Muted text | `--color--text--muted` | `color: var(--color--text--muted)` |
-| Subtle border | `--color--border--on-surface-0` | `border: 1px solid var(--color--border--on-surface-0)` |
-| Blue button | `--color--base--primary` | `background: var(--color--base--primary)` |
-| Button text | `--color--text--on-primary` | `color: var(--color--text--on-primary)` |
-| Focus ring | `--color--outline--focus` | `outline: 2px solid var(--color--outline--focus)` |
-| Success dot | `--color--status--success` | `color: var(--color--status--success)` |
-| Font family | `--font-sans` | `font-family: var(--font-sans)` |
-| Font size | `--font-size-sm` | `font-size: var(--font-size-sm)` |
-| Shadow | `--shadow-md` | `box-shadow: var(--shadow-md)` |
+| I need… | Use… |
+|---|---|
+| App background | `var(--surface-0)` |
+| Chrome background (title/activity/status bar) | `var(--surface-floor)` |
+| Card / input / menu background | `var(--surface-1)` |
+| Selected tab / active chip background | `var(--surface-2)` or `var(--tint-primary-soft)` |
+| Primary body text | `var(--text-on-surface)` |
+| Secondary label text | `var(--text-on-surface-variant)` |
+| Muted metadata text | `var(--text-muted)` |
+| Disabled text | `var(--text-disabled)` |
+| Link text | `var(--text-primary)` → hover `var(--text-primary-light)` |
+| Subtle border | `var(--border-subtle)` |
+| Input border | `var(--border-default)` |
+| Focus ring | `var(--ring)` + `outline-offset: 1px` |
+| Primary button bg | `var(--primary)` → hover `var(--primary-hover)` |
+| Primary button text | `var(--primary-foreground)` |
+| Destructive button | `var(--destructive)` |
+| Success indicator | `var(--status-success)` |
+| Error indicator | `var(--status-critical)` |
+| Warning indicator | `var(--status-warning)` |
+| Panel padding | `var(--space-6)` (12px) or `var(--space-7)` (14px) |
+| Row padding Y | `var(--space-5)` (10px) |
+| Item gap | `var(--space-3)` (6px) |
+| Button radius | `var(--radius-sm)` (6px, DEFAULT) |
+| Card/menu radius | `var(--radius-md)` (8px) |
+| Dialog radius | `var(--radius-lg)` (12px) |
+| Pill radius | `var(--radius-pill)` (9999px) |
+| Hover tint | `background: var(--tint-hover)` |
+| Active tint | `background: var(--tint-active)` |
+| Selected row bg | `background: var(--tint-primary-soft)` |
+| Dropdown z-index | (nothing — the primitive owns it, `var(--z-dropdown)`) |
+| Modal z-index | (nothing — the primitive owns it, `var(--z-modal)`) |
+| Transition duration | `var(--dur-fast)` for color/bg, `var(--dur-base)` for layout |
+| System font stack | `var(--font-ui)` |
+| Monospace | `var(--font-mono)` |
+| Icon next to 13px text | `size={14}` or `<Icon size="md">` |
+| Icon in activity bar / nav | `size={16}` or `<Icon size="lg">` |
+| Chevron in pill | `size={10}` or `<Icon size="xs">` |
 
-| Visual Concept | React Code |
-|---------------|------------|
-| State variable | `useState()` |
-| Computed value | `useMemo()` or `const x = ...` |
-| Side effect | `useEffect()` |
-| Event handler | `onClick`, `onChange`, `onSubmit` |
-| Conditional render | `{condition && <Element />}` |
-| List render | `{array.map(item => <Element />)}` |
-| CSS class toggle | `` className={`oc-btn ${active ? 'is-active' : ''}`} `` |
+---
+
+## Pre-commit Checklist
+
+Before every UI-touching commit, verify:
+
+- [ ] No new hex colors (`rg '#[0-9a-fA-F]{3,8}' src/`, should only light up `design-tokens.css`)
+- [ ] No Tailwind color classes outside layout (`rg 'bg-(red|blue|green|gray|zinc|neutral)-\d+' src/`)
+- [ ] No off-scale `font-size: Npx` (N ∉ {10,11,12,13,15,18})
+- [ ] No off-scale `border-radius: Npx` (N ∉ {4,6,8,12})
+- [ ] No numeric `z-index` in components
+- [ ] `style={{}}` contains no static visual properties (color/bg/padding/margin/fontSize/border)
+- [ ] Every new interactive element uses a primitive from `/src/0canvas/ui/`
+- [ ] `pnpm check:ui` passes
+- [ ] `pnpm build:ui` compiles clean
+
+---
+
+## Reference: Sections of `design-tokens.css`
+
+1. Primitives (internal only — never reference in components)
+2. Surfaces (backgrounds)
+3. Text (foregrounds on surfaces)
+4. Borders
+5. Status
+6. Primary / action
+7. Typography
+8. Space
+9. Radius
+10. Control heights
+11. Icon sizes
+12. Motion
+13. Shadows
+14. Z-index
+15. Chrome layout
+16. Tints (the ONLY rgba allowed outside the tokens file)
+17. Syntax highlighting
+18. Legacy aliases (deprecated, do not use in new code)

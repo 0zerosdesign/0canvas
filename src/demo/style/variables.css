@@ -32,49 +32,49 @@
   --blue-500: #4f9492;
   --blue-700: #216869;
 
-  --color--surface--floor: #f2ebdf;
-  --color--surface--0: var(--demo-surface-strong);
-  --color--surface--1: var(--demo-surface);
-  --color--surface--2: var(--demo-surface-muted);
-  --color--surface--absolute: #ffffff;
-  --color--surface--inverted: #1f2a24;
+  --surface-floor: #f2ebdf;
+  --surface-0: var(--demo-surface-strong);
+  --surface-1: var(--demo-surface);
+  --surface-2: var(--demo-surface-muted);
+  --surface-absolute: #ffffff;
+  --surface-inverted: #1f2a24;
 
-  --color--text--on-surface: var(--demo-text);
-  --color--text--on-surface-variant: #3c4842;
-  --color--text--muted: var(--demo-text-muted);
-  --color--text--disabled: #93a097;
-  --color--text--hint: #7f8b83;
-  --color--text--on-primary: #f9fbfb;
-  --color--text--on-success: #f4fbf7;
-  --color--text--on-critical: #fff6f2;
-  --color--text--on-warning: #fffaf1;
-  --color--text--primary: var(--demo-primary);
-  --color--text--primary-light: #3b8d89;
-  --color--text--link: var(--demo-primary);
-  --color--text--link-hover: var(--demo-primary-strong);
-  --color--text--info: #3b8d89;
-  --color--text--success: var(--demo-success);
-  --color--text--warning: var(--demo-warning);
-  --color--text--critical: var(--demo-danger);
-  --color--text--critical-light: #d2755b;
+  --text-on-surface: var(--demo-text);
+  --text-on-surface-variant: #3c4842;
+  --text-muted: var(--demo-text-muted);
+  --text-disabled: #93a097;
+  --text-hint: #7f8b83;
+  --text-on-primary: #f9fbfb;
+  --text-on-primary: #f4fbf7;
+  --text-on-primary: #fff6f2;
+  --text-on-primary: #fffaf1;
+  --text-primary: var(--demo-primary);
+  --text-primary-light: #3b8d89;
+  --text-primary: var(--demo-primary);
+  --text-primary-light: var(--demo-primary-strong);
+  --status-info: #3b8d89;
+  --text-success: var(--demo-success);
+  --text-warning: var(--demo-warning);
+  --text-critical: var(--demo-danger);
+  --text-critical-light: #d2755b;
 
-  --color--border--on-surface-0: var(--demo-border);
-  --color--border--on-surface-1: var(--demo-border-strong);
-  --color--border--on-surface-2: rgba(102, 84, 61, 0.4);
+  --border-subtle: var(--demo-border);
+  --border-default: var(--demo-border-strong);
+  --border-strong: rgba(102, 84, 61, 0.4);
 
-  --color--base--primary: var(--demo-primary);
-  --color--base--primary-hover: var(--demo-primary-strong);
-  --color--base--primary-light: #3b8d89;
+  --primary: var(--demo-primary);
+  --primary-hover: var(--demo-primary-strong);
+  --primary-light: #3b8d89;
 
-  --color--status--info: #4f9492;
-  --color--status--success: var(--demo-success);
-  --color--status--warning: var(--demo-warning);
-  --color--status--critical: var(--demo-danger);
-  --color--status--connecting: var(--demo-accent);
+  --status-info: #4f9492;
+  --status-success: var(--demo-success);
+  --status-warning: var(--demo-warning);
+  --status-critical: var(--demo-danger);
+  --status-connecting: var(--demo-accent);
 }
 
 @theme inline {
-  --font-sans: "Manrope", "Segoe UI", sans-serif;
+  --font-ui: "Manrope", "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", "SFMono-Regular", monospace;
 
   --color-background: var(--demo-bg);
@@ -138,7 +138,7 @@
   body {
     min-height: 100vh;
     margin: 0;
-    font-family: var(--font-sans);
+    font-family: var(--font-ui);
     color: var(--demo-text);
     background:
       radial-gradient(circle at top left, rgba(193, 120, 74, 0.12), transparent 28%),

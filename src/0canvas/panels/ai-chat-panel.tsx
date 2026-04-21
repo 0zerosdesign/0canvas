@@ -14,7 +14,7 @@ import {
   Undo2, ArrowRight, X, FolderOpen, ChevronDown, MoreHorizontal,
   GitBranch, Eye, Image as ImageIcon, TerminalSquare,
   Compass, Users, Plug, Clock, FileText, MessageCircle,
-  Brain, LogIn, Search,
+  Brain, LogIn, Search, Zap,
   type LucideIcon,
 } from "lucide-react";
 import { useWorkspace, findElement, type AiThinkingEffort, type AiPermissionMode } from "../store/store";
@@ -25,6 +25,8 @@ import { runCliLogin } from "../lib/ai-cli";
 import { listSkills, type Skill } from "../../native/tauri-events";
 import { applyStyle, flashElement } from "../inspector";
 import { ScrollArea } from "../ui/scroll-area";
+import { Button, Textarea } from "../ui";
+import { AcpMode } from "../acp/acp-mode";
 
 // ── Diff / pending changes types ─────────────────────────
 
@@ -315,9 +317,10 @@ function providerKey(p: string): ProviderKey {
 
 function ProviderIcon({ provider, size = 12 }: { provider: ProviderKey; size?: number }) {
   return provider === "claude" ? (
+    // Brand glyph tint — primitive scale is intentional. check:ui ignore-next
     <Sparkles size={size} style={{ color: "var(--orange-400)" }} />
   ) : (
-    <Bot size={size} style={{ color: "var(--color--text--on-surface-variant)" }} />
+    <Bot size={size} style={{ color: "var(--text-on-surface-variant)" }} />
   );
 }
 
@@ -860,15 +863,15 @@ function DiffView({
         </label>
       ))}
       <div className="oc-ai-diff-actions">
-        <button className="oc-ai-diff-btn oc-ai-diff-apply" onClick={onApplySelected} disabled={checkedCount === 0}>
+        <Button variant="primary" size="sm" onClick={onApplySelected} disabled={checkedCount === 0}>
           Apply{checkedCount < changes.length ? ` (${checkedCount})` : " Selected"}
-        </button>
-        <button className="oc-ai-diff-btn oc-ai-diff-all" onClick={onApplyAll}>
+        </Button>
+        <Button variant="outline" size="sm" onClick={onApplyAll}>
           Apply All
-        </button>
-        <button className="oc-ai-diff-btn oc-ai-diff-reject" onClick={onReject}>
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onReject}>
           Reject
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -885,12 +888,12 @@ function VariantDiffView({
     <div className="oc-ai-diff">
       <div className="oc-ai-diff-title">Redesign variant?</div>
       <div className="oc-ai-diff-actions">
-        <button className="oc-ai-diff-btn oc-ai-diff-apply" onClick={onApply}>
+        <Button variant="primary" size="sm" onClick={onApply}>
           Apply
-        </button>
-        <button className="oc-ai-diff-btn oc-ai-diff-reject" onClick={onReject}>
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onReject}>
           Reject
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -899,6 +902,10 @@ function VariantDiffView({
 export function AIChatPanel() {
   const { state, dispatch } = useWorkspace();
   const bridge = useBridge();
+  // ACP beta mode — when true, the panel swaps its body for the ACP-native
+  // surface (use-acp-session + agents-panel + acp-chat). Legacy state below
+  // stays mounted so turning it off returns to the exact prior conversation.
+  const [acpMode, setAcpMode] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -1398,10 +1405,36 @@ Styles:\n${Object.entries(selectedElement.styles)
 
   const activeChatTitle =
     state.chats.find((c) => c.id === state.activeChatId)?.title ?? "Chat";
-  const providerIconTint =
-    aiSettings.provider === "openai" ? "var(--green-500)"
-    : aiSettings.provider === "chatgpt" ? "var(--green-500)"
-    : "var(--orange-400)";
+  // Brand accent colors for the provider icon (Claude=orange, OpenAI=green).
+  // Primitive tokens are used here because these are brand glyph tints,
+  // not semantic UI color. check:ui ignore-next
+  const providerIconTint = aiSettings.provider === "openai" ? "var(--green-500)" : aiSettings.provider === "chatgpt" ? "var(--green-500)" : "var(--orange-400)";
+
+  // ACP beta surface — swaps the panel body only; header stays so the user
+  // can toggle back to the legacy chat in one click. Legacy state above is
+  // preserved intact across toggles.
+  if (acpMode) {
+    return (
+      <div className="oc-panel oc-chat" data-0canvas="ai-chat">
+        <div className="oc-chat-header">
+          <span className="oc-chat-title">ACP · Beta</span>
+          <div className="oc-chat-header-actions">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => setAcpMode(false)}
+              title="Back to legacy chat"
+            >
+              <ArrowRight size={13} style={{ transform: "rotate(180deg)" }} />
+            </Button>
+          </div>
+        </div>
+        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+          <AcpMode />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="oc-panel oc-chat" data-0canvas="ai-chat">
@@ -1411,13 +1444,21 @@ Styles:\n${Object.entries(selectedElement.styles)
         <div className="oc-chat-header-actions">
           <OpenProjectMenu />
           {variantHistory.length > 0 && (
-            <button className="oc-chat-iconbtn" onClick={handleUndo} title="Undo last AI change">
+            <Button variant="ghost" size="icon-sm" onClick={handleUndo} title="Undo last AI change">
               <Undo2 size={13} />
-            </button>
+            </Button>
           )}
-          <button className="oc-chat-iconbtn" title="More">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => setAcpMode(true)}
+            title="Switch to ACP (Beta) — drive any ACP agent via the shared registry"
+          >
+            <Zap size={13} />
+          </Button>
+          <Button variant="ghost" size="icon-sm" title="More">
             <MoreHorizontal size={14} />
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -1505,7 +1546,9 @@ Styles:\n${Object.entries(selectedElement.styles)
                   ? `.${selectedElement.classes[0]}`
                   : ""}
               </code>
-              <button
+              <Button
+                variant="ghost"
+                size="icon-sm"
                 className="oc-ai-chip-x"
                 onClick={() =>
                   dispatch({ type: "SELECT_ELEMENT", id: null, source: "panel" })
@@ -1514,7 +1557,7 @@ Styles:\n${Object.entries(selectedElement.styles)
                 aria-label="Clear element selection"
               >
                 ×
-              </button>
+              </Button>
             </span>
           )}
         </div>
@@ -1551,7 +1594,7 @@ Styles:\n${Object.entries(selectedElement.styles)
           />
         )}
         <div className="oc-chat-composer-card">
-          <textarea
+          <Textarea
             className="oc-chat-composer-input"
             value={input}
             onChange={(e) => {
@@ -1642,44 +1685,47 @@ Styles:\n${Object.entries(selectedElement.styles)
                 dispatch({ type: "SET_AI_SETTINGS", settings: updated });
               }}
             />
-            <button className="oc-chat-toolbar-iconbtn" title="Attach image" type="button">
+            <Button variant="ghost" size="icon-sm" title="Attach image" type="button">
               <ImageIcon size={13} />
-            </button>
+            </Button>
             <SkillPillButton
               skills={skills}
               selected={selectedSkill}
               onSelect={setSelectedSkill}
             />
             {selectedSkill && (
-              <button
-                className="oc-chat-toolbar-iconbtn"
+              <Button
+                variant="ghost"
+                size="icon-sm"
                 title={`Clear skill (${selectedSkill.name})`}
                 onClick={() => setSelectedSkill(null)}
                 type="button"
               >
                 <X size={12} />
-              </button>
+              </Button>
             )}
             <div className="oc-chat-toolbar-spacer" />
             {streaming ? (
-              <button
-                className="oc-chat-send is-stop"
+              <Button
+                variant="destructive"
+                size="icon-sm"
                 onClick={handleStop}
                 title="Stop"
                 type="button"
               >
                 <Square size={11} />
-              </button>
+              </Button>
             ) : (
-              <button
-                className="oc-chat-send"
+              <Button
+                variant="primary"
+                size="icon-sm"
                 onClick={() => handleSend()}
                 disabled={!input.trim()}
                 title="Send"
                 type="button"
               >
                 <ArrowRight size={13} />
-              </button>
+              </Button>
             )}
           </div>
         </div>

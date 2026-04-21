@@ -35,6 +35,18 @@ export interface McpServerOptions {
   writer: CSSFileWriter;
   ocManager: OCManager;
   engineServer: EngineServer;
+  /**
+   * Returns the latest selection the browser reported, or null when nothing
+   * is selected. The engine caches the selection from ELEMENT_SELECTED bridge
+   * messages; MCP clients read it via the 0canvas_get_selection tool.
+   */
+  getSelection?: () => {
+    selector: string;
+    tagName: string;
+    className: string;
+    computedStyles: Record<string, string>;
+    updatedAt: number;
+  } | null;
 }
 
 export class ZeroCanvasMcp {
@@ -91,7 +103,46 @@ export class ZeroCanvasMcp {
   // ── Tool Registration ─────────────────────────────────────
 
   private registerTools(): void {
-    const { root, cache, resolver, writer, ocManager, engineServer } = this.options;
+    const { root, cache, resolver, writer, ocManager, engineServer, getSelection } = this.options;
+
+    // 0. Get selection — what the designer is focused on right now.
+    // Agents should call this before generating changes so they know
+    // what element the user has in mind without being told.
+    this.mcpServer.tool(
+      "0canvas_get_selection",
+      "Returns the element the designer currently has selected in the canvas (selector, tag, class list, computed styles). Returns null when nothing is selected — in that case, ask the designer which element to work on rather than guessing. Always call this first before generating design changes.",
+      {},
+      async () => {
+        try {
+          const sel = getSelection?.() ?? null;
+          if (!sel) {
+            return {
+              content: [{
+                type: "text" as const,
+                text: JSON.stringify({ selection: null, hint: "Nothing selected. Ask the designer which element they want to work on." }),
+              }],
+            };
+          }
+          return {
+            content: [{
+              type: "text" as const,
+              text: JSON.stringify({
+                selector: sel.selector,
+                tagName: sel.tagName,
+                className: sel.className,
+                computedStyles: sel.computedStyles,
+                updatedAt: sel.updatedAt,
+              }, null, 2),
+            }],
+          };
+        } catch (err) {
+          return {
+            content: [{ type: "text" as const, text: JSON.stringify({ error: String(err) }) }],
+            isError: true,
+          };
+        }
+      }
+    );
 
     // 1. Read design state — returns the .0c project file JSON
     this.mcpServer.tool(
@@ -261,6 +312,7 @@ export class ZeroCanvasMcp {
       {
         selector: z.string().describe("CSS selector to target (e.g. '.hero-title')"),
         property: z.string().describe("CSS property name in kebab-case (e.g. 'background-color')"),
+        // check:ui ignore-next — MCP description text, not an applied color
         value: z.string().describe("New CSS value (e.g. '#3B82F6', '16px', 'flex')"),
       },
       async ({ selector, property, value }) => {

@@ -173,12 +173,12 @@ ${S} .border-b { border-bottom-width: 1px; }
 ${S} .border-l { border-left-width: 1px; }
 ${S} .border-r { border-right-width: 1px; }
 ${S} .border-t { border-top-width: 1px; }
-${S} .border-border { border-color: var(--color--border--on-surface-0); }
-${S} .border-\\[\\#1a1a1a\\] { border-color: var(--color--border--on-surface-0); }
-${S} .border-\\[\\#222222\\] { border-color: var(--color--border--on-surface-0); }
-${S} .border-\\[\\#333333\\] { border-color: var(--color--border--on-surface-1); }
-${S} .border-\\[\\#444\\] { border-color: var(--color--border--on-surface-1); }
-${S} .border-foreground { border-color: var(--color--text--on-surface); }
+${S} .border-border { border-color: var(--border-subtle); }
+${S} .border-\\[\\#1a1a1a\\] { border-color: var(--border-subtle); }
+${S} .border-\\[\\#222222\\] { border-color: var(--border-subtle); }
+${S} .border-\\[\\#333333\\] { border-color: var(--border-default); }
+${S} .border-\\[\\#444\\] { border-color: var(--border-default); }
+${S} .border-foreground { border-color: var(--text-on-surface); }
 ${S} .border-l-transparent { border-left-color: transparent; }
 ${S} .border-t-transparent { border-top-color: transparent; }
 ${S} .border-dashed { border-style: dashed; }
@@ -203,21 +203,21 @@ ${S} .rounded-\\[inherit\\] { border-radius: inherit; }
 /* ============================================================
    BACKGROUNDS
    ============================================================ */
-${S} .bg-background { background-color: var(--color--surface--0); }
-${S} .bg-foreground { background-color: var(--color--surface--inverted); }
-${S} .bg-border { background-color: var(--color--surface--1); }
+${S} .bg-background { background-color: var(--surface-0); }
+${S} .bg-foreground { background-color: var(--surface-inverted); }
+${S} .bg-border { background-color: var(--surface-1); }
 ${S} .bg-transparent { background-color: transparent; }
-${S} .bg-\\[\\#000000\\] { background-color: var(--color--surface--0); }
-${S} .bg-\\[\\#080808\\] { background-color: var(--color--surface--0); }
-${S} .bg-\\[\\#0a0a0a\\] { background-color: var(--color--surface--floor); }
-${S} .bg-\\[var\\(--grey-950\\)\\] { background-color: var(--color--surface--floor); }
-${S} .bg-\\[\\#111111\\] { background-color: var(--color--surface--1); }
-${S} .bg-\\[\\#1a1a1a\\] { background-color: var(--color--surface--1); }
-${S} .bg-\\[\\#222222\\] { background-color: var(--color--surface--1); }
-${S} .bg-\\[\\#333333\\] { background-color: var(--color--surface--2); }
-${S} .bg-\\[\\#444444\\] { background-color: var(--color--surface--2); }
-${S} .bg-\\[\\#0070f3\\] { background-color: var(--color--base--primary); }
-${S} .bg-\\[\\#50e3c2\\] { background-color: var(--color--status--success); }
+${S} .bg-\\[\\#000000\\] { background-color: var(--surface-0); }
+${S} .bg-\\[\\#080808\\] { background-color: var(--surface-0); }
+${S} .bg-\\[\\#0a0a0a\\] { background-color: var(--surface-floor); }
+${S} .bg-\\[var\\(--grey-950\\)\\] { background-color: var(--surface-floor); }
+${S} .bg-\\[\\#111111\\] { background-color: var(--surface-1); }
+${S} .bg-\\[\\#1a1a1a\\] { background-color: var(--surface-1); }
+${S} .bg-\\[\\#222222\\] { background-color: var(--surface-1); }
+${S} .bg-\\[\\#333333\\] { background-color: var(--surface-2); }
+${S} .bg-\\[\\#444444\\] { background-color: var(--surface-2); }
+${S} .bg-\\[\\#0070f3\\] { background-color: var(--primary); }
+${S} .bg-\\[\\#50e3c2\\] { background-color: var(--status-success); }
 ${S} .bg-\\[\\#0070f3\\]\\/5 { background-color: rgba(0,112,243,0.05); }
 ${S} .bg-\\[\\#0070f3\\]\\/10 { background-color: rgba(0,112,243,0.1); }
 ${S} .bg-\\[\\#0070f3\\]\\/15 { background-color: rgba(0,112,243,0.15); }
@@ -234,7 +234,7 @@ ${S} .bg-\\[\\#ff4444\\]\\/10 { background-color: rgba(255,68,68,0.1); }
 ${S} .bg-\\[\\#ff980020\\] { background-color: #ff980020; }
 ${S} .bg-\\[\\#4caf5020\\] { background-color: #4caf5020; }
 ${S} .bg-\\[\\#2196f320\\] { background-color: #2196f320; }
-${S} .bg-black\\/60 { background-color: rgba(0,0,0,0.6); }
+${S} .bg-black\\/60 { background-color: var(--backdrop-weak); }
 ${S} .bg-\\[\\#0a0a0a\\]\\/95 { background-color: rgba(10,10,10,0.95); } /* grey-950/95 */
 ${S} .bg-\\[\\#ffffff06\\] { background-color: rgba(255,255,255,0.024); }
 ${S} .bg-\\[\\#ffffff08\\] { background-color: rgba(255,255,255,0.031); }
@@ -243,22 +243,22 @@ ${S} .bg-\\[\\#ffffff10\\] { background-color: rgba(255,255,255,0.063); }
 /* ============================================================
    TEXT COLORS
    ============================================================ */
-${S} .text-foreground { color: var(--color--text--on-surface); }
-${S} .text-background { color: var(--color--surface--0); }
-${S} .text-muted-foreground { color: var(--color--text--muted); }
-${S} .text-white { color: var(--color--text--on-primary); }
-${S} .text-\\[\\#0070f3\\] { color: var(--color--text--primary); }
-${S} .text-\\[\\#50e3c2\\] { color: var(--color--status--success); }
-${S} .text-\\[\\#f5a623\\] { color: var(--color--status--warning); }
+${S} .text-foreground { color: var(--text-on-surface); }
+${S} .text-background { color: var(--surface-0); }
+${S} .text-muted-foreground { color: var(--text-muted); }
+${S} .text-white { color: var(--text-on-primary); }
+${S} .text-\\[\\#0070f3\\] { color: var(--text-primary); }
+${S} .text-\\[\\#50e3c2\\] { color: var(--status-success); }
+${S} .text-\\[\\#f5a623\\] { color: var(--status-warning); }
 ${S} .text-\\[\\#7928ca\\] { color: var(--blue-700); }
 ${S} .text-\\[\\#ff0080\\] { color: var(--blue-500); }
-${S} .text-\\[\\#ff4444\\] { color: var(--color--status--critical); }
+${S} .text-\\[\\#ff4444\\] { color: var(--status-critical); }
 ${S} .text-\\[\\#ff9800\\] { color: var(--yellow-600); }
 ${S} .text-\\[\\#4caf50\\] { color: var(--green-600); }
 ${S} .text-\\[\\#2196f3\\] { color: var(--blue-500); }
 ${S} .text-\\[\\#79b8ff\\] { color: var(--blue-300); }
-${S} .text-\\[\\#444444\\] { color: var(--color--text--hint); }
-${S} .text-\\[\\#888888\\] { color: var(--color--text--muted); }
+${S} .text-\\[\\#444444\\] { color: var(--text-hint); }
+${S} .text-\\[\\#888888\\] { color: var(--text-muted); }
 ${S} .text-blue-300 { color: var(--blue-300); }
 ${S} .text-blue-400 { color: var(--blue-400); }
 ${S} .text-blue-500 { color: var(--blue-500); }
@@ -295,7 +295,7 @@ ${S} .uppercase { text-transform: uppercase; }
 ${S} .tracking-wider { letter-spacing: 0.05em; }
 ${S} .tracking-tight { letter-spacing: -0.025em; }
 ${S} .resize-none { resize: none; }
-${S} .placeholder\\:text-muted-foreground::placeholder { color: var(--color--text--muted); }
+${S} .placeholder\\:text-muted-foreground::placeholder { color: var(--text-muted); }
 
 /* ============================================================
    EFFECTS & TRANSITIONS
@@ -346,15 +346,15 @@ ${S} .outline-none { outline: none; }
 /* ============================================================
    RINGS (box-shadow based)
    ============================================================ */
-${S} .ring-1 { box-shadow: 0 0 0 1px var(--color--outline--focus); }
+${S} .ring-1 { box-shadow: 0 0 0 1px var(--ring); }
 ${S} .ring-white\\/30 { box-shadow: 0 0 0 1px rgba(255,255,255,0.3); }
 ${S} .ring-white\\/40 { box-shadow: 0 0 0 1px rgba(255,255,255,0.4); }
 
 /* ============================================================
    HOVER STATES
    ============================================================ */
-${S} .hover\\:bg-\\[\\#1a1a1a\\]:hover { background-color: var(--color--surface--1); }
-${S} .hover\\:bg-\\[\\#111111\\]:hover { background-color: var(--color--surface--1); }
+${S} .hover\\:bg-\\[\\#1a1a1a\\]:hover { background-color: var(--surface-1); }
+${S} .hover\\:bg-\\[\\#111111\\]:hover { background-color: var(--surface-1); }
 ${S} .hover\\:bg-\\[\\#ffffff06\\]:hover { background-color: rgba(255,255,255,0.024); }
 ${S} .hover\\:bg-\\[\\#ffffff08\\]:hover { background-color: rgba(255,255,255,0.031); }
 ${S} .hover\\:bg-\\[\\#ffffff10\\]:hover { background-color: rgba(255,255,255,0.063); }
@@ -362,13 +362,13 @@ ${S} .hover\\:bg-\\[\\#0070f3\\]\\/10:hover { background-color: rgba(0,112,243,0
 ${S} .hover\\:bg-\\[\\#0070f3\\]\\/20:hover { background-color: rgba(0,112,243,0.2); }
 ${S} .hover\\:bg-\\[\\#0070f3\\]\\/90:hover { background-color: rgba(0,112,243,0.9); }
 ${S} .hover\\:bg-\\[\\#ff4444\\]\\/10:hover { background-color: rgba(255,68,68,0.1); }
-${S} .hover\\:text-foreground:hover { color: var(--color--text--on-surface); }
-${S} .hover\\:text-\\[\\#0070f3\\]:hover { color: var(--color--text--primary); }
+${S} .hover\\:text-foreground:hover { color: var(--text-on-surface); }
+${S} .hover\\:text-\\[\\#0070f3\\]:hover { color: var(--text-primary); }
 ${S} .hover\\:text-\\[\\#7928ca\\]:hover { color: var(--blue-700); }
-${S} .hover\\:text-\\[\\#f5a623\\]:hover { color: var(--color--status--warning); }
-${S} .hover\\:text-\\[\\#ff4444\\]:hover { color: var(--color--status--critical); }
-${S} .hover\\:border-\\[\\#333333\\]:hover { border-color: var(--color--border--on-surface-1); }
-${S} .hover\\:border-foreground:hover { border-color: var(--color--text--on-surface); }
+${S} .hover\\:text-\\[\\#f5a623\\]:hover { color: var(--status-warning); }
+${S} .hover\\:text-\\[\\#ff4444\\]:hover { color: var(--status-critical); }
+${S} .hover\\:border-\\[\\#333333\\]:hover { border-color: var(--border-default); }
+${S} .hover\\:border-foreground:hover { border-color: var(--text-on-surface); }
 ${S} .hover\\:underline:hover { text-decoration: underline; }
 ${S} .hover\\:opacity-90:hover { opacity: 0.9; }
 
@@ -376,10 +376,10 @@ ${S} .hover\\:opacity-90:hover { opacity: 0.9; }
    FOCUS STATES
    ============================================================ */
 ${S} .focus\\:outline-none:focus { outline: none; }
-${S} .focus\\:border-\\[\\#333333\\]:focus { border-color: var(--color--border--on-surface-1); }
-${S} .focus\\:border-\\[\\#0070f3\\]:focus { border-color: var(--color--outline--on-background); }
+${S} .focus\\:border-\\[\\#333333\\]:focus { border-color: var(--border-default); }
+${S} .focus\\:border-\\[\\#0070f3\\]:focus { border-color: var(--primary); }
 ${S} .focus-visible\\:ring-ring\\/50:focus-visible { box-shadow: 0 0 0 3px rgba(51,51,51,0.5); }
-${S} .focus-visible\\:ring-\\[3px\\]:focus-visible { box-shadow: 0 0 0 3px var(--color--outline--focus); }
+${S} .focus-visible\\:ring-\\[3px\\]:focus-visible { box-shadow: 0 0 0 3px var(--ring); }
 ${S} .focus-visible\\:outline-1:focus-visible { outline-width: 1px; }
 
 /* ============================================================

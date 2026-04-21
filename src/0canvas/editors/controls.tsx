@@ -3,6 +3,7 @@
 // ──────────────────────────────────────────────────────────
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { Input } from "../ui";
 
 // ── Segmented Control ────────────────────────────────────
 
@@ -207,7 +208,7 @@ export function NumberInputWithUnit({
       )}
       <div className="oc-num-row">
         {editing ? (
-          <input
+          <Input
             ref={inputRef}
             className="oc-num-input"
             value={editValue}
@@ -340,7 +341,7 @@ export function SliderInput({
           value={value}
           onChange={(e) => onChange(parseFloat(e.target.value))}
           onKeyDown={handleSliderKeyDown}
-          style={{ background: `linear-gradient(to right, var(--color--base--primary) ${pct}%, var(--color--surface--2) ${pct}%)` }}
+          style={{ background: `linear-gradient(to right, var(--primary) ${pct}%, var(--surface-2) ${pct}%)` }}
           data-0canvas="slider-range"
         />
         <span className="oc-slider-value">

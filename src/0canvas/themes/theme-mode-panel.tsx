@@ -22,6 +22,7 @@ import {
 import { useWorkspace, type DesignToken, type ThemeChangeItem } from "../store/store";
 import { copyToClipboard } from "../utils/clipboard";
 import { ScrollArea } from "../ui/scroll-area";
+import { Button, Input } from "../ui";
 import { applyStyle, getElementById } from "../inspector";
 
 export function ThemeModePanel() {
@@ -114,6 +115,8 @@ export function ThemeModePanel() {
 
     lines.push("## Instructions");
     lines.push("Find each element by its selector and replace the CSS property value with the new design token.");
+    // Instruction text copied to the clipboard — the token example
+    // below is part of the message shown to users. check:ui ignore-next
     lines.push("Use the `var()` form (e.g., `var(--blue-600)`) in the source code, not the resolved hex value.");
 
     copyToClipboard(lines.join("\n"));
@@ -146,16 +149,16 @@ export function ThemeModePanel() {
             <>
               <div className="oc-theme-mode-search">
                 <Search size={12} />
-                <input
+                <Input
                   placeholder="Search tokens..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   spellCheck={false}
                 />
                 {search && (
-                  <button className="oc-theme-mode-search-clear" onClick={() => setSearch("")}>
+                  <Button variant="ghost" size="icon-sm" onClick={() => setSearch("")}>
                     <X size={10} />
-                  </button>
+                  </Button>
                 )}
               </div>
 
@@ -182,12 +185,14 @@ export function ThemeModePanel() {
               <div className="oc-theme-mode-empty-text">
                 No color tokens loaded. Add a CSS file on the Themes page first.
               </div>
-              <button
+              <Button
+                variant="outline"
+                size="sm"
                 className="oc-theme-mode-empty-btn"
                 onClick={() => dispatch({ type: "SET_ACTIVE_PAGE", page: "themes" })}
               >
                 Go to Themes
-              </button>
+              </Button>
             </div>
           )}
         </div>
@@ -197,9 +202,9 @@ export function ThemeModePanel() {
           <div className="oc-theme-mode-section-header">
             <div className="oc-theme-mode-section-title">Changes</div>
             {hasChanges && (
-              <button className="oc-theme-mode-clear-btn" onClick={handleClearAll}>
+              <Button variant="ghost" size="sm" onClick={handleClearAll}>
                 Clear All
-              </button>
+              </Button>
             )}
           </div>
 
@@ -216,7 +221,7 @@ export function ThemeModePanel() {
                         className="oc-theme-mode-token-swatch is-small"
                         style={{ background: change.originalValue }}
                       />
-                      <ArrowRight size={10} style={{ color: "var(--color--text--disabled)", flexShrink: 0 }} />
+                      <ArrowRight size={10} style={{ color: "var(--text-disabled)", flexShrink: 0 }} />
                       <span
                         className="oc-theme-mode-token-swatch is-small"
                         style={{ background: change.newValue }}
@@ -224,13 +229,14 @@ export function ThemeModePanel() {
                       <span className="oc-theme-mode-change-token">{change.newToken}</span>
                     </div>
                   </div>
-                  <button
-                    className="oc-theme-mode-change-remove"
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
                     onClick={() => handleRemoveChange(change)}
                     title="Revert"
                   >
                     <X size={12} />
-                  </button>
+                  </Button>
                 </div>
               ))}
             </div>
@@ -245,10 +251,10 @@ export function ThemeModePanel() {
       {/* Footer: Send */}
       {hasChanges && (
         <div className="oc-theme-mode-footer">
-          <button className="oc-theme-mode-send-btn" onClick={handleCopyPrompt}>
+          <Button variant="primary" onClick={handleCopyPrompt}>
             {copied ? <Check size={14} /> : <Send size={14} />}
             {copied ? "Copied!" : `Copy Prompt (${state.themeChanges.length})`}
-          </button>
+          </Button>
         </div>
       )}
     </div>

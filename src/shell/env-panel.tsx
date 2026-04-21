@@ -32,6 +32,7 @@ import {
   type EnvFile,
   type EnvVar,
 } from "../native/tauri-events";
+import { Button, Input } from "../0canvas/ui";
 
 function isTauriWebview(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -147,9 +148,9 @@ export function EnvPanel() {
           <br />
           <code>touch .env.local</code>
         </p>
-        <button className="oc-env-panel__refresh" onClick={refresh}>
+        <Button variant="outline" size="sm" onClick={refresh}>
           <RefreshCw size={12} /> Refresh
-        </button>
+        </Button>
       </div>
     );
   }
@@ -158,8 +159,10 @@ export function EnvPanel() {
     <div className="oc-env-panel">
       <nav className="oc-env-panel__files">
         {files.map((f) => (
-          <button
+          <Button
             key={f.path}
+            variant="ghost"
+            size="sm"
             className={`oc-env-panel__file ${
               f.path === activePath ? "is-active" : ""
             }`}
@@ -167,15 +170,17 @@ export function EnvPanel() {
             title={f.path}
           >
             {f.filename}
-          </button>
+          </Button>
         ))}
-        <button
+        <Button
+          variant="ghost"
+          size="icon-sm"
           className="oc-env-panel__file oc-env-panel__refresh-tab"
           onClick={refresh}
           title="Refresh"
         >
           <RefreshCw size={12} />
-        </button>
+        </Button>
       </nav>
 
       {activeFile && (
@@ -199,7 +204,7 @@ export function EnvPanel() {
             )}
             {draft.map((row, idx) => (
               <div key={idx} className="oc-env-panel__row">
-                <input
+                <Input
                   className="oc-env-panel__key"
                   type="text"
                   placeholder="KEY"
@@ -209,7 +214,7 @@ export function EnvPanel() {
                   }
                   spellCheck={false}
                 />
-                <input
+                <Input
                   className="oc-env-panel__value"
                   type={row.revealed ? "text" : "password"}
                   placeholder="value"
@@ -217,36 +222,39 @@ export function EnvPanel() {
                   onChange={(e) => updateRow(idx, { value: e.target.value })}
                   spellCheck={false}
                 />
-                <button
-                  className="oc-env-panel__icon-btn"
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
                   onClick={() => updateRow(idx, { revealed: !row.revealed })}
                   title={row.revealed ? "Hide value" : "Reveal value"}
                 >
                   {row.revealed ? <EyeOff size={13} /> : <Eye size={13} />}
-                </button>
-                <button
-                  className="oc-env-panel__icon-btn is-danger"
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="icon-sm"
                   onClick={() => removeRow(idx)}
                   title="Remove variable"
                 >
                   <Trash2 size={13} />
-                </button>
+                </Button>
               </div>
             ))}
           </div>
 
           <footer className="oc-env-panel__footer">
-            <button className="oc-env-panel__add" onClick={addRow}>
+            <Button variant="outline" size="sm" onClick={addRow}>
               <Plus size={13} /> Add Variable
-            </button>
-            <button
-              className="oc-env-panel__save"
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
               disabled={!dirty || saving}
               onClick={handleSave}
             >
               <Save size={13} />
               {saving ? "Saving…" : dirty ? "Save" : "Saved"}
-            </button>
+            </Button>
           </footer>
 
           {error && <div className="oc-env-panel__error">{error}</div>}

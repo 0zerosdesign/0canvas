@@ -16,6 +16,7 @@ import { Link, Unlink } from "lucide-react";
 import { useStyleChange } from "../bridge/use-bridge";
 import { useWorkspace } from "../store/store";
 import { applyStyle } from "../inspector";
+import { Input } from "../ui";
 
 interface SpacingEditorProps {
   elementId: string;
@@ -71,7 +72,7 @@ function SpacingInput({
 
   if (editing) {
     return (
-      <input
+      <Input
         ref={inputRef}
         className="oc-spacing-input"
         value={editValue}

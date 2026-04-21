@@ -23,7 +23,7 @@ Example user request: "make it rounded with a blue background"
 Example response:
 \`\`\`css
 border-radius: 12px;
-background-color: #3B82F6;
+background-color: #3B82F6; /* check:ui ignore-line — LLM prompt example */
 \`\`\`
 
 Example user request: "add more padding and make text bigger"

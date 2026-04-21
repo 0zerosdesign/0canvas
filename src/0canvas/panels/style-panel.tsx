@@ -19,6 +19,7 @@ import {
 import { useWorkspace, findElement, BREAKPOINT_WIDTHS, type DesignToken } from "../store/store";
 import { copyToClipboard } from "../utils/clipboard";
 import { ScrollArea } from "../ui/scroll-area";
+import { Button, Input } from "../ui";
 import { ColorEditor } from "../editors/color-editor";
 import { SpacingEditor } from "../editors/spacing-editor";
 import { TypographyEditor } from "../editors/typography-editor";
@@ -168,10 +169,11 @@ function TokenSuggestions({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open]);
 
-  // Get resolved color value for display
-  const resolvedColor = (token: DesignToken): string => {
-    return token.values["default"] || Object.values(token.values)[0] || "#000";
-  };
+  // Get resolved color value for display.
+  // Fallback hex is a literal color value returned as a STRING, not
+  // applied as a CSS color — serializing unknown tokens as "#000".
+  // check:ui ignore-next
+  const resolvedColor = (token: DesignToken): string => token.values["default"] || Object.values(token.values)[0] || "#000";
 
   // Format token name for display: --blue-500 → blue-500
   const displayName = (name: string) => name.replace(/^--/, "");
@@ -293,7 +295,7 @@ function AutocompleteInput({
 
   return (
     <div className="oc-autocomplete-wrap">
-      <input
+      <Input
         ref={inputRef}
         autoFocus
         className="oc-style-input"
@@ -523,19 +525,20 @@ function StyleSection({
 
   return (
     <div className="oc-panel-section">
-      <button
+      <Button
+        variant="ghost"
         onClick={onToggle}
         className="oc-style-section-btn"
       >
         {expanded ? (
-          <ChevronDown size={11} color="#666" className="oc-style-chevron" />
+          <ChevronDown size={11} color="var(--text-muted)" className="oc-style-chevron" />
         ) : (
-          <ChevronRight size={11} color="#666" className="oc-style-chevron" />
+          <ChevronRight size={11} color="var(--text-muted)" className="oc-style-chevron" />
         )}
         <span className="oc-style-section-icon">{category.icon}</span>
         <span className="oc-style-section-name">{category.name}</span>
         <span className="oc-style-section-count">{activeProperties.length}</span>
-      </button>
+      </Button>
       {expanded && (
         <div className="oc-style-section-children">
           {/* Visual editors for special sections */}
@@ -698,12 +701,12 @@ export function StylePanel() {
           <div>
             {state.elements.length === 0 ? (
               <>
-                <Globe size={24} color="#404040" className="oc-style-empty-icon" />
+                <Globe size={24} color="var(--text-hint)" className="oc-style-empty-icon" />
                 <p>Connect a project to inspect styles</p>
               </>
             ) : (
               <>
-                <MousePointer2 size={24} color="#404040" className="oc-style-empty-icon" />
+                <MousePointer2 size={24} color="var(--text-hint)" className="oc-style-empty-icon" />
                 <p>Select an element to inspect its styles</p>
               </>
             )}
@@ -746,13 +749,15 @@ export function StylePanel() {
         <div className="oc-style-header-row">
           <span className="oc-panel-title">Style</span>
           <div className="oc-style-header-actions">
-              <button
-              className={`oc-panel-btn oc-focus-toggle${focusMode ? " is-active" : ""}`}
+              <Button
+              variant="ghost"
+              size="icon-sm"
+              className={`oc-focus-toggle${focusMode ? " is-active" : ""}`}
               onClick={toggleFocusMode}
               title={focusMode ? "Focus mode ON — one section at a time" : "Focus mode OFF — expand freely"}
             >
               <Focus size={13} />
-            </button>
+            </Button>
             <CopyBtn onClick={() => copyToClipboard(`${selectedElement.selector} {\n${cssOutput}\n}`)} />
           </div>
         </div>
@@ -796,7 +801,7 @@ export function StylePanel() {
             {/* Search bar */}
             <div className="oc-style-search">
               <Search size={12} className="oc-style-search-icon" />
-              <input
+              <Input
                 className="oc-style-search-input"
                 placeholder="Search property..."
                 value={searchQuery}
@@ -885,8 +890,8 @@ function TabBtn({ label, active, onClick }: { label: string; active: boolean; on
 
 function CopyBtn({ onClick }: { onClick: () => void }) {
   return (
-    <button onClick={onClick} className="oc-panel-btn" title="Copy CSS">
+    <Button variant="ghost" size="icon-sm" onClick={onClick} title="Copy CSS">
       <Copy size={13} />
-    </button>
+    </Button>
   );
 }

@@ -21,10 +21,14 @@ import React, { useEffect } from "react";
 import { WorkspaceProvider, useWorkspace, type ChatThread } from "./0canvas/store/store";
 import { hydrateAiApiKey } from "./0canvas/lib/openai";
 import { BridgeProvider } from "./0canvas/bridge/use-bridge";
+import { SelectionSync } from "./0canvas/acp/selection-sync";
 import { AutoConnect, EngineWorkspace } from "./0canvas/engine/0canvas-engine";
 import { injectStyles } from "./0canvas/engine/0canvas-styles";
 import { Column1Nav } from "./shell/column1-nav";
 import { Column2Workspace } from "./shell/column2-workspace";
+import { TitleBar } from "./shell/title-bar";
+import { ActivityBar, type ActivityView } from "./shell/activity-bar";
+import { StatusBar } from "./shell/status-bar";
 import { SettingsPage } from "./0canvas/panels/settings-page";
 import { onProjectChanged } from "./native/tauri-events";
 import { getSetting, setSetting } from "./native/settings";
@@ -168,13 +172,24 @@ function ReloadOnProjectChange() {
  */
 function ShellRouter() {
   const { state } = useWorkspace();
+  // Activity-bar selected view. Currently wired for visual state only —
+  // Col 1 still renders its full tree inside the sidebar slot. Future
+  // migration will swap this to filter what appears in the sidebar.
+  const [activityView, setActivityView] = React.useState<ActivityView>("chats");
   return (
-    <div className="oc-app">
-      <Column1Nav />
-      <Column2Workspace />
-      <div className="oc-column-3" data-0canvas-root="">
-        {state.activePage === "settings" ? <SettingsPage /> : <EngineWorkspace />}
+    <div className="oc-app-root">
+      <TitleBar />
+      <div className="oc-app-body">
+        <ActivityBar active={activityView} onChange={setActivityView} />
+        <div className="oc-app">
+          <Column1Nav />
+          <Column2Workspace />
+          <div className="oc-column-3" data-0canvas-root="">
+            {state.activePage === "settings" ? <SettingsPage /> : <EngineWorkspace />}
+          </div>
+        </div>
       </div>
+      <StatusBar />
     </div>
   );
 }
@@ -188,6 +203,7 @@ export function AppShell() {
           <HydrateAiApiKey />
           <ReloadOnProjectChange />
           <ChatsPersistence />
+          <SelectionSync />
           <ShellRouter />
         </AutoConnect>
       </BridgeProvider>

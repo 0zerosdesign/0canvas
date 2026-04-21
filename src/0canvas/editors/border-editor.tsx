@@ -8,6 +8,7 @@ import { SegmentedControl, NumberInputWithUnit } from "./controls";
 import { useStyleChange } from "../bridge/use-bridge";
 import { useWorkspace } from "../store/store";
 import { applyStyle } from "../inspector";
+import { Input } from "../ui";
 
 interface BorderEditorProps {
   elementId: string;
@@ -36,6 +37,7 @@ function parseShadow(val: string | undefined): {
     y: m[2] || "0px",
     blur: m[3] || "0px",
     spread: m[4] || "0px",
+    // Default shadow color emitted as a serialized CSS value — check:ui ignore-next
     color: m[5]?.trim() || "rgba(0,0,0,0.25)",
   };
 }
@@ -85,6 +87,7 @@ export function BorderEditor({ elementId, selector, styles, onOpenColorEditor }:
   const shadow = parseShadow(styles.boxShadow);
 
   const updateShadow = (field: string, value: string) => {
+    // Default shadow emitted when the target has no box-shadow yet — check:ui ignore-next
     const s = shadow || { x: "0px", y: "0px", blur: "0px", spread: "0px", color: "rgba(0,0,0,0.25)" };
     const updated = { ...s, [field]: value };
     apply("boxShadow", `${updated.x} ${updated.y} ${updated.blur} ${updated.spread} ${updated.color}`);
@@ -175,7 +178,7 @@ export function BorderEditor({ elementId, selector, styles, onOpenColorEditor }:
       {/* Box shadow */}
       {styles.boxShadow && styles.boxShadow !== "none" && shadow && (
         <>
-          <div className="oc-editor-row" style={{ marginTop: 6 }}>
+          <div className="oc-editor-row" style={{ marginTop: "var(--space-3)" }}>
             <span className="oc-editor-label">Shadow</span>
           </div>
           <div className="oc-shadow-grid" title="box-shadow">
@@ -212,7 +215,7 @@ function RadiusInput({ value, onChange, title }: { value: string; onChange: (v: 
 
   if (editing) {
     return (
-      <input
+      <Input
         autoFocus
         className="oc-radius-input"
         value={editValue}

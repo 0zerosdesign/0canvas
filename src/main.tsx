@@ -8,7 +8,7 @@
 // ──────────────────────────────────────────────────────────
 
 import { createRoot } from "react-dom/client";
-import "./styles/variables.css";
+import "./styles/design-tokens.css";
 import { AppShell } from "./app-shell";
 
 const rootEl = document.getElementById("root");

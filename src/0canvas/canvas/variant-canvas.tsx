@@ -342,7 +342,7 @@ function VariantCanvasInner({ onNavigateRef }: VariantCanvasProps) {
         proOptions={{ hideAttribution: true }}
         className="oc-vc-flow"
       >
-        <Background variant={BackgroundVariant.Dots} color="var(--color--surface--2)" gap={20} size={1} />
+        <Background variant={BackgroundVariant.Dots} color="var(--surface-2)" gap={20} size={1} />
         <Controls
           showInteractive={false}
           className="oc-vc-controls"

@@ -56,7 +56,8 @@ export type ThemeChangeItem = {
   elementClasses: string[];
   property: string;              // "color", "background-color", etc.
   originalValue: string;         // computed value before change
-  originalTokenChain: string[];  // var() resolution chain, e.g. ["--color--text--primary", "--blue-600", "#2563EB"]
+  /** var() resolution chain, e.g. ["--text-primary", "--blue-600", "#2563EB"] — check:ui ignore-line */
+  originalTokenChain: string[];
   originalSourceSelector: string; // CSS rule that originally set this, e.g. ".demo-card"
   originalSourceType: "rule" | "inline" | "inherited";
   newToken: string;              // token name applied, e.g. "--green-500"
@@ -158,7 +159,8 @@ export type TokenSyntax = "color" | "length-percentage" | "percentage" | "number
 
 export type DesignToken = {
   name: string;          // e.g. "--blue-500"
-  values: Record<string, string>; // themeId → value, e.g. { default: "#3B82F6", light: "#2563EB" }
+  /** themeId → value, e.g. { default: "#3B82F6", light: "#2563EB" } — check:ui ignore-line */
+  values: Record<string, string>;
   syntax: TokenSyntax;
   description: string;
   inherits: boolean;
@@ -411,7 +413,7 @@ const initialState: WorkspaceState = {
 // Helpers
 // ──────────────────────────────────────────────────────────
 
-/** Derive group name from a CSS custom property name, e.g. "--blue-500" → "blue", "--color--text--muted" → "color" */
+/** Derive group name from a CSS custom property name, e.g. "--blue-500" → "blue", "--text-muted" → "color" */
 export function deriveGroup(name: string): string {
   const stripped = name.replace(/^--/, "");
   const dashIdx = stripped.indexOf("-");
@@ -425,6 +427,26 @@ function findElement(elements: ElementNode[], id: string): ElementNode | null {
   for (const el of elements) {
     if (el.id === id) return el;
     const found = findElement(el.children, id);
+    if (found) return found;
+  }
+  return null;
+}
+
+/**
+ * Walk the tree looking for the first element whose canonical selector
+ * matches. Used by ACP follow-along so the canvas can jump to the element
+ * the agent just edited. Returns null when nothing matches — callers
+ * should treat that as "agent edited a selector we don't have a live node
+ * for" (happens for variants rendered off-screen).
+ */
+export function findBySelector(
+  elements: ElementNode[],
+  selector: string,
+): ElementNode | null {
+  if (!selector) return null;
+  for (const el of elements) {
+    if (el.selector === selector) return el;
+    const found = findBySelector(el.children, selector);
     if (found) return found;
   }
   return null;

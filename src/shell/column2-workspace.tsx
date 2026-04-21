@@ -29,6 +29,7 @@ import { TodoPanel } from "./todo-panel";
 import { GitPanel } from "./git-panel";
 import { MissionPanel } from "./mission-panel";
 import { useWorkspace } from "../0canvas/store/store";
+import { Button } from "../0canvas/ui";
 
 type TabId = "chat" | "git" | "terminal" | "env" | "todo" | "mission";
 
@@ -87,8 +88,10 @@ export function Column2Workspace() {
         {TABS.map(({ id, label, icon: Icon }, idx) => {
           const isActive = activeTab === id;
           return (
-            <button
+            <Button
               key={id}
+              variant="ghost"
+              size="sm"
               role="tab"
               aria-selected={isActive}
               className={`oc-column-2__tab ${isActive ? "is-active" : ""}`}
@@ -97,7 +100,7 @@ export function Column2Workspace() {
             >
               <Icon size={16} />
               <span>{label}</span>
-            </button>
+            </Button>
           );
         })}
       </nav>

@@ -8,7 +8,45 @@
 //
 // ──────────────────────────────────────────────────────────
 
+import type {
+  ContentBlock,
+  InitializeResponse,
+  NewSessionResponse,
+  PromptResponse,
+  RequestPermissionRequest,
+  RequestPermissionResponse,
+  SessionNotification,
+  StopReason,
+} from "@agentclientprotocol/sdk";
+
 export type MessageSource = "browser" | "engine";
+
+// ── ACP registry agent (mirror of the engine-side shape) ─
+//
+// We redeclare the browser-visible fields here rather than import the Node
+// module from the browser bundle. Fields track src/engine/acp/registry.ts.
+
+export interface BridgeRegistryAgent {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  repository?: string;
+  website?: string;
+  authors?: string[];
+  license?: string;
+  icon?: string;
+  distribution: {
+    npx?: { package: string; args?: string[]; env?: Record<string, string> };
+    uvx?: { package: string; args?: string[]; env?: Record<string, string> };
+    binary?: Record<string, {
+      archive: string;
+      cmd: string;
+      args?: string[];
+      env?: Record<string, string>;
+    }>;
+  };
+}
 
 // ── Base envelope ────────────────────────────────────────
 
@@ -134,6 +172,121 @@ export interface ErrorMessage extends BaseMessage {
   requestId?: string;
 }
 
+// ── ACP (Agent Client Protocol) ──────────────────────────
+//
+// See docs/ACP_INTEGRATION.md for the architecture. These wire types
+// mirror src/engine/types.ts — keep them in sync or the union breaks.
+
+export interface AcpListAgentsMessage extends BaseMessage {
+  type: "ACP_LIST_AGENTS";
+  force?: boolean;
+}
+
+export interface AcpNewSessionMessage extends BaseMessage {
+  type: "ACP_NEW_SESSION";
+  agentId: string;
+  cwd?: string;
+  /** Env passed to the agent subprocess at spawn time. */
+  env?: Record<string, string>;
+}
+
+export interface AcpAuthenticateMessage extends BaseMessage {
+  type: "ACP_AUTHENTICATE";
+  agentId: string;
+  methodId: string;
+}
+
+export interface AcpPromptMessage extends BaseMessage {
+  type: "ACP_PROMPT";
+  agentId: string;
+  sessionId: string;
+  prompt: ContentBlock[];
+}
+
+export interface AcpCancelMessage extends BaseMessage {
+  type: "ACP_CANCEL";
+  agentId: string;
+  sessionId: string;
+}
+
+export interface AcpPermissionResponseMessage extends BaseMessage {
+  type: "ACP_PERMISSION_RESPONSE";
+  permissionId: string;
+  response: RequestPermissionResponse;
+}
+
+export interface AcpAgentsListMessage extends BaseMessage {
+  type: "ACP_AGENTS_LIST";
+  requestId: string;
+  agents: BridgeRegistryAgent[];
+}
+
+export interface AcpSessionCreatedMessage extends BaseMessage {
+  type: "ACP_SESSION_CREATED";
+  requestId: string;
+  agentId: string;
+  session: NewSessionResponse;
+  initialize: InitializeResponse;
+}
+
+export interface AcpAuthCompletedMessage extends BaseMessage {
+  type: "ACP_AUTH_COMPLETED";
+  requestId: string;
+  agentId: string;
+  methodId: string;
+}
+
+export interface AcpSessionUpdateMessage extends BaseMessage {
+  type: "ACP_SESSION_UPDATE";
+  agentId: string;
+  notification: SessionNotification;
+}
+
+export interface AcpPermissionRequestMessage extends BaseMessage {
+  type: "ACP_PERMISSION_REQUEST";
+  agentId: string;
+  permissionId: string;
+  request: RequestPermissionRequest;
+}
+
+export interface AcpPromptCompleteMessage extends BaseMessage {
+  type: "ACP_PROMPT_COMPLETE";
+  requestId: string;
+  agentId: string;
+  sessionId: string;
+  stopReason: StopReason;
+  response: PromptResponse;
+}
+
+export interface AcpPromptFailedMessage extends BaseMessage {
+  type: "ACP_PROMPT_FAILED";
+  requestId: string;
+  agentId: string;
+  sessionId: string;
+  error: string;
+}
+
+export interface AcpAgentStderrMessage extends BaseMessage {
+  type: "ACP_AGENT_STDERR";
+  agentId: string;
+  line: string;
+}
+
+export interface AcpAgentExitedMessage extends BaseMessage {
+  type: "ACP_AGENT_EXITED";
+  agentId: string;
+  code: number | null;
+  signal: string | null;
+}
+
+export interface AcpErrorMessage extends BaseMessage {
+  type: "ACP_ERROR";
+  requestId?: string;
+  agentId?: string;
+  code: string;
+  message: string;
+}
+
 // ── Union ────────────────────────────────────────────────
 
 export type BridgeMessage =
@@ -152,7 +305,25 @@ export type BridgeMessage =
   | AIChatResponseMessage
   | EngineReadyMessage
   | CSSFileChangedMessage
-  | OCFileChangedMessage;
+  | OCFileChangedMessage
+  // ACP (browser → engine)
+  | AcpListAgentsMessage
+  | AcpNewSessionMessage
+  | AcpAuthenticateMessage
+  | AcpPromptMessage
+  | AcpCancelMessage
+  | AcpPermissionResponseMessage
+  // ACP (engine → browser)
+  | AcpAgentsListMessage
+  | AcpSessionCreatedMessage
+  | AcpAuthCompletedMessage
+  | AcpSessionUpdateMessage
+  | AcpPermissionRequestMessage
+  | AcpPromptCompleteMessage
+  | AcpPromptFailedMessage
+  | AcpAgentStderrMessage
+  | AcpAgentExitedMessage
+  | AcpErrorMessage;
 
 // ── Helpers ──────────────────────────────────────────────
 

@@ -26,6 +26,7 @@ import { OCManager } from "./oc-manager";
 import { FileWatcher } from "./watcher";
 import { EngineServer } from "./server";
 import { ZeroCanvasMcp } from "./mcp";
+import { AcpSessionManager } from "./acp/session-manager";
 import { detectFramework, findProjectRoot, type Framework } from "./framework-detector";
 import { createMessage, type EngineMessage } from "./types";
 
@@ -45,12 +46,27 @@ export class ZeroCanvasEngine {
   private watcher: FileWatcher;
   private server: EngineServer;
   private mcp: ZeroCanvasMcp | null = null;
+  private acp: AcpSessionManager;
 
   private root: string;
   private port: number;
   private actualPort = 0;
   private framework: Framework = "unknown";
   private running = false;
+
+  /**
+   * Latest selection the browser reported. The MCP server's get_selection
+   * tool reads this so the agent always knows what the designer is looking
+   * at. Null means nothing is selected; the agent should treat that as
+   * "ask the designer what they want me to work on" rather than an error.
+   */
+  private currentSelection: {
+    selector: string;
+    tagName: string;
+    className: string;
+    computedStyles: Record<string, string>;
+    updatedAt: number;
+  } | null = null;
 
   constructor(options?: EngineOptions) {
     this.root = options?.root
@@ -74,6 +90,49 @@ export class ZeroCanvasEngine {
       onMessage: (msg, ws) => this.handleMessage(msg, ws),
       onConnect: (ws) => this.handleConnect(ws),
       onDisconnect: () => {},
+    });
+
+    // ACP session manager — spawns agents on demand, fans notifications out
+    // over the same WebSocket the browser is already listening on. Credentials
+    // never cross this boundary; the agent owns its own auth.
+    this.acp = new AcpSessionManager({
+      projectRoot: this.root,
+      events: {
+        onSessionUpdate: (agentId, notification) => {
+          this.server.broadcast(createMessage({
+            type: "ACP_SESSION_UPDATE",
+            source: "engine",
+            agentId,
+            notification,
+          }));
+        },
+        onPermissionRequest: (agentId, permissionId, request) => {
+          this.server.broadcast(createMessage({
+            type: "ACP_PERMISSION_REQUEST",
+            source: "engine",
+            agentId,
+            permissionId,
+            request,
+          }));
+        },
+        onAgentStderr: (agentId, line) => {
+          this.server.broadcast(createMessage({
+            type: "ACP_AGENT_STDERR",
+            source: "engine",
+            agentId,
+            line,
+          }));
+        },
+        onAgentExit: (agentId, code, signal) => {
+          this.server.broadcast(createMessage({
+            type: "ACP_AGENT_EXITED",
+            source: "engine",
+            agentId,
+            code,
+            signal: signal ? String(signal) : null,
+          }));
+        },
+      },
     });
 
     const engineStartTime = Date.now();
@@ -116,9 +175,19 @@ export class ZeroCanvasEngine {
       writer: this.writer,
       ocManager: this.ocManager,
       engineServer: this.server,
+      getSelection: () => this.currentSelection,
     });
     this.server.setMcpHandler((req, res) => this.mcp!.handleRequest(req, res));
     console.log("[0canvas] MCP server mounted at /mcp");
+
+    // Register the MCP endpoint with the ACP session manager. Every new ACP
+    // session will tell its agent to connect to this endpoint — the agent
+    // gets our 5 design tools natively, no per-agent config required.
+    this.acp.registerMcpServer({
+      name: "0canvas",
+      url: `http://127.0.0.1:${this.actualPort}/mcp`,
+    });
+    console.log(`[0canvas] MCP auto-attach enabled for ACP sessions`);
 
     // 5. Start file watcher
     await this.watcher.start();
@@ -144,6 +213,7 @@ export class ZeroCanvasEngine {
     if (this.mcp) {
       await this.mcp.stop();
     }
+    await this.acp.dispose();
     await this.watcher.stop();
     await this.server.stop();
     this.removePortFile();
@@ -170,6 +240,17 @@ export class ZeroCanvasEngine {
       case "AI_CHAT_REQUEST":
         this.handleAIChatRequest(msg, ws);
         break;
+      case "ELEMENT_SELECTED":
+        this.handleElementSelected(msg);
+        break;
+      case "ACP_LIST_AGENTS":
+      case "ACP_NEW_SESSION":
+      case "ACP_AUTHENTICATE":
+      case "ACP_PROMPT":
+      case "ACP_CANCEL":
+      case "ACP_PERMISSION_RESPONSE":
+        await this.handleAcpMessage(msg, ws);
+        break;
       case "CONNECTED":
         // Browser announced itself — already handled in onConnect
         break;
@@ -178,6 +259,118 @@ export class ZeroCanvasEngine {
         break;
       default:
         break;
+    }
+  }
+
+  /**
+   * Cache the latest selection reported by the browser. Exposed as the
+   * 0canvas_get_selection MCP tool so the agent sees what the designer is
+   * focused on without the user having to retype a selector.
+   */
+  private handleElementSelected(msg: EngineMessage): void {
+    if (msg.type !== "ELEMENT_SELECTED") return;
+    if (!msg.selector) {
+      this.currentSelection = null;
+      return;
+    }
+    this.currentSelection = {
+      selector: msg.selector,
+      tagName: msg.tagName,
+      className: msg.className,
+      computedStyles: msg.computedStyles,
+      updatedAt: Date.now(),
+    };
+  }
+
+  /**
+   * Dispatch ACP-family messages from the browser to the session manager.
+   * Responses fan back out via the shared WebSocket; permission prompts are
+   * pushed proactively by the session manager (not via this request path).
+   */
+  private async handleAcpMessage(msg: EngineMessage, ws: WebSocket): Promise<void> {
+    try {
+      switch (msg.type) {
+        case "ACP_LIST_AGENTS": {
+          const agents = msg.force
+            ? await this.acp.refreshRegistry()
+            : await this.acp.listAgents();
+          this.server.send(ws, createMessage({
+            type: "ACP_AGENTS_LIST",
+            source: "engine",
+            requestId: msg.id,
+            agents,
+          }));
+          return;
+        }
+        case "ACP_NEW_SESSION": {
+          const initialize = await this.acp.ensureAgent(msg.agentId, { env: msg.env });
+          const session = await this.acp.newSession(msg.agentId, {
+            cwd: msg.cwd,
+            env: msg.env,
+          });
+          this.server.send(ws, createMessage({
+            type: "ACP_SESSION_CREATED",
+            source: "engine",
+            requestId: msg.id,
+            agentId: msg.agentId,
+            session,
+            initialize,
+          }));
+          return;
+        }
+        case "ACP_AUTHENTICATE": {
+          await this.acp.authenticate(msg.agentId, msg.methodId);
+          this.server.send(ws, createMessage({
+            type: "ACP_AUTH_COMPLETED",
+            source: "engine",
+            requestId: msg.id,
+            agentId: msg.agentId,
+            methodId: msg.methodId,
+          }));
+          return;
+        }
+        case "ACP_PROMPT": {
+          try {
+            const response = await this.acp.prompt(msg.agentId, msg.sessionId, msg.prompt);
+            this.server.send(ws, createMessage({
+              type: "ACP_PROMPT_COMPLETE",
+              source: "engine",
+              requestId: msg.id,
+              agentId: msg.agentId,
+              sessionId: msg.sessionId,
+              stopReason: response.stopReason,
+              response,
+            }));
+          } catch (err) {
+            this.server.send(ws, createMessage({
+              type: "ACP_PROMPT_FAILED",
+              source: "engine",
+              requestId: msg.id,
+              agentId: msg.agentId,
+              sessionId: msg.sessionId,
+              error: err instanceof Error ? err.message : String(err),
+            }));
+          }
+          return;
+        }
+        case "ACP_CANCEL": {
+          await this.acp.cancel(msg.agentId, msg.sessionId);
+          return;
+        }
+        case "ACP_PERMISSION_RESPONSE": {
+          this.acp.answerPermission(msg.permissionId, msg.response);
+          return;
+        }
+      }
+    } catch (err) {
+      this.server.send(ws, createMessage({
+        type: "ACP_ERROR",
+        source: "engine",
+        requestId: msg.id,
+        agentId: "agentId" in msg ? (msg as { agentId?: string }).agentId : undefined,
+        code: "ACP_DISPATCH_FAILED",
+        message: err instanceof Error ? err.message : String(err),
+      }));
     }
   }
 
