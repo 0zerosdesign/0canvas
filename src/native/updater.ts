@@ -47,7 +47,9 @@ export function useUpdater(): {
 
   const checkNow = useCallback(async () => {
     if (!isTauriWebview()) return;
-    setStatus({ kind: "checking" });
+    // Don't flash "checking" state in the UI — background polling every
+    // 30 min shouldn't produce visual churn. Only an available update
+    // should surface anything visible.
     try {
       const { check } = await import("@tauri-apps/plugin-updater");
       const update = await check();
@@ -63,7 +65,14 @@ export function useUpdater(): {
         notes: update.body,
       });
     } catch (err) {
-      setStatus({ kind: "error", message: errMsg(err) });
+      // Background-check failures are common and non-actionable:
+      //   - no releases exist yet (first run before CI publishes)
+      //   - offline / rate-limited / transient 5xx
+      //   - the endpoint was temporarily misconfigured
+      // Logging to console is enough; never surface a red "Retry" pill
+      // for something the user didn't initiate. Stay idle.
+      console.warn("[updater] background check failed:", errMsg(err));
+      setStatus({ kind: "idle" });
     }
   }, []);
 
