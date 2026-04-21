@@ -34,6 +34,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { Button, Input } from "../0canvas/ui";
 import { useWorkspace, type ChatThread } from "../0canvas/store/store";
 import {
   discoverLocalhostServices,
@@ -50,6 +51,7 @@ import {
   rememberProject,
   type RecentProject,
 } from "../native/recent-projects";
+import { useUpdater } from "../native/updater";
 
 const DOCS_URL = "https://github.com/zerosdesign/0canvas#readme";
 const COLLAPSE_KEY = "column-1-collapsed";
@@ -125,7 +127,8 @@ function ServiceRow({
 }) {
   const clickable = service.kind === "dev-server";
   return (
-    <button
+    <Button
+      variant="ghost"
       className={`oc-column-1__service ${isActive ? "is-active" : ""} ${
         clickable ? "" : "is-disabled"
       }`}
@@ -138,7 +141,7 @@ function ServiceRow({
       </span>
       <span className="oc-column-1__service-port">:{service.port}</span>
       <span className="oc-column-1__service-label">{service.label}</span>
-    </button>
+    </Button>
   );
 }
 
@@ -252,6 +255,7 @@ export function Column1Nav() {
   const currentUrl = state.project?.devServerUrl ?? "";
   const profileMenu = useProfileMenu();
   const workspaceMenu = useWorkspaceMenu();
+  const updater = useUpdater();
   const [collapsed, setCollapsed] = useState<boolean>(() =>
     getSetting<boolean>(COLLAPSE_KEY, false),
   );
@@ -395,38 +399,43 @@ export function Column1Nav() {
           </svg>
           {!collapsed && <span className="oc-column-1__brand-name">0canvas</span>}
         </div>
-        <button
+        <Button
+          variant="ghost"
+          size="icon-sm"
           className="oc-column-1__collapse"
           onClick={toggleCollapsed}
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
-        </button>
+        </Button>
       </div>
 
       <div className="oc-column-1__actions">
-        <button
+        <Button
+          variant="ghost"
           className="oc-column-1__action"
           onClick={handleNewChat}
           title={collapsed ? "New Chat" : undefined}
         >
           <MessageSquarePlus size={16} />
           {!collapsed && <span>New Chat</span>}
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="ghost"
           className="oc-column-1__action"
           disabled
           title={collapsed ? "Skills (later phase)" : undefined}
         >
           <Sparkles size={16} />
           {!collapsed && <span>Skills</span>}
-        </button>
+        </Button>
       </div>
 
       {/* Phase 2-D: Workspace Manager — current project + recents dropdown */}
       <div className="oc-column-1__workspace" ref={workspaceMenu.rootRef}>
-        <button
+        <Button
+          variant="ghost"
           className={`oc-column-1__action oc-column-1__workspace-btn ${
             workspaceMenu.open ? "is-open" : ""
           }`}
@@ -442,7 +451,7 @@ export function Column1Nav() {
               <ChevronDown size={12} className="oc-column-1__workspace-caret" />
             </>
           )}
-        </button>
+        </Button>
 
         {workspaceMenu.open && (
           <div className={`oc-column-1__workspace-menu ${collapsed ? "is-collapsed" : ""}`}>
@@ -454,7 +463,8 @@ export function Column1Nav() {
                   const isCurrent = p.path === workspaceMenu.currentRoot;
                   return (
                     <li key={p.path} className="oc-column-1__workspace-item">
-                      <button
+                      <Button
+                        variant="ghost"
                         className={`oc-column-1__workspace-pick ${isCurrent ? "is-current" : ""}`}
                         onClick={() => !isCurrent && handlePickProject(p.path)}
                         disabled={isCurrent}
@@ -463,36 +473,40 @@ export function Column1Nav() {
                         <Folder size={14} className="oc-column-1__workspace-item-icon" />
                         <span className="oc-column-1__workspace-item-name">{p.name}</span>
                         <span className="oc-column-1__workspace-item-path">{p.path}</span>
-                      </button>
+                      </Button>
                       {!isCurrent && (
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
                           className="oc-column-1__workspace-forget"
                           onClick={(e) => handleForgetProject(e, p.path)}
                           title="Remove from recent"
                           aria-label="Remove from recent"
                         >
                           <X size={10} />
-                        </button>
+                        </Button>
                       )}
                     </li>
                   );
                 })}
               </ul>
             )}
-            <button
+            <Button
+              variant="ghost"
               className="oc-column-1__workspace-open"
               onClick={handleOpenFolder}
             >
               <FolderPlus size={13} />
               <span>Open Folder…</span>
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
               className="oc-column-1__workspace-open"
               onClick={handleOpenClone}
             >
               <GitBranch size={13} />
               <span>Clone from URL…</span>
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -521,7 +535,8 @@ export function Column1Nav() {
                       key={folder}
                       className={`oc-column-1__folder ${isCurrent ? "is-current" : ""}`}
                     >
-                      <button
+                      <Button
+                        variant="ghost"
                         className="oc-column-1__folder-header"
                         onClick={() => toggleFolder(folder)}
                         title={folder || "Not associated with a project"}
@@ -536,7 +551,7 @@ export function Column1Nav() {
                           {folderBasename(folder)}
                         </span>
                         <span className="oc-column-1__folder-count">{chats.length}</span>
-                      </button>
+                      </Button>
                       {!isCollapsed && (
                         <div className="oc-column-1__chat-list">
                           {chats.map((chat) => (
@@ -550,14 +565,16 @@ export function Column1Nav() {
                             >
                               <MessageSquare size={12} />
                               <span className="oc-column-1__chat-title">{chat.title}</span>
-                              <button
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
                                 className="oc-column-1__chat-delete"
                                 onClick={(e) => handleDeleteChat(e, chat.id)}
                                 title="Delete chat"
                                 aria-label="Delete chat"
                               >
                                 <Trash2 size={10} />
-                              </button>
+                              </Button>
                             </div>
                           ))}
                         </div>
@@ -600,45 +617,151 @@ export function Column1Nav() {
       <footer className="oc-column-1__footer" ref={profileMenu.rootRef}>
         {profileMenu.open && (
           <div className="oc-column-1__menu" role="menu">
-            <button
+            <Button
+              variant="ghost"
               className="oc-column-1__menu-item"
               role="menuitem"
               onClick={handleOpenDocs}
             >
               <HelpCircle size={14} />
               <span>How to</span>
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
               className="oc-column-1__menu-item"
               role="menuitem"
               onClick={handleGoToSettings}
             >
               <SettingsIcon size={14} />
               <span>Settings</span>
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
               className="oc-column-1__menu-item is-danger"
               role="menuitem"
               onClick={handleLogout}
             >
               <LogOut size={14} />
               <span>Logout</span>
-            </button>
+            </Button>
           </div>
         )}
-        <button
-          className={`oc-column-1__profile ${profileMenu.open ? "is-open" : ""}`}
-          onClick={() => profileMenu.setOpen((v) => !v)}
-          aria-haspopup="menu"
-          aria-expanded={profileMenu.open}
-          title={collapsed ? "Profile" : undefined}
-        >
-          <div className="oc-column-1__avatar">0</div>
-          {!collapsed && <span>Profile</span>}
-        </button>
+        <div className="oc-column-1__profile-row">
+          <Button
+            variant="ghost"
+            className={`oc-column-1__profile ${profileMenu.open ? "is-open" : ""}`}
+            onClick={() => profileMenu.setOpen((v) => !v)}
+            aria-haspopup="menu"
+            aria-expanded={profileMenu.open}
+            title={collapsed ? "Profile" : undefined}
+          >
+            <div className="oc-column-1__avatar">0</div>
+            {!collapsed && <span>Profile</span>}
+          </Button>
+          <UpdatePill updater={updater} collapsed={collapsed} />
+        </div>
       </footer>
       {showClone && <CloneModal onClose={() => setShowClone(false)} />}
     </aside>
+  );
+}
+
+// ── Auto-updater pill ─────────────────────────────────────
+//
+// Cursor-style affordance: invisible while no update is pending,
+// becomes a small blue "Update" pill when one is available. Click
+// starts the download; the pill shows progress then "Restart".
+// Collapsed rail: renders as a small dot on the top-right of the
+// profile avatar so the user still sees the signal.
+
+function UpdatePill({
+  updater,
+  collapsed,
+}: {
+  updater: ReturnType<typeof useUpdater>;
+  collapsed: boolean;
+}) {
+  const { status, install } = updater;
+
+  if (status.kind === "idle" || status.kind === "checking") return null;
+
+  if (collapsed) {
+    const title =
+      status.kind === "available"
+        ? `Update ${status.version} available`
+        : status.kind === "downloading"
+          ? `Downloading update…`
+          : status.kind === "ready"
+            ? `Update ready — click to restart`
+            : `Update error`;
+    return (
+      <Button
+        variant="ghost"
+        className={`oc-column-1__update-dot is-${status.kind}`}
+        onClick={() => {
+          if (status.kind === "available" || status.kind === "ready") {
+            void install();
+          }
+        }}
+        title={title}
+        aria-label={title}
+      />
+    );
+  }
+
+  if (status.kind === "available") {
+    return (
+      <Button
+        variant="primary"
+        className="oc-column-1__update-pill"
+        onClick={() => void install()}
+        title={`Update to ${status.version}`}
+      >
+        Update
+      </Button>
+    );
+  }
+
+  if (status.kind === "downloading") {
+    const pct =
+      status.total && status.total > 0
+        ? Math.min(100, Math.round((status.downloaded / status.total) * 100))
+        : undefined;
+    return (
+      <Button
+        variant="primary"
+        className="oc-column-1__update-pill is-downloading"
+        disabled
+        title="Downloading update…"
+      >
+        {pct != null ? `${pct}%` : "…"}
+      </Button>
+    );
+  }
+
+  if (status.kind === "ready") {
+    return (
+      <Button
+        variant="primary"
+        className="oc-column-1__update-pill is-ready"
+        onClick={() => void install()}
+        title="Restart to apply update"
+      >
+        Restart
+      </Button>
+    );
+  }
+
+  // status.kind === "error"
+  return (
+    <Button
+      variant="primary"
+      className="oc-column-1__update-pill is-error"
+      onClick={() => void updater.checkNow()}
+      title={status.message}
+    >
+      Retry
+    </Button>
   );
 }
 
@@ -707,7 +830,7 @@ function CloneModal({ onClose }: { onClose: () => void }) {
         <h2>Clone a repository</h2>
         <label>
           Git URL
-          <input
+          <Input
             autoFocus
             placeholder="https://github.com/owner/repo.git"
             value={url}
@@ -717,7 +840,7 @@ function CloneModal({ onClose }: { onClose: () => void }) {
         </label>
         <label>
           Destination folder (absolute path)
-          <input
+          <Input
             placeholder="/Users/you/Projects/repo"
             value={dest}
             onChange={(e) => {
@@ -732,20 +855,20 @@ function CloneModal({ onClose }: { onClose: () => void }) {
         )}
         {err && <div className="oc-clone-modal__err">{err}</div>}
         <div className="oc-clone-modal__actions">
-          <button
-            className="oc-git__btn"
+          <Button
+            variant="ghost"
             onClick={onClose}
             disabled={busy}
           >
             Cancel
-          </button>
-          <button
-            className="oc-git__btn is-primary"
+          </Button>
+          <Button
+            variant="primary"
             onClick={handleClone}
             disabled={busy || !url.trim() || !dest.trim()}
           >
             {busy ? "Cloning…" : "Clone"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

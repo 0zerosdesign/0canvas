@@ -3,11 +3,11 @@
  * ──────────────────────────────────────────────────────────
  *
  * Surface hierarchy (Pass 1):
- *   Chrome   (nav, tab bars, toolbars) → --color--surface--floor
- *   Content  (canvas, body)            → --color--surface--0
- *   Elevated (cards, menus, hover)     → --color--surface--1
- *   Emphasis (active, selected)        → --color--surface--2
- *   Separators                         → --color--border--on-surface-0
+ *   Chrome   (nav, tab bars, toolbars) → --surface-floor
+ *   Content  (canvas, body)            → --surface-0
+ *   Elevated (cards, menus, hover)     → --surface-1
+ *   Emphasis (active, selected)        → --surface-2
+ *   Separators                         → --border-subtle
  *
  * Type scale (Pass 2) — the only font-sizes that should appear
  * in this file or in the engine stylesheets:
@@ -45,256 +45,53 @@
  *
  * Icons:   16px for nav, 14px for inline, 12px for micro.
  *
- * Primitives (Pass 5) — new code should use these instead of
- * defining per-feature button/input/card rules:
- *   .oc-btn              ghost (transparent, tinted hover)
- *   .oc-btn--primary     solid brand (CTAs, save)
- *   .oc-btn--secondary   surface-1 (muted actions)
- *   .oc-btn--critical    error bg (destructive)
- *   .oc-btn--icon        square 26x26 icon-only
- *   .oc-btn--sm|--lg     size modifiers
- *   .oc-input            full-width text input
- *   .oc-card             surface-1 bordered container
- *   .oc-card--flat       transparent with border
- *   .oc-card--elevated   shadow-md lift
- * Existing per-feature classes still render; they share focus
- * and disabled styling with the primitives via the legacy
- * normalization block below.
+ * Primitives — live in `src/0canvas/ui/` and are imported via
+ * `src/0canvas/ui/primitives.css`. Use <Button/>, <Input/>,
+ * <Textarea/>, <ScrollArea/> — do NOT add class-based button
+ * primitives here. Feature-specific class rules below target
+ * existing DOM that hasn't migrated to primitives yet.
  * ────────────────────────────────────────────────────────── */
 
 .oc-app {
-  position: fixed;
-  inset: 0;
+  flex: 1;
   display: flex;
-  min-height: 100vh;
+  min-width: 0;
+  min-height: 0;
   overflow: hidden;
-  font-family: var(--font-sans);
-  font-size: 13px;
-  color: var(--color--text--on-surface);
-  background: var(--color--surface--floor);
+  font-family: var(--font-ui, var(--font-ui));
+  font-size: var(--text-13);
+  color: var(--text-on-surface);
+  background: var(--surface-floor);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 /* ============================================================
- * Pass 5 — UI Primitives
+ * Feature-button focus + disabled normalization
  * ============================================================
- * Canonical button / input / card classes. New code should use
- * these instead of defining per-component variants. Existing
- * component-specific classes (oc-toolbar-btn, oc-chat-iconbtn,
- * oc-ai-send-btn, etc.) remain in place and render correctly;
- * they will migrate onto these primitives as features are touched.
- *
- * Usage:
- *   <button class="oc-btn">Label</button>             ghost (default)
- *   <button class="oc-btn oc-btn--primary">Save</button>
- *   <button class="oc-btn oc-btn--secondary">Back</button>
- *   <button class="oc-btn oc-btn--critical">Delete</button>
- *   <button class="oc-btn oc-btn--icon"><Icon/></button>
- *   <button class="oc-btn oc-btn--sm">small</button>
- *   <input  class="oc-input" />
- *   <div    class="oc-card">...</div>
- */
-
-.oc-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 6px 10px;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  color: var(--color--text--muted);
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
-  user-select: none;
-}
-
-.oc-btn:hover {
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--color--text--on-surface);
-}
-
-.oc-btn:disabled,
-.oc-btn[aria-disabled="true"] {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.oc-btn:disabled:hover,
-.oc-btn[aria-disabled="true"]:hover {
-  background: transparent;
-  color: var(--color--text--muted);
-}
-
-.oc-btn:focus-visible {
-  outline: 2px solid var(--color--outline--focus);
-  outline-offset: 1px;
-}
-
-/* Variants */
-.oc-btn--primary {
-  background: var(--color--base--primary);
-  color: var(--color--text--on-primary);
-}
-.oc-btn--primary:hover {
-  background: var(--color--base--primary-hover);
-  color: var(--color--text--on-primary);
-}
-
-.oc-btn--secondary {
-  background: var(--color--surface--1);
-  color: var(--color--text--on-surface);
-  border-color: var(--color--border--on-surface-1);
-}
-.oc-btn--secondary:hover {
-  background: var(--color--surface--2);
-  color: var(--color--text--on-surface);
-}
-
-.oc-btn--critical {
-  background: var(--color--status--critical);
-  color: var(--color--text--on-critical);
-}
-.oc-btn--critical:hover {
-  background: var(--color--status--critical);
-  color: var(--color--text--on-critical);
-  filter: brightness(1.1);
-}
-
-.oc-btn--ghost {
-  /* explicit opt-in for the default ghost treatment */
-}
-
-.oc-btn--icon {
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  gap: 0;
-}
-
-/* Sizes */
-.oc-btn--sm {
-  padding: 4px 8px;
-  font-size: 11px;
-  border-radius: 4px;
-}
-.oc-btn--sm.oc-btn--icon {
-  width: 22px;
-  height: 22px;
-  padding: 0;
-}
-
-.oc-btn--lg {
-  padding: 8px 14px;
-  font-size: 13px;
-}
-
-/* ── Input primitive ───────────────────────────────────── */
-.oc-input {
-  width: 100%;
-  padding: 6px 10px;
-  background: var(--color--surface--0);
-  border: 1px solid var(--color--border--on-surface-1);
-  border-radius: 6px;
-  color: var(--color--text--on-surface);
-  font-family: inherit;
-  font-size: 13px;
-  line-height: 1.4;
-  outline: none;
-  transition: border-color 120ms ease, background 120ms ease;
-}
-
-.oc-input::placeholder {
-  color: var(--color--text--muted);
-}
-
-.oc-input:hover {
-  border-color: var(--color--border--on-surface-2);
-}
-
-.oc-input:focus {
-  border-color: var(--color--base--primary);
-}
-
-.oc-input:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* ── Card primitive ────────────────────────────────────── */
-.oc-card {
-  padding: 12px 14px;
-  background: var(--color--surface--1);
-  border: 1px solid var(--color--border--on-surface-1);
-  border-radius: 8px;
-  color: var(--color--text--on-surface);
-}
-
-.oc-card--flat {
-  background: transparent;
-  border: 1px solid var(--color--border--on-surface-0);
-}
-
-.oc-card--elevated {
-  padding: 14px 16px;
-  box-shadow: var(--shadow-md);
-}
-
-/* ============================================================
- * Legacy button normalization (Pass 5)
- * ============================================================
- * Until each component migrates onto .oc-btn, these rules bring
- * the older per-feature button classes into a single hover /
- * focus / disabled vocabulary. They don't change size or role —
- * just make the interaction feel identical across features.
- *
- * Once a class is migrated to .oc-btn in JSX, its entry here and
- * any per-feature duplicate hover/focus rules in the engine CSS
- * should be removed.
+ * Shared `:focus-visible` ring and `:disabled` dim for the
+ * feature-specific button classes that still exist in the
+ * shell (i.e. the ones NOT yet converted to <Button/>). Keeps
+ * hover/focus feel identical across features.
  */
 
 .oc-toolbar-btn:focus-visible,
-.oc-panel-btn:focus-visible,
-.oc-chat-iconbtn:focus-visible,
-.oc-chat-toolbar-iconbtn:focus-visible,
-.oc-git__btn:focus-visible,
-.oc-git__icon-btn:focus-visible,
-.oc-git__refresh-btn:focus-visible,
-.oc-env-panel__icon-btn:focus-visible,
 .oc-todo__icon-btn:focus-visible,
-.oc-themes-action-btn:focus-visible,
-.oc-theme-header-btn:focus-visible,
-.oc-layers-action-btn:focus-visible,
 .oc-style-section-btn:focus-visible,
 .oc-typo-align-btn:focus-visible,
 .oc-source-btn:focus-visible,
 .oc-variant-action-btn:focus-visible,
 .oc-segmented-btn:focus-visible,
-.oc-ai-provider-btn:focus-visible,
-.oc-chat-headerbtn:focus-visible,
-.oc-close-btn:focus-visible {
-  outline: 2px solid var(--color--outline--focus);
+.oc-chat-headerbtn:focus-visible {
+  outline: 2px solid var(--ring);
   outline-offset: 1px;
 }
 
 .oc-toolbar-btn:disabled,
-.oc-panel-btn:disabled,
-.oc-chat-iconbtn:disabled,
-.oc-chat-toolbar-iconbtn:disabled,
-.oc-git__btn:disabled,
-.oc-git__icon-btn:disabled,
-.oc-ai-send-btn:disabled,
-.oc-ai-save-btn:disabled,
-.oc-theme-dialog-btn:disabled,
-.oc-theme-mode-send-btn:disabled,
-.oc-themes-empty-btn:disabled {
+.oc-todo__icon-btn:disabled,
+.oc-style-section-btn:disabled,
+.oc-typo-align-btn:disabled,
+.oc-segmented-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -307,8 +104,8 @@
   flex: 0 0 248px;
   display: flex;
   flex-direction: column;
-  background: var(--color--surface--floor);
-  border-right: 1px solid var(--color--border--on-surface-0);
+  background: var(--surface-floor);
+  border-right: 1px solid var(--border-subtle);
   padding: 10px 10px 12px;
   gap: 14px;
   overflow: hidden;
@@ -353,7 +150,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--color--text--on-surface);
+  color: var(--text-on-surface);
 }
 
 .oc-column-1__brand-name {
@@ -371,14 +168,14 @@
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   cursor: pointer;
   transition: background 120ms ease, color 120ms ease;
 }
 
 .oc-column-1__collapse:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--color--text--on-surface);
+  background: var(--tint-hover-strong);
+  color: var(--text-on-surface);
 }
 
 .oc-column-1__collapse:disabled {
@@ -402,7 +199,7 @@
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: var(--color--text--on-surface);
+  color: var(--text-on-surface);
   font-size: 13px;
   font-weight: 500;
   text-align: left;
@@ -412,7 +209,7 @@
 }
 
 .oc-column-1__action:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--tint-hover);
 }
 
 .oc-column-1__action:disabled {
@@ -421,7 +218,7 @@
 }
 
 .oc-column-1__action > svg {
-  color: var(--color--text--on-surface-variant);
+  color: var(--text-on-surface-variant);
   flex-shrink: 0;
 }
 
@@ -438,7 +235,7 @@
 
 .oc-column-1__workspace-btn.is-open,
 .oc-column-1__workspace-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--tint-hover);
 }
 
 .oc-column-1__workspace-name {
@@ -452,7 +249,7 @@
 }
 
 .oc-column-1__workspace-caret {
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   flex-shrink: 0;
 }
 
@@ -461,9 +258,9 @@
   top: calc(100% + 6px);
   left: 0;
   right: 0;
-  z-index: 20;
-  background: var(--color--surface--1);
-  border: 1px solid var(--color--border--on-surface-1);
+  z-index: var(--z-dropdown);
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
   border-radius: 8px;
   box-shadow: var(--shadow-lg);
   padding: 4px;
@@ -483,7 +280,7 @@
   margin: 0;
   padding: 12px 14px;
   font-size: 12px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
 }
 
 .oc-column-1__workspace-list {
@@ -505,7 +302,7 @@
 }
 
 .oc-column-1__workspace-item:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--tint-hover);
 }
 
 .oc-column-1__workspace-pick {
@@ -521,7 +318,7 @@
   padding: 8px 10px;
   background: transparent;
   border: none;
-  color: var(--color--text--on-surface);
+  color: var(--text-on-surface);
   font-family: inherit;
   font-size: 13px;
   text-align: left;
@@ -531,16 +328,16 @@
 
 .oc-column-1__workspace-pick.is-current {
   cursor: default;
-  color: var(--color--text--primary-light);
+  color: var(--text-primary-light);
 }
 
 .oc-column-1__workspace-item-icon {
   grid-area: icon;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
 }
 
 .oc-column-1__workspace-pick.is-current .oc-column-1__workspace-item-icon {
-  color: var(--color--text--primary-light);
+  color: var(--text-primary-light);
 }
 
 .oc-column-1__workspace-item-name {
@@ -556,8 +353,8 @@
 .oc-column-1__workspace-item-path {
   grid-area: path;
   font-size: 11px;
-  color: var(--color--text--muted);
-  font-family: var(--font-firacode);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -574,7 +371,7 @@
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   cursor: pointer;
   opacity: 0;
   transition: opacity 120ms ease, background 120ms ease, color 120ms ease;
@@ -585,8 +382,8 @@
 }
 
 .oc-column-1__workspace-forget:hover {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--color--text--critical);
+  background: var(--tint-critical-soft);
+  color: var(--text-critical);
 }
 
 .oc-column-1__workspace-open {
@@ -597,8 +394,8 @@
   margin-top: 4px;
   background: transparent;
   border: none;
-  border-top: 1px solid var(--color--border--on-surface-1);
-  color: var(--color--text--on-surface);
+  border-top: 1px solid var(--border-default);
+  color: var(--text-on-surface);
   font-family: inherit;
   font-size: 12px;
   font-weight: 500;
@@ -608,8 +405,8 @@
 }
 
 .oc-column-1__workspace-open:hover {
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--color--text--primary-light);
+  background: var(--tint-hover);
+  color: var(--text-primary-light);
 }
 
 /* ── Sections (CHATS / LOCALHOST) ─────────────────────── */
@@ -630,7 +427,7 @@
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.08em;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   text-transform: uppercase;
   height: 18px;
 }
@@ -645,8 +442,8 @@
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0;
-  color: var(--color--text--on-surface-variant);
-  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-on-surface-variant);
+  background: var(--tint-hover-strong);
   border-radius: 8px;
 }
 
@@ -654,7 +451,7 @@
   margin: 0;
   padding: 0 6px;
   font-size: 11px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   line-height: 1.55;
 }
 
@@ -674,7 +471,7 @@
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: var(--color--text--on-surface);
+  color: var(--text-on-surface);
   font-size: 12px;
   text-align: left;
   cursor: pointer;
@@ -685,12 +482,12 @@
 }
 
 .oc-column-1__service:hover:not(.is-disabled) {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--tint-hover);
 }
 
 .oc-column-1__service.is-active {
-  background: rgba(37, 99, 235, 0.14);
-  color: var(--color--text--primary-light);
+  background: var(--tint-primary-soft);
+  color: var(--text-primary-light);
 }
 
 .oc-column-1__service.is-disabled {
@@ -701,29 +498,29 @@
 .oc-column-1__service-icon {
   display: inline-flex;
   align-items: center;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   flex-shrink: 0;
 }
 
 .oc-column-1__service.is-active .oc-column-1__service-icon {
-  color: var(--color--text--primary-light);
+  color: var(--text-primary-light);
 }
 
 .oc-column-1__service-port {
-  font-family: var(--font-firacode);
+  font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--color--text--on-surface);
+  color: var(--text-on-surface);
   flex-shrink: 0;
   font-weight: 500;
 }
 
 .oc-column-1__service.is-active .oc-column-1__service-port {
-  color: var(--color--text--primary-light);
+  color: var(--text-primary-light);
 }
 
 .oc-column-1__service-label {
   font-size: 11px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -756,7 +553,7 @@
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: var(--color--text--on-surface);
+  color: var(--text-on-surface);
   font-size: 12px;
   font-weight: 500;
   text-align: left;
@@ -767,15 +564,15 @@
 }
 
 .oc-column-1__folder-header:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--tint-hover);
 }
 
 .oc-column-1__folder.is-current .oc-column-1__folder-header {
-  color: var(--color--text--primary-light);
+  color: var(--text-primary-light);
 }
 
 .oc-column-1__folder.is-current .oc-column-1__folder-header:hover {
-  background: rgba(59, 130, 246, 0.08);
+  background: var(--tint-primary-weak);
 }
 
 .oc-column-1__folder-name {
@@ -788,7 +585,7 @@
 
 .oc-column-1__folder-count {
   font-size: 10px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   padding: 0 2px;
 }
 
@@ -805,20 +602,20 @@
   gap: 6px;
   padding: 6px 8px;
   border-radius: 6px;
-  color: var(--color--text--on-surface-variant);
+  color: var(--text-on-surface-variant);
   font-size: 12px;
   cursor: pointer;
   transition: background 120ms ease, color 120ms ease;
 }
 
 .oc-column-1__chat:hover {
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--color--text--on-surface);
+  background: var(--tint-hover);
+  color: var(--text-on-surface);
 }
 
 .oc-column-1__chat.is-active {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--color--text--on-surface);
+  background: var(--tint-active);
+  color: var(--text-on-surface);
   font-weight: 500;
 }
 
@@ -839,7 +636,7 @@
   background: transparent;
   border: none;
   border-radius: 4px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   cursor: pointer;
   padding: 0;
 }
@@ -849,8 +646,8 @@
 }
 
 .oc-column-1__chat-delete:hover {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--color--text--critical);
+  background: var(--tint-critical-soft);
+  color: var(--text-critical);
 }
 
 .oc-column-1__spacer {
@@ -864,16 +661,28 @@
   padding-top: 8px;
 }
 
+.oc-column-1__profile-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.oc-column-1.is-collapsed .oc-column-1__profile-row {
+  position: relative;
+}
+
 .oc-column-1__profile {
   display: flex;
   align-items: center;
   gap: 10px;
-  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
   padding: 6px 8px;
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: var(--color--text--on-surface);
+  color: var(--text-on-surface);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -881,9 +690,74 @@
   transition: background 120ms ease;
 }
 
+.oc-column-1__update-pill {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  background: var(--primary);
+  color: var(--text-on-primary);
+  border: none;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-11);
+  font-weight: var(--weight-heading);
+  font-family: inherit;
+  cursor: pointer;
+  transition: filter var(--dur-fast) var(--ease-standard),
+              opacity var(--dur-fast) var(--ease-standard);
+}
+
+.oc-column-1__update-pill:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.oc-column-1__update-pill.is-downloading {
+  opacity: 0.7;
+  cursor: default;
+  min-width: 48px;
+  text-align: center;
+}
+
+.oc-column-1__update-pill.is-ready {
+  background: var(--status-success);
+}
+
+.oc-column-1__update-pill.is-error {
+  background: var(--status-critical);
+}
+
+.oc-column-1__update-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.oc-column-1__update-dot.is-ready {
+  background: var(--status-success);
+}
+
+.oc-column-1__update-dot.is-error {
+  background: var(--status-critical);
+}
+
+.oc-column-1__update-dot.is-downloading {
+  opacity: 0.6;
+  animation: oc-updater-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes oc-updater-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.9; }
+}
+
 .oc-column-1__profile:hover,
 .oc-column-1__profile.is-open {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--tint-hover);
 }
 
 .oc-column-1__profile:disabled {
@@ -897,14 +771,14 @@
   left: 0;
   right: 0;
   padding: 4px;
-  background: var(--color--surface--1);
-  border: 1px solid var(--color--border--on-surface-1);
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
   border-radius: 8px;
   box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
   gap: 1px;
-  z-index: 10;
+  z-index: var(--z-panel);
 }
 
 .oc-column-1__menu-item {
@@ -915,7 +789,7 @@
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: var(--color--text--on-surface);
+  color: var(--text-on-surface);
   font-size: 12px;
   font-weight: 500;
   text-align: left;
@@ -925,15 +799,15 @@
 }
 
 .oc-column-1__menu-item:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--tint-hover-strong);
 }
 
 .oc-column-1__menu-item.is-danger {
-  color: var(--color--text--critical);
+  color: var(--text-critical);
 }
 
 .oc-column-1__menu-item.is-danger:hover {
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--tint-critical-soft);
 }
 
 .oc-column-1__avatar {
@@ -943,7 +817,7 @@
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: var(--color--base--primary);
+  background: var(--primary);
   color: white;
   font-size: 11px;
   font-weight: 600;
@@ -958,8 +832,8 @@
   flex: 0 0 440px;
   display: flex;
   flex-direction: column;
-  background: var(--color--surface--floor);
-  border-right: 1px solid var(--color--border--on-surface-0);
+  background: var(--surface-floor);
+  border-right: 1px solid var(--border-subtle);
   overflow: hidden;
 }
 
@@ -982,7 +856,7 @@
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -992,13 +866,13 @@
 }
 
 .oc-column-2__tab:hover {
-  color: var(--color--text--on-surface);
-  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-on-surface);
+  background: var(--tint-hover);
 }
 
 .oc-column-2__tab.is-active {
-  color: var(--color--text--on-surface);
-  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-on-surface);
+  background: var(--tint-active);
 }
 
 .oc-column-2__body {
@@ -1053,20 +927,20 @@
 .oc-ai-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 8px 3px 10px;
-  background: rgba(37, 99, 235, 0.12);
-  color: var(--color--text--primary-light);
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4) var(--space-2) var(--space-5);
+  background: var(--tint-primary-soft);
+  color: var(--text-primary-light);
   border-radius: 12px;
   font-size: 11px;
-  font-family: var(--font-firacode);
-  border: 1px solid rgba(37, 99, 235, 0.22);
+  font-family: var(--font-mono);
+  border: 1px solid var(--tint-primary-border);
 }
 
 .oc-ai-chip.is-variant {
-  background: rgba(139, 92, 246, 0.12);
-  color: var(--purple-300);
-  border-color: rgba(139, 92, 246, 0.22);
+  background: var(--tint-accent-soft);
+  color: var(--text-accent);
+  border-color: var(--tint-accent-border);
 }
 
 .oc-ai-chip code {
@@ -1096,7 +970,7 @@
 
 .oc-ai-chip-x:hover {
   opacity: 1;
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--tint-border-hover);
 }
 
 /* ── Terminal tab ─────────────────────────────────────── */
@@ -1106,7 +980,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: var(--color--surface--floor);
+  background: var(--surface-floor);
 }
 
 .oc-terminal {
@@ -1114,15 +988,15 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: var(--color--surface--floor);
+  background: var(--surface-floor);
 }
 
 .oc-terminal__error {
   padding: 10px 14px;
   font-size: 11px;
-  color: var(--color--text--critical);
-  background: rgba(239, 68, 68, 0.08);
-  border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+  color: var(--text-critical);
+  background: var(--tint-critical-soft);
+  border-bottom: 1px solid var(--tint-critical-border);
 }
 
 .oc-terminal__host {
@@ -1141,7 +1015,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: var(--color--surface--floor);
+  background: var(--surface-floor);
 }
 
 .oc-terminal-panel__tabs {
@@ -1156,12 +1030,12 @@
 .oc-terminal-panel__tab {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 8px 5px 10px;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4) var(--space-2) var(--space-5);
   background: transparent;
   border: none;
-  border-radius: 6px 6px 0 0;
-  color: var(--color--text--muted);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  color: var(--text-muted);
   font-size: 11px;
   font-weight: 500;
   cursor: pointer;
@@ -1171,13 +1045,13 @@
 }
 
 .oc-terminal-panel__tab:hover {
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--color--text--on-surface);
+  background: var(--tint-hover);
+  color: var(--text-on-surface);
 }
 
 .oc-terminal-panel__tab.is-active {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--color--text--on-surface);
+  background: var(--tint-active);
+  color: var(--text-on-surface);
 }
 
 .oc-terminal-panel__close {
@@ -1189,15 +1063,15 @@
   background: transparent;
   border: none;
   border-radius: 4px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   cursor: pointer;
   padding: 0;
   transition: background 120ms ease, color 120ms ease;
 }
 
 .oc-terminal-panel__close:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--color--text--on-surface);
+  background: var(--tint-active);
+  color: var(--text-on-surface);
 }
 
 .oc-terminal-panel__add {
@@ -1209,15 +1083,15 @@
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   cursor: pointer;
   margin-left: 2px;
   transition: background 120ms ease, color 120ms ease;
 }
 
 .oc-terminal-panel__add:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--color--text--on-surface);
+  background: var(--tint-hover-strong);
+  color: var(--text-on-surface);
 }
 
 .oc-terminal-panel__sessions {
@@ -1251,18 +1125,18 @@
 
 .oc-env-panel__empty {
   padding: 24px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   font-size: 12px;
   line-height: 1.55;
 }
 
 .oc-env-panel__empty code {
-  font-family: var(--font-firacode);
+  font-family: var(--font-mono);
   padding: 1px 6px;
-  background: var(--color--surface--1);
+  background: var(--surface-1);
   border-radius: 4px;
   font-size: 11px;
-  color: var(--color--text--on-surface);
+  color: var(--text-on-surface);
 }
 
 .oc-env-panel__hint {
@@ -1276,8 +1150,8 @@
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  background: var(--color--surface--1);
-  color: var(--color--text--on-surface);
+  background: var(--surface-1);
+  color: var(--text-on-surface);
   border: none;
   border-radius: 6px;
   font-size: 11px;
@@ -1288,7 +1162,7 @@
 }
 
 .oc-env-panel__refresh:hover {
-  background: var(--color--surface--2);
+  background: var(--surface-2);
 }
 
 .oc-env-panel__files {
@@ -1305,29 +1179,29 @@
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   font-size: 12px;
-  font-family: var(--font-firacode);
+  font-family: var(--font-mono);
   cursor: pointer;
   white-space: nowrap;
   transition: background 120ms ease, color 120ms ease;
 }
 
 .oc-env-panel__file:hover {
-  color: var(--color--text--on-surface);
-  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-on-surface);
+  background: var(--tint-hover);
 }
 
 .oc-env-panel__file.is-active {
-  color: var(--color--text--on-surface);
-  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-on-surface);
+  background: var(--tint-active);
 }
 
 .oc-env-panel__refresh-tab {
   margin-left: auto;
   display: inline-flex;
   align-items: center;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   padding: 6px 8px;
   background: transparent;
   border: none;
@@ -1337,8 +1211,8 @@
 }
 
 .oc-env-panel__refresh-tab:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--color--text--on-surface);
+  background: var(--tint-hover-strong);
+  color: var(--text-on-surface);
 }
 
 .oc-env-panel__warning {
@@ -1347,16 +1221,16 @@
   gap: 8px;
   padding: 10px 12px;
   margin: 10px 14px 0;
-  background: rgba(245, 158, 11, 0.08);
-  border: 1px solid rgba(245, 158, 11, 0.18);
+  background: var(--tint-warning-soft);
+  border: 1px solid var(--tint-warning-soft);
   border-radius: 8px;
-  color: var(--color--text--warning);
+  color: var(--text-warning);
   font-size: 11px;
   line-height: 1.5;
 }
 
 .oc-env-panel__warning code {
-  font-family: var(--font-firacode);
+  font-family: var(--font-mono);
 }
 
 .oc-env-panel__rows {
@@ -1371,7 +1245,7 @@
 .oc-env-panel__empty-rows {
   margin: 12px 0;
   font-size: 11px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
 }
 
 .oc-env-panel__row {
@@ -1382,11 +1256,11 @@
 
 .oc-env-panel__key,
 .oc-env-panel__value {
-  background: var(--color--surface--1);
+  background: var(--surface-1);
   border: 1px solid transparent;
   border-radius: 6px;
-  color: var(--color--text--on-surface);
-  font-family: var(--font-firacode);
+  color: var(--text-on-surface);
+  font-family: var(--font-mono);
   font-size: 11px;
   padding: 6px 10px;
   min-width: 0;
@@ -1405,8 +1279,8 @@
 .oc-env-panel__key:focus,
 .oc-env-panel__value:focus {
   outline: none;
-  border-color: var(--color--outline--focus);
-  background: var(--color--surface--0);
+  border-color: var(--ring);
+  background: var(--surface-0);
 }
 
 .oc-env-panel__icon-btn {
@@ -1418,19 +1292,19 @@
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   cursor: pointer;
   transition: background 120ms ease, color 120ms ease;
 }
 
 .oc-env-panel__icon-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--color--text--on-surface);
+  background: var(--tint-hover-strong);
+  color: var(--text-on-surface);
 }
 
 .oc-env-panel__icon-btn.is-danger:hover {
-  color: var(--color--text--critical);
-  background: rgba(239, 68, 68, 0.1);
+  color: var(--text-critical);
+  background: var(--tint-critical-soft);
 }
 
 .oc-env-panel__footer {
@@ -1458,21 +1332,21 @@
 }
 
 .oc-env-panel__add {
-  background: var(--color--surface--1);
-  color: var(--color--text--on-surface);
+  background: var(--surface-1);
+  color: var(--text-on-surface);
 }
 
 .oc-env-panel__add:hover {
-  background: var(--color--surface--2);
+  background: var(--surface-2);
 }
 
 .oc-env-panel__save {
-  background: var(--color--base--primary);
+  background: var(--primary);
   color: white;
 }
 
 .oc-env-panel__save:hover:not(:disabled) {
-  background: var(--color--base--primary-hover);
+  background: var(--primary-hover);
 }
 
 .oc-env-panel__save:disabled {
@@ -1482,8 +1356,8 @@
 
 .oc-env-panel__error {
   padding: 10px 14px;
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--color--text--critical);
+  background: var(--tint-critical-soft);
+  color: var(--text-critical);
   font-size: 11px;
 }
 
@@ -1505,18 +1379,18 @@
 
 .oc-todo__empty {
   padding: 24px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   font-size: 12px;
   line-height: 1.55;
 }
 
 .oc-todo__empty code {
-  font-family: var(--font-firacode);
+  font-family: var(--font-mono);
   padding: 1px 6px;
-  background: var(--color--surface--1);
+  background: var(--surface-1);
   border-radius: 4px;
   font-size: 11px;
-  color: var(--color--text--on-surface);
+  color: var(--text-on-surface);
 }
 
 .oc-todo__header {
@@ -1534,14 +1408,14 @@
   margin: 0;
   font-size: 13px;
   font-weight: 600;
-  color: var(--color--text--on-surface);
+  color: var(--text-on-surface);
 }
 
 .oc-todo__count {
   font-size: 10px;
   font-weight: 500;
-  color: var(--color--text--muted);
-  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  background: var(--tint-hover-strong);
   padding: 2px 8px;
   border-radius: 8px;
   letter-spacing: 0.02em;
@@ -1555,7 +1429,7 @@
 
 .oc-todo__saving {
   font-size: 10px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
 }
 
 .oc-todo__icon-btn {
@@ -1567,19 +1441,19 @@
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   cursor: pointer;
   transition: background 120ms ease, color 120ms ease;
 }
 
 .oc-todo__icon-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--color--text--on-surface);
+  background: var(--tint-hover-strong);
+  color: var(--text-on-surface);
 }
 
 .oc-todo__icon-btn.is-danger:hover {
-  color: var(--color--text--critical);
-  background: rgba(239, 68, 68, 0.1);
+  color: var(--text-critical);
+  background: var(--tint-critical-soft);
 }
 
 .oc-todo__list {
@@ -1594,17 +1468,17 @@
 .oc-todo__empty-rows {
   margin: 16px 8px;
   font-size: 11px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   line-height: 1.6;
 }
 
 .oc-todo__empty-rows code {
-  font-family: var(--font-firacode);
+  font-family: var(--font-mono);
   padding: 1px 6px;
-  background: var(--color--surface--1);
+  background: var(--surface-1);
   border-radius: 4px;
   font-size: 10px;
-  color: var(--color--text--on-surface);
+  color: var(--text-on-surface);
 }
 
 .oc-todo__row {
@@ -1617,7 +1491,7 @@
 }
 
 .oc-todo__row:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--tint-hover);
 }
 
 .oc-todo__check {
@@ -1628,34 +1502,34 @@
   height: 22px;
   background: transparent;
   border: none;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   cursor: pointer;
   transition: color 120ms ease;
 }
 
 .oc-todo__row.is-done .oc-todo__check {
-  color: var(--color--text--success);
+  color: var(--text-success);
 }
 
 .oc-todo__text {
   flex: 1;
   background: transparent;
   border: none;
-  color: var(--color--text--on-surface);
+  color: var(--text-on-surface);
   font-size: 13px;
-  line-height: 1.5;
-  padding: 3px 4px;
+  line-height: var(--leading-normal);
+  padding: var(--space-2);
   font-family: inherit;
 }
 
 .oc-todo__text:focus {
   outline: none;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--tint-hover);
   border-radius: 4px;
 }
 
 .oc-todo__row.is-done .oc-todo__text {
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   text-decoration: line-through;
 }
 
@@ -1672,8 +1546,8 @@
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  background: var(--color--surface--1);
-  color: var(--color--text--on-surface);
+  background: var(--surface-1);
+  color: var(--text-on-surface);
   border: none;
   border-radius: 6px;
   font-size: 12px;
@@ -1684,19 +1558,19 @@
 }
 
 .oc-todo__add:hover {
-  background: var(--color--surface--2);
+  background: var(--surface-2);
 }
 
 .oc-todo__path {
   font-size: 10px;
-  color: var(--color--text--muted);
-  font-family: var(--font-firacode);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
 }
 
 .oc-todo__error {
   padding: 8px 14px;
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--color--text--critical);
+  background: var(--tint-critical-soft);
+  color: var(--text-critical);
   font-size: 11px;
 }
 
@@ -1720,18 +1594,18 @@
 
 .oc-git__empty {
   padding: 24px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   font-size: 12px;
   line-height: 1.55;
 }
 
 .oc-git__empty code {
-  font-family: var(--font-firacode);
+  font-family: var(--font-mono);
   padding: 1px 6px;
-  background: var(--color--surface--1);
+  background: var(--surface-1);
   border-radius: 4px;
   font-size: 11px;
-  color: var(--color--text--on-surface);
+  color: var(--text-on-surface);
 }
 
 .oc-git__hint {
@@ -1745,8 +1619,8 @@
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  background: var(--color--surface--1);
-  color: var(--color--text--on-surface);
+  background: var(--surface-1);
+  color: var(--text-on-surface);
   border: none;
   border-radius: 6px;
   font-size: 11px;
@@ -1757,7 +1631,7 @@
 }
 
 .oc-git__refresh-btn:hover {
-  background: var(--color--surface--2);
+  background: var(--surface-2);
 }
 
 .oc-git__header {
@@ -1774,18 +1648,18 @@
   align-items: center;
   gap: 6px;
   padding: 6px 10px;
-  background: rgba(37, 99, 235, 0.12);
-  color: var(--color--text--primary-light);
+  background: var(--tint-primary-soft);
+  color: var(--text-primary-light);
   border-radius: 9999px;
   font-size: 12px;
   font-weight: 500;
-  font-family: var(--font-firacode);
+  font-family: var(--font-mono);
   border: none;
   cursor: pointer;
 }
 
 .oc-git__branch:hover {
-  background: rgba(37, 99, 235, 0.18);
+  background: var(--tint-primary-hover);
 }
 
 .oc-git__remote {
@@ -1796,28 +1670,28 @@
 
 .oc-git__no-upstream {
   font-size: 10px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   padding: 0 4px;
 }
 
 .oc-git__btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 6px 10px;
-  background: var(--color--surface--1);
-  color: var(--color--text--on-surface);
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  background: var(--surface-1);
+  color: var(--text-on-surface);
   border: none;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 500;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-11);
+  font-weight: var(--weight-control);
   cursor: pointer;
   font-family: inherit;
   transition: background 120ms ease;
 }
 
 .oc-git__btn:hover:not(:disabled) {
-  background: var(--color--surface--2);
+  background: var(--surface-2);
 }
 
 .oc-git__btn:disabled {
@@ -1826,12 +1700,12 @@
 }
 
 .oc-git__btn.is-primary {
-  background: var(--color--base--primary);
+  background: var(--primary);
   color: white;
 }
 
 .oc-git__btn.is-primary:hover:not(:disabled) {
-  background: var(--color--base--primary-hover);
+  background: var(--primary-hover);
 }
 
 .oc-git__badge {
@@ -1841,7 +1715,7 @@
   min-width: 16px;
   padding: 0 6px;
   height: 14px;
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--tint-black-soft);
   color: inherit;
   border-radius: 8px;
   font-size: 10px;
@@ -1857,18 +1731,18 @@
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   cursor: pointer;
   transition: background 120ms ease, color 120ms ease;
 }
 
 .oc-git__icon-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--color--text--on-surface);
+  background: var(--tint-hover-strong);
+  color: var(--text-on-surface);
 }
 
 .oc-git__section {
-  border-top: 1px solid var(--color--border--on-surface-0);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .oc-git__section-header {
@@ -1879,41 +1753,42 @@
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.08em;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   text-transform: uppercase;
 }
 
 .oc-git__section-count {
   margin-left: 6px;
-  color: var(--color--text--on-surface);
+  color: var(--text-on-surface);
   font-weight: 500;
 }
 
 .oc-git__section-action {
   background: transparent;
   border: none;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   font-size: 11px;
   font-weight: 500;
   cursor: pointer;
   text-transform: none;
   letter-spacing: 0;
   font-family: inherit;
-  padding: 3px 8px;
-  border-radius: 6px;
-  transition: background 120ms ease, color 120ms ease;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  transition: background var(--dur-fast) var(--ease-standard),
+              color var(--dur-fast) var(--ease-standard);
 }
 
 .oc-git__section-action:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--color--text--on-surface);
+  background: var(--tint-hover-strong);
+  color: var(--text-on-surface);
 }
 
 .oc-git__section-empty {
   padding: 4px 14px 12px;
   margin: 0;
   font-size: 11px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
 }
 
 .oc-git__files {
@@ -1923,7 +1798,7 @@
 }
 
 .oc-git__file.is-expanded {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--tint-hover);
 }
 
 .oc-git__file-header {
@@ -1936,7 +1811,7 @@
 }
 
 .oc-git__file:hover .oc-git__file-header {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--tint-hover);
 }
 
 .oc-git__caret {
@@ -1947,7 +1822,7 @@
   height: 18px;
   background: transparent;
   border: none;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   cursor: pointer;
   padding: 0;
   border-radius: 4px;
@@ -1955,13 +1830,13 @@
 }
 
 .oc-git__caret:hover {
-  color: var(--color--text--on-surface);
+  color: var(--text-on-surface);
 }
 
 .oc-git__file-path {
   flex: 1;
-  font-family: var(--font-firacode);
-  color: var(--color--text--on-surface);
+  font-family: var(--font-mono);
+  color: var(--text-on-surface);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1979,18 +1854,13 @@
   width: 16px;
   height: 16px;
   flex-shrink: 0;
-  font-family: var(--font-firacode);
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 600;
-  color: var(--color--text--muted);
-  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  background: var(--tint-hover);
   border-radius: 4px;
   letter-spacing: 0;
-}
-
-.oc-git__file-mark.is-conflicted {
-  color: var(--color--text--critical);
-  background: rgba(239, 68, 68, 0.1);
 }
 
 .oc-git__file-action {
@@ -2002,14 +1872,14 @@
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   cursor: pointer;
   transition: background 120ms ease, color 120ms ease;
 }
 
 .oc-git__file-action:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--color--text--on-surface);
+  background: var(--tint-active);
+  color: var(--text-on-surface);
 }
 
 .oc-git__file-action:disabled {
@@ -2019,29 +1889,30 @@
 
 .oc-git__diff {
   margin: 0;
-  padding: 8px 14px 12px 46px;
-  font-size: 11px;
-  line-height: 1.5;
-  font-family: var(--font-firacode);
-  color: var(--color--text--on-surface);
+  /* 46px left-indent aligns the diff body under the file name column */
+  padding: var(--space-4) var(--space-7) var(--space-6) calc(var(--space-7) + 32px);
+  font-size: var(--text-11);
+  line-height: var(--leading-normal);
+  font-family: var(--font-mono);
+  color: var(--text-on-surface);
   white-space: pre-wrap;
   word-break: break-all;
   max-height: 400px;
   overflow-y: auto;
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--tint-black-soft);
 }
 
 .oc-git__commit {
   padding: 12px 14px;
-  border-top: 1px solid var(--color--border--on-surface-0);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .oc-git__message {
   width: 100%;
-  background: var(--color--surface--1);
+  background: var(--surface-1);
   border: 1px solid transparent;
   border-radius: 8px;
-  color: var(--color--text--on-surface);
+  color: var(--text-on-surface);
   font-family: inherit;
   font-size: 12px;
   line-height: 1.5;
@@ -2052,8 +1923,8 @@
 
 .oc-git__message:focus {
   outline: none;
-  border-color: var(--color--outline--focus);
-  background: var(--color--surface--0);
+  border-color: var(--ring);
+  background: var(--surface-0);
 }
 
 .oc-git__commit-actions {
@@ -2066,7 +1937,7 @@
 
 .oc-git__commit-hint {
   font-size: 10px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
 }
 
 .oc-git__commits {
@@ -2085,22 +1956,22 @@
 }
 
 .oc-git__commit-row:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--tint-hover);
 }
 
 .oc-git__commit-sha {
-  font-family: var(--font-firacode);
-  color: var(--color--text--primary-light);
+  font-family: var(--font-mono);
+  color: var(--text-primary-light);
   font-size: 10px;
   flex-shrink: 0;
   padding: 1px 6px;
-  background: rgba(37, 99, 235, 0.1);
+  background: var(--tint-primary-weak);
   border-radius: 4px;
 }
 
 .oc-git__commit-summary {
   flex: 1;
-  color: var(--color--text--on-surface);
+  color: var(--text-on-surface);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2109,7 +1980,7 @@
 
 .oc-git__commit-author {
   font-size: 10px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   flex-shrink: 0;
 }
 
@@ -2118,12 +1989,12 @@
   bottom: 36px;
   margin: 0 10px;
   padding: 8px 12px;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: var(--color--text--critical);
+  background: var(--tint-critical-soft);
+  border: 1px solid var(--tint-critical-border);
+  color: var(--text-critical);
   font-size: 11px;
   border-radius: 6px;
-  z-index: 2;
+  z-index: var(--z-panel);
 }
 
 .oc-git__toast {
@@ -2131,12 +2002,12 @@
   bottom: 10px;
   margin: 0 10px;
   padding: 8px 12px;
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  color: var(--color--text--success);
+  background: var(--tint-success-soft);
+  border: 1px solid var(--tint-success-border);
+  color: var(--text-success);
   font-size: 11px;
   border-radius: 6px;
-  z-index: 2;
+  z-index: var(--z-panel);
 }
 
 /* ── Phase 3 additions ──────────────────────────────────── */
@@ -2150,9 +2021,9 @@
   top: calc(100% + 6px);
   left: 0;
   width: 280px;
-  z-index: 30;
-  background: var(--color--surface--1);
-  border: 1px solid var(--color--border--on-surface-1);
+  z-index: var(--z-dropdown);
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
   border-radius: 8px;
   box-shadow: var(--shadow-lg);
   padding: 6px;
@@ -2166,17 +2037,17 @@
 .oc-git__branch-search {
   width: 100%;
   padding: 6px 8px;
-  background: var(--color--surface--0);
-  border: 1px solid var(--color--border--on-surface-0);
+  background: var(--surface-0);
+  border: 1px solid var(--border-subtle);
   border-radius: 6px;
-  color: var(--color--text--on-surface);
+  color: var(--text-on-surface);
   font-family: inherit;
   font-size: 12px;
 }
 
 .oc-git__branch-search:focus {
   outline: none;
-  border-color: var(--color--outline--focus);
+  border-color: var(--ring);
 }
 
 .oc-git__branch-list {
@@ -2194,7 +2065,7 @@
 }
 
 .oc-git__branch-item:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--tint-hover);
 }
 
 .oc-git__branch-pick {
@@ -2206,8 +2077,8 @@
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: var(--color--text--on-surface);
-  font-family: var(--font-firacode);
+  color: var(--text-on-surface);
+  font-family: var(--font-mono);
   font-size: 12px;
   text-align: left;
   cursor: pointer;
@@ -2218,14 +2089,14 @@
 }
 
 .oc-git__branch-pick.is-current {
-  color: var(--color--text--primary-light);
+  color: var(--text-primary-light);
 }
 
 .oc-git__branch-chip {
   margin-left: auto;
-  font-family: var(--font-sans);
+  font-family: var(--font-ui);
   font-size: 10px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
 }
 
 .oc-git__branch-delete {
@@ -2237,7 +2108,7 @@
   background: transparent;
   border: none;
   border-radius: 4px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   cursor: pointer;
   opacity: 0;
   transition: opacity 120ms ease, background 120ms ease, color 120ms ease;
@@ -2248,8 +2119,8 @@
 }
 
 .oc-git__branch-delete:hover {
-  background: rgba(239, 68, 68, 0.12);
-  color: var(--color--text--critical);
+  background: var(--tint-critical-soft);
+  color: var(--text-critical);
 }
 
 .oc-git__branch-create {
@@ -2258,25 +2129,25 @@
   gap: 8px;
   padding: 8px 8px;
   margin-top: 2px;
-  background: rgba(37, 99, 235, 0.08);
-  border: 1px dashed rgba(37, 99, 235, 0.3);
+  background: var(--tint-primary-weak);
+  border: 1px dashed var(--tint-primary-border);
   border-radius: 6px;
-  color: var(--color--text--primary-light);
-  font-family: var(--font-sans);
+  color: var(--text-primary-light);
+  font-family: var(--font-ui);
   font-size: 12px;
   cursor: pointer;
 }
 
 .oc-git__branch-create:hover:not(:disabled) {
-  background: rgba(37, 99, 235, 0.14);
+  background: var(--tint-primary-soft);
 }
 
 /* Conflict banner (3-H) */
 .oc-git__conflicts {
   margin: 8px 10px;
   padding: 10px 12px;
-  background: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.25);
+  background: var(--tint-critical-soft);
+  border: 1px solid var(--tint-critical-border);
   border-radius: 8px;
   display: flex;
   flex-direction: column;
@@ -2289,7 +2160,7 @@
   gap: 6px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--color--text--critical);
+  color: var(--text-critical);
 }
 
 .oc-git__conflicts-list {
@@ -2312,15 +2183,15 @@
 .oc-git__conflicts-hint {
   margin: 0;
   font-size: 11px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
 }
 
 /* Visual diff v2 (3-E) */
 .oc-git__visual {
-  padding: 6px 14px 12px 46px;
+  padding: var(--space-3) var(--space-7) var(--space-6) calc(var(--space-7) + 32px);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-3);
 }
 
 .oc-git__visual-tabs {
@@ -2331,25 +2202,25 @@
 .oc-git__visual-tab {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
   background: transparent;
-  border: 1px solid var(--color--border--on-surface-0);
+  border: 1px solid var(--border-subtle);
   border-radius: 6px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   font-size: 11px;
   font-family: inherit;
   cursor: pointer;
 }
 
 .oc-git__visual-tab:hover {
-  color: var(--color--text--on-surface);
+  color: var(--text-on-surface);
 }
 
 .oc-git__visual-tab.is-active {
-  color: var(--color--text--on-surface);
-  background: rgba(255, 255, 255, 0.06);
-  border-color: var(--color--border--on-surface-1);
+  color: var(--text-on-surface);
+  background: var(--tint-active);
+  border-color: var(--border-default);
 }
 
 .oc-git__previews {
@@ -2369,14 +2240,14 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
 }
 
 .oc-git__preview-frame {
   width: 100%;
   height: 180px;
-  background: var(--color--surface--0);
-  border: 1px solid var(--color--border--on-surface-0);
+  background: var(--surface-0);
+  border: 1px solid var(--border-subtle);
   border-radius: 6px;
 }
 
@@ -2394,7 +2265,7 @@
   background: transparent;
   border: none;
   border-radius: 4px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   cursor: pointer;
   opacity: 0;
   margin-left: 4px;
@@ -2406,18 +2277,18 @@
 }
 
 .oc-git__commit-more:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--color--text--on-surface);
+  background: var(--tint-active);
+  color: var(--text-on-surface);
 }
 
 .oc-git__commit-menu {
   position: absolute;
   top: calc(100% + 2px);
   right: 10px;
-  z-index: 20;
+  z-index: var(--z-dropdown);
   padding: 4px;
-  background: var(--color--surface--1);
-  border: 1px solid var(--color--border--on-surface-1);
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
   border-radius: 8px;
   box-shadow: var(--shadow-lg);
   display: flex;
@@ -2431,7 +2302,7 @@
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: var(--color--text--on-surface);
+  color: var(--text-on-surface);
   font-size: 12px;
   text-align: left;
   font-family: inherit;
@@ -2439,15 +2310,15 @@
 }
 
 .oc-git__commit-menu button:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--tint-hover-strong);
 }
 
 .oc-git__commit-menu button.is-danger {
-  color: var(--color--text--critical);
+  color: var(--text-critical);
 }
 
 .oc-git__commit-menu button.is-danger:hover {
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--tint-critical-soft);
 }
 
 .oc-git__commit-menu button:disabled {
@@ -2468,7 +2339,7 @@
   gap: 8px;
   margin-top: 10px;
   font-size: 11px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   cursor: pointer;
 }
 
@@ -2477,35 +2348,35 @@
 }
 
 .oc-git__toggle-hint {
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   opacity: 0.7;
 }
 
 .oc-git__btn.is-danger {
-  background: rgba(239, 68, 68, 0.15);
-  color: var(--color--text--critical);
+  background: var(--tint-critical-soft);
+  color: var(--text-critical);
 }
 
 .oc-git__btn.is-danger:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.25);
+  background: var(--tint-critical-border);
 }
 
 /* Clone modal (3-F) */
 .oc-clone-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--backdrop-weak);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 50;
+  z-index: var(--z-dropdown);
 }
 
 .oc-clone-modal {
   width: 480px;
   max-width: calc(100vw - 48px);
-  background: var(--color--surface--1);
-  border: 1px solid var(--color--border--on-surface-1);
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
   border-radius: 12px;
   box-shadow: var(--shadow-lg);
   padding: 20px;
@@ -2518,7 +2389,7 @@
   margin: 0;
   font-size: 15px;
   font-weight: 600;
-  color: var(--color--text--on-surface);
+  color: var(--text-on-surface);
 }
 
 .oc-clone-modal label {
@@ -2526,22 +2397,22 @@
   flex-direction: column;
   gap: 4px;
   font-size: 11px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
 }
 
 .oc-clone-modal input {
   padding: 8px 10px;
-  background: var(--color--surface--0);
-  border: 1px solid var(--color--border--on-surface-0);
+  background: var(--surface-0);
+  border: 1px solid var(--border-subtle);
   border-radius: 6px;
-  color: var(--color--text--on-surface);
-  font-family: var(--font-firacode);
+  color: var(--text-on-surface);
+  font-family: var(--font-mono);
   font-size: 12px;
 }
 
 .oc-clone-modal input:focus {
   outline: none;
-  border-color: var(--color--outline--focus);
+  border-color: var(--ring);
 }
 
 .oc-clone-modal__row {
@@ -2562,16 +2433,16 @@
 
 .oc-clone-modal__err {
   padding: 8px 10px;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  color: var(--color--text--critical);
+  background: var(--tint-critical-soft);
+  border: 1px solid var(--tint-critical-border);
+  color: var(--text-critical);
   font-size: 11px;
   border-radius: 6px;
 }
 
 .oc-clone-modal__progress {
   font-size: 11px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
 }
 
 .oc-column-2__placeholder {
@@ -2585,14 +2456,14 @@
   margin: 0;
   font-size: 15px;
   font-weight: 600;
-  color: var(--color--text--on-surface);
+  color: var(--text-on-surface);
 }
 
 .oc-column-2__placeholder p {
   margin: 0;
   font-size: 13px;
   line-height: 1.55;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
 }
 
 /* ============================================================
@@ -2604,7 +2475,7 @@
   position: relative;
   min-width: 0;
   overflow: hidden;
-  background: var(--color--surface--0);
+  background: var(--surface-0);
 }
 
 .oc-column-3 .oc-app-shell {
@@ -2624,7 +2495,7 @@
   padding: 14px 16px 20px;
   gap: 16px;
   overflow-y: auto;
-  color: var(--color--text--on-surface);
+  color: var(--text-on-surface);
 }
 
 .oc-mission__header {
@@ -2645,15 +2516,15 @@
 .oc-mission__subtitle {
   margin: 0;
   font-size: 11px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   line-height: 1.5;
 }
 
 .oc-mission__subtitle code {
-  font-family: var(--font-firacode);
-  padding: 1px 5px;
-  background: var(--color--surface--0);
-  border-radius: 4px;
+  font-family: var(--font-mono);
+  padding: 1px var(--space-2);
+  background: var(--surface-0);
+  border-radius: var(--radius-xs);
   font-size: 10px;
 }
 
@@ -2669,19 +2540,19 @@
   gap: 10px;
   padding: 10px 12px;
   border-radius: 8px;
-  background: var(--color--surface--1);
-  border: 1px solid var(--color--border--on-surface-1);
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
   min-width: 0;
 }
 
 .oc-mission__card.is-info {
-  border-color: rgba(37, 99, 235, 0.25);
+  border-color: var(--tint-primary-border);
 }
 .oc-mission__card.is-success {
-  border-color: rgba(16, 185, 129, 0.25);
+  border-color: var(--tint-success-border);
 }
 .oc-mission__card.is-danger {
-  border-color: rgba(239, 68, 68, 0.25);
+  border-color: var(--tint-critical-border);
 }
 
 .oc-mission__card-icon {
@@ -2691,21 +2562,21 @@
   align-items: center;
   justify-content: center;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--color--text--muted);
+  background: var(--tint-hover);
+  color: var(--text-muted);
 }
 
 .oc-mission__card.is-info .oc-mission__card-icon {
-  background: rgba(37, 99, 235, 0.12);
-  color: var(--color--text--primary-light);
+  background: var(--tint-primary-soft);
+  color: var(--text-primary-light);
 }
 .oc-mission__card.is-success .oc-mission__card-icon {
-  background: rgba(16, 185, 129, 0.14);
-  color: var(--color--text--success);
+  background: var(--tint-success-soft);
+  color: var(--text-success);
 }
 .oc-mission__card.is-danger .oc-mission__card-icon {
-  background: rgba(239, 68, 68, 0.14);
-  color: var(--color--text--critical-light);
+  background: var(--tint-critical-soft);
+  color: var(--text-critical-light);
 }
 
 .oc-mission__card-body {
@@ -2720,13 +2591,13 @@
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
 }
 
 .oc-mission__card-value {
   font-size: 15px;
   font-weight: 600;
-  color: var(--color--text--on-surface);
+  color: var(--text-on-surface);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2744,16 +2615,16 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
 }
 
 .oc-mission__empty {
   margin: 0;
   padding: 12px 14px;
-  border: 1px dashed var(--color--border--on-surface-1);
+  border: 1px dashed var(--border-default);
   border-radius: 8px;
   font-size: 11px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   line-height: 1.5;
 }
 
@@ -2771,8 +2642,8 @@
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
-  background: var(--color--surface--1);
-  border: 1px solid var(--color--border--on-surface-0);
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
   border-radius: 8px;
 }
 
@@ -2785,14 +2656,14 @@
 }
 
 .oc-mission__session-id {
-  font-family: var(--font-firacode);
+  font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--color--text--on-surface);
+  color: var(--text-on-surface);
 }
 
 .oc-mission__session-meta {
   font-size: 11px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
 }
 
 .oc-mission__chip {
@@ -2808,16 +2679,16 @@
 }
 
 .oc-mission__chip.is-info {
-  background: rgba(37, 99, 235, 0.14);
-  color: var(--color--text--primary-light);
+  background: var(--tint-primary-soft);
+  color: var(--text-primary-light);
 }
 .oc-mission__chip.is-success {
-  background: rgba(16, 185, 129, 0.14);
-  color: var(--color--text--success);
+  background: var(--tint-success-soft);
+  color: var(--text-success);
 }
 .oc-mission__chip.is-danger {
-  background: rgba(239, 68, 68, 0.14);
-  color: var(--color--text--critical-light);
+  background: var(--tint-critical-soft);
+  color: var(--text-critical-light);
 }
 
 /* ============================================================
@@ -2827,26 +2698,26 @@
 .oc-login-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--backdrop-weak);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: var(--z-modal);
 }
 
 .oc-login-modal {
   width: 440px;
   max-width: calc(100vw - 32px);
-  background: var(--color--surface--1);
-  border: 1px solid var(--color--border--on-surface-1);
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
   border-radius: 12px;
   box-shadow: var(--shadow-lg);
   padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  color: var(--color--text--on-surface);
-  font-family: var(--font-sans);
+  color: var(--text-on-surface);
+  font-family: var(--font-ui);
 }
 
 .oc-login-modal__head {
@@ -2869,17 +2740,17 @@
 .oc-login-modal__lead {
   margin: 0;
   font-size: 12px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   line-height: 1.5;
 }
 
 .oc-login-modal__lead code {
   padding: 1px 6px;
-  background: var(--color--surface--0);
+  background: var(--surface-0);
   border-radius: 4px;
-  font-family: var(--font-firacode);
+  font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--color--text--on-surface);
+  color: var(--text-on-surface);
 }
 
 .oc-login-modal__steps {
@@ -2897,22 +2768,22 @@
   gap: 10px;
   padding: 8px 10px;
   border-radius: 8px;
-  background: var(--color--surface--0);
+  background: var(--surface-0);
   font-size: 12px;
 }
 
 .oc-login-modal__steps li.is-done {
-  color: var(--color--text--success);
+  color: var(--text-success);
 }
 
 .oc-login-modal__steps li.is-pending .oc-login-modal__dot {
-  background: var(--color--text--muted);
+  background: var(--text-muted);
   opacity: 0.4;
   animation: oc-login-pulse 1.4s ease-in-out infinite;
 }
 
 .oc-login-modal__steps li.is-done .oc-login-modal__dot {
-  background: var(--color--status--success);
+  background: var(--status-success);
 }
 
 .oc-login-modal__dot {
@@ -2925,7 +2796,7 @@
 .oc-login-modal__steps li code {
   padding: 0 4px;
   background: transparent;
-  font-family: var(--font-firacode);
+  font-family: var(--font-mono);
   font-size: 11px;
 }
 
@@ -2935,7 +2806,7 @@
 
 .oc-login-modal__muted {
   font-size: 11px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
 }
 
 .oc-login-modal__success {
@@ -2943,17 +2814,17 @@
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: var(--tint-success-soft);
+  border: 1px solid var(--tint-success-border);
   border-radius: 8px;
-  color: var(--color--text--success);
+  color: var(--text-success);
   font-size: 12px;
 }
 
 .oc-login-modal__hint {
   margin: 0;
   font-size: 11px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   line-height: 1.5;
 }
 
@@ -2965,7 +2836,7 @@
 
 .oc-login-modal__footer {
   font-size: 10px;
-  color: var(--color--text--muted);
+  color: var(--text-muted);
   text-align: right;
 }
 
@@ -2980,3 +2851,183 @@
  * strip or dedicated space — the same space the UI occupies is
  * draggable on empty pixels. macOS gives traffic-light clicks
  * priority, so overlap with interactive children is harmless. */
+
+
+/* ============================================================
+ * Cursor 3 Chrome — TitleBar, ActivityBar, Sidebar shim, StatusBar
+ * ============================================================
+ * Added in the design-tokens refactor. These sit OUTSIDE the
+ * existing .oc-app / .oc-column-* grid — the shell wraps them.
+ * All values pull from design-tokens.css; no hex, no literals.
+ * ============================================================ */
+
+/* Root wrapper that puts TitleBar on top, content in middle,
+   StatusBar on bottom. Replaces the old fixed-inset .oc-app as
+   the top-level layout element. */
+.oc-app-root {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-rows: var(--titlebar-h) 1fr var(--statusbar-h);
+  overflow: hidden;
+  background: var(--surface-floor);
+  color: var(--text-on-surface);
+  font-family: var(--font-ui);
+  font-size: var(--text-13);
+}
+.oc-app-body {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── TitleBar ─────────────────────────────────────────────── */
+.oc-titlebar {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  height: var(--titlebar-h);
+  padding: 0 var(--space-4);
+  background: var(--surface-floor);
+  border-bottom: 1px solid var(--border-subtle);
+  z-index: var(--z-chrome);
+  user-select: none;
+}
+.oc-titlebar__lights {
+  /* Reserve space for macOS traffic lights (inset by window chrome). */
+  width: 72px;
+  height: 100%;
+}
+.oc-titlebar__center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.oc-titlebar__project {
+  font-size: var(--text-12);
+  font-weight: var(--weight-control);
+  color: var(--text-on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 240px;
+}
+.oc-titlebar__branch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 1px var(--space-3);
+  font-size: var(--text-11);
+  color: var(--text-muted);
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+}
+.oc-titlebar__right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-right: var(--space-2);
+}
+.oc-titlebar__hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--text-11);
+}
+
+/* ── ActivityBar ──────────────────────────────────────────── */
+.oc-activitybar {
+  width: var(--activitybar-w);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: var(--surface-floor);
+  border-right: 1px solid var(--border-subtle);
+  z-index: var(--z-chrome);
+  flex-shrink: 0;
+}
+.oc-activitybar__list {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-3) 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+.oc-activitybar__list--footer { padding-bottom: var(--space-4); }
+
+.oc-activitybar__btn {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--dur-fast), color var(--dur-fast);
+  position: relative;
+}
+.oc-activitybar__btn:hover {
+  background: var(--tint-hover);
+  color: var(--text-on-surface);
+}
+.oc-activitybar__btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+.oc-activitybar__btn[data-active="true"] {
+  color: var(--text-on-surface);
+  background: var(--tint-active);
+}
+.oc-activitybar__btn[data-active="true"]::before {
+  content: "";
+  position: absolute;
+  left: -6px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: var(--primary);
+  border-radius: var(--radius-pill);
+}
+
+/* ── StatusBar ────────────────────────────────────────────── */
+.oc-statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--statusbar-h);
+  padding: 0 var(--space-5);
+  background: var(--surface-floor);
+  border-top: 1px solid var(--border-subtle);
+  z-index: var(--z-chrome);
+  font-family: var(--font-ui);
+  font-size: var(--text-11);
+  color: var(--text-muted);
+  user-select: none;
+}
+.oc-statusbar__group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+}
+.oc-statusbar__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-on-surface-variant);
+}
+.oc-statusbar__item--muted { color: var(--text-muted); }
+.oc-statusbar__item svg { flex-shrink: 0; }
+
+.oc-spin { animation: oc-spin 1s linear infinite; }
+@keyframes oc-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+

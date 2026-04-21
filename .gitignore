@@ -35,6 +35,9 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
+# Tauri updater signing key — PRIVATE, never commit
+src-tauri/tauri-updater.key
+
 # Testing
 coverage/
 .nyc_output
@@ -54,3 +57,7 @@ testing/
 package.figma.json
 package.figmamake.json
 *.bun-build
+
+# Visual harness output (local captures)
+snapshots/current/
+snapshots/diff/

@@ -8,6 +8,8 @@
     "dialog:default",
     "pty:default",
     "deep-link:default",
-    "notification:default"
+    "notification:default",
+    "updater:default",
+    "process:default"
   ]
 }

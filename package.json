@@ -14,15 +14,20 @@
     "serve:engine": "node dist-engine/cli.js",
     "tauri": "tauri",
     "tauri:dev": "pnpm build:sidecar && tauri dev",
-    "tauri:build": "pnpm build:sidecar && pnpm build:ui && tauri build"
+    "tauri:build": "pnpm build:sidecar && pnpm build:ui && tauri build",
+    "check:ui": "node scripts/check-ui-consistency.mjs",
+    "snap:ui": "node scripts/visual-harness.mjs"
   },
   "dependencies": {
+    "@agentclientprotocol/sdk": "^0.19.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@parcel/watcher": "^2.5.0",
     "@radix-ui/react-scroll-area": "^1.2.0",
     "@tauri-apps/api": "^2.10.1",
     "@tauri-apps/plugin-deep-link": "^2.4.8",
     "@tauri-apps/plugin-notification": "^2.3.3",
+    "@tauri-apps/plugin-process": "^2.3.1",
+    "@tauri-apps/plugin-updater": "^2.10.1",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/xterm": "^6.0.0",
     "@xyflow/react": "^12.10.1",
@@ -41,6 +46,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@tailwindcss/cli": "^4.0.0",
     "@tailwindcss/vite": "^4.2.2",
     "@tauri-apps/cli": "^2.1.0",
