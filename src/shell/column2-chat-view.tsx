@@ -19,15 +19,18 @@
 // ──────────────────────────────────────────────────────────
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { MessageSquarePlus, Plus, Bot as BotIcon } from "lucide-react";
+import { Plus, Bot as BotIcon, History } from "lucide-react";
 import { Button } from "../zeros/ui";
 import { useWorkspace, type ChatThread } from "../zeros/store/store";
 import { useAcpSessions, useChatSession } from "../zeros/acp/sessions-provider";
 import { AcpChat } from "../zeros/acp/acp-chat";
 import { AgentsPanel } from "../zeros/acp/agents-panel";
 import { envForChat } from "../zeros/acp/composer-pills";
+import { uiEntryForAgent } from "../zeros/acp/agent-ui-registry";
+import type { SessionInfo } from "@agentclientprotocol/sdk";
 import type { BridgeRegistryAgent } from "../zeros/bridge/messages";
 import { invoke } from "@tauri-apps/api/core";
+import { EmptyComposer } from "./empty-composer";
 
 function newChatId(): string {
   return `chat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
@@ -50,14 +53,7 @@ export function Column2ChatView() {
   const active = state.chats.find((c) => c.id === state.activeChatId);
 
   if (!active) {
-    return (
-      <div className="oc-chat-empty-state">
-        <MessageSquarePlus size={24} />
-        <p>
-          Click <strong>New Chat</strong> in the sidebar to start a conversation.
-        </p>
-      </div>
-    );
+    return <EmptyComposer />;
   }
 
   // Chat has no agent bound yet — show the registry picker. Bind the
@@ -104,11 +100,17 @@ function NoAgentView({
   onPicked: (agent: BridgeRegistryAgent) => void;
 }) {
   const session = useChatSession(chatId);
+  const sessions = useAcpSessions();
   return (
     <AgentsPanel
       listAgents={session.listAgents}
       onSelect={onPicked}
       activeAgentId={null}
+      onPreWarm={(id) => {
+        // Fire-and-forget; errors silently ignored. Warms the adapter
+        // subprocess + ACP initialize so clicking is instant.
+        void sessions.initAgent(id).catch(() => {});
+      }}
     />
   );
 }
@@ -124,7 +126,7 @@ function ChatBody({
   agentName: string;
   cwd: string;
 }) {
-  const { state } = useWorkspace();
+  const { state, dispatch } = useWorkspace();
   const session = useChatSession(chatId);
   const chat = state.chats.find((c) => c.id === chatId);
 
@@ -136,14 +138,36 @@ function ChatBody({
   const envKeyRef = useRef(envKey);
 
   // Initial spawn (idempotent). ensureSession short-circuits if the
-  // same (chatId, agentId) pair is already ready.
+  // same (chatId, agentId) pair is already ready. When the chat has a
+  // resumeSessionId set (Codex/Claude "resume recent thread"), we load
+  // that session instead of creating a new one.
+  const sessions = useAcpSessions();
   useEffect(() => {
     const env = chat ? envForChat(chat, session.initialize) : undefined;
-    void session.ensureSession(agentId, {
-      agentName,
-      cwd: cwd || undefined,
-      env,
-    });
+    const toResume = chat?.resumeSessionId;
+    if (toResume) {
+      // Clear the resume marker *before* awaiting — if the load fails or
+      // the user closes/reopens the app mid-load, we must not re-enter
+      // the same broken resume on next mount. The Retry button then falls
+      // back to ensureSession (fresh session), which is the right thing
+      // when the prior session is unrecoverable.
+      dispatch({
+        type: "UPDATE_CHAT_SETTINGS",
+        id: chatId,
+        updates: { resumeSessionId: undefined },
+      });
+      void sessions.loadIntoChat(chatId, agentId, toResume, {
+        agentName,
+        cwd: cwd || undefined,
+        env,
+      });
+    } else {
+      void session.ensureSession(agentId, {
+        agentName,
+        cwd: cwd || undefined,
+        env,
+      });
+    }
     envKeyRef.current = envKey;
     // We only want this to fire when the identity triple changes, not
     // on every render or when session internals shuffle.
@@ -180,13 +204,23 @@ function ChatBody({
 /** "+" dropdown in the chat header — opens a list of installed agents
  *  and creates a new chat bound to the picked one. Mirrors the behavior
  *  of Column 1's "New Chat" but lets the user pick the agent up front. */
+interface RecentThread {
+  agentId: string;
+  agentName: string;
+  info: SessionInfo;
+}
+
 function NewChatPicker() {
   const { dispatch } = useWorkspace();
   const sessions = useAcpSessions();
   const [open, setOpen] = useState(false);
   const [agents, setAgents] = useState<BridgeRegistryAgent[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [recent, setRecent] = useState<RecentThread[]>([]);
   const rootRef = useRef<HTMLDivElement>(null);
+  // Pre-warm set — agent ids we've already initAgent'd this session, so
+  // re-hovering doesn't re-fire the spawn.
+  const warmedRef = useRef<Set<string>>(new Set());
 
   // Close on outside-click / Escape — same pattern as the profile menu.
   useEffect(() => {
@@ -222,6 +256,70 @@ function NewChatPicker() {
   useEffect(() => {
     if (open && !agents && !loading) void loadAgents();
   }, [open, agents, loading, loadAgents]);
+
+  // Also load recent threads for history-capable installed agents. Fires
+  // once per dropdown open, parallel across agents so slow adapters don't
+  // block the whole list.
+  useEffect(() => {
+    if (!open || !agents) return;
+    const eligible = agents.filter(
+      (a) => a.installed && uiEntryForAgent(a.id).ui.hasThreadHistory,
+    );
+    if (eligible.length === 0) {
+      setRecent([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const results = await Promise.allSettled(
+        eligible.map(async (a) => ({
+          agent: a,
+          resp: await sessions.listSessionsFor(a.id),
+        })),
+      );
+      if (cancelled) return;
+      const flat: RecentThread[] = [];
+      for (const r of results) {
+        if (r.status !== "fulfilled") continue;
+        for (const info of r.value.resp.sessions) {
+          flat.push({
+            agentId: r.value.agent.id,
+            agentName: r.value.agent.name,
+            info,
+          });
+        }
+      }
+      // Most-recent first, cap to 5 across agents.
+      flat.sort((a, b) => {
+        const ta = a.info.updatedAt ? Date.parse(a.info.updatedAt) : 0;
+        const tb = b.info.updatedAt ? Date.parse(b.info.updatedAt) : 0;
+        return tb - ta;
+      });
+      setRecent(flat.slice(0, 5));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, agents, sessions]);
+
+  const handleResume = async (r: RecentThread) => {
+    setOpen(false);
+    const folder = r.info.cwd || (await resolveCurrentFolder());
+    const chat: ChatThread = {
+      id: newChatId(),
+      folder,
+      agentId: r.agentId,
+      agentName: r.agentName,
+      model: null,
+      effort: "medium",
+      permissionMode: "ask",
+      title: r.info.title ?? `Resumed ${r.agentName} chat`,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      resumeSessionId: r.info.sessionId,
+    };
+    dispatch({ type: "ADD_CHAT", chat });
+  };
 
   const handlePick = async (agent: BridgeRegistryAgent) => {
     setOpen(false);
@@ -261,6 +359,26 @@ function NewChatPicker() {
       </Button>
       {open && (
         <div className="oc-new-chat-picker__menu" role="menu">
+          {recent.length > 0 && (
+            <>
+              <div className="oc-new-chat-picker__label">Resume recent</div>
+              {recent.map((r) => (
+                <Button
+                  key={`${r.agentId}:${r.info.sessionId}`}
+                  variant="ghost"
+                  className="oc-new-chat-picker__item"
+                  onClick={() => void handleResume(r)}
+                  title={`${r.agentName} · ${r.info.cwd}`}
+                >
+                  <History className="oc-new-chat-picker__icon" />
+                  <span className="truncate">
+                    {r.info.title ?? r.info.sessionId.slice(0, 8)}
+                  </span>
+                </Button>
+              ))}
+              <div className="oc-new-chat-picker__sep" aria-hidden />
+            </>
+          )}
           <div className="oc-new-chat-picker__label">New chat with…</div>
           {loading && !agents && (
             <div className="oc-new-chat-picker__hint">Loading agents…</div>
@@ -277,6 +395,11 @@ function NewChatPicker() {
               variant="ghost"
               className="oc-new-chat-picker__item"
               onClick={() => handlePick(a)}
+              onMouseEnter={() => {
+                if (warmedRef.current.has(a.id)) return;
+                warmedRef.current.add(a.id);
+                void sessions.initAgent(a.id).catch(() => {});
+              }}
             >
               {a.icon ? (
                 // eslint-disable-next-line @next/next/no-img-element

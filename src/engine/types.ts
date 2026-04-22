@@ -14,6 +14,8 @@
 import type {
   ContentBlock,
   InitializeResponse,
+  ListSessionsResponse,
+  LoadSessionResponse,
   NewSessionResponse,
   PromptResponse,
   RequestPermissionRequest,
@@ -223,6 +225,21 @@ export interface AcpSetModeMessage extends BaseMessage {
   modeId: string;
 }
 
+export interface AcpListSessionsMessage extends BaseMessage {
+  type: "ACP_LIST_SESSIONS";
+  agentId: string;
+  cwd?: string;
+  cursor?: string | null;
+}
+
+export interface AcpLoadSessionMessage extends BaseMessage {
+  type: "ACP_LOAD_SESSION";
+  agentId: string;
+  sessionId: string;
+  cwd?: string;
+  env?: Record<string, string>;
+}
+
 // ── Engine → Browser
 
 export interface AcpAgentsListMessage extends BaseMessage {
@@ -308,6 +325,22 @@ export interface AcpErrorMessage extends BaseMessage {
   message: string;
 }
 
+export interface AcpSessionsListMessage extends BaseMessage {
+  type: "ACP_SESSIONS_LIST";
+  requestId: string;
+  agentId: string;
+  sessions: ListSessionsResponse["sessions"];
+  nextCursor?: string | null;
+}
+
+export interface AcpSessionLoadedMessage extends BaseMessage {
+  type: "ACP_SESSION_LOADED";
+  requestId: string;
+  agentId: string;
+  sessionId: string;
+  response: LoadSessionResponse;
+}
+
 export interface AcpModeChangedMessage extends BaseMessage {
   type: "ACP_MODE_CHANGED";
   requestId: string;
@@ -344,6 +377,8 @@ export type EngineMessage =
   | AcpCancelMessage
   | AcpPermissionResponseMessage
   | AcpSetModeMessage
+  | AcpListSessionsMessage
+  | AcpLoadSessionMessage
   // ACP (engine → browser)
   | AcpAgentsListMessage
   | AcpSessionCreatedMessage
@@ -356,6 +391,8 @@ export type EngineMessage =
   | AcpAgentStderrMessage
   | AcpAgentExitedMessage
   | AcpModeChangedMessage
+  | AcpSessionsListMessage
+  | AcpSessionLoadedMessage
   | AcpErrorMessage;
 
 // ── Helpers ──────────────────────────────────────────────

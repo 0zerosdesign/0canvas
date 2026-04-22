@@ -21,6 +21,11 @@ import {
 } from "./mentions";
 import { MentionPicker } from "./mention-picker";
 import {
+  detectSlashTrigger,
+  filterSlashCommands,
+  SlashCommandPicker,
+} from "./slash-command-picker";
+import {
   Bot,
   User as UserIcon,
   Loader2,
@@ -46,6 +51,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import type {
+  PlanEntry,
   RequestPermissionRequest,
   RequestPermissionOutcome,
 } from "@agentclientprotocol/sdk";
@@ -85,6 +91,25 @@ export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps
   const [input, setInput] = useState("");
   const [caret, setCaret] = useState(0);
   const [mentionHighlight, setMentionHighlight] = useState(0);
+  // Text the user hit Enter on while status === "starting". Flushed the
+  // moment the session reaches "ready". Kept as a ref-backed string so
+  // the useEffect below can read the latest value without closing stale.
+  const queuedRef = useRef<string | null>(null);
+  const [queuedPreview, setQueuedPreview] = useState<string | null>(null);
+  // Elapsed time since status transitioned to "starting", for the
+  // progressive "warming up" message on slow agents (Claude ~11s).
+  const [startingElapsed, setStartingElapsed] = useState(0);
+  useEffect(() => {
+    if (session.status !== "starting") {
+      setStartingElapsed(0);
+      return;
+    }
+    const started = Date.now();
+    const id = window.setInterval(() => {
+      setStartingElapsed(Date.now() - started);
+    }, 500);
+    return () => window.clearInterval(id);
+  }, [session.status]);
   // Persistent receipts for apply_change tool calls. Keyed by toolCallId.
   // Captured at first observation of the tool (before the write lands) so
   // "before" still reflects the pre-change value when the card re-renders
@@ -174,6 +199,53 @@ export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps
       Math.min(Math.max(h, 0), Math.max(filteredMentions.length - 1, 0)),
     );
   }, [filteredMentions, pickerOpen]);
+
+  // ── Slash-command picker plumbing ─────────────────────────
+  // Mutually exclusive with mention picker by caret position (mentions
+  // need a word-boundary '@', slash commands only trigger at prompt start).
+  const slashTrigger = detectSlashTrigger(input, caret);
+  const filteredCommands = useMemo(
+    () =>
+      slashTrigger
+        ? filterSlashCommands(session.availableCommands, slashTrigger.query)
+        : [],
+    [session.availableCommands, slashTrigger],
+  );
+  const slashPickerOpen =
+    !!slashTrigger && session.availableCommands.length > 0;
+  const [slashHighlight, setSlashHighlight] = useState(0);
+  useEffect(() => {
+    if (!slashPickerOpen) {
+      setSlashHighlight(0);
+      return;
+    }
+    setSlashHighlight((h) =>
+      Math.min(Math.max(h, 0), Math.max(filteredCommands.length - 1, 0)),
+    );
+  }, [filteredCommands, slashPickerOpen]);
+
+  const insertSlashCommand = (
+    cmd: { name: string; input?: unknown | null },
+  ) => {
+    if (!slashTrigger) return;
+    // Replace the "/<query>" segment with "/<name> " and park the caret
+    // after it, so the user either hits Enter (no-arg commands) or types
+    // args (commands with `input`).
+    const after = input.slice(slashTrigger.end);
+    // Avoid doubling the space if they've already typed one.
+    const sep = after.startsWith(" ") || after.length === 0 ? "" : " ";
+    const nextText = `/${cmd.name}${sep}${after}`;
+    const nextCaret = 1 + cmd.name.length + sep.length;
+    setInput(nextText);
+    setSlashHighlight(0);
+    requestAnimationFrame(() => {
+      const ta = textareaRef.current;
+      if (!ta) return;
+      ta.focus();
+      ta.setSelectionRange(nextCaret, nextCaret);
+      setCaret(nextCaret);
+    });
+  };
 
   const insertMention = (item: MentionItem) => {
     if (!mentionTrigger) return;
@@ -275,26 +347,87 @@ export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps
   >([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Allow sending during "starting": the message is queued and flushed
+  // when the session becomes ready. Visible feedback is immediate.
   const canSend =
-    session.status === "ready" &&
+    (session.status === "ready" || session.status === "starting") &&
     !session.pendingPermission &&
     (input.trim().length > 0 || attachments.length > 0);
 
-  const handleSend = () => {
-    if (!canSend) return;
-    const displayText = input.trim();
+  const handleSend = (override?: string) => {
+    const rawText = override ?? input;
+    const displayText = rawText.trim();
+    if (session.pendingPermission) return;
+    if (displayText.length === 0 && attachments.length === 0) return;
+
+    // Queue during "starting" — flush on ready via the effect below.
+    if (session.status === "starting") {
+      queuedRef.current = rawText;
+      setQueuedPreview(displayText);
+      if (override === undefined) setInput("");
+      return;
+    }
+
+    if (session.status !== "ready") return;
     const wireText = expandMentionsInText(displayText, workspaceState);
     const extraBlocks = attachments.map((a) => ({
       type: "image" as const,
       mimeType: a.mimeType,
       data: a.data,
     }));
-    setInput("");
+    // Auto-title from the first user message. Only runs once per chat:
+    // we overwrite "New chat" (the seeded default) but never touch a
+    // title the user or a previous send already set. Trimmed to ~40
+    // chars with an ellipsis so the sidebar and title bar stay tidy.
+    if (chatId && chatThread && chatThread.title === "New chat" && displayText) {
+      const preview =
+        displayText.length > 40
+          ? `${displayText.slice(0, 40).trimEnd()}…`
+          : displayText;
+      dispatch({ type: "UPDATE_CHAT_TITLE", id: chatId, title: preview });
+    }
+    if (override === undefined) {
+      setInput("");
+    }
     setAttachments([]);
     session.sendPrompt(wireText, displayText, extraBlocks).catch(() => {
       /* error surfaces via session.error */
     });
   };
+
+  // Flush a queued prompt the moment the session reaches "ready". Uses
+  // session.sendPrompt directly so we don't re-enter handleSend and
+  // have to worry about re-reading stale input state.
+  useEffect(() => {
+    if (session.status !== "ready") return;
+    const queued = queuedRef.current;
+    if (!queued) return;
+    queuedRef.current = null;
+    setQueuedPreview(null);
+    const wireText = expandMentionsInText(queued.trim(), workspaceState);
+    session.sendPrompt(wireText, queued.trim()).catch(() => {
+      /* error surfaces via session.error */
+    });
+  }, [session.status, session.sendPrompt, workspaceState]);
+
+  // Phase 2-B handoff: InlineEdit, feedback pill, and the empty-state
+  // composer all funnel AI requests through the ACP chat now. When the
+  // pending submission targets this chat (or we're the only live one)
+  // and the session is ready, send it and clear the queue.
+  const pendingSub = workspaceState.pendingChatSubmission;
+  useEffect(() => {
+    if (!pendingSub) return;
+    if (!chatId) return;
+    // Only the active chat consumes the pending submission. The store
+    // already routes by activeChatId at enqueue time; this guard is a
+    // belt-and-suspenders check against double-sends if two chats are
+    // ever mounted simultaneously.
+    if (workspaceState.activeChatId !== chatId) return;
+    if (session.status !== "ready" || session.pendingPermission) return;
+    handleSend(pendingSub.text);
+    dispatch({ type: "CONSUME_CHAT_SUBMISSION", id: pendingSub.id });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingSub, session.status, session.pendingPermission, chatId, workspaceState.activeChatId]);
 
   /** Read a File into a base64 data payload (sans the `data:...;base64,`
    *  prefix — ACP's image block wants the raw base64 + a separate
@@ -360,6 +493,40 @@ export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Slash-command picker intercepts nav keys when open. Takes priority
+    // over the mention picker, but in practice the two never both open
+    // because their triggers are mutually exclusive by caret position.
+    if (slashPickerOpen && filteredCommands.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSlashHighlight((h) => (h + 1) % filteredCommands.length);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSlashHighlight(
+          (h) => (h - 1 + filteredCommands.length) % filteredCommands.length,
+        );
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        insertSlashCommand(filteredCommands[slashHighlight]);
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        // Move caret past the command-name segment to close the picker.
+        const ta = textareaRef.current;
+        if (ta && slashTrigger) {
+          const end = slashTrigger.end;
+          ta.setSelectionRange(end, end);
+          setCaret(end);
+        }
+        return;
+      }
+    }
+
     // Mention picker intercepts nav keys + Enter when open.
     if (pickerOpen && filteredMentions.length > 0) {
       if (e.key === "ArrowDown") {
@@ -436,17 +603,22 @@ export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps
         />
         <div className="min-w-0 flex-1">
           <div className="oc-acp-subheader-title">
-            {session.agentName ?? session.agentId ?? "ACP"}
+            {chatThread?.title ?? session.agentName ?? session.agentId ?? "ACP"}
           </div>
           <div className="oc-acp-subheader-sub">
-            {session.status === "streaming" && "streaming…"}
-            {session.status !== "streaming" && session.lastStopReason
-              ? session.lastStopReason
-              : session.status === "ready"
-              ? "ready"
-              : session.status === "starting"
-              ? "connecting…"
-              : ""}
+            {session.agentName && (
+              <span className="oc-acp-subheader-agent">{session.agentName}</span>
+            )}
+            <span className="oc-acp-subheader-status">
+              {session.status === "streaming" && "streaming…"}
+              {session.status !== "streaming" && session.lastStopReason
+                ? session.lastStopReason
+                : session.status === "ready"
+                ? "ready"
+                : session.status === "starting"
+                ? "connecting…"
+                : ""}
+            </span>
           </div>
         </div>
         {headerActions}
@@ -486,17 +658,24 @@ export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps
         </div>
       )}
 
+      {session.plan.length > 0 && <PlanPanel entries={session.plan} />}
+
       <div ref={scrollRef} className="oc-acp-body">
         <div className="oc-acp-messages">
           {session.status === "starting" && (
             <div className="oc-acp-empty-muted">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              Starting session with {session.agentName ?? session.agentId}...
+              {startingElapsed < 3000
+                ? `Starting session with ${session.agentName ?? session.agentId}…`
+                : startingElapsed < 8000
+                ? `Warming up ${session.agentName ?? session.agentId}…`
+                : `Still connecting — ${session.agentName ?? "the agent"} can take 10+ seconds on cold start.`}
             </div>
           )}
           {session.messages.length === 0 &&
             session.status === "ready" &&
-            !session.error && (
+            !session.error &&
+            !queuedPreview && (
               <div className="oc-acp-empty-muted">
                 Session ready. Ask the agent anything.
               </div>
@@ -504,6 +683,19 @@ export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps
           {session.messages.map((m) => (
             <MessageView key={m.id} message={m} applyReceipts={applyReceipts} />
           ))}
+          {queuedPreview && (
+            <div className="oc-acp-msg oc-acp-msg-user oc-acp-msg-queued">
+              <div className="oc-acp-msg-icon">
+                <UserIcon className="w-3.5 h-3.5" />
+              </div>
+              <div className="oc-acp-msg-content">
+                {queuedPreview}
+                <div className="oc-acp-msg-queued-hint">
+                  <Clock className="w-3 h-3" /> queued — sending when the session connects
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -518,7 +710,15 @@ export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps
       )}
 
       <div className="oc-acp-composer">
-        {pickerOpen && (
+        {slashPickerOpen && (
+          <SlashCommandPicker
+            commands={filteredCommands}
+            highlightIndex={slashHighlight}
+            onHover={setSlashHighlight}
+            onPick={insertSlashCommand}
+          />
+        )}
+        {pickerOpen && !slashPickerOpen && (
           <MentionPicker
             items={filteredMentions}
             highlightIndex={mentionHighlight}
@@ -563,11 +763,10 @@ export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps
                 : session.status === "streaming"
                 ? "Agent is responding…"
                 : session.status === "starting"
-                ? "Starting session…"
+                ? "Type — we'll send when the session connects…"
                 : "Waiting for session…"
             }
             className="oc-acp-composer-input"
-            disabled={session.status === "starting"}
           />
           <div className="oc-acp-composer-toolbar">
             {chatThread && (
@@ -624,7 +823,7 @@ export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps
                 variant="primary"
                 size="icon-sm"
                 type="button"
-                onClick={handleSend}
+                onClick={() => handleSend()}
                 disabled={!canSend}
                 title="Send (Enter)"
               >
@@ -725,6 +924,50 @@ function DesignAuditsPill({
             </button>
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────
+// PlanPanel — collapsible todo list from ACP `plan` notifications
+// ──────────────────────────────────────────────────────────
+
+function PlanPanel({ entries }: { entries: PlanEntry[] }) {
+  const [collapsed, setCollapsed] = useState(false);
+  const done = entries.filter((e) => e.status === "completed").length;
+  return (
+    <div className="oc-acp-plan">
+      <button
+        type="button"
+        className="oc-acp-plan-head"
+        onClick={() => setCollapsed((v) => !v)}
+        aria-expanded={!collapsed}
+      >
+        <Layers className="w-3.5 h-3.5" />
+        <span className="oc-acp-plan-title">Plan</span>
+        <span className="oc-acp-plan-count">
+          {done}/{entries.length}
+        </span>
+      </button>
+      {!collapsed && (
+        <ul className="oc-acp-plan-list">
+          {entries.map((e, i) => (
+            <li
+              key={i}
+              className={`oc-acp-plan-item oc-acp-plan-item-${e.status}`}
+            >
+              <span className="oc-acp-plan-bullet" aria-hidden>
+                {e.status === "completed"
+                  ? "✓"
+                  : e.status === "in_progress"
+                  ? "⋯"
+                  : "○"}
+              </span>
+              <span className="oc-acp-plan-desc">{e.content}</span>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

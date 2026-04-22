@@ -15,6 +15,7 @@
 // ──────────────────────────────────────────────────────────
 
 import * as fs from "node:fs";
+import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import type { WebSocket } from "ws";
 
@@ -95,6 +96,17 @@ export class ZerosEngine {
     // ACP session manager — spawns agents on demand, fans notifications out
     // over the same WebSocket the browser is already listening on. Credentials
     // never cross this boundary; the agent owns its own auth.
+    const projectRoot = this.root;
+    const resolveInsideRoot = (raw: string): string => {
+      const full = path.isAbsolute(raw)
+        ? path.resolve(raw)
+        : path.resolve(projectRoot, raw);
+      const rel = path.relative(projectRoot, full);
+      if (rel.startsWith("..") || path.isAbsolute(rel)) {
+        throw new Error(`Path escapes project root: ${raw}`);
+      }
+      return full;
+    };
     this.acp = new AcpSessionManager({
       projectRoot: this.root,
       events: {
@@ -131,6 +143,19 @@ export class ZerosEngine {
             code,
             signal: signal ? String(signal) : null,
           }));
+        },
+      },
+      fs: {
+        async readTextFile({ path: p }) {
+          const full = resolveInsideRoot(p);
+          const content = await fsp.readFile(full, "utf-8");
+          return { content };
+        },
+        async writeTextFile({ path: p, content }) {
+          const full = resolveInsideRoot(p);
+          await fsp.mkdir(path.dirname(full), { recursive: true });
+          await fsp.writeFile(full, content, "utf-8");
+          return {};
         },
       },
     });
@@ -251,6 +276,8 @@ export class ZerosEngine {
       case "ACP_CANCEL":
       case "ACP_PERMISSION_RESPONSE":
       case "ACP_SET_MODE":
+      case "ACP_LIST_SESSIONS":
+      case "ACP_LOAD_SESSION":
         await this.handleAcpMessage(msg, ws);
         break;
       case "CONNECTED":
@@ -387,6 +414,37 @@ export class ZerosEngine {
             agentId: msg.agentId,
             sessionId: msg.sessionId,
             modeId: msg.modeId,
+          }));
+          return;
+        }
+        case "ACP_LIST_SESSIONS": {
+          const resp = await this.acp.listSessions(msg.agentId, {
+            cwd: msg.cwd,
+            cursor: msg.cursor,
+          });
+          this.server.send(ws, createMessage({
+            type: "ACP_SESSIONS_LIST",
+            source: "engine",
+            requestId: msg.id,
+            agentId: msg.agentId,
+            sessions: resp.sessions,
+            nextCursor: resp.nextCursor ?? null,
+          }));
+          return;
+        }
+        case "ACP_LOAD_SESSION": {
+          const response = await this.acp.loadSession(
+            msg.agentId,
+            msg.sessionId,
+            { cwd: msg.cwd, env: msg.env },
+          );
+          this.server.send(ws, createMessage({
+            type: "ACP_SESSION_LOADED",
+            source: "engine",
+            requestId: msg.id,
+            agentId: msg.agentId,
+            sessionId: msg.sessionId,
+            response,
           }));
           return;
         }

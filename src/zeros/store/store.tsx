@@ -302,6 +302,10 @@ export type ChatThread = {
   title: string;
   createdAt: number;
   updatedAt: number;
+  /** When set, the ChatBody loads this ACP sessionId on mount instead of
+   *  calling newSession. Used by the Codex/Claude "Recent threads" resume
+   *  flow. Cleared after the first successful load. */
+  resumeSessionId?: string;
 };
 
 type Action =
@@ -380,7 +384,7 @@ type Action =
   | { type: "SET_ACTIVE_CHAT"; id: string | null }
   | { type: "DELETE_CHAT"; id: string }
   | { type: "UPDATE_CHAT_TITLE"; id: string; title: string }
-  | { type: "UPDATE_CHAT_SETTINGS"; id: string; updates: Partial<Pick<ChatThread, "model" | "effort" | "permissionMode" | "agentId" | "agentName">> }
+  | { type: "UPDATE_CHAT_SETTINGS"; id: string; updates: Partial<Pick<ChatThread, "model" | "effort" | "permissionMode" | "agentId" | "agentName" | "resumeSessionId">> }
   | { type: "TOUCH_CHAT"; id: string }
   // Auto-submit into Column 2 chat (Phase 2-B)
   | { type: "ENQUEUE_CHAT_SUBMISSION"; submission: PendingChatSubmission }

@@ -23,7 +23,7 @@ import { hydrateAiApiKey } from "./zeros/lib/openai";
 import { BridgeProvider } from "./zeros/bridge/use-bridge";
 import { SelectionSync } from "./zeros/acp/selection-sync";
 import { AutoConnect } from "./zeros/engine/zeros-engine";
-import { AcpSessionsProvider } from "./zeros/acp/sessions-provider";
+import { AcpSessionsProvider, useAcpSessions } from "./zeros/acp/sessions-provider";
 import { loadCatalog } from "./zeros/acp/model-catalog";
 import { injectStyles } from "./zeros/engine/zeros-styles";
 import { Column1Nav } from "./shell/column1-nav";
@@ -66,6 +66,41 @@ function LoadModelCatalogOnBoot() {
   useEffect(() => {
     void loadCatalog();
   }, []);
+  return null;
+}
+
+/**
+ * Pre-warm the agent subprocesses referenced by existing chats so the
+ * first `ensureSession` call doesn't pay the adapter-spawn + ACP
+ * `initialize` round trip. Fires once on mount, fire-and-forget.
+ *
+ * Only warms unique agent ids; if the user has 10 Claude chats we warm
+ * Claude once. Does NOT pre-create sessions — just the subprocess.
+ */
+function PreWarmAgents() {
+  const { state } = useWorkspace();
+  const sessions = useAcpSessions();
+  const warmedRef = React.useRef(false);
+  useEffect(() => {
+    if (warmedRef.current) return;
+    // Wait until the bridge is up — initAgent rejects otherwise.
+    // A short delay also lets the registry preload from cache.
+    const t = window.setTimeout(() => {
+      if (warmedRef.current) return;
+      const unique = new Set<string>();
+      const active = state.chats.find((c) => c.id === state.activeChatId);
+      if (active?.agentId) unique.add(active.agentId);
+      for (const c of state.chats) if (c.agentId) unique.add(c.agentId);
+      for (const id of unique) {
+        void sessions.initAgent(id).catch(() => {
+          /* warming failures are invisible — real session creation will
+             surface actual errors */
+        });
+      }
+      warmedRef.current = true;
+    }, 800);
+    return () => window.clearTimeout(t);
+  }, [state.chats, state.activeChatId, sessions]);
   return null;
 }
 
@@ -134,12 +169,23 @@ function ChatsPersistence() {
           ? (c as any).permissionMode
           : "ask",
     }));
-    const activeChatId = getSetting<string | null>(ACTIVE_CHAT_KEY, null);
-    const stillActive =
-      activeChatId && chats.some((c) => c.id === activeChatId)
-        ? activeChatId
+    const storedActive = getSetting<string | null>(ACTIVE_CHAT_KEY, null);
+    const storedStillValid =
+      storedActive && chats.some((c) => c.id === storedActive)
+        ? storedActive
         : null;
-    dispatch({ type: "HYDRATE_CHATS", chats, activeChatId: stillActive });
+    // If the stored selection is stale (chat deleted, or this is a fresh
+    // workspace-reload path where activeChatId wasn't persisted), fall back
+    // to the most-recently-updated chat rather than showing the blank empty
+    // composer — "I opened the app and my work is gone" is the worst UX.
+    let activeChatId = storedStillValid;
+    if (!activeChatId && chats.length > 0) {
+      const mostRecent = [...chats].sort(
+        (a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0),
+      )[0];
+      activeChatId = mostRecent?.id ?? null;
+    }
+    dispatch({ type: "HYDRATE_CHATS", chats, activeChatId });
   }, [dispatch]);
 
   // Persist on change (after hydration).
@@ -246,6 +292,7 @@ export function AppShell() {
             <ForceDesignPageOnBoot />
             <HydrateAiApiKey />
             <LoadModelCatalogOnBoot />
+            <PreWarmAgents />
             <ReloadOnProjectChange />
             <ChatsPersistence />
             <SelectionSync />

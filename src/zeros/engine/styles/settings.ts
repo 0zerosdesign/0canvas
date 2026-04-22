@@ -180,6 +180,11 @@ ${S} .oc-new-chat-picker__icon {
   flex-shrink: 0;
   color: var(--text-muted);
 }
+${S} .oc-new-chat-picker__sep {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 4px 6px;
+}
 
 /* Chat tab empty state — shown when no chat is active. */
 ${S} .oc-chat-empty-state {

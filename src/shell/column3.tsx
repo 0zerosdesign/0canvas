@@ -67,8 +67,16 @@ export function Column3() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  // The Zeros engine stylesheet scopes an aggressive reset to
+  // [data-Zeros-root] that forces font-size, letter-spacing,
+  // text-transform etc. to `inherit !important` on every descendant.
+  // That reset is required for EngineWorkspace (which is ported from
+  // Tailwind and relies on the scoped tokens) but it wipes typography
+  // on the IDE panels (Git/Env/Todo/Terminal) whose CSS lives in
+  // app-shell.css. Apply the attribute only while the Design tab is
+  // active so the other panels keep their own typography.
   return (
-    <div className="oc-column-3" data-Zeros-root="">
+    <div className="oc-column-3">
       <nav className="oc-column-3__tabs" role="tablist" data-tauri-drag-region>
         {TABS.map(({ id, label, icon: Icon }, idx) => {
           const isActive = tab === id;
@@ -93,6 +101,7 @@ export function Column3() {
       <div
         className={`oc-column-3__body is-${tab}`}
         role="tabpanel"
+        data-Zeros-root={tab === "design" ? "" : undefined}
       >
         {tab === "design" && <EngineWorkspace />}
         {tab === "git" && <GitPanel />}

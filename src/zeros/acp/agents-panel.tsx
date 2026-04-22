@@ -23,7 +23,11 @@ import {
   Github,
   Globe,
   Scale,
+  Download,
+  Check,
+  AlertCircle,
 } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
 import type { BridgeRegistryAgent } from "../bridge/messages";
 import { Button, Input } from "../ui";
 
@@ -33,9 +37,13 @@ interface AgentsPanelProps {
   listAgents: (force?: boolean) => Promise<BridgeRegistryAgent[]>;
   onSelect: (agent: BridgeRegistryAgent) => void;
   activeAgentId?: string | null;
+  /** Fire-and-forget pre-warm hook called when the user hovers a row.
+   *  Spawning the agent subprocess in the background hides ~200-500ms
+   *  of adapter boot when they actually click. Failures are silent. */
+  onPreWarm?: (agentId: string) => void;
 }
 
-export function AgentsPanel({ listAgents, onSelect, activeAgentId }: AgentsPanelProps) {
+export function AgentsPanel({ listAgents, onSelect, activeAgentId, onPreWarm }: AgentsPanelProps) {
   const [agents, setAgents] = useState<BridgeRegistryAgent[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -57,6 +65,19 @@ export function AgentsPanel({ listAgents, onSelect, activeAgentId }: AgentsPanel
 
   useEffect(() => {
     load(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Re-probe when the window regains focus — if the user ran `npm install -g`
+  // in their terminal while Zeros was backgrounded, we want the install-state
+  // to reflect that without them hunting for a Refresh button.
+  useEffect(() => {
+    const onFocus = () => {
+      // Silent refresh; we already have data, just update install flags.
+      void load(true);
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -173,6 +194,7 @@ export function AgentsPanel({ listAgents, onSelect, activeAgentId }: AgentsPanel
             key={agent.id}
             agent={agent}
             onSelect={onSelect}
+            onPreWarm={onPreWarm}
             active={activeAgentId === agent.id}
           />
         ))}
@@ -219,15 +241,78 @@ function TabButton({
   );
 }
 
+/** Known install hints for binary-distributed agents where we can't
+ *  just run `npm install -g`. Keyed by registry agent id. Value is a
+ *  best-effort one-liner the user pastes into their terminal. */
+const BINARY_INSTALL_HINTS: Record<string, string> = {
+  "amp-acp": "curl -fsSL https://ampcode.com/install.sh | sh",
+  "factory-droid": "curl -fsSL https://app.factory.ai/cli | sh",
+  cursor: "curl https://cursor.com/install -fsS | bash",
+};
+
+/** Build the shell command a user would run to install this agent's CLI.
+ *  Prefers npm → uv → known binary installer. Returns null only when we
+ *  genuinely have no actionable install path (rare). */
+function installCommandFor(agent: BridgeRegistryAgent): string | null {
+  const npxPkg = agent.distribution.npx?.package;
+  if (npxPkg) {
+    // Strip a trailing "@version" pin so the user gets the latest by default.
+    const unpinned = npxPkg.replace(/@[^@/]+$/, "");
+    return `npm install -g ${unpinned}`;
+  }
+  const uvxPkg = agent.distribution.uvx?.package;
+  if (uvxPkg) {
+    const unpinned = uvxPkg.replace(/@[^@/]+$/, "");
+    return `uv tool install ${unpinned}`;
+  }
+  const binaryHint = BINARY_INSTALL_HINTS[agent.id];
+  if (binaryHint) return binaryHint;
+  return null;
+}
+
 function AgentRow({
   agent,
   onSelect,
+  onPreWarm,
   active,
 }: {
   agent: BridgeRegistryAgent;
   onSelect: (a: BridgeRegistryAgent) => void;
+  onPreWarm?: (agentId: string) => void;
   active: boolean;
 }) {
+  // Warm the subprocess on hover, once per session. Debounce-via-flag to
+  // avoid re-firing as the user hovers repeatedly across installed rows.
+  const warmedRef = React.useRef(false);
+  const handleMouseEnter = () => {
+    if (warmedRef.current) return;
+    if (!onPreWarm) return;
+    if (!agent.installed) return;
+    warmedRef.current = true;
+    onPreWarm(agent.id);
+  };
+
+  type InstallState = "idle" | "launching" | "running" | "error";
+  const [installState, setInstallState] = useState<InstallState>("idle");
+  const [installError, setInstallError] = useState<string | null>(null);
+  const installCmd = installCommandFor(agent);
+  const handleInstall = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!installCmd) return;
+    setInstallState("launching");
+    setInstallError(null);
+    try {
+      await invoke("open_install_terminal", { command: installCmd });
+      // Terminal opened with the install running. Flip to "running" so the
+      // CTA reads "Installing…" — the focus-refresh hook at panel level
+      // polls the registry when the user returns to Zeros and the button
+      // will flip back to "Installed" once PATH detection picks it up.
+      setInstallState("running");
+    } catch (err) {
+      setInstallState("error");
+      setInstallError(err instanceof Error ? err.message : String(err));
+    }
+  };
   const distKind =
     agent.launchKind && agent.launchKind !== "unavailable"
       ? agent.launchKind
@@ -245,6 +330,7 @@ function AgentRow({
     <div
       className={`oc-acp-reg-row ${active ? "oc-acp-reg-row-active" : ""}`}
       onClick={() => onSelect(agent)}
+      onMouseEnter={handleMouseEnter}
     >
       {agent.icon ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -304,18 +390,82 @@ function AgentRow({
           </div>
         )}
       </div>
-      <Button
-        variant={active ? "outline" : "primary"}
-        size="sm"
-        type="button"
-        className={`oc-acp-reg-cta ${active ? "oc-acp-reg-cta-active" : ""}`}
-        onClick={(e) => {
-          e.stopPropagation();
-          onSelect(agent);
-        }}
-      >
-        {active ? "Active" : agent.installed ? "Start" : "Run"}
-      </Button>
+      {agent.installed ? (
+        // Installed agents are always available in the chat picker. The only
+        // per-agent affordance is "is this my default" — expressed as a star
+        // on the row itself. No separate Start/Run/Active button needed.
+        <div
+          className={`oc-acp-reg-cta-installed ${active ? "is-default" : ""}`}
+          title={active ? "Default agent for new chats" : "Set as default"}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect(agent);
+          }}
+          role="button"
+          tabIndex={0}
+        >
+          <Check className="w-3 h-3" />
+          <span>{active ? "Default" : "Installed"}</span>
+        </div>
+      ) : installCmd ? (
+        <Button
+          variant="outline"
+          size="sm"
+          type="button"
+          className="oc-acp-reg-cta"
+          onClick={handleInstall}
+          disabled={installState === "launching"}
+          title={
+            installState === "error"
+              ? installError ?? "Failed to open terminal"
+              : installState === "running"
+              ? "Installing — finish in the terminal window that opened"
+              : `Run in Terminal: ${installCmd}`
+          }
+        >
+          {installState === "launching" ? (
+            <>
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Opening…
+            </>
+          ) : installState === "running" ? (
+            <>
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Installing…
+            </>
+          ) : installState === "error" ? (
+            <>
+              <AlertCircle className="w-3 h-3" />
+              Retry
+            </>
+          ) : (
+            <>
+              <Download className="w-3 h-3" />
+              Install
+            </>
+          )}
+        </Button>
+      ) : (
+        // No known install recipe — point the user at the agent's own docs.
+        <Button
+          variant="outline"
+          size="sm"
+          type="button"
+          className="oc-acp-reg-cta"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (agent.website) {
+              window.open(agent.website, "_blank", "noopener,noreferrer");
+            } else if (agent.repository) {
+              window.open(agent.repository, "_blank", "noopener,noreferrer");
+            }
+          }}
+          title="Open install instructions"
+        >
+          <ExternalLink className="w-3 h-3" />
+          Install docs
+        </Button>
+      )}
     </div>
   );
 }

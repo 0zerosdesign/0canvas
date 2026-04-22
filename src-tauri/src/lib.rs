@@ -124,6 +124,93 @@ fn get_engine_root(state: tauri::State<'_, SidecarState>) -> Option<String> {
         .map(|p| p.to_string_lossy().into_owned())
 }
 
+/// Run an agent-install shell command in the user's Terminal app. We don't
+/// spawn `npm install -g` directly — it may need the user's shell env
+/// (nvm, homebrew paths) and they want to see the output. Opening a real
+/// terminal window is both reliable and transparent.
+///
+/// The caller passes the raw shell line (e.g. `npm install -g <pkg>`).
+/// We don't parse or rewrite it — this runs exactly what the registry
+/// metadata suggests. Rejected if the command contains shell metacharacters
+/// beyond what's needed for known install recipes, so a compromised
+/// registry can't exfil data via `; curl ...`.
+#[tauri::command]
+fn open_install_terminal(command: String) -> Result<(), String> {
+    // Allow-list the set of characters that show up in legitimate install
+    // commands: `npm install -g @scope/pkg`, `uv tool install …`,
+    // `curl -fsSL https://… | sh`, `brew install …`. Reject anything else.
+    if command.is_empty() || command.len() > 512 {
+        return Err("invalid install command".into());
+    }
+    let allowed = |c: char| {
+        c.is_ascii_alphanumeric()
+            || matches!(
+                c,
+                ' ' | '-'
+                    | '_'
+                    | '.'
+                    | '/'
+                    | ':'
+                    | '@'
+                    | '='
+                    | '|'
+                    | '+'
+                    | ','
+            )
+    };
+    if !command.chars().all(allowed) {
+        return Err("install command contains disallowed characters".into());
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        // Escape double-quotes for AppleScript embedding.
+        let escaped = command.replace('\\', "\\\\").replace('"', "\\\"");
+        let script = format!(
+            r#"tell application "Terminal"
+    activate
+    do script "{cmd}"
+end tell"#,
+            cmd = escaped
+        );
+        std::process::Command::new("osascript")
+            .arg("-e")
+            .arg(&script)
+            .spawn()
+            .map_err(|e| format!("osascript: {}", e))?;
+        return Ok(());
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        for term in &["gnome-terminal", "konsole", "xterm"] {
+            if std::process::Command::new(term)
+                .arg("--")
+                .arg("bash")
+                .arg("-lc")
+                .arg(&command)
+                .spawn()
+                .is_ok()
+            {
+                return Ok(());
+            }
+        }
+        return Err("no supported terminal emulator found".into());
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("cmd")
+            .args(["/C", "start", "cmd", "/K", &command])
+            .spawn()
+            .map_err(|e| format!("cmd start: {}", e))?;
+        return Ok(());
+    }
+
+    #[allow(unreachable_code)]
+    Err("unsupported platform".into())
+}
+
 /// Open the system directory picker; if the user picks a folder, restart the
 /// engine rooted there and emit `project-changed` to the webview.
 #[tauri::command]
@@ -372,6 +459,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_engine_port,
             get_engine_root,
+            open_install_terminal,
             open_project_folder,
             open_project_folder_path,
             localhost::discover_localhost_services,

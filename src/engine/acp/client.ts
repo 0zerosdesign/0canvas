@@ -66,9 +66,18 @@ export interface AcpClient {
   connection: ClientSideConnection;
   /** Resolves when the subprocess exits. */
   exited: Promise<{ code: number | null; signal: NodeJS.Signals | null }>;
+  /** Last N stderr lines from the subprocess. Rolling buffer — useful to
+   *  attach to exit diagnostics so the user sees *why* the agent died
+   *  instead of a bare "code=0". */
+  stderrTail(): string[];
+  /** True once the child has exited. Use to short-circuit new RPCs. */
+  hasExited(): boolean;
   /** Send SIGTERM and await exit. */
   dispose(): Promise<void>;
 }
+
+/** How many stderr lines to retain for exit diagnostics. */
+const STDERR_TAIL_LIMIT = 30;
 
 /**
  * Spawn an ACP agent from the registry and wrap its stdio in
@@ -100,8 +109,16 @@ export function startAcpClient(
   }
 
   // Forward stderr line-by-line. Agents chat a lot on stderr — debug logs,
-  // startup banners, auth prompts — and surfacing it helps triage.
+  // startup banners, auth prompts — and surfacing it helps triage. We also
+  // keep a rolling tail so exit diagnostics can quote the last few lines.
   const stderrBuf: string[] = [];
+  const stderrTailBuf: string[] = [];
+  const pushTail = (line: string): void => {
+    stderrTailBuf.push(line);
+    if (stderrTailBuf.length > STDERR_TAIL_LIMIT) {
+      stderrTailBuf.splice(0, stderrTailBuf.length - STDERR_TAIL_LIMIT);
+    }
+  };
   child.stderr.setEncoding("utf-8");
   child.stderr.on("data", (chunk: string) => {
     stderrBuf.push(chunk);
@@ -112,6 +129,7 @@ export function startAcpClient(
     if (leftover) stderrBuf.push(leftover);
     for (const line of lines) {
       if (!line) continue;
+      pushTail(line);
       if (callbacks.onStderr) callbacks.onStderr(line);
       else console.error(`[acp ${agent.id}] ${line}`);
     }
@@ -158,6 +176,8 @@ export function startAcpClient(
     agentVersion: agent.version,
     connection,
     exited,
+    stderrTail: () => [...stderrTailBuf],
+    hasExited: () => child.exitCode !== null || child.signalCode !== null,
     async dispose() {
       if (child.exitCode !== null) return;
       child.kill("SIGTERM");
@@ -172,4 +192,53 @@ export function startAcpClient(
       await exited;
     },
   };
+}
+
+/** Build a human-readable diagnostic for a subprocess that exited while an
+ *  ACP RPC was pending. Special-cases code=0 (graceful exit, usually means
+ *  the agent aborted on missing credentials) so the user sees something
+ *  actionable instead of "Request timeout after 60s". */
+export function describeUnexpectedExit(args: {
+  agentId: string;
+  code: number | null;
+  signal: NodeJS.Signals | null;
+  stderrTail: string[];
+  stage: "initialize" | "newSession" | "loadSession" | "prompt";
+}): string {
+  const { agentId, code, signal, stderrTail, stage } = args;
+  const exitDesc = signal
+    ? `killed by signal ${signal}`
+    : code === null
+    ? "exited with unknown status"
+    : `exited with code ${code}`;
+  const tail = stderrTail
+    .filter((l) => l.trim().length > 0)
+    .slice(-5)
+    .join("\n");
+
+  const prefix = `${agentId} ${exitDesc} during ${stage}.`;
+
+  // Code 0 + short/empty stderr is almost always "adapter checked for
+  // credentials, didn't find any, gave up quietly". Point the user at auth
+  // rather than making them decode an opaque 60-second hang.
+  if (code === 0 && stage !== "prompt") {
+    const hint = authHintFor(agentId);
+    return tail
+      ? `${prefix} This usually means the agent needs authentication (${hint}).\n\nLast output:\n${tail}`
+      : `${prefix} This usually means the agent needs authentication (${hint}).`;
+  }
+
+  return tail ? `${prefix}\n\nLast output:\n${tail}` : prefix;
+}
+
+function authHintFor(agentId: string): string {
+  if (agentId.includes("codex")) return "run `codex login` in your terminal";
+  if (agentId.includes("claude")) return "run `claude /login` or set `ANTHROPIC_API_KEY`";
+  if (agentId.includes("gemini")) return "run `gemini` once to authenticate";
+  if (agentId.includes("copilot")) return "run `gh auth login` + `gh extension install github/gh-copilot`";
+  if (agentId.includes("amp")) return "run `amp login`";
+  if (agentId.includes("factory") || agentId.includes("droid"))
+    return "run `droid` once and sign in, or set `FACTORY_API_KEY`";
+  if (agentId.includes("cursor")) return "sign in via the Cursor app";
+  return "check the agent's docs for how to authenticate";
 }

@@ -589,34 +589,128 @@
   min-width: 0;
 }
 
-/* ── Chats tree ───────────────────────────────────────── */
+/* ── Chats tree (Cursor-style: per-project sections) ──── */
 
 .oc-column-1__chats {
-  max-height: 40vh;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
 }
 
 .oc-column-1__folders {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 8px;
 }
 
-.oc-column-1__folder {
+/* "Other workspaces" — collapsed-by-default section that holds chats from
+   any folder other than the active engine root. Keeps cross-project
+   history accessible without drowning out the active project's chats. */
+.oc-column-1__other {
+  display: flex;
+  flex-direction: column;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border-subtle);
+}
+.oc-column-1__other-header {
+  display: flex !important;
+  justify-content: flex-start !important;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  min-height: 24px;
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+.oc-column-1__other-header:hover { color: var(--text-on-surface); }
+.oc-column-1__other-count {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.oc-column-1__project {
   display: flex;
   flex-direction: column;
 }
 
-.oc-column-1__folder-header {
+/* Project section header: faint label + "+" that appears on hover.
+   No chevron — chats beyond the first 5 hide behind "More" instead. */
+.oc-column-1__project-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  min-height: 24px;
+}
+
+.oc-column-1__project-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+}
+
+.oc-column-1__project.is-current .oc-column-1__project-name {
+  color: var(--text-on-surface-variant);
+}
+
+/* "+" icon-button — always rendered but invisible until the header
+   is hovered. Keyboard-focus visible via :focus-visible so
+   keyboard users can still reach it. */
+.oc-column-1__project-add {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  opacity: 0;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 120ms ease, background 120ms ease, color 120ms ease;
+}
+
+.oc-column-1__project-header:hover .oc-column-1__project-add,
+.oc-column-1__project-add:focus-visible {
+  opacity: 1;
+}
+
+.oc-column-1__project-add:hover {
+  background: var(--tint-hover);
+  color: var(--text-on-surface);
+}
+
+.oc-column-1__chat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.oc-column-1__project-more {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 6px;
+  gap: 8px;
   padding: 6px 8px;
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: var(--text-on-surface);
+  color: var(--text-muted);
   font-size: 12px;
   font-weight: 500;
   text-align: left;
@@ -624,47 +718,22 @@
   font-family: inherit;
   width: 100%;
   height: auto;
-  transition: background 120ms ease;
+  transition: background 120ms ease, color 120ms ease;
 }
 
-.oc-column-1__folder-header:hover {
+.oc-column-1__project-more:hover {
   background: var(--tint-hover);
-}
-
-.oc-column-1__folder.is-current .oc-column-1__folder-header {
-  color: var(--text-primary-light);
-}
-
-.oc-column-1__folder.is-current .oc-column-1__folder-header:hover {
-  background: var(--tint-primary-weak);
-}
-
-.oc-column-1__folder-name {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-
-.oc-column-1__folder-count {
-  font-size: 10px;
-  color: var(--text-muted);
-  padding: 0 2px;
-}
-
-.oc-column-1__chat-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding: 2px 0 4px 16px;
+  color: var(--text-on-surface);
 }
 
 .oc-column-1__chat {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 8px;
+  /* Fixed height — no layout shift on hover, even when the delete
+     icon fades in. Matches Cursor's row cadence (~28px tall). */
+  height: 28px;
+  padding: 0 8px;
   border-radius: 6px;
   color: var(--text-on-surface-variant);
   font-size: 12px;
@@ -691,22 +760,31 @@
   min-width: 0;
 }
 
+/* Delete button is always in the DOM with reserved width so the row
+   height never shifts on hover. Invisible at rest, fades in on hover
+   and when the button receives keyboard focus. */
 .oc-column-1__chat-delete {
-  display: none;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 18px;
   height: 18px;
+  flex-shrink: 0;
   background: transparent;
   border: none;
   border-radius: 4px;
   color: var(--text-muted);
   cursor: pointer;
   padding: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease, background 120ms ease, color 120ms ease;
 }
 
-.oc-column-1__chat:hover .oc-column-1__chat-delete {
-  display: inline-flex;
+.oc-column-1__chat:hover .oc-column-1__chat-delete,
+.oc-column-1__chat-delete:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .oc-column-1__chat-delete:hover {
@@ -3170,4 +3248,145 @@
 
 .oc-spin { animation: oc-spin 1s linear infinite; }
 @keyframes oc-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* ============================================================
+ * Column 2 — Empty-state composer (Cursor-style)
+ * ============================================================
+ * When no chat is active, Column 2 shows a centered composer
+ * card instead of a "click New Chat" hint. Submitting creates
+ * a new chat in the current workspace folder and forwards the
+ * text via ENQUEUE_CHAT_SUBMISSION.
+ */
+
+.oc-empty-composer-wrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--surface-0);
+}
+
+.oc-empty-composer {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.oc-empty-composer__meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.oc-empty-composer__folder {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-on-surface-variant);
+  font-weight: 500;
+}
+
+.oc-empty-composer__box {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  padding: 8px 10px 8px;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.oc-empty-composer__box:focus-within {
+  border-color: var(--border-emphasis);
+  background: var(--surface-1-strong, var(--surface-1));
+}
+
+.oc-empty-composer__input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-on-surface);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.55;
+  resize: none;
+  padding: 4px 2px;
+  min-height: 56px;
+}
+
+.oc-empty-composer__input::placeholder {
+  color: var(--text-muted);
+}
+
+.oc-empty-composer__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.oc-empty-composer__actions-left {
+  flex: 1;
+}
+
+.oc-empty-composer__chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px;
+}
+
+.oc-empty-composer__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px solid var(--border-default);
+  border-radius: 9999px;
+  color: var(--text-on-surface-variant);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.oc-empty-composer__chip:hover {
+  background: var(--tint-hover);
+  color: var(--text-on-surface);
+}
+
+.oc-empty-composer__chip.is-active {
+  background: var(--tint-primary-weak);
+  border-color: var(--border-emphasis);
+  color: var(--text-primary-light);
+}
+
+.oc-empty-composer__hint {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--tint-hover);
+  color: var(--text-on-surface);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.oc-empty-composer__hint span {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.45;
+}
 

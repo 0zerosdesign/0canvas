@@ -31,6 +31,8 @@ import {
   FolderPlus,
   GitBranch,
   MessageSquare,
+  MoreHorizontal,
+  Plus,
   Trash2,
   X,
 } from "lucide-react";
@@ -61,8 +63,13 @@ import { useUpdater } from "../native/updater";
 
 const DOCS_URL = "https://github.com/Withso/zeros#readme";
 const COLLAPSE_KEY = "column-1-collapsed";
-const FOLDERS_COLLAPSED_KEY = "column-1-folders-collapsed";
+const PROJECTS_EXPANDED_KEY = "column-1-projects-expanded";
 const LOCALHOST_COLLAPSED_KEY = "column-1-localhost-collapsed";
+const OTHER_WORKSPACES_EXPANDED_KEY = "column-1-other-workspaces-expanded";
+
+/** How many chats to show per project before collapsing behind "More".
+ *  Matches Cursor's Agents Window behavior. */
+const PROJECT_CHATS_VISIBLE = 5;
 
 /** Visible rows in LOCALHOST before the list scrolls. Keeps the profile
  * footer pinned even when many dev servers are running. */
@@ -270,12 +277,28 @@ export function Column1Nav() {
   const [collapsed, setCollapsed] = useState<boolean>(() =>
     getSetting<boolean>(COLLAPSE_KEY, false),
   );
-  const [foldersCollapsed, setFoldersCollapsed] = useState<Record<string, boolean>>(() =>
-    getSetting<Record<string, boolean>>(FOLDERS_COLLAPSED_KEY, {}),
+  // Per-folder "show all chats beyond the first 5" toggle. Default false
+  // means newest 5 shown, "More" button appears when there are more.
+  const [projectsExpanded, setProjectsExpanded] = useState<Record<string, boolean>>(() =>
+    getSetting<Record<string, boolean>>(PROJECTS_EXPANDED_KEY, {}),
   );
   const [localhostCollapsed, setLocalhostCollapsed] = useState<boolean>(() =>
     getSetting<boolean>(LOCALHOST_COLLAPSED_KEY, false),
   );
+  // "Other workspaces" — chats whose folder doesn't match the current
+  // engine root. Collapsed by default so chats from the active workspace
+  // stay visually dominant. Expand to dig into cross-project history.
+  const [otherWorkspacesExpanded, setOtherWorkspacesExpanded] =
+    useState<boolean>(() =>
+      getSetting<boolean>(OTHER_WORKSPACES_EXPANDED_KEY, false),
+    );
+  const toggleOtherWorkspaces = () => {
+    setOtherWorkspacesExpanded((prev) => {
+      const next = !prev;
+      setSetting(OTHER_WORKSPACES_EXPANDED_KEY, next);
+      return next;
+    });
+  };
 
   const toggleLocalhost = () => {
     setLocalhostCollapsed((prev) => {
@@ -293,57 +316,77 @@ export function Column1Nav() {
     });
   };
 
-  const toggleFolder = (folder: string) => {
-    setFoldersCollapsed((prev) => {
+  const toggleProjectExpanded = (folder: string) => {
+    setProjectsExpanded((prev) => {
       const next = { ...prev, [folder]: !prev[folder] };
-      setSetting(FOLDERS_COLLAPSED_KEY, next);
+      setSetting(PROJECTS_EXPANDED_KEY, next);
       return next;
     });
   };
 
   const bridge = useBridge();
 
-  const handleNewChat = useCallback(async () => {
-    const folder = await getCurrentProjectFolder();
-
-    // Resolve the default agent. User preference wins; otherwise pick
-    // the first installed agent in the registry; otherwise leave it
-    // unset and let the Chat tab prompt the user to pick one.
-    let agentId = getDefaultAgentId();
-    let agentName: string | null = null;
-    if (bridge) {
-      try {
-        const resp = await bridge.request<AcpAgentsListMessage>(
-          { type: "ACP_LIST_AGENTS" },
-          10_000,
-        );
-        const found =
-          (agentId && resp.agents.find((a) => a.id === agentId)) ||
-          resp.agents.find((a) => a.installed) ||
-          null;
-        if (found) {
-          agentId = found.id;
-          agentName = found.name;
+  // Shared path for "+" buttons. `folder` is the project root the new
+  // chat should bind to — for the header + it's the current project,
+  // for per-project + it's that project's folder. Using an explicit
+  // folder (instead of re-reading the engine root) is what guarantees
+  // the chat lands in the right project context even when the active
+  // workspace differs from the project the user clicked.
+  const createChatInFolder = useCallback(
+    async (folder: string) => {
+      let agentId = getDefaultAgentId();
+      let agentName: string | null = null;
+      if (bridge) {
+        try {
+          const resp = await bridge.request<AcpAgentsListMessage>(
+            { type: "ACP_LIST_AGENTS" },
+            10_000,
+          );
+          const found =
+            (agentId && resp.agents.find((a) => a.id === agentId)) ||
+            resp.agents.find((a) => a.installed) ||
+            null;
+          if (found) {
+            agentId = found.id;
+            agentName = found.name;
+          }
+        } catch {
+          /* registry unreachable — chat is still usable; header will prompt */
         }
-      } catch {
-        /* registry unreachable — chat is still usable; header will prompt */
       }
-    }
 
-    const chat: ChatThread = {
-      id: newChatId(),
-      folder,
-      agentId,
-      agentName,
-      model: null,
-      effort: "medium",
-      permissionMode: "ask",
-      title: "New chat",
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-    dispatch({ type: "ADD_CHAT", chat });
-  }, [dispatch, bridge]);
+      const chat: ChatThread = {
+        id: newChatId(),
+        folder,
+        agentId,
+        agentName,
+        model: null,
+        effort: "medium",
+        permissionMode: "ask",
+        title: "New chat",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      dispatch({ type: "ADD_CHAT", chat });
+    },
+    [dispatch, bridge],
+  );
+
+  // Top-level "New Agent" opens the empty-state composer in Column 2.
+  // It deselects the active chat so the chat body falls through to the
+  // EmptyComposer; the composer then creates the chat on first submit
+  // (Cursor-style). Per-project "+" still creates a chat eagerly so the
+  // folder binding is unambiguous.
+  const handleNewChat = useCallback(() => {
+    dispatch({ type: "SET_ACTIVE_CHAT", id: null });
+  }, [dispatch]);
+
+  const handleNewChatInFolder = useCallback(
+    (folder: string) => {
+      void createChatInFolder(folder);
+    },
+    [createChatInFolder],
+  );
 
   // ⌘N — new chat from anywhere. Skipped when focus is inside an
   // editable surface (input, textarea, contenteditable) so we don't
@@ -378,20 +421,146 @@ export function Column1Nav() {
   };
 
   const grouped = React.useMemo(() => groupChatsByFolder(state.chats), [state.chats]);
-  // Current-project folder first, "" (No project) second, others
-  // alphabetical. Keeps the active project's chats prominent even
-  // when the user has threads from many repos.
-  const folderKeys = React.useMemo(() => {
+  // Split folders into "this workspace" (current engine root, plus the
+  // no-project ambient bucket) and "other workspaces" (everything else).
+  // The main list shows current-workspace chats at full prominence; other
+  // workspaces collapse behind a single toggle so cross-project history
+  // doesn't crowd out the chats the user is actively working on.
+  const { currentFolderKeys, otherFolderKeys } = React.useMemo(() => {
     const keys = Array.from(grouped.keys());
     const currentRoot = workspaceMenu.currentRoot;
-    return keys.sort((a, b) => {
-      if (a === currentRoot && b !== currentRoot) return -1;
-      if (b === currentRoot && a !== currentRoot) return 1;
-      if (a === "" && b !== "") return -1;
-      if (b === "" && a !== "") return 1;
-      return a.localeCompare(b);
-    });
+    const current: string[] = [];
+    const other: string[] = [];
+    for (const key of keys) {
+      if (key === currentRoot || key === "") current.push(key);
+      else other.push(key);
+    }
+    // Inside each bucket: current-root first, then "" (no-project) ambient,
+    // then alphabetical by basename.
+    const sortKeys = (list: string[]) =>
+      list.sort((a, b) => {
+        if (a === currentRoot && b !== currentRoot) return -1;
+        if (b === currentRoot && a !== currentRoot) return 1;
+        if (a === "" && b !== "") return -1;
+        if (b === "" && a !== "") return 1;
+        return a.localeCompare(b);
+      });
+    return {
+      currentFolderKeys: sortKeys(current),
+      otherFolderKeys: sortKeys(other),
+    };
   }, [grouped, workspaceMenu.currentRoot]);
+  const otherWorkspaceChatCount = React.useMemo(() => {
+    let n = 0;
+    for (const key of otherFolderKeys) n += grouped.get(key)?.length ?? 0;
+    return n;
+  }, [grouped, otherFolderKeys]);
+
+  /**
+   * Per-folder section render, extracted so it can be reused for both the
+   * current-workspace list and the expanded "Other workspaces" list.
+   * Kept as a closure (not a component) so it has direct access to store
+   * state + handlers without prop-drilling.
+   */
+  const renderFolderSection = (args: {
+    folder: string;
+    chats: ChatThread[];
+    isExpanded: boolean;
+    isCurrent: boolean;
+    activeChatId: string | null;
+    onSelectChat: (id: string) => void;
+    onDeleteChat: (e: React.MouseEvent, id: string) => void;
+    onToggleExpanded: (folder: string) => void;
+    onNewInFolder: (folder: string) => void;
+  }): React.ReactNode => {
+    const {
+      folder,
+      chats,
+      isExpanded,
+      isCurrent,
+      activeChatId,
+      onSelectChat,
+      onDeleteChat,
+      onToggleExpanded,
+      onNewInFolder,
+    } = args;
+    if (chats.length === 0) return null;
+    const visibleChats =
+      isExpanded || chats.length <= PROJECT_CHATS_VISIBLE
+        ? chats
+        : chats.slice(0, PROJECT_CHATS_VISIBLE);
+    const hiddenCount = chats.length - visibleChats.length;
+    return (
+      <div
+        key={folder}
+        className={`oc-column-1__project ${isCurrent ? "is-current" : ""}`}
+      >
+        <div className="oc-column-1__project-header">
+          <span
+            className="oc-column-1__project-name"
+            title={folder || "Not associated with a project"}
+          >
+            {folderBasename(folder)}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="oc-column-1__project-add"
+            onClick={() => onNewInFolder(folder)}
+            title={`New chat in ${folderBasename(folder)}`}
+            aria-label={`New chat in ${folderBasename(folder)}`}
+          >
+            <Plus size={12} />
+          </Button>
+        </div>
+        <div className="oc-column-1__chat-list">
+          {visibleChats.map((chat) => (
+            <div
+              key={chat.id}
+              className={`oc-column-1__chat ${
+                activeChatId === chat.id ? "is-active" : ""
+              }`}
+              onClick={() => onSelectChat(chat.id)}
+              title={chat.title}
+            >
+              <MessageSquare size={12} />
+              <span className="oc-column-1__chat-title">{chat.title}</span>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="oc-column-1__chat-delete"
+                onClick={(e) => onDeleteChat(e, chat.id)}
+                title="Delete chat"
+                aria-label="Delete chat"
+              >
+                <Trash2 size={10} />
+              </Button>
+            </div>
+          ))}
+          {hiddenCount > 0 && !isExpanded && (
+            <Button
+              variant="ghost"
+              className="oc-column-1__project-more"
+              onClick={() => onToggleExpanded(folder)}
+            >
+              <MoreHorizontal size={12} />
+              <span>More</span>
+            </Button>
+          )}
+          {isExpanded && chats.length > PROJECT_CHATS_VISIBLE && (
+            <Button
+              variant="ghost"
+              className="oc-column-1__project-more"
+              onClick={() => onToggleExpanded(folder)}
+            >
+              <MoreHorizontal size={12} />
+              <span>Show less</span>
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   const handleSelect = (service: LocalhostService) => {
     if (!state.project) return;
@@ -488,28 +657,13 @@ export function Column1Nav() {
         </Button>
       </div>
 
-      <div className="oc-column-1__actions">
-        <Button
-          variant="ghost"
-          className="oc-column-1__action"
-          onClick={handleNewChat}
-          title={collapsed ? "New Chat (⌘N)" : "⌘N"}
-        >
-          <MessageSquarePlus size={16} />
-          {!collapsed && <span>New Chat</span>}
-        </Button>
-        <Button
-          variant="ghost"
-          className="oc-column-1__action"
-          disabled
-          title={collapsed ? "Skills (later phase)" : undefined}
-        >
-          <Sparkles size={16} />
-          {!collapsed && <span>Skills</span>}
-        </Button>
-      </div>
-
-      {/* Phase 2-D: Workspace Manager — current project + recents dropdown */}
+      {/* Workspace Manager sits at the top — switching the project
+          context is the primary navigation action, so it's the first
+          control the user sees. The button label is always "Open
+          Workspace" (matches Cursor), and the dropdown contains the
+          recents list + Open Folder + Clone from URL so the user can
+          identify which project they're currently in from the
+          dropdown's is-current highlight, not from the button itself. */}
       <div className="oc-column-1__workspace" ref={workspaceMenu.rootRef}>
         <Button
           variant="ghost"
@@ -517,14 +671,16 @@ export function Column1Nav() {
             workspaceMenu.open ? "is-open" : ""
           }`}
           onClick={() => workspaceMenu.setOpen(!workspaceMenu.open)}
-          title={collapsed ? "Workspace" : undefined}
+          title={
+            collapsed
+              ? "Open Workspace"
+              : workspaceMenu.currentRoot || "Open a project folder"
+          }
         >
           <FolderOpen size={16} />
           {!collapsed && (
             <>
-              <span className="oc-column-1__workspace-name">
-                {folderBasename(workspaceMenu.currentRoot || state.project?.name || "")}
-              </span>
+              <span className="oc-column-1__workspace-name">Open Workspace</span>
               <ChevronDown size={12} className="oc-column-1__workspace-caret" />
             </>
           )}
@@ -588,82 +744,85 @@ export function Column1Nav() {
         )}
       </div>
 
-      {!collapsed && (
-        <>
-          <section className="oc-column-1__section oc-column-1__chats">
-            <h3 className="oc-column-1__section-title">
-              CHATS
-              {state.chats.length > 0 && (
-                <span className="oc-column-1__section-badge">{state.chats.length}</span>
-              )}
-            </h3>
-            {state.chats.length === 0 ? (
-              <p className="oc-column-1__placeholder">
-                Click <strong>New Chat</strong> to start a conversation. Chats are grouped by project.
-              </p>
-            ) : (
-              <div className="oc-column-1__folders">
-                {folderKeys.map((folder) => {
-                  const chats = grouped.get(folder) ?? [];
-                  const isCollapsed = foldersCollapsed[folder] === true;
-                  const isCurrent = folder !== "" && folder === workspaceMenu.currentRoot;
-                  return (
-                    <div
-                      key={folder}
-                      className={`oc-column-1__folder ${isCurrent ? "is-current" : ""}`}
-                    >
-                      <Button
-                        variant="ghost"
-                        className="oc-column-1__folder-header"
-                        onClick={() => toggleFolder(folder)}
-                        title={folder || "Not associated with a project"}
-                      >
-                        {isCollapsed ? (
-                          <ChevronRight size={12} />
-                        ) : (
-                          <ChevronDown size={12} />
-                        )}
-                        <Folder size={12} />
-                        <span className="oc-column-1__folder-name">
-                          {folderBasename(folder)}
-                        </span>
-                        <span className="oc-column-1__folder-count">{chats.length}</span>
-                      </Button>
-                      {!isCollapsed && (
-                        <div className="oc-column-1__chat-list">
-                          {chats.map((chat) => (
-                            <div
-                              key={chat.id}
-                              className={`oc-column-1__chat ${
-                                state.activeChatId === chat.id ? "is-active" : ""
-                              }`}
-                              onClick={() => handleSelectChat(chat.id)}
-                              title={chat.title}
-                            >
-                              <MessageSquare size={12} />
-                              <span className="oc-column-1__chat-title">{chat.title}</span>
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                className="oc-column-1__chat-delete"
-                                onClick={(e) => handleDeleteChat(e, chat.id)}
-                                title="Delete chat"
-                                aria-label="Delete chat"
-                              >
-                                <Trash2 size={10} />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+      <div className="oc-column-1__actions">
+        <Button
+          variant="ghost"
+          className="oc-column-1__action"
+          onClick={handleNewChat}
+          title={collapsed ? "New Agent (⌘N)" : "⌘N"}
+        >
+          <MessageSquarePlus size={16} />
+          {!collapsed && <span>New Agent</span>}
+        </Button>
+        <Button
+          variant="ghost"
+          className="oc-column-1__action"
+          disabled
+          title={collapsed ? "Skills (later phase)" : undefined}
+        >
+          <Sparkles size={16} />
+          {!collapsed && <span>Skills</span>}
+        </Button>
+      </div>
+
+      {!collapsed && state.chats.length > 0 && (
+        <section className="oc-column-1__section oc-column-1__chats">
+          <div className="oc-column-1__folders">
+            {currentFolderKeys.map((folder) =>
+              renderFolderSection({
+                folder,
+                chats: grouped.get(folder) ?? [],
+                isExpanded: projectsExpanded[folder] === true,
+                isCurrent:
+                  folder !== "" && folder === workspaceMenu.currentRoot,
+                activeChatId: state.activeChatId,
+                onSelectChat: handleSelectChat,
+                onDeleteChat: handleDeleteChat,
+                onToggleExpanded: toggleProjectExpanded,
+                onNewInFolder: handleNewChatInFolder,
+              }),
+            )}
+            {otherFolderKeys.length > 0 && (
+              <div className="oc-column-1__other">
+                <Button
+                  variant="ghost"
+                  className="oc-column-1__other-header"
+                  onClick={toggleOtherWorkspaces}
+                  aria-expanded={otherWorkspacesExpanded}
+                  title={
+                    otherWorkspacesExpanded
+                      ? "Hide chats from other workspaces"
+                      : "Show chats from other workspaces"
+                  }
+                >
+                  {otherWorkspacesExpanded ? (
+                    <ChevronDown size={12} />
+                  ) : (
+                    <ChevronRight size={12} />
+                  )}
+                  <span>Other workspaces</span>
+                  <span className="oc-column-1__other-count">
+                    {otherWorkspaceChatCount}
+                  </span>
+                </Button>
+                {otherWorkspacesExpanded &&
+                  otherFolderKeys.map((folder) =>
+                    renderFolderSection({
+                      folder,
+                      chats: grouped.get(folder) ?? [],
+                      isExpanded: projectsExpanded[folder] === true,
+                      isCurrent: false,
+                      activeChatId: state.activeChatId,
+                      onSelectChat: handleSelectChat,
+                      onDeleteChat: handleDeleteChat,
+                      onToggleExpanded: toggleProjectExpanded,
+                      onNewInFolder: handleNewChatInFolder,
+                    }),
+                  )}
               </div>
             )}
-          </section>
-
-        </>
+          </div>
+        </section>
       )}
 
       <div className="oc-column-1__spacer" />

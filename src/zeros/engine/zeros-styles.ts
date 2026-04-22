@@ -3118,11 +3118,71 @@ ${S} .oc-acp-subheader-sub {
   font-size: 10.5px;
   color: var(--text-muted);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  display: flex; align-items: center; gap: 6px;
 }
+${S} .oc-acp-subheader-agent {
+  color: var(--text-on-surface-variant);
+  font-weight: 500;
+}
+${S} .oc-acp-subheader-agent + .oc-acp-subheader-status:not(:empty)::before {
+  content: "·"; margin: 0 2px 0 -2px; color: var(--text-muted);
+}
+${S} .oc-acp-subheader-status:empty { display: none; }
 ${S} .oc-acp-body {
   flex: 1; min-height: 0; overflow-y: auto;
   padding: 12px;
 }
+
+/* ── Plan panel — rendered when the agent emits session/update plan ─ */
+${S} .oc-acp-plan {
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(168, 85, 247, 0.04);
+}
+${S} .oc-acp-plan-head {
+  all: unset;
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  width: 100%; box-sizing: border-box;
+  font-size: 11px; color: var(--text-muted);
+}
+${S} .oc-acp-plan-head:hover { background: rgba(168, 85, 247, 0.08); }
+${S} .oc-acp-plan-title {
+  font-weight: 600;
+  color: rgba(216, 180, 254, 0.9);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+${S} .oc-acp-plan-count {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-hint);
+}
+${S} .oc-acp-plan-list {
+  list-style: none; margin: 0; padding: 0 12px 10px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+${S} .oc-acp-plan-item {
+  display: flex; gap: 8px; align-items: flex-start;
+  font-size: 12px; line-height: 1.45;
+  color: var(--text-on-surface);
+  padding: 3px 0;
+}
+${S} .oc-acp-plan-bullet {
+  flex-shrink: 0;
+  width: 14px; display: inline-block;
+  color: var(--text-hint);
+  font-variant-numeric: tabular-nums;
+}
+${S} .oc-acp-plan-item-completed { color: var(--text-muted); }
+${S} .oc-acp-plan-item-completed .oc-acp-plan-desc {
+  text-decoration: line-through;
+  text-decoration-color: var(--border-subtle);
+}
+${S} .oc-acp-plan-item-completed .oc-acp-plan-bullet { color: var(--text-success); }
+${S} .oc-acp-plan-item-in_progress .oc-acp-plan-bullet { color: rgba(216,180,254,0.9); }
+${S} .oc-acp-plan-desc { flex: 1; min-width: 0; word-break: break-word; }
 
 /* ── Messages (ACP variant of oc-ai-msg) ───────────────── */
 ${S} .oc-acp-messages {
@@ -3139,6 +3199,14 @@ ${S} .oc-acp-msg-content {
   color: var(--text-on-surface);
   flex: 1; min-width: 0; padding-top: 2px;
   white-space: pre-wrap; word-break: break-word;
+}
+${S} .oc-acp-msg-queued { opacity: 0.72; }
+${S} .oc-acp-msg-queued-hint {
+  margin-top: 6px;
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px;
+  color: var(--text-hint);
+  font-style: italic;
 }
 
 /* ── Tool card ─────────────────────────────────────────── */
@@ -3667,6 +3735,31 @@ ${S} .oc-acp-reg-cta-active {
   background: rgba(34,197,94,0.18); color: rgba(187,247,208,0.95);
 }
 ${S} .oc-acp-reg-cta-active:hover { background: rgba(34,197,94,0.28); }
+
+/* Installed-state chip. Dual purpose: shows state AND acts as the
+   "set as default" click target (row click also works). The is-default
+   variant gets the green tint so the current default is obvious. */
+${S} .oc-acp-reg-cta-installed {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; padding: 4px 8px; border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  background: transparent; color: var(--text-muted);
+  cursor: pointer; flex-shrink: 0; user-select: none;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+${S} .oc-acp-reg-cta-installed:hover {
+  background: rgba(255,255,255,0.04);
+  color: var(--text-on-surface);
+  border-color: var(--border-default);
+}
+${S} .oc-acp-reg-cta-installed.is-default {
+  background: rgba(34,197,94,0.14);
+  border-color: rgba(34,197,94,0.32);
+  color: rgba(187,247,208,0.95);
+}
+${S} .oc-acp-reg-cta-installed.is-default:hover {
+  background: rgba(34,197,94,0.22);
+}
 ${S} .oc-acp-reg-footer {
   border-top: 1px solid var(--border-subtle);
   padding: 6px 12px;

@@ -93,8 +93,8 @@ export interface EnrichedRegistryAgent extends RegistryAgent {
 
 /**
  * Map of registry agent id → candidate CLI binary names to probe on PATH.
- * Hand-curated for the 4 agents we explicitly support; unlisted agents
- * fall through to `installed: false` (fine — they still run via npx/uvx).
+ * Hand-curated per MVP agent; unlisted agents fall through to
+ * `installed: false` (fine — they still run via npx/uvx).
  *
  * This is the one and only per-agent table in the integration. Everything
  * else is driven by the upstream registry JSON.
@@ -104,7 +104,31 @@ const AGENT_PATH_PROBES: Record<string, string[]> = {
   "codex-acp": ["codex"],
   gemini: ["gemini"],
   "github-copilot-cli": ["copilot", "gh-copilot"],
+  "amp-acp": ["amp"],
+  "factory-droid": ["droid"],
+  cursor: ["cursor-agent", "cursor"],
 };
+
+/**
+ * Agents the UI should surface. The CDN registry includes ~27 entries; we
+ * only expose the ones Zeros has tested end-to-end for the MVP. This is a
+ * display-layer filter — the underlying registry still fetches everything,
+ * so `findById()` continues to resolve if some other code path references
+ * a non-MVP agent.
+ *
+ * To temporarily expose all agents for dogfooding, set localStorage key
+ * `zeros.acp.showAllAgents = "1"` (read by the UI side; engine always
+ * filters by default). No recompile needed.
+ */
+export const MVP_VISIBLE_AGENTS = new Set<string>([
+  "claude-acp",
+  "codex-acp",
+  "amp-acp",
+  "factory-droid",
+  "cursor",
+  "gemini",
+  "github-copilot-cli",
+]);
 
 /** Detect the current host platform tag as used in the registry schema. */
 export function currentPlatform(): Platform | null {
@@ -188,9 +212,15 @@ export class RegistryClient {
    * Same as `listRunnable`, plus an `installed` flag per agent (PATH probe
    * for the vendor's own CLI) and a resolved `launchKind`. Runs the PATH
    * probes in parallel so the total cost is one `which` timeout.
+   *
+   * Filters to the MVP-visible set — non-MVP agents are present in the
+   * cache (so `findById()` keeps working for any code path that references
+   * them) but never surface in the UI.
    */
   async listEnriched(): Promise<EnrichedRegistryAgent[]> {
-    const agents = await this.listRunnable();
+    const agents = (await this.listRunnable()).filter((a) =>
+      MVP_VISIBLE_AGENTS.has(a.id),
+    );
     const plat = currentPlatform();
     return Promise.all(
       agents.map(async (a) => ({
@@ -295,6 +325,20 @@ export async function detectInstalled(agent: RegistryAgent): Promise<boolean> {
   return false;
 }
 
+/** Same as detectInstalled but returns the absolute path of the first
+ *  probe hit, or null. Used to skip the adapter's bundled-binary download
+ *  path by pointing it at the user's own install. */
+export async function resolveInstalledPath(
+  agent: RegistryAgent,
+): Promise<string | null> {
+  const probes = AGENT_PATH_PROBES[agent.id] ?? [];
+  for (const bin of probes) {
+    const full = await resolveFullPathOnPath(bin);
+    if (full) return full;
+  }
+  return null;
+}
+
 function resolveOnPath(bin: string): Promise<boolean> {
   return new Promise((resolve) => {
     const cmd = process.platform === "win32" ? "where" : "which";
@@ -306,6 +350,45 @@ function resolveOnPath(bin: string): Promise<boolean> {
       resolve(false);
     }
   });
+}
+
+function resolveFullPathOnPath(bin: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    const cmd = process.platform === "win32" ? "where" : "which";
+    try {
+      const child = spawn(cmd, [bin], { stdio: ["ignore", "pipe", "ignore"] });
+      let out = "";
+      child.stdout.on("data", (b) => (out += String(b)));
+      child.once("error", () => resolve(null));
+      child.once("exit", (code) => {
+        if (code !== 0) return resolve(null);
+        const first = out.split(/\r?\n/).map((s) => s.trim()).find((s) => s);
+        resolve(first ?? null);
+      });
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
+/** Per-agent env var that, when set, makes the adapter use the user's
+ *  installed CLI instead of downloading its bundled binary. Absence
+ *  means the agent doesn't support swapping (fall back to default). */
+const INSTALLED_BINARY_ENV_VAR: Record<string, string> = {
+  "claude-acp": "CLAUDE_CODE_EXECUTABLE",
+};
+
+/** Build an env-var overlay that points the adapter at the user's
+ *  installed CLI when we detected one. Returns an empty object when
+ *  no swap is possible — callers merge the result into their env map. */
+export async function installedBinaryEnv(
+  agent: RegistryAgent,
+): Promise<Record<string, string>> {
+  const envVar = INSTALLED_BINARY_ENV_VAR[agent.id];
+  if (!envVar) return {};
+  const full = await resolveInstalledPath(agent);
+  if (!full) return {};
+  return { [envVar]: full };
 }
 
 function resolveLaunchKind(

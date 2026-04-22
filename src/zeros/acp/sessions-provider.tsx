@@ -28,8 +28,10 @@ import React, {
   useState,
 } from "react";
 import type {
+  AvailableCommand,
   ContentBlock,
   InitializeResponse,
+  PlanEntry,
   RequestPermissionRequest,
   RequestPermissionResponse,
   SessionNotification,
@@ -42,8 +44,11 @@ import type {
   AcpPromptCompleteMessage,
   AcpPromptFailedMessage,
   AcpSessionCreatedMessage,
+  AcpSessionLoadedMessage,
+  AcpSessionsListMessage,
   BridgeRegistryAgent,
 } from "../bridge/messages";
+import type { ListSessionsResponse } from "@agentclientprotocol/sdk";
 import { useBridge } from "../bridge/use-bridge";
 import {
   applyUpdate,
@@ -74,6 +79,8 @@ const BLANK: AcpSessionState = {
   availableModes: [],
   currentModeId: null,
   usage: BLANK_USAGE,
+  plan: [],
+  availableCommands: [],
 };
 
 interface StartForChatOptions extends StartSessionOptions {
@@ -123,6 +130,24 @@ interface SessionsCtx {
 
   /** Drop browser-side state for this chat. Subprocess stays warm. */
   reset(chatId: string): void;
+
+  /** Enumerate resumable sessions for an agent. Only agents with
+   *  thread-history support (see agent-ui-registry.hasThreadHistory) will
+   *  return anything useful. Errors are surfaced to the caller. */
+  listSessionsFor(
+    agentId: string,
+    opts?: { cwd?: string; cursor?: string | null },
+  ): Promise<ListSessionsResponse>;
+
+  /** Load a previously-saved agent session into a chat. Replaces any
+   *  existing session for the chat. Does NOT call newSession — the agent
+   *  replays history via session/update notifications. */
+  loadIntoChat(
+    chatId: string,
+    agentId: string,
+    sessionId: string,
+    options?: StartForChatOptions,
+  ): Promise<void>;
 }
 
 const Ctx = createContext<SessionsCtx | null>(null);
@@ -180,6 +205,8 @@ export function AcpSessionsProvider({ children }: { children: React.ReactNode })
         size?: number;
         used?: number;
         currentModeId?: string;
+        entries?: PlanEntry[];
+        availableCommands?: AvailableCommand[];
       };
 
       // usage_update → context window accounting. Keep any per-turn
@@ -202,6 +229,22 @@ export function AcpSessionsProvider({ children }: { children: React.ReactNode })
       // a /plan-mode slash command). Echo into state so the pill updates.
       if (upd.sessionUpdate === "current_mode_update" && upd.currentModeId) {
         patch(chatId, { currentModeId: upd.currentModeId });
+        return;
+      }
+
+      // plan → agent emitted a fresh todo list. Replaces wholesale (ACP
+      // spec: `plan` always carries the full list, not a delta).
+      if (upd.sessionUpdate === "plan" && Array.isArray(upd.entries)) {
+        patch(chatId, { plan: upd.entries });
+        return;
+      }
+
+      // available_commands_update → slash-command palette refresh.
+      if (
+        upd.sessionUpdate === "available_commands_update" &&
+        Array.isArray(upd.availableCommands)
+      ) {
+        patch(chatId, { availableCommands: upd.availableCommands });
         return;
       }
 
@@ -269,6 +312,10 @@ export function AcpSessionsProvider({ children }: { children: React.ReactNode })
         signal: string | null;
       };
       // All sessions on this agent die with it — mark them failed.
+      // IMPORTANT: if a slot already has a specific error (e.g. from
+      // ACP_ERROR carrying the engine's "likely missing authentication"
+      // diagnostic), preserve it. Overwriting with the generic "Agent
+      // exited (code=0)" message would bury the actionable explanation.
       setSessions((prev) => {
         let changed = false;
         const next: Record<string, AcpSessionState> = {};
@@ -277,10 +324,17 @@ export function AcpSessionsProvider({ children }: { children: React.ReactNode })
             const detail = `code=${msg.code ?? "null"}${
               msg.signal ? `, signal=${msg.signal}` : ""
             }`;
+            const hasSpecificError =
+              slot.status === "failed" &&
+              typeof slot.error === "string" &&
+              slot.error.length > 0 &&
+              !slot.error.startsWith("Agent exited");
             next[chatId] = {
               ...slot,
               status: "failed" as SessionStatus,
-              error: `Agent exited (${detail})`,
+              error: hasSpecificError
+                ? slot.error
+                : `Agent exited (${detail})`,
               messages: [
                 ...slot.messages,
                 {
@@ -560,6 +614,73 @@ export function AcpSessionsProvider({ children }: { children: React.ReactNode })
     [],
   );
 
+  const listSessionsFor = useCallback<SessionsCtx["listSessionsFor"]>(
+    async (agentId, opts) => {
+      if (!bridge) throw new Error("Engine not connected");
+      const resp = await bridge.request<
+        AcpSessionsListMessage | AcpErrorMessage
+      >(
+        {
+          type: "ACP_LIST_SESSIONS",
+          agentId,
+          cwd: opts?.cwd,
+          cursor: opts?.cursor,
+        },
+        30_000,
+      );
+      if (resp.type === "ACP_ERROR") throw new Error(resp.message);
+      return {
+        sessions: resp.sessions,
+        nextCursor: resp.nextCursor ?? null,
+      };
+    },
+    [bridge],
+  );
+
+  const loadIntoChat = useCallback<SessionsCtx["loadIntoChat"]>(
+    async (chatId, agentId, sessionId, options) => {
+      if (!bridge) return;
+      patch(chatId, {
+        ...BLANK,
+        agentId,
+        agentName: options?.agentName ?? agentId,
+        sessionId,
+        status: "starting",
+      });
+      try {
+        const resp = await bridge.request<
+          AcpSessionLoadedMessage | AcpErrorMessage
+        >(
+          {
+            type: "ACP_LOAD_SESSION",
+            agentId,
+            sessionId,
+            cwd: options?.cwd,
+            env: options?.env,
+          },
+          60_000,
+        );
+        if (resp.type === "ACP_ERROR") {
+          patch(chatId, { status: "failed", error: resp.message });
+          return;
+        }
+        patch(chatId, {
+          status: "ready",
+          sessionId: resp.sessionId,
+          availableModes: resp.response.modes?.availableModes ?? [],
+          currentModeId: resp.response.modes?.currentModeId ?? null,
+          error: null,
+        });
+      } catch (err) {
+        patch(chatId, {
+          status: "failed",
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    },
+    [bridge, patch],
+  );
+
   const value = useMemo<SessionsCtx>(
     () => ({
       sessions,
@@ -571,6 +692,8 @@ export function AcpSessionsProvider({ children }: { children: React.ReactNode })
       respondToPermission,
       setMode,
       reset,
+      listSessionsFor,
+      loadIntoChat,
     }),
     [
       sessions,
@@ -582,6 +705,8 @@ export function AcpSessionsProvider({ children }: { children: React.ReactNode })
       setMode,
       respondToPermission,
       reset,
+      listSessionsFor,
+      loadIntoChat,
     ],
   );
 

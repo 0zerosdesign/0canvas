@@ -19,6 +19,8 @@
 import type {
   ContentBlock,
   InitializeResponse,
+  ListSessionsResponse,
+  LoadSessionResponse,
   NewSessionResponse,
   PromptResponse,
   ReadTextFileRequest,
@@ -32,10 +34,16 @@ import type {
 
 import {
   RegistryClient,
+  installedBinaryEnv,
   type EnrichedRegistryAgent,
   type RegistryAgent,
 } from "./registry.js";
-import { startAcpClient, type AcpClient } from "./client.js";
+import {
+  describeUnexpectedExit,
+  startAcpClient,
+  type AcpClient,
+} from "./client.js";
+import { envMatchesForRespawn } from "./env-policy.js";
 
 const ACP_PROTOCOL_VERSION = 1;
 
@@ -156,17 +164,24 @@ export class AcpSessionManager {
     const existing = this.agents.get(agentId);
 
     if (existing?.initialized) {
-      if (sameEnv(existing.spawnedEnv, requestedEnv)) {
+      if (envMatchesForRespawn(existing.spawnedEnv, requestedEnv)) {
         return existing.initialized;
       }
-      // Env drifted — respawn under the new environment so the user's
-      // auth change actually takes effect.
+      // Env drifted on a key that actually matters (auth, model, HOME
+      // override). Respawn under the new environment so the change takes
+      // effect; subprocess env is immutable after fork.
       await existing.client.dispose();
       this.agents.delete(agentId);
     }
 
     const meta = await this.registry.findById(agentId);
     if (!meta) throw new Error(`Unknown agent: ${agentId}`);
+
+    // When the user has the vendor's CLI installed (PATH probe hit), point
+    // the adapter at that binary so it skips the bundled-binary download.
+    // Shaves multi-hundred ms off the first claude-code-acp spawn.
+    const binaryOverride = await installedBinaryEnv(meta);
+    const launchEnv = { ...binaryOverride, ...requestedEnv };
 
     const client = startAcpClient(
       meta,
@@ -182,7 +197,7 @@ export class AcpSessionManager {
           this.opts.events.onAgentExit(agentId, code, signal);
         },
       },
-      { cwd: this.opts.projectRoot, env: requestedEnv },
+      { cwd: this.opts.projectRoot, env: launchEnv },
     );
 
     const live: LiveAgent = {
@@ -193,16 +208,20 @@ export class AcpSessionManager {
     };
     this.agents.set(agentId, live);
 
-    const initialized = await client.connection.initialize({
-      protocolVersion: ACP_PROTOCOL_VERSION,
-      clientCapabilities: {
-        fs: {
-          readTextFile: !!this.opts.fs,
-          writeTextFile: !!this.opts.fs,
+    const initialized = await raceAgainstExit(
+      client.connection.initialize({
+        protocolVersion: ACP_PROTOCOL_VERSION,
+        clientCapabilities: {
+          fs: {
+            readTextFile: !!this.opts.fs,
+            writeTextFile: !!this.opts.fs,
+          },
+          terminal: false,
         },
-        terminal: false,
-      },
-    });
+      }),
+      client,
+      "initialize",
+    );
     live.initialized = initialized;
     return initialized;
   }
@@ -244,10 +263,14 @@ export class AcpSessionManager {
       ...((opts?.mcpServers as never[]) ?? []),
     ];
 
-    const response = await live.client.connection.newSession({
-      cwd: opts?.cwd ?? this.opts.projectRoot,
-      mcpServers: mcpServers as never,
-    });
+    const response = await raceAgainstExit(
+      live.client.connection.newSession({
+        cwd: opts?.cwd ?? this.opts.projectRoot,
+        mcpServers: mcpServers as never,
+      }),
+      live.client,
+      "newSession",
+    );
     live.sessions.add(response.sessionId);
     return response;
   }
@@ -259,7 +282,11 @@ export class AcpSessionManager {
     prompt: ContentBlock[],
   ): Promise<PromptResponse> {
     const live = this.requireAgent(agentId);
-    return live.client.connection.prompt({ sessionId, prompt });
+    return raceAgainstExit(
+      live.client.connection.prompt({ sessionId, prompt }),
+      live.client,
+      "prompt",
+    );
   }
 
   /** Cancel an in-flight prompt for a session. */
@@ -279,6 +306,49 @@ export class AcpSessionManager {
   ): Promise<void> {
     const live = this.requireAgent(agentId);
     await live.client.connection.setSessionMode({ sessionId, modeId });
+  }
+
+  /** Enumerate resumable sessions for an agent. Only works when the agent
+   *  advertises list-sessions capability; otherwise the ACP SDK returns a
+   *  protocol error which we surface to the caller. */
+  async listSessions(
+    agentId: string,
+    opts?: { cwd?: string; cursor?: string | null },
+  ): Promise<ListSessionsResponse> {
+    await this.ensureAgent(agentId);
+    const live = this.requireAgent(agentId);
+    return live.client.connection.listSessions({
+      cwd: opts?.cwd ?? null,
+      cursor: opts?.cursor ?? null,
+    });
+  }
+
+  /** Load a prior session by id. Agent replays history via `session/update`
+   *  notifications, so the caller should be subscribed before this resolves. */
+  async loadSession(
+    agentId: string,
+    sessionId: string,
+    opts?: { cwd?: string; env?: Record<string, string> },
+  ): Promise<LoadSessionResponse> {
+    await this.ensureAgent(agentId, { env: opts?.env });
+    const live = this.requireAgent(agentId);
+    const mcpServers = this.mcpServers.map((s) => ({
+      type: "http" as const,
+      name: s.name,
+      url: s.url,
+      headers: s.headers ?? [],
+    }));
+    const response = await raceAgainstExit(
+      live.client.connection.loadSession({
+        sessionId,
+        cwd: opts?.cwd ?? this.opts.projectRoot,
+        mcpServers: mcpServers as never,
+      }),
+      live.client,
+      "loadSession",
+    );
+    live.sessions.add(sessionId);
+    return response;
   }
 
   /**
@@ -339,15 +409,42 @@ export class AcpSessionManager {
   }
 }
 
-function sameEnv(
-  a: Record<string, string>,
-  b: Record<string, string>,
-): boolean {
-  const ak = Object.keys(a);
-  const bk = Object.keys(b);
-  if (ak.length !== bk.length) return false;
-  for (const k of ak) {
-    if (a[k] !== b[k]) return false;
+/**
+ * Wait for `rpc` but reject immediately if the agent subprocess exits
+ * before the RPC resolves. Without this, an adapter that quits cleanly
+ * (e.g. Codex on missing auth) would leave the RPC hanging until the
+ * 60s bridge timeout — a useless "Request timeout" instead of the
+ * actionable "likely missing authentication" message users need.
+ */
+async function raceAgainstExit<T>(
+  rpc: Promise<T>,
+  client: AcpClient,
+  stage: "initialize" | "newSession" | "loadSession" | "prompt",
+): Promise<T> {
+  // If the child already exited before we even started the RPC (rare but
+  // possible), fail immediately with the captured tail.
+  if (client.hasExited()) {
+    const info = await client.exited;
+    throw new Error(
+      describeUnexpectedExit({
+        agentId: client.agentId,
+        code: info.code,
+        signal: info.signal,
+        stderrTail: client.stderrTail(),
+        stage,
+      }),
+    );
   }
-  return true;
+  const exitPromise = client.exited.then((info) => {
+    throw new Error(
+      describeUnexpectedExit({
+        agentId: client.agentId,
+        code: info.code,
+        signal: info.signal,
+        stderrTail: client.stderrTail(),
+        stage,
+      }),
+    );
+  });
+  return Promise.race([rpc, exitPromise]);
 }

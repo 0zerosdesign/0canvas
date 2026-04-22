@@ -15,9 +15,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
+  AvailableCommand,
   ContentBlock,
   InitializeResponse,
   NewSessionResponse,
+  PlanEntry,
   RequestPermissionRequest,
   RequestPermissionResponse,
   SessionMode,
@@ -116,6 +118,12 @@ export interface AcpSessionState {
   currentModeId: string | null;
   /** Token accounting for the context pill + usage popover. */
   usage: AcpUsage;
+  /** Latest plan (todo list) the agent has produced. Replaced wholesale
+   *  each time a `plan` notification arrives. Empty = no plan yet. */
+  plan: PlanEntry[];
+  /** Slash-command palette advertised by the agent via
+   *  `available_commands_update`. Used by the composer "/" picker. */
+  availableCommands: AvailableCommand[];
 }
 
 export interface StartSessionOptions {
@@ -184,6 +192,8 @@ export function useAcpSession(): AcpSessionState & AcpSessionControls {
     availableModes: [],
     currentModeId: null,
     usage: BLANK_USAGE,
+    plan: [],
+    availableCommands: [],
   });
 
   // Mutable view of live state, so listener callbacks don't close over stale refs.
@@ -308,6 +318,8 @@ export function useAcpSession(): AcpSessionState & AcpSessionControls {
         availableModes: [],
         currentModeId: null,
         usage: BLANK_USAGE,
+        plan: [],
+        availableCommands: [],
       }));
 
       try {
@@ -451,6 +463,8 @@ export function useAcpSession(): AcpSessionState & AcpSessionControls {
       availableModes: [],
       currentModeId: null,
       usage: BLANK_USAGE,
+      plan: [],
+      availableCommands: [],
     });
   }, []);
 
@@ -519,8 +533,8 @@ export function applyUpdate(
         };
       });
     }
-    // Plan / mode / commands updates — ignored by the minimal UI for now.
-    // They still arrive over the wire; we'll surface them in a later phase.
+    // Plan / mode / commands updates are handled at the provider level
+    // (they change session slots other than `messages`), so skip here.
     case "plan":
     case "current_mode_update":
     case "available_commands_update":
