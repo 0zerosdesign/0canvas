@@ -299,38 +299,90 @@ export function startWatchdog(): void {
   }, POLL_INTERVAL_MS);
 }
 
-/**
- * Resolve the initial project root for boot. Mirrors
- * src-tauri/src/lib.rs:default_project_root():
- *
- *   1. `cargo tauri dev` launches with CWD = `<repo>/src-tauri`; walk
- *      up one so the engine operates on the repo itself. Kept here
- *      for parity even though Electron's dev command runs from the
- *      repo root already.
- *   2. `open Zeros.app` from Finder launches with CWD = `/`. Fall
- *      back to $HOME — indexing `/` is useless and slow.
- *   3. Otherwise, use CWD.
- */
+// ──────────────────────────────────────────────────────────
+// Initial project root resolution
+// ──────────────────────────────────────────────────────────
+//
+// The engine's file watcher indexes every file under its root. That's
+// fine for a user repo (~thousands of files) but catastrophic for
+// $HOME (~millions) or / (entire filesystem). When the watcher exceeds
+// macOS's EMFILE ceiling the engine crashes on every fs event and the
+// IPC bridge stalls indefinitely — the exact "Fetching ACP registry..."
+// hang users hit when the packaged app is launched from Finder (CWD=/)
+// or from a shell where the cwd isn't a real project.
+//
+// Strategy: refuse to root at anything that doesn't look like a user
+// project. Use a dedicated empty sentinel at
+//   ~/.zeros/default-project/
+// The user then opens their real project via File → Open Folder,
+// which respawns the engine rooted there.
+
+const SENTINEL_DIR_NAME = "default-project";
+
+function sentinelRoot(): string {
+  const home = process.env.HOME ?? "/tmp";
+  const dir = path.join(home, ".zeros", SENTINEL_DIR_NAME);
+  try {
+    if (!existsSync(dir)) {
+      require("node:fs").mkdirSync(dir, { recursive: true });
+    }
+  } catch {
+    /* falls back to the unwritable path — spawn surfaces the error */
+  }
+  return dir;
+}
+
+/** A directory is a "plausible project" when it has a .git, a
+ *  package.json, or an existing .zeros subdir. Anything else is
+ *  treated as "not a project" and redirected to the sentinel. */
+function isPlausibleProject(dir: string): boolean {
+  if (!existsSync(dir)) return false;
+  try {
+    if (!statSync(dir).isDirectory()) return false;
+  } catch {
+    return false;
+  }
+  return (
+    existsSync(path.join(dir, ".git")) ||
+    existsSync(path.join(dir, "package.json")) ||
+    existsSync(path.join(dir, ".zeros")) ||
+    existsSync(path.join(dir, "pyproject.toml")) ||
+    existsSync(path.join(dir, "Cargo.toml")) ||
+    existsSync(path.join(dir, "go.mod"))
+  );
+}
+
+/** Bail-out directories we KNOW aren't projects even if they happen
+ *  to contain a git/package.json accidentally. $HOME, /, system dirs. */
+function isSystemDir(dir: string): boolean {
+  if (!dir) return true;
+  const home = process.env.HOME;
+  if (home && path.resolve(dir) === path.resolve(home)) return true;
+  // Any of the Unix system root dirs (/tmp, /private/tmp, /var, /etc,
+  // /usr, /bin, /Applications, /Library, etc.) or the filesystem
+  // root itself. Match by leading segment rather than a hardcoded
+  // list so new macOS volumes don't slip through.
+  if (/^\/(?:private\/)?(?:tmp|var|etc|usr|bin|sbin|opt|System|Library|Volumes|Applications|Network|cores|dev)(?:\/|$)/.test(dir)) {
+    return true;
+  }
+  return dir === "/" || dir.includes(".app/Contents/");
+}
+
 export function defaultProjectRoot(): string {
   const cwd = process.cwd();
 
+  // Legacy dev-tree tolerance (harmless to keep).
   if (path.basename(cwd) === "src-tauri") {
     return path.dirname(cwd);
   }
 
-  if (cwd === "/") {
-    return process.env.HOME ?? cwd;
+  // Is the CWD actually a user project we can safely index?
+  if (!isSystemDir(cwd) && isPlausibleProject(cwd)) {
+    return cwd;
   }
 
-  // When packaged and launched from Finder, CWD may be "/" (handled
-  // above) or the bundle's MacOS directory, which is also useless.
-  // Treat any path inside "<...>.app/Contents/" the same as "/" — no
-  // project there; fall back to $HOME.
-  if (cwd.includes(".app/Contents/") && process.env.HOME) {
-    return process.env.HOME;
-  }
-
-  return cwd;
+  // Otherwise: sentinel. The user picks a real project next.
+  return sentinelRoot();
 }
 
 /** Validate a path exists and is a directory before we spawn into it.
