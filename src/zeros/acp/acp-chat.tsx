@@ -149,12 +149,10 @@ export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps
   const chatFolder = chatThread?.folder || undefined;
   useEffect(() => {
     let cancelled = false;
-    if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) {
-      return;
-    }
     const refresh = async () => {
+      const { isNativeRuntime, git } = await import("../../native/tauri-events");
+      if (!isNativeRuntime()) return;
       try {
-        const { git } = await import("../../native/tauri-events");
         const st = await git.status(chatFolder);
         if (cancelled) return;
         setGitBranch(st.branch ?? null);

@@ -1,13 +1,23 @@
 // ──────────────────────────────────────────────────────────
-// Tauri ↔ Webview event bridge
+// Native shell façade (Tauri + Electron)
 // ──────────────────────────────────────────────────────────
 //
-// A thin adapter that wires Tauri's event system to the React
-// app without forcing every component to know about Tauri. If
-// we're running in `pnpm dev` (plain Vite, no Tauri), these
-// functions no-op silently so the same code runs in both modes.
+// Thin adapter over the desktop-shell IPC. Every function routes
+// through `nativeInvoke()` / `nativeListen()` in runtime.ts so the
+// same call lands on either Tauri commands (src-tauri/src/*.rs) or
+// Electron IPC handlers (electron/ipc/router.ts) without branching.
 //
+// In browser-only dev (`pnpm dev` without Electron), read-style
+// functions resolve to empty / null; write-style ones throw so the
+// caller sees a clear "requires the Mac app" error instead of silent
+// failure. The legacy Tauri import sites still work because the
+// function NAMES here are unchanged — only the internals moved.
 // ──────────────────────────────────────────────────────────
+
+import { isElectron, isNativeRuntime, isTauri, nativeInvoke, nativeListen } from "./runtime";
+
+// Re-export so call sites can import from either module.
+export { isElectron, isNativeRuntime, isTauri, runtimeName } from "./runtime";
 
 export type ProjectChangedPayload = {
   root: string;
@@ -21,10 +31,6 @@ export type LocalhostService = {
   label: string;
 };
 
-function isTauriWebview(): boolean {
-  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-}
-
 /**
  * Probe common dev-server / database / engine ports on 127.0.0.1 and
  * return whatever responded. Safe to call repeatedly; each call takes
@@ -32,9 +38,8 @@ function isTauriWebview(): boolean {
  * "connection refused" instantly; open ones complete the connect).
  */
 export async function discoverLocalhostServices(): Promise<LocalhostService[]> {
-  if (!isTauriWebview()) return [];
-  const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<LocalhostService[]>("discover_localhost_services");
+  if (!isNativeRuntime()) return [];
+  return nativeInvoke<LocalhostService[]>("discover_localhost_services");
 }
 
 // ── .env file editor ──────────────────────────────────────
@@ -53,9 +58,8 @@ export type EnvFile = {
 };
 
 export async function listEnvFiles(cwd?: string): Promise<EnvFile[]> {
-  if (!isTauriWebview()) return [];
-  const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<EnvFile[]>("list_env_files", { cwd });
+  if (!isNativeRuntime()) return [];
+  return nativeInvoke<EnvFile[]>("list_env_files", { cwd });
 }
 
 export async function saveEnvFile(
@@ -63,9 +67,8 @@ export async function saveEnvFile(
   variables: EnvVar[],
   cwd?: string,
 ): Promise<void> {
-  if (!isTauriWebview()) throw new Error("Env editing requires the Mac app");
-  const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<void>("save_env_file", { cwd, path, variables });
+  if (!isNativeRuntime()) throw new Error("Env editing requires the Mac app");
+  return nativeInvoke<void>("save_env_file", { cwd, path, variables });
 }
 
 // ── Todo list ─────────────────────────────────────────────
@@ -85,15 +88,13 @@ export type TodoFile = {
 };
 
 export async function loadTodoFile(cwd?: string): Promise<TodoFile | null> {
-  if (!isTauriWebview()) return null;
-  const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<TodoFile>("load_todo_file", { cwd });
+  if (!isNativeRuntime()) return null;
+  return nativeInvoke<TodoFile>("load_todo_file", { cwd });
 }
 
 export async function saveTodoFile(raw: string, cwd?: string): Promise<void> {
-  if (!isTauriWebview()) throw new Error("Todo editing requires the Mac app");
-  const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<void>("save_todo_file", { cwd, raw });
+  if (!isNativeRuntime()) throw new Error("Todo editing requires the Mac app");
+  return nativeInvoke<void>("save_todo_file", { cwd, raw });
 }
 
 // ── Git ───────────────────────────────────────────────────
@@ -142,9 +143,8 @@ export type GitDiff = {
 };
 
 async function gitInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
-  if (!isTauriWebview()) throw new Error("Git requires the Mac app");
-  const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<T>(cmd, args);
+  if (!isNativeRuntime()) throw new Error("Git requires the Mac app");
+  return nativeInvoke<T>(cmd, args);
 }
 
 // ── CSS file picker / read / write (Themes page two-way sync) ──
@@ -156,21 +156,18 @@ export type CssFile = {
 };
 
 export async function pickCssFile(): Promise<CssFile | null> {
-  if (!isTauriWebview()) return null;
-  const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<CssFile | null>("pick_css_file");
+  if (!isNativeRuntime()) return null;
+  return nativeInvoke<CssFile | null>("pick_css_file");
 }
 
 export async function readCssFile(path: string): Promise<string> {
-  if (!isTauriWebview()) throw new Error("Native fs requires the Mac app");
-  const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<string>("read_css_file", { path });
+  if (!isNativeRuntime()) throw new Error("Native fs requires the Mac app");
+  return nativeInvoke<string>("read_css_file", { path });
 }
 
 export async function writeCssFile(path: string, content: string): Promise<void> {
-  if (!isTauriWebview()) throw new Error("Native fs requires the Mac app");
-  const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<void>("write_css_file", { path, content });
+  if (!isNativeRuntime()) throw new Error("Native fs requires the Mac app");
+  return nativeInvoke<void>("write_css_file", { path, content });
 }
 
 export type GitFileVersion = {
@@ -191,9 +188,9 @@ export type GitWorktree = {
   isCurrent: boolean;
 };
 
-/** Every git op takes an optional `cwd`. When provided, Rust uses that
- *  path instead of the global engine root. The frontend passes the
- *  active chat's folder so each chat's Git panel is scoped to its
+/** Every git op takes an optional `cwd`. When provided, the shell uses
+ *  that path instead of the global engine root. The frontend passes
+ *  the active chat's folder so each chat's Git panel is scoped to its
  *  own project — multiple projects can be live at once. */
 export const git = {
   status: (cwd?: string) => gitInvoke<GitStatus>("git_status", { cwd }),
@@ -302,10 +299,9 @@ export type Skill = {
 };
 
 export async function listSkills(): Promise<Skill[]> {
-  if (!isTauriWebview()) return [];
-  const { invoke } = await import("@tauri-apps/api/core");
+  if (!isNativeRuntime()) return [];
   try {
-    return await invoke<Skill[]>("skills_list");
+    return await nativeInvoke<Skill[]>("skills_list");
   } catch {
     return [];
   }
@@ -313,68 +309,56 @@ export async function listSkills(): Promise<Skill[]> {
 
 /** Open an external http(s) URL in the user's default browser. */
 export async function shellOpenUrl(url: string): Promise<void> {
-  if (!isTauriWebview()) {
+  if (!isNativeRuntime()) {
     window.open(url, "_blank", "noopener,noreferrer");
     return;
   }
-  const { invoke } = await import("@tauri-apps/api/core");
-  await invoke<void>("shell_open_url", { url });
+  await nativeInvoke<void>("shell_open_url", { url });
 }
 
 /** Reveal a path in macOS Finder. */
 export async function revealInFinder(path: string): Promise<void> {
-  if (!isTauriWebview()) return;
-  const { invoke } = await import("@tauri-apps/api/core");
-  await invoke<void>("reveal_in_finder", { path });
+  if (!isNativeRuntime()) return;
+  await nativeInvoke<void>("reveal_in_finder", { path });
 }
 
 /** Launch macOS Terminal.app at the given directory. */
 export async function openInTerminal(path: string): Promise<void> {
-  if (!isTauriWebview()) return;
-  const { invoke } = await import("@tauri-apps/api/core");
-  await invoke<void>("open_in_terminal", { path });
+  if (!isNativeRuntime()) return;
+  await nativeInvoke<void>("open_in_terminal", { path });
 }
 
 /** Phase 3-F: finalize a clone by handing the destination to the sidecar. */
 export async function openClonedProject(
   path: string,
 ): Promise<ProjectChangedPayload> {
-  if (!isTauriWebview()) {
-    throw new Error("Clone requires the Mac app");
-  }
-  const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<ProjectChangedPayload>("open_cloned_project", { path });
+  if (!isNativeRuntime()) throw new Error("Clone requires the Mac app");
+  return nativeInvoke<ProjectChangedPayload>("open_cloned_project", { path });
 }
 
 /**
- * Subscribe to the Rust-emitted `project-changed` event (fired when the
- * user picks a new folder via File > Open Folder). Returns an unsubscribe
- * function; safe to call in both Tauri and plain-browser builds.
+ * Subscribe to the main-process `project-changed` event (fired when
+ * the user picks a new folder via File > Open Folder). Returns an
+ * unsubscribe function; safe to call in all three modes.
  */
 export async function onProjectChanged(
   handler: (payload: ProjectChangedPayload) => void,
 ): Promise<() => void> {
-  if (!isTauriWebview()) return () => {};
-  const { listen } = await import("@tauri-apps/api/event");
-  const unlisten = await listen<ProjectChangedPayload>("project-changed", (e) => {
-    handler(e.payload);
-  });
-  return unlisten;
+  if (!isNativeRuntime()) return () => {};
+  return nativeListen<ProjectChangedPayload>("project-changed", handler);
 }
 
 /**
- * Invoke the Rust `open_project_folder` command from the webview. Phase 1B's
- * Workspace Manager route will call this from its "Open Folder" button; the
- * native File menu already calls the same command on click.
+ * Invoke the main-process `open_project_folder` command. The native
+ * File menu already fires the same command on click; this is the
+ * webview-initiated path (Workspace Manager, "Open Folder" button).
  */
 export async function openProjectFolder(): Promise<ProjectChangedPayload | null> {
-  if (!isTauriWebview()) {
-    // No Tauri API available in the browser-only Vite harness; treat as a
-    // soft cancel rather than an error.
+  if (!isNativeRuntime()) {
+    // No native runtime available; treat as a soft cancel.
     return null;
   }
-  const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<ProjectChangedPayload | null>("open_project_folder");
+  return nativeInvoke<ProjectChangedPayload | null>("open_project_folder");
 }
 
 /**
@@ -385,50 +369,61 @@ export async function openProjectFolder(): Promise<ProjectChangedPayload | null>
 export async function openProjectFolderPath(
   path: string,
 ): Promise<ProjectChangedPayload> {
-  if (!isTauriWebview()) {
-    throw new Error("Opening by path requires the Mac app");
-  }
-  const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<ProjectChangedPayload>("open_project_folder_path", { path });
+  if (!isNativeRuntime()) throw new Error("Opening by path requires the Mac app");
+  return nativeInvoke<ProjectChangedPayload>("open_project_folder_path", { path });
 }
 
-// ── Native notifications (Phase 2-F) ──────────────────────
+// ── Native notifications ──────────────────────────────────
 //
-// Thin wrapper over tauri-plugin-notification. Requests permission
-// lazily on first use so the OS prompt only appears when there's
-// actually a notification to show.
+// Tauri uses `@tauri-apps/plugin-notification` (requests permission
+// lazily). Electron uses the main-process `notify_send` IPC command
+// (wired in Phase 8). Both end up showing a native macOS notification
+// via the NSUserNotificationCenter.
 
-let notificationPermission: "granted" | "denied" | "default" | null = null;
+let tauriNotificationPermission: "granted" | "denied" | "default" | null = null;
 
 export async function notify(title: string, body?: string): Promise<void> {
-  if (!isTauriWebview()) return;
-  const { isPermissionGranted, requestPermission, sendNotification } =
-    await import("@tauri-apps/plugin-notification");
-
-  if (notificationPermission === null) {
-    const granted = await isPermissionGranted();
-    if (granted) {
-      notificationPermission = "granted";
-    } else {
-      const result = await requestPermission();
-      notificationPermission = result;
+  if (isElectron()) {
+    try {
+      await nativeInvoke<void>("notify_send", { title, body });
+    } catch {
+      // Phase 1: `notify_send` isn't in the router yet — swallow so
+      // callers aren't forced to guard. Real implementation lands Phase 8.
     }
+    return;
   }
 
-  if (notificationPermission !== "granted") return;
-  sendNotification({ title, body });
+  if (isTauri()) {
+    const { isPermissionGranted, requestPermission, sendNotification } =
+      await import("@tauri-apps/plugin-notification");
+
+    if (tauriNotificationPermission === null) {
+      const granted = await isPermissionGranted();
+      if (granted) {
+        tauriNotificationPermission = "granted";
+      } else {
+        const result = await requestPermission();
+        tauriNotificationPermission = result;
+      }
+    }
+
+    if (tauriNotificationPermission !== "granted") return;
+    sendNotification({ title, body });
+    return;
+  }
+
+  // browser-only: no-op.
 }
 
-// ── Deep links (Phase 2-F) ────────────────────────────────
+// ── Deep links ────────────────────────────────────────────
 //
-// Rust handles zeros://open?path=... directly. Other routes
-// are forwarded as "deep-link" events for future handling.
+// The main process handles zeros://open?path=... directly and emits
+// a `deep-link` event for any other routes so React can handle them
+// without a native rebuild.
 
 export async function onDeepLink(
   handler: (url: string) => void,
 ): Promise<() => void> {
-  if (!isTauriWebview()) return () => {};
-  const { listen } = await import("@tauri-apps/api/event");
-  const unlisten = await listen<string>("deep-link", (e) => handler(e.payload));
-  return unlisten;
+  if (!isNativeRuntime()) return () => {};
+  return nativeListen<string>("deep-link", handler);
 }

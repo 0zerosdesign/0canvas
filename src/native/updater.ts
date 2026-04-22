@@ -31,8 +31,14 @@ export type UpdaterStatus =
 
 const POLL_INTERVAL_MS = 30 * 60 * 1000;
 
+import { isTauri } from "./runtime";
+
+// NOTE: this hook currently only runs on Tauri. The Electron-side
+// updater (`electron-updater`) is wired in Phase 8 via a separate
+// main-process path; until then, the Electron build shows no update
+// pill and the poll is disabled.
 function isTauriWebview(): boolean {
-  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+  return isTauri();
 }
 
 export function useUpdater(): {

@@ -444,15 +444,13 @@ function OpenProjectMenu() {
 
   useEffect(() => {
     (async () => {
-      if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) {
-        return;
-      }
+      const { isNativeRuntime, nativeInvoke } = await import("../../native/runtime");
+      if (!isNativeRuntime()) return;
       try {
-        const { invoke } = await import("@tauri-apps/api/core");
-        const r = await invoke<string | null>("get_engine_root");
+        const r = await nativeInvoke<string | null>("get_engine_root");
         setRoot(r ?? "");
       } catch {
-        /* ignore — no Tauri */
+        /* ignore — engine not up yet */
       }
     })();
   }, []);

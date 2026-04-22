@@ -2,18 +2,19 @@
 // Zeros Electron — main process entry
 // ──────────────────────────────────────────────────────────
 //
-// Phase 0 scaffold. Just creates a BrowserWindow pointing at
-// the Vite dev server (or dist/index.html in prod). IPC, sidecar
-// spawning, deep-link handling, menu, keychain — all arrive in
-// later phases. See docs/TAURI_MAC_APP_PLAN.md for the full
-// migration sequence.
+// Window + IPC skeleton. Phase 2 wires in the sidecar engine; later
+// phases light up the 55 IPC commands one module at a time. See
+// electron/ipc/router.ts for the full command table.
 //
 // Window geometry mirrors src-tauri/tauri.conf.json:
-//   1600x1000 default, 1200x700 min, hidden-inset title bar.
+//   1600x1000 default, 1200x700 min, hidden-inset title bar so app
+//   content extends under the traffic lights (Cursor/Figma-style).
 // ──────────────────────────────────────────────────────────
 
 import { app, BrowserWindow } from "electron";
 import path from "node:path";
+import { registerIpcHandlers } from "./ipc/router";
+import { setMainWindow } from "./ipc/events";
 
 // Vite dev server URL. Override with ELECTRON_RENDERER_URL for
 // non-standard ports during CI / weird setups.
@@ -53,12 +54,21 @@ function createMainWindow(): BrowserWindow {
 }
 
 app.whenReady().then(() => {
-  createMainWindow();
+  // Register IPC handlers BEFORE the window loads so any command fired
+  // during boot (settings hydration, engine port probe, etc.) finds a
+  // handler registered rather than "No handler for 'zeros:invoke'".
+  registerIpcHandlers();
+
+  const win = createMainWindow();
+  setMainWindow(win);
 
   // macOS: re-create the window when the dock icon is clicked and no
   // windows are open.
   app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
+    if (BrowserWindow.getAllWindows().length === 0) {
+      const next = createMainWindow();
+      setMainWindow(next);
+    }
   });
 });
 

@@ -25,12 +25,9 @@ import {
   type TodoFile,
   type TodoItem,
 } from "../native/tauri-events";
+import { isNativeRuntime } from "../native/runtime";
 import { Button, Input } from "../zeros/ui";
 import { useChatCwd } from "./use-chat-cwd";
-
-function isTauriWebview(): boolean {
-  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-}
 
 type LineModel =
   | { kind: "todo"; done: boolean; text: string; indent: string; marker: "-" | "*" }
@@ -161,7 +158,7 @@ export function TodoPanel() {
     });
   };
 
-  if (!isTauriWebview()) {
+  if (!isNativeRuntime()) {
     return (
       <div className="oc-todo__empty">
         Todo editor requires the Mac app (pnpm tauri:dev).

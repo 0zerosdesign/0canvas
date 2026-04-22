@@ -1,17 +1,19 @@
 // ──────────────────────────────────────────────────────────
-// Phase 4 — frontend bridge to the Rust AI CLI subprocess
+// Phase 4 — frontend bridge to the native AI CLI subprocess
 // ──────────────────────────────────────────────────────────
 //
-// Wraps the ai_cli_* Tauri commands into an AsyncGenerator<string>
+// Wraps the ai_cli_* native commands into an AsyncGenerator<string>
 // that matches the shape of the openai.ts streamChat(), so the chat
 // panel can dispatch between HTTP providers and CLI subprocesses
 // without caring which one it's talking to.
+//
+// Routes through the unified runtime façade so the same calls land
+// on Tauri (ai_cli.rs) or Electron (electron/ipc/commands/ai-cli.ts,
+// Phase 7) without branching here.
 // ──────────────────────────────────────────────────────────
 
 import type { AiSettings, AiThinkingEffort } from "../store/store";
-
-const isTauri = () =>
-  typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+import { isNativeRuntime, nativeInvoke, nativeListen } from "../../native/runtime";
 
 type AiStreamEvent = {
   sessionId: string;
@@ -26,9 +28,8 @@ function newSessionId(): string {
 
 /** Probe whether the named CLI binary is on the user's PATH. */
 export async function checkCli(binary: "claude" | "codex"): Promise<string | null> {
-  if (!isTauri()) return null;
-  const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<string | null>("ai_cli_check", { binary });
+  if (!isNativeRuntime()) return null;
+  return nativeInvoke<string | null>("ai_cli_check", { binary });
 }
 
 /**
@@ -39,33 +40,30 @@ export async function checkCli(binary: "claude" | "codex"): Promise<string | nul
 export async function isCliAuthenticated(
   binary: "claude" | "codex",
 ): Promise<boolean> {
-  if (!isTauri()) return false;
-  const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<boolean>("ai_cli_is_authenticated", { binary });
+  if (!isNativeRuntime()) return false;
+  return nativeInvoke<boolean>("ai_cli_is_authenticated", { binary });
 }
 
 /** Open Terminal and run `<binary> login` so the user authenticates
  *  with the official CLI's OAuth flow. We never handle tokens ourselves. */
 export async function runCliLogin(binary: "claude" | "codex"): Promise<void> {
-  if (!isTauri()) {
+  if (!isNativeRuntime()) {
     throw new Error("CLI login requires the Mac app");
   }
-  const { invoke } = await import("@tauri-apps/api/core");
-  await invoke<void>("ai_cli_run_login", { binary });
+  await nativeInvoke<void>("ai_cli_run_login", { binary });
 }
 
 export async function cancelSession(sessionId: string): Promise<void> {
-  if (!isTauri()) return;
-  const { invoke } = await import("@tauri-apps/api/core");
-  await invoke<void>("ai_cli_cancel", { sessionId });
+  if (!isNativeRuntime()) return;
+  await nativeInvoke<void>("ai_cli_cancel", { sessionId });
 }
 
 // ── Streaming adapter ────────────────────────────────────
 //
-// Rust emits NDJSON-parsed chunks as Tauri events. We bridge them
-// to an AsyncGenerator by buffering events in a queue and yielding
-// them out; the generator closes when the "end" event arrives or
-// when the consumer abort-signals.
+// The native side emits NDJSON-parsed chunks as `ai-stream-event`
+// events. We bridge them to an AsyncGenerator by buffering events
+// in a queue and yielding them out; the generator closes when the
+// "end" event arrives or when the consumer abort-signals.
 
 type QueueItem =
   | { kind: "text"; text: string }
@@ -91,13 +89,11 @@ export async function* streamCli(
   signal: AbortSignal | undefined,
   handlers: CliStreamHandlers = {},
 ): AsyncGenerator<string> {
-  if (!isTauri()) {
+  if (!isNativeRuntime()) {
     throw new Error(
       `${provider} subscription mode requires the Mac app — use API key mode in the browser.`,
     );
   }
-  const { invoke } = await import("@tauri-apps/api/core");
-  const { listen } = await import("@tauri-apps/api/event");
 
   const sessionId = newSessionId();
   const queue: QueueItem[] = [];
@@ -113,30 +109,30 @@ export async function* streamCli(
     }
   };
 
-  const unlisten = await listen<AiStreamEvent>("ai-stream-event", (e) => {
-    if (e.payload.sessionId !== sessionId) return;
-    switch (e.payload.kind) {
+  const unlisten = await nativeListen<AiStreamEvent>("ai-stream-event", (payload) => {
+    if (payload.sessionId !== sessionId) return;
+    switch (payload.kind) {
       case "text":
-        if (typeof e.payload.content === "string") {
-          push({ kind: "text", text: e.payload.content });
+        if (typeof payload.content === "string") {
+          push({ kind: "text", text: payload.content });
         }
         break;
       case "tool":
         push({
           kind: "tool",
-          name: e.payload.content ?? "tool",
-          input: e.payload.data ?? null,
+          name: payload.content ?? "tool",
+          input: payload.data ?? null,
         });
         break;
       case "error":
         push({
           kind: "error",
-          message: e.payload.content ?? "CLI error",
+          message: payload.content ?? "CLI error",
         });
         break;
       case "session":
-        if (typeof e.payload.content === "string") {
-          push({ kind: "session", resumeId: e.payload.content });
+        if (typeof payload.content === "string") {
+          push({ kind: "session", resumeId: payload.content });
         }
         break;
       case "end":
@@ -146,7 +142,7 @@ export async function* streamCli(
       // to the console for diagnostics but don't interrupt the stream.
       default:
         // eslint-disable-next-line no-console
-        console.debug("[ai-cli] unhandled event", e.payload);
+        console.debug("[ai-cli] unhandled event", payload);
     }
   });
 
@@ -159,7 +155,7 @@ export async function* streamCli(
   try {
     const effort = mapEffort(settings.thinkingEffort);
     if (provider === "claude") {
-      await invoke<void>("claude_spawn", {
+      await nativeInvoke<void>("claude_spawn", {
         args: {
           sessionId,
           prompt,
@@ -170,7 +166,7 @@ export async function* streamCli(
         },
       });
     } else {
-      await invoke<void>("codex_spawn", {
+      await nativeInvoke<void>("codex_spawn", {
         args: {
           sessionId,
           prompt,

@@ -33,8 +33,11 @@ type StreamEvent = {
   data?: unknown;
 };
 
-const isTauri = () =>
-  typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+import { isNativeRuntime } from "../native/runtime";
+
+// Local alias for readability — mission panel just needs "native shell
+// is present" semantics (Tauri or Electron), not Tauri-specific.
+const isTauri = isNativeRuntime;
 
 // Very rough token estimate — real tokenizer is provider-specific and
 // runtime-expensive. A 4 chars/token average is close enough for a

@@ -31,16 +31,18 @@ const enginePortPromise: Promise<number> = (async () => {
     return injected;
   }
 
-  if ("__TAURI_INTERNALS__" in window) {
-    try {
-      const { invoke } = await import("@tauri-apps/api/core");
-      const port = await invoke<number | null>("get_engine_port");
+  // Runtime-agnostic: ask the native shell for the engine port. Works
+  // under Tauri (src-tauri/src/sidecar.rs) and Electron (Phase 2 wires
+  // electron/ipc/commands/sidecar.ts). Any failure degrades to the
+  // default port so the WebSocket bridge still has a chance to attach.
+  try {
+    const { isNativeRuntime, nativeInvoke } = await import("../../native/runtime");
+    if (isNativeRuntime()) {
+      const port = await nativeInvoke<number | null>("get_engine_port");
       if (typeof port === "number" && port > 0) return port;
-    } catch (err) {
-      // Fall through to default — any Tauri error should degrade
-      // gracefully rather than brick the WebSocket bridge.
-      console.warn("[Zeros] get_engine_port failed:", err);
     }
+  } catch (err) {
+    console.warn("[Zeros] get_engine_port failed:", err);
   }
 
   return DEFAULT_ENGINE_PORT;

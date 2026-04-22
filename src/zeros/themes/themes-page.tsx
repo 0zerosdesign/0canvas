@@ -50,8 +50,10 @@ type PickedCssFile =
   | { kind: "tauri"; path: string; name: string; content: string }
   | { kind: "fsa"; handle: FileSystemFileHandle; name: string; content: string };
 
+import { isNativeRuntime } from "../../native/runtime";
+
 function isTauriWebview(): boolean {
-  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+  return isNativeRuntime();
 }
 
 async function pickCSSFile(): Promise<PickedCssFile | null> {

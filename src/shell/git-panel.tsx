@@ -48,15 +48,12 @@ import {
   type GitBranch as GitBranchInfo,
   type GitConflict,
 } from "../native/tauri-events";
+import { isNativeRuntime } from "../native/runtime";
 import { getSetting, setSetting } from "../native/settings";
 import { Button, Textarea } from "../zeros/ui";
 import { useChatCwd } from "./use-chat-cwd";
 
 const FORCE_PUSH_KEY = "git-allow-force-push";
-
-function isTauriWebview(): boolean {
-  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-}
 
 // Convert a git remote URL into its GitHub compare URL for a given branch.
 // Returns null when the URL isn't github.com — other hosts don't have the
@@ -761,7 +758,7 @@ export function GitPanel() {
     refresh(next);
   };
 
-  if (!isTauriWebview()) {
+  if (!isNativeRuntime()) {
     return <div className="oc-git__empty">Git requires the Mac app.</div>;
   }
 

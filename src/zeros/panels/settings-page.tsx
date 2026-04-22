@@ -1070,16 +1070,16 @@ function DebugPanel() {
 
   useEffect(() => {
     (async () => {
-      if (!("__TAURI_INTERNALS__" in window)) return;
-      const { invoke } = await import("@tauri-apps/api/core");
+      const { isNativeRuntime, nativeInvoke } = await import("../../native/runtime");
+      if (!isNativeRuntime()) return;
       try {
-        const r = await invoke<string | null>("get_engine_root");
+        const r = await nativeInvoke<string | null>("get_engine_root");
         setRoot(r ?? "");
       } catch {
         /* ignore */
       }
       try {
-        const p = await invoke<number | null>("get_engine_port");
+        const p = await nativeInvoke<number | null>("get_engine_port");
         setPort(p ?? null);
       } catch {
         /* ignore */

@@ -26,18 +26,19 @@ import { Plus, X as XIcon } from "lucide-react";
 import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { spawn, type IPty } from "tauri-pty";
-import { invoke } from "@tauri-apps/api/core";
 import "@xterm/xterm/css/xterm.css";
 import { useWorkspace } from "../zeros/store/store";
+import { isTauri, nativeInvoke } from "../native/runtime";
 
-function isTauriWebview(): boolean {
-  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-}
-
+// NOTE: the current terminal uses `tauri-pty` directly, so it only
+// works in the Tauri build. Phase 6 swaps this for node-pty over IPC
+// so it also works under Electron. Until then, `isTauri()` is the
+// right guard here (not `isNativeRuntime()`) — spinning up xterm with
+// tauri-pty in an Electron window would explode on import.
 async function resolveProjectRoot(): Promise<string | undefined> {
-  if (!isTauriWebview()) return undefined;
+  if (!isTauri()) return undefined;
   try {
-    const root = await invoke<string | null>("get_engine_root");
+    const root = await nativeInvoke<string | null>("get_engine_root");
     return root ?? undefined;
   } catch {
     return undefined;
@@ -99,7 +100,7 @@ function TerminalSession({
 
   useEffect(() => {
     if (!hostRef.current) return;
-    if (!isTauriWebview()) {
+    if (!isTauri()) {
       setError("Integrated terminal requires the Mac app (pnpm tauri:dev).");
       return;
     }

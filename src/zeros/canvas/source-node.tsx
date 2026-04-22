@@ -91,7 +91,12 @@ export function SourceNode({ id, data, selected }: NodeProps) {
     const projectUrl = state.project?.devServerUrl;
     if (projectUrl && projectUrl.length > 0) return projectUrl;
     if (typeof window === "undefined") return "";
-    const isMacApp = "__TAURI_INTERNALS__" in window;
+    // In the Mac app (Tauri or Electron), window.location.href IS Zeros
+    // itself — using it as an iframe src would recursively render the
+    // app inside the design canvas. Leave empty until the user picks
+    // a project URL from the toolbar or LOCALHOST discovery.
+    const isMacApp =
+      "__TAURI_INTERNALS__" in window || "__ZEROS_NATIVE__" in window;
     if (isMacApp) return "";
     return window.location.href;
   })();

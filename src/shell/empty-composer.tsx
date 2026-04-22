@@ -16,7 +16,6 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { FolderOpen, Send, Sparkles } from "lucide-react";
-import { invoke } from "@tauri-apps/api/core";
 import { Button, Textarea } from "../zeros/ui";
 import { useWorkspace, type ChatThread } from "../zeros/store/store";
 import { useBridge } from "../zeros/bridge/use-bridge";
@@ -31,11 +30,10 @@ function folderBasename(path: string): string {
 }
 
 async function resolveCurrentFolder(): Promise<string> {
-  if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) {
-    return "";
-  }
+  const { isNativeRuntime, nativeInvoke } = await import("../native/runtime");
+  if (!isNativeRuntime()) return "";
   try {
-    const root = await invoke<string | null>("get_engine_root");
+    const root = await nativeInvoke<string | null>("get_engine_root");
     return root ?? "";
   } catch {
     return "";

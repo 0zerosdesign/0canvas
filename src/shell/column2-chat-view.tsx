@@ -29,7 +29,7 @@ import { envForChat } from "../zeros/acp/composer-pills";
 import { uiEntryForAgent } from "../zeros/acp/agent-ui-registry";
 import type { SessionInfo } from "@agentclientprotocol/sdk";
 import type { BridgeRegistryAgent } from "../zeros/bridge/messages";
-import { invoke } from "@tauri-apps/api/core";
+import { isNativeRuntime, nativeInvoke } from "../native/runtime";
 import { EmptyComposer } from "./empty-composer";
 
 function newChatId(): string {
@@ -37,11 +37,9 @@ function newChatId(): string {
 }
 
 async function resolveCurrentFolder(): Promise<string> {
-  if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) {
-    return "";
-  }
+  if (!isNativeRuntime()) return "";
   try {
-    const root = await invoke<string | null>("get_engine_root");
+    const root = await nativeInvoke<string | null>("get_engine_root");
     return root ?? "";
   } catch {
     return "";

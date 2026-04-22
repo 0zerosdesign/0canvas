@@ -186,12 +186,10 @@ function groupChatsByFolder(chats: ChatThread[]): Map<string, ChatThread[]> {
 }
 
 async function getCurrentProjectFolder(): Promise<string> {
-  if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) {
-    return "";
-  }
+  const { isNativeRuntime, nativeInvoke } = await import("../native/runtime");
+  if (!isNativeRuntime()) return "";
   try {
-    const { invoke } = await import("@tauri-apps/api/core");
-    const root = await invoke<string | null>("get_engine_root");
+    const root = await nativeInvoke<string | null>("get_engine_root");
     return root ?? "";
   } catch {
     return "";

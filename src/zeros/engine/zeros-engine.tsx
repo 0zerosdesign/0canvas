@@ -98,7 +98,9 @@ export function AutoConnect({ children }: { children: React.ReactNode }) {
       // causes the source-node iframe to render Zeros inside Zeros.
       // Start with no URL and let the user pick one (manual input in the
       // toolbar, or Phase 1B's LOCALHOST auto-discovery).
-      const isMacApp = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+      const isMacApp =
+        typeof window !== "undefined" &&
+        ("__TAURI_INTERNALS__" in window || "__ZEROS_NATIVE__" in window);
       dispatch({
         type: "CONNECT_PROJECT",
         project: {
