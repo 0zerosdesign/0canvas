@@ -1,6 +1,6 @@
 ---
 name: Review UI Change
-description: Reviewer checklist for any PR that touches UI files in 0canvas. Use this skill when doing code review on `src/shell/**`, `src/app-shell.tsx`, `src/0canvas/**`, or any CSS file.
+description: Reviewer checklist for any PR that touches UI files in Zeros. Use this skill when doing code review on `src/shell/**`, `src/app-shell.tsx`, `src/zeros/**`, or any CSS file.
 icon: ShieldCheck
 ---
 
@@ -24,9 +24,9 @@ You are the review-ui-change skill. Your job is to catch visual drift before it 
 
 ## 3. Primitive discipline
 
-- [ ] Every new `<button>` / `<input>` / `<textarea>` / menu / card / dialog is a primitive from `@/0canvas/ui`, not a raw HTML element styled inline.
+- [ ] Every new `<button>` / `<input>` / `<textarea>` / menu / card / dialog is a primitive from `@/Zeros/ui`, not a raw HTML element styled inline.
 - [ ] No per-feature button class has been added (no new `.oc-*-btn`, `.oc-*-input`, `.oc-*-card`).
-- [ ] If a variant was needed that doesn't exist, it was added to the primitive in `/src/0canvas/ui/`, not inline-styled in the feature file.
+- [ ] If a variant was needed that doesn't exist, it was added to the primitive in `/src/zeros/ui/`, not inline-styled in the feature file.
 
 ## 4. Inline-style discipline
 

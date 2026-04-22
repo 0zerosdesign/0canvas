@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────
-// Todo — markdown-backed list at .0canvas/todo.md
+// Todo — markdown-backed list at .zeros/todo.md
 // ──────────────────────────────────────────────────────────
 //
 // Intentionally minimal. The source of truth is a plain
@@ -26,14 +26,14 @@ pub struct TodoItem {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct TodoFile {
-    /// Absolute path to `.0canvas/todo.md`.
+    /// Absolute path to `.zeros/todo.md`.
     pub path: String,
     pub raw: String,
     pub items: Vec<TodoItem>,
 }
 
 fn todo_path(root: &PathBuf) -> PathBuf {
-    root.join(".0canvas").join("todo.md")
+    root.join(".zeros").join("todo.md")
 }
 
 fn resolve_root(state: &SidecarState, cwd: Option<String>) -> Option<PathBuf> {
@@ -130,7 +130,7 @@ pub fn save_todo_file(
         content.push('\n');
     }
 
-    let tmp = path.with_extension("md.0canvas-tmp");
+    let tmp = path.with_extension("md.zeros-tmp");
     fs::write(&tmp, &content).map_err(|e| format!("write tmp: {}", e))?;
     fs::rename(&tmp, &path).map_err(|e| format!("rename: {}", e))?;
     Ok(())

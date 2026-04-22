@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────
-// 0canvas Mac App — Entry Point (Tauri webview + Vite browser dev)
+// Zeros Mac App — Entry Point (Tauri webview + Vite browser dev)
 // ──────────────────────────────────────────────────────────
 //
 // This is loaded by index.html, which Tauri's devUrl points to

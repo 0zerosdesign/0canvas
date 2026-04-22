@@ -14,7 +14,7 @@ const DEFAULT_IGNORE = [
   "**/dist/**",
   "**/.next/**",
   "**/build/**",
-  "**/.0canvas/**",
+  "**/.zeros/**",
   "**/.git/**",
 ];
 

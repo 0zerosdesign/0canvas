@@ -14,10 +14,10 @@
 The Settings page provides configuration for AI providers and IDE/agent connections. It is accessed via the app sidebar navigation (activePage = "settings") and replaces the main canvas view with a two-column settings layout.
 
 Key files:
-- `src/0canvas/panels/settings-page.tsx` -- settings page layout, AI settings panel
-- `src/0canvas/panels/agent-panel.tsx` -- IDE & Agents panel
-- `src/0canvas/store/store.tsx` -- AiSettings type, SET_AI_SETTINGS action
-- `src/0canvas/lib/openai.ts` -- model list, settings persistence helpers
+- `src/zeros/panels/settings-page.tsx` -- settings page layout, AI settings panel
+- `src/zeros/panels/agent-panel.tsx` -- IDE & Agents panel
+- `src/zeros/store/store.tsx` -- AiSettings type, SET_AI_SETTINGS action
+- `src/zeros/lib/openai.ts` -- model list, settings persistence helpers
 
 ## Settings Layout
 
@@ -131,7 +131,7 @@ type AiSettings = {
 
 AI settings are persisted via two mechanisms:
 
-1. **localStorage:** `loadAiSettings()` and `saveAiSettings()` in `src/0canvas/lib/openai.ts` read/write to localStorage for cross-session persistence
+1. **localStorage:** `loadAiSettings()` and `saveAiSettings()` in `src/zeros/lib/openai.ts` read/write to localStorage for cross-session persistence
 2. **Store state:** `dispatch({ type: "SET_AI_SETTINGS", settings })` updates the in-memory state used by the AI chat panel and auto-send system
 
 On mount, the AiSettingsPanel loads from localStorage and syncs with the store state if there are non-default values.

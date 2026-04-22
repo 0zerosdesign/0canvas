@@ -6,7 +6,7 @@
 // persistence with direct filesystem operations.
 //
 // Reuses the format/serialization functions from
-// src/0canvas/format/oc-project.ts (pure TypeScript).
+// src/zeros/format/oc-project.ts (pure TypeScript).
 //
 // ──────────────────────────────────────────────────────────
 
@@ -72,7 +72,7 @@ export class OCManager {
       ? filePath
       : path.resolve(this.root, filePath);
 
-    const tmpPath = absPath + ".0canvas-tmp";
+    const tmpPath = absPath + ".zeros-tmp";
     try {
       // Ensure directory exists
       const dir = path.dirname(absPath);
@@ -85,7 +85,7 @@ export class OCManager {
       return true;
     } catch (err) {
       try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
-      console.error(`[0canvas] Failed to write .0c file:`, err);
+      console.error(`[Zeros] Failed to write .0c file:`, err);
       return false;
     }
   }
@@ -131,7 +131,7 @@ export class OCManager {
       pages: [],
       variants: [],
       history: { checkpoints: [], lastCheckpointAt: null },
-      integrity: { hash: "", generator: "0canvas-engine" },
+      integrity: { hash: "", generator: "zeros-engine" },
     };
 
     const content = JSON.stringify(projectFile, null, 2);

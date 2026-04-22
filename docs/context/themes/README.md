@@ -1,11 +1,11 @@
 # Module: Themes & Design Tokens
 
 > **Source files:**
-> - `src/0canvas/themes/themes-page.tsx` -- token table editor, file import, multi-theme columns
-> - `src/0canvas/themes/theme-mode-panel.tsx` -- color inspection panel, change tracking, prompt generation
-> - `src/0canvas/themes/css-token-parser.ts` -- CSS custom property extraction, syntax detection, surgical updates
-> - `src/0canvas/themes/theme-color-resolver.ts` -- CSSOM walking, var() chain resolution, shorthand extraction
-> - `src/0canvas/themes/color-picker.tsx` -- HSL-based color picker with hex input
+> - `src/zeros/themes/themes-page.tsx` -- token table editor, file import, multi-theme columns
+> - `src/zeros/themes/theme-mode-panel.tsx` -- color inspection panel, change tracking, prompt generation
+> - `src/zeros/themes/css-token-parser.ts` -- CSS custom property extraction, syntax detection, surgical updates
+> - `src/zeros/themes/theme-color-resolver.ts` -- CSSOM walking, var() chain resolution, shorthand extraction
+> - `src/zeros/themes/color-picker.tsx` -- HSL-based color picker with hex input
 
 ---
 
@@ -149,7 +149,7 @@ ThemeChangeItem {
 The "Copy Prompt" button generates markdown with:
 
 ```markdown
-# 0canvas Theme Changes (N items)
+# Zeros Theme Changes (N items)
 
 Apply these design token changes to the source code.
 Use the var() form in stylesheets, not the resolved hex value.

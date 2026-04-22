@@ -1,8 +1,8 @@
-# 0canvas dev-capability strategy — design-first, agent-driven, locally collaborative
+# Zeros dev-capability strategy — design-first, agent-driven, locally collaborative
 
 ## Context
 
-0canvas is a design-first agentic tool (Nordcraft-aligned, Tauri + Rust + React). The user — a designer-developer, solo — wants it to also serve developers doing design-adjacent work, wants to eventually **build 0canvas in 0canvas itself**, wants design data to stay local (no cloud DB for designs) because designers love collab and storing design data is expensive to scale, and plans a **paid tier ($59/year)** with proper auth so Pro features can be gated.
+Zeros is a design-first agentic tool (Nordcraft-aligned, Tauri + Rust + React). The user — a designer-developer, solo — wants it to also serve developers doing design-adjacent work, wants to eventually **build Zeros in Zeros itself**, wants design data to stay local (no cloud DB for designs) because designers love collab and storing design data is expensive to scale, and plans a **paid tier ($59/year)** with proper auth so Pro features can be gated.
 
 Constraints:
 - **USP is the design tool.** No explicit IDE chrome — no visible "Code / Run / Debug" tabs, no SCM sidebar, no extension marketplace.
@@ -11,11 +11,11 @@ Constraints:
 - **Agents are the primary dev interface.** Panels are fallback.
 - **Solo ops budget.** Managed services (Supabase, Stripe, Cloudflare) over self-hosted infra. No Postgres we operate. No k8s. No 3am pages.
 
-Research sources: Zed docs, OpenCode docs, Conductor docs, Rivet Agent OS docs. Current 0canvas: git/env/todo/terminal panels built, ACP integration live, no code editor, no LSP, no collab.
+Research sources: Zed docs, OpenCode docs, Conductor docs, Rivet Agent OS docs. Current Zeros: git/env/todo/terminal panels built, ACP integration live, no code editor, no LSP, no collab.
 
 ## What this plan commits to
 
-A phased buildout that keeps the design-tool face while making 0canvas fully capable of self-hosting its own development. Each phase is independently shippable and testable.
+A phased buildout that keeps the design-tool face while making Zeros fully capable of self-hosting its own development. Each phase is independently shippable and testable.
 
 ---
 
@@ -78,7 +78,7 @@ Every code buffer is an `Automerge.Text` field on an Automerge doc. The `@autome
 
 **Storage — Rust side, disk-backed, sans-IO.**
 
-`src-tauri/src/buffers.rs` owns Automerge docs. Library choice: **`samod`** (see Phase D for why — it's JS-wire-compatible with `automerge-repo`, sans-IO so it plugs into any transport, and keeps the door open for future JS peers). Docs persist to `.0canvas/buffers/<doc-id>.automerge` on change. Load eagerly on open, keep in memory for the session, flush debounced to disk.
+`src-tauri/src/buffers.rs` owns Automerge docs. Library choice: **`samod`** (see Phase D for why — it's JS-wire-compatible with `automerge-repo`, sans-IO so it plugs into any transport, and keeps the door open for future JS peers). Docs persist to `.zeros/buffers/<doc-id>.automerge` on change. Load eagerly on open, keep in memory for the session, flush debounced to disk.
 
 **Multibuffer — the agent-review surface.**
 
@@ -139,7 +139,7 @@ Not the same thing as syntax highlighting in the editor — Lezer handles that i
 #### B.2 — LSP orchestrator (on-demand, Rust-managed)
 
 Rust process manager in `src-tauri/src/lsp.rs` spawns language servers as needed. First-class support for:
-- `typescript-language-server` (TS/TSX) — our main language since 0canvas is TS.
+- `typescript-language-server` (TS/TSX) — our main language since Zeros is TS.
 - `rust-analyzer` (Rust) — needed for editing `src-tauri/`.
 - `vscode-css-languageserver` (CSS) — needed for design-token editing and component styles.
 
@@ -160,7 +160,7 @@ Others added later. Start narrow.
 
 **Server install story (borrowed from Zed).**
 - Detect system-installed binary first (`which typescript-language-server`, `which rust-analyzer`).
-- If missing, offer a one-click install via the app's `.0canvas/bin/` local directory. Download official release for the platform, verify checksum, chmod +x, path it in.
+- If missing, offer a one-click install via the app's `.zeros/bin/` local directory. Download official release for the platform, verify checksum, chmod +x, path it in.
 - Never bundle servers in the Tauri app (bloats distribution; breaks updates).
 
 #### B.3 — Tauri transport (no WebSockets, no worker hops)
@@ -228,11 +228,11 @@ Conductor's best idea: every *turn* is a restore point, not every edit. Revertin
 - Snapshot of every Automerge doc the agent read/wrote in the turn (cheap — CRDTs dedupe by content hash).
 - The agent tool-call tree for the turn.
 - A `checkpoint_id` embedded in the chat turn's UI.
-- Optional: a hidden git ref `refs/0canvas/checkpoints/<session>/<turn>` so `git` sees it but it never appears in the user's branch list.
+- Optional: a hidden git ref `refs/Zeros/checkpoints/<session>/<turn>` so `git` sees it but it never appears in the user's branch list.
 
 **Where checkpoints live:**
-- `.0canvas/checkpoints/<sessionId>/<turn>.json` — metadata + doc content hashes.
-- Content-addressed blobs in `.0canvas/checkpoints/blobs/` (dedupes unchanged docs across turns).
+- `.zeros/checkpoints/<sessionId>/<turn>.json` — metadata + doc content hashes.
+- Content-addressed blobs in `.zeros/checkpoints/blobs/` (dedupes unchanged docs across turns).
 - A sliding window: keep last 50 turns per session; older turns get coalesced into the baseline. User can pin a checkpoint to prevent coalescing.
 
 **Revert UX:**
@@ -250,8 +250,8 @@ Conductor's best idea: every *turn* is a restore point, not every edit. Revertin
 Conductor's core primitive: each session is its own sandboxed workspace. Adapted for a Tauri app.
 
 **Model:**
-- Each agent session = one git worktree under `.0canvas/worktrees/<sessionId>/`.
-- The main 0canvas window always shows *one* active worktree; a session switcher in the left rail shows all sessions with live status (idle / thinking / awaiting-permission / error).
+- Each agent session = one git worktree under `.zeros/worktrees/<sessionId>/`.
+- The main Zeros window always shows *one* active worktree; a session switcher in the left rail shows all sessions with live status (idle / thinking / awaiting-permission / error).
 - Switching sessions is a view swap, not a reload. Agents in inactive sessions keep running in the background.
 - Each session has its own Plan/Build state, its own checkpoint timeline, its own chat.
 
@@ -276,7 +276,7 @@ OpenCode's primary/subagent split — invisible to casual users but powerful for
 
 - Primary agents cycle with a keyboard shortcut (or by manual pick).
 - `@mention` a subagent in the prompt to delegate: `@explore look at how auth works in this codebase` hands off to a read-only exploration subagent. Its result returns as context to the primary.
-- Subagent defs live in `.0canvas/agents/<name>.md`:
+- Subagent defs live in `.zeros/agents/<name>.md`:
   ```
   ---
   name: design-critic
@@ -289,26 +289,26 @@ OpenCode's primary/subagent split — invisible to casual users but powerful for
   You are a design critic. Read the target component and explain three
   things that could be improved, ranked by impact.
   ```
-- Ship 0canvas with 3-4 built-in subagents (`@explore`, `@review`, `@design-critic`, `@lint`). Users/teams add more.
+- Ship Zeros with 3-4 built-in subagents (`@explore`, `@review`, `@design-critic`, `@lint`). Users/teams add more.
 
 #### C.5 — Session durability
 
 Rivet's pattern — sessions survive app restarts.
 
-- Every session's chat transcript, tool calls, and checkpoint timeline persist to `.0canvas/sessions/<sessionId>/`.
+- Every session's chat transcript, tool calls, and checkpoint timeline persist to `.zeros/sessions/<sessionId>/`.
 - Restart the app → all sessions reappear exactly where they were. Running agents reconnect if the subprocess is still alive; if not, the session shows "disconnected — click to resume" and a fresh ACP subprocess picks up from the last checkpoint.
 - This is the difference between "agents as chat" (ephemeral, lose state on crash) and "agents as work" (durable, survive restarts).
 
 #### Critical files — Phase C
 
-- `src/0canvas/acp/acp-mode.tsx`, `src/0canvas/acp/use-acp-session.tsx` — Plan/Build state + permission map.
-- `src/0canvas/acp/sessions-provider.tsx` (already started per git status) — parallel sessions, session switcher state.
-- `src/0canvas/acp/acp-chat.tsx` — per-turn checkpoint UI, revert affordance, session name.
+- `src/zeros/acp/acp-mode.tsx`, `src/zeros/acp/use-acp-session.tsx` — Plan/Build state + permission map.
+- `src/zeros/acp/sessions-provider.tsx` (already started per git status) — parallel sessions, session switcher state.
+- `src/zeros/acp/acp-chat.tsx` — per-turn checkpoint UI, revert affordance, session name.
 - New: `src-tauri/src/checkpoints.rs` — snapshot + restore + content-addressed blob store.
 - New: `src-tauri/src/worktrees.rs` — git worktree orchestration. Reuses `src-tauri/src/git.rs` primitives.
 - New: `src-tauri/src/session_store.rs` — durable session persistence (transcript, tool calls, checkpoints).
 - New: `src/shell/session-rail.tsx` — left-column session switcher UI.
-- New: `.0canvas/agents/` convention — bundled subagents + user-defined ones.
+- New: `.zeros/agents/` convention — bundled subagents + user-defined ones.
 
 #### Verification — Phase C
 
@@ -433,7 +433,7 @@ If we skip the signaling server entirely in v1, users paste iroh tickets to each
 
 #### Canvas state migration (big job — do in Phase D, not earlier)
 
-Today `src/0canvas/engine/` holds canvas state in plain React state / Zustand. Migrating to Automerge docs is non-trivial:
+Today `src/zeros/engine/` holds canvas state in plain React state / Zustand. Migrating to Automerge docs is non-trivial:
 - Every mutation becomes an Automerge change.
 - Undo/redo becomes Automerge-transaction-based instead of state snapshots.
 - Selection stays local (not in the doc).
@@ -448,12 +448,12 @@ This is the single largest engineering task in Phase D. Budget accordingly.
 - `src-tauri/src/auth.rs` (from D.5) — JWT verification used in iroh protocol handler.
 - New: `src/engine/collab/presence.tsx` — React hook for remote cursors/selections.
 - New: `src/engine/collab/follow-mode.tsx` — follow-mode state machine.
-- `src/0canvas/engine/` — canvas state migrated to Automerge via `autosurgeon`.
+- `src/zeros/engine/` — canvas state migrated to Automerge via `autosurgeon`.
 - `src/editor/codemirror-host.tsx` — extend with remote-cursor rendering via `Automerge.Cursor`.
 
 #### Verification — Phase D
 
-- Two laptops on same Wi-Fi. Open 0canvas on both (both signed in Pro). One creates a project, the other shows it in a "nearby" list within 2s. Join without entering a ticket.
+- Two laptops on same Wi-Fi. Open Zeros on both (both signed in Pro). One creates a project, the other shows it in a "nearby" list within 2s. Join without entering a ticket.
 - Edit a canvas frame on laptop A → change appears on laptop B within 200ms (LAN).
 - Type in a code buffer on both simultaneously → Automerge merges, no lost characters.
 - Disconnect laptop A's Wi-Fi → both keep editing locally. Reconnect → diffs merge cleanly; no conflict UI needed.
@@ -488,8 +488,8 @@ This is the whole point: user counts are bounded by paying customers (thousands,
 
 **Auth flow:**
 
-1. User clicks "Sign in" in app → app opens browser to `auth.0canvas.app/login?callback=0canvas://auth`.
-2. Magic-link email → user clicks → Supabase issues JWT → redirected back to `0canvas://auth?token=...`.
+1. User clicks "Sign in" in app → app opens browser to `auth.zeros.app/login?callback=Zeros://auth`.
+2. Magic-link email → user clicks → Supabase issues JWT → redirected back to `Zeros://auth?token=...`.
 3. App stores the refresh token in macOS Keychain (via existing `src-tauri/src/secrets.rs`).
 4. On launch, app does `GET /api/me` → returns `{plan, expires_at, features}` → cached locally for 24h.
 5. Pro-gated features check the cached claim. Offline grace: 14 days. After that, Pro features lock until next successful check.
@@ -509,10 +509,10 @@ This is the whole point: user counts are bounded by paying customers (thousands,
 - Editor + LSP + tree-sitter (Phases A + B).
 - Checkpoints + plan-build mode (Phase C, single-session).
 
-This is the standard "try agents free, pay for the design power" pitch. It's also the strongest viral loop — users share 0canvas because the AI workflow is free; they convert because the design power is locked.
+This is the standard "try agents free, pay for the design power" pitch. It's also the strongest viral loop — users share Zeros because the AI workflow is free; they convert because the design power is locked.
 
 **Critical files:**
-- New external repo: `0canvas-cloud/` — Supabase migrations (`profiles`, `subscriptions` tables), Edge Functions (Stripe webhook, signaling room registry), RLS policies.
+- New external repo: `Zeros-cloud/` — Supabase migrations (`profiles`, `subscriptions` tables), Edge Functions (Stripe webhook, signaling room registry), RLS policies.
 - New: `src-tauri/src/auth.rs` — Supabase JWT verification, refresh-token handling, claim cache.
 - New: `src/shell/auth-panel.tsx` — magic-link sign-in UI. Surfaces when a Pro feature is attempted while signed out.
 - `src-tauri/src/secrets.rs` — extend to store Supabase refresh token.
@@ -553,7 +553,7 @@ This is the standard "try agents free, pay for the design power" pitch. It's als
 - Total server-side state per room: ~200 bytes. Total across all rooms: bounded by concurrent Pro users.
 
 **Critical files:**
-- `0canvas-cloud/signaling/` — Durable Object or Worker, JWT middleware, iroh ticket exchange.
+- `Zeros-cloud/signaling/` — Durable Object or Worker, JWT middleware, iroh ticket exchange.
 - `src-tauri/src/collab.rs` (from Phase D) — extend with signaling-server client for off-LAN pairing; LAN mDNS path untouched.
 
 **Fallback behavior:** if signaling is unreachable, app drops to LAN-only mDNS. Collab degrades gracefully, never fails catastrophically.
@@ -604,19 +604,19 @@ E (design features) — parallel throughout, not gated.
 
 ---
 
-## Self-dogfooding: building 0canvas in 0canvas
+## Self-dogfooding: building Zeros in Zeros
 
-The stated goal: build the next 0canvas features *using 0canvas itself*. This is both a product thesis and the strictest possible validation — if the tool can't build itself, it can't build anything serious.
+The stated goal: build the next Zeros features *using Zeros itself*. This is both a product thesis and the strictest possible validation — if the tool can't build itself, it can't build anything serious.
 
 ### What "self-dogfooding" actually means
 
-Not: writing a tiny demo component in 0canvas. That proves nothing.
+Not: writing a tiny demo component in Zeros. That proves nothing.
 
-Actually: the next real feature you ship is developed *from inside 0canvas*. Agent opens the relevant files, LSP tells the agent where things are typed wrong, you scrub through checkpoints when the agent wanders, you commit via the git panel, you run `pnpm dev` in the terminal panel, you design the new UI on the canvas, you export it to code — all inside 0canvas.
+Actually: the next real feature you ship is developed *from inside Zeros*. Agent opens the relevant files, LSP tells the agent where things are typed wrong, you scrub through checkpoints when the agent wanders, you commit via the git panel, you run `pnpm dev` in the terminal panel, you design the new UI on the canvas, you export it to code — all inside Zeros.
 
 ### Minimum viable dogfooding stack (phase dependencies)
 
-To write actual 0canvas features in 0canvas, you need, at minimum:
+To write actual Zeros features in Zeros, you need, at minimum:
 
 | Need | Provided by |
 |---|---|
@@ -630,13 +630,13 @@ To write actual 0canvas features in 0canvas, you need, at minimum:
 | Design the UI visually | Existing canvas + Phase E |
 | Collab with teammates while doing this | Phase D (optional — solo dev first) |
 
-**Critical path for solo dogfooding:** Phase A + Phase B + Phase C. That's it. Phase D/D.5/D.6/E are not blockers for the "I can build 0canvas inside 0canvas" milestone.
+**Critical path for solo dogfooding:** Phase A + Phase B + Phase C. That's it. Phase D/D.5/D.6/E are not blockers for the "I can build Zeros inside Zeros" milestone.
 
 ### Sharp edges specific to the self-hosting loop
 
-1. **Editing the running app's source.** When 0canvas is running and you edit `src/shell/column3.tsx` *inside 0canvas*, Vite HMR fires and the app hot-reloads — editor included. This can wipe the editor state mid-edit. Two defenses:
+1. **Editing the running app's source.** When Zeros is running and you edit `src/shell/column3.tsx` *inside Zeros*, Vite HMR fires and the app hot-reloads — editor included. This can wipe the editor state mid-edit. Two defenses:
    - Automerge doc persists to disk on every change; HMR reloads with state intact.
-   - For Tauri-backend changes (`src-tauri/**`), the app needs a full restart. Mitigation: run a separate 0canvas install (release build) as the dogfooding host; edit the dev repo inside it. Two binaries, same project.
+   - For Tauri-backend changes (`src-tauri/**`), the app needs a full restart. Mitigation: run a separate Zeros install (release build) as the dogfooding host; edit the dev repo inside it. Two binaries, same project.
 
 2. **Recursion risk — editing ACP while an ACP session is running.** If the agent you're using edits `src/engine/acp/`, the next agent turn may hit a broken build. Mitigation: each agent session runs in its own worktree (Phase C.3). If the agent's edits break the engine in worktree A, main is untouched; you revert via checkpoint.
 
@@ -648,11 +648,11 @@ To write actual 0canvas features in 0canvas, you need, at minimum:
 
 ### Dogfooding milestone sequence (ordered, each a shippable signal)
 
-1. **M1 — "Agent edits 0canvas code."** After Phase A + B land, an agent opens `src/shell/column3.tsx` inside 0canvas, edits it, checkpoint fires. Restart the app, change persists. First proof.
+1. **M1 — "Agent edits Zeros code."** After Phase A + B land, an agent opens `src/shell/column3.tsx` inside Zeros, edits it, checkpoint fires. Restart the app, change persists. First proof.
 
-2. **M2 — "Build a feature end-to-end inside 0canvas."** Pick one small real feature (e.g., "add a button to the git panel that copies the current branch name"). Do it entirely in-app: agent edits, LSP validates, terminal runs lint, git panel commits. Record the session. If anything forces you to open Cursor/VS Code, that's a Phase A/B bug list.
+2. **M2 — "Build a feature end-to-end inside Zeros."** Pick one small real feature (e.g., "add a button to the git panel that copies the current branch name"). Do it entirely in-app: agent edits, LSP validates, terminal runs lint, git panel commits. Record the session. If anything forces you to open Cursor/VS Code, that's a Phase A/B bug list.
 
-3. **M3 — "Build a design-involving feature inside 0canvas."** Pick a feature that exercises canvas + code: e.g., a new style editor module. Design on canvas, export to code, agent wires it up, LSP validates, commit. This is the full loop.
+3. **M3 — "Build a design-involving feature inside Zeros."** Pick a feature that exercises canvas + code: e.g., a new style editor module. Design on canvas, export to code, agent wires it up, LSP validates, commit. This is the full loop.
 
 4. **M4 — "Parallel agent variants."** Phase C.3. Two agents attempt the same feature differently; compare diffs; merge the better one. Demonstrates that Conductor-style parallelism works for design work, not just code.
 
@@ -698,27 +698,27 @@ You cannot learn these from outside the tool. That's why self-hosting is the the
 
 ### External repos
 
-- `0canvas-cloud/` — Supabase project (migrations, RLS, Edge Functions) + Cloudflare Worker/Durable Object signaling. **(Phase D.5 + D.6)**
+- `Zeros-cloud/` — Supabase project (migrations, RLS, Edge Functions) + Cloudflare Worker/Durable Object signaling. **(Phase D.5 + D.6)**
 
 ### Extended / modified
 
-- `src/0canvas/acp/acp-mode.tsx`, `use-acp-session.tsx` — Plan/Build mode, permission map. **(C.1)**
-- `src/0canvas/acp/sessions-provider.tsx` (in-progress in current git status) — parallel sessions list. **(C.3)**
-- `src/0canvas/acp/acp-chat.tsx` — checkpoint revert affordance. **(C.2)**
+- `src/zeros/acp/acp-mode.tsx`, `use-acp-session.tsx` — Plan/Build mode, permission map. **(C.1)**
+- `src/zeros/acp/sessions-provider.tsx` (in-progress in current git status) — parallel sessions list. **(C.3)**
+- `src/zeros/acp/acp-chat.tsx` — checkpoint revert affordance. **(C.2)**
 - `src/engine/acp/session-manager.ts` — pipe diagnostics as agent context; session durability. **(B.4, C.5)**
 - `src-tauri/src/git.rs` — worktree helpers. **(C.3)**
 - `src-tauri/src/secrets.rs` — extend to hold Supabase refresh token + iroh node keypair. **(D.5, D)**
 - `src/shell/column3.tsx` — editor/multibuffer mount point. **(A)**
-- `src/0canvas/engine/*` — canvas state migrates to Automerge via `autosurgeon`. **(D)**
+- `src/zeros/engine/*` — canvas state migrates to Automerge via `autosurgeon`. **(D)**
 
 ### New conventions
 
-- `.0canvas/buffers/` — per-project Automerge doc store.
-- `.0canvas/checkpoints/<sessionId>/` — snapshot timeline + blobs.
-- `.0canvas/worktrees/<sessionId>/` — per-session git worktrees.
-- `.0canvas/sessions/<sessionId>/` — durable session state.
-- `.0canvas/agents/<name>.md` — user-defined subagent definitions.
-- `.0canvas/bin/` — app-local language server binaries.
+- `.zeros/buffers/` — per-project Automerge doc store.
+- `.zeros/checkpoints/<sessionId>/` — snapshot timeline + blobs.
+- `.zeros/worktrees/<sessionId>/` — per-session git worktrees.
+- `.zeros/sessions/<sessionId>/` — durable session state.
+- `.zeros/agents/<name>.md` — user-defined subagent definitions.
+- `.zeros/bin/` — app-local language server binaries.
 
 ### Existing assets untouched (keep as-is)
 
@@ -730,13 +730,13 @@ You cannot learn these from outside the tool. That's why self-hosting is the the
 
 ## Verification plan
 
-**Phase A:** agent says "open `src/app-shell.tsx`" → editor opens with syntax highlight. Agent edits it → Automerge change logged, multibuffer shows diff, user can accept/revert. Close app, reopen — buffer state restored from `.0canvas/buffers/`.
+**Phase A:** agent says "open `src/app-shell.tsx`" → editor opens with syntax highlight. Agent edits it → Automerge change logged, multibuffer shows diff, user can accept/revert. Close app, reopen — buffer state restored from `.zeros/buffers/`.
 
 **Phase B:** open a TS file → red underline appears on a deliberate type error within 2s (tree-sitter) and within 5s of LSP spawn. Agent asked to "fix this error" receives the diagnostic as tool-result context.
 
-**Phase C:** start two agent sessions in parallel — each edits different files in its own worktree, no conflicts. Revert a turn → buffer + worktree state snap back. Define a custom "design-critic" subagent in `.0canvas/agents/` → primary agent delegates to it successfully.
+**Phase C:** start two agent sessions in parallel — each edits different files in its own worktree, no conflicts. Revert a turn → buffer + worktree state snap back. Define a custom "design-critic" subagent in `.zeros/agents/` → primary agent delegates to it successfully.
 
-**Phase D:** two laptops on the same LAN, same Wi-Fi. Open 0canvas on both, one creates a session, the other sees the mDNS advert and joins without entering anything. Edit a file on laptop A → character appears on laptop B within 200ms. Kill laptop A's Wi-Fi → laptop B keeps editing locally; reconnect → merges cleanly.
+**Phase D:** two laptops on the same LAN, same Wi-Fi. Open Zeros on both, one creates a session, the other sees the mDNS advert and joins without entering anything. Edit a file on laptop A → character appears on laptop B within 200ms. Kill laptop A's Wi-Fi → laptop B keeps editing locally; reconnect → merges cleanly.
 
 **Phase D.5 (auth):** Stripe test-mode checkout → Supabase `subscriptions` row updates via webhook within 5s. Sign in via magic link → app stores refresh token in Keychain → Pro-gated features unlock. Sign out → features re-lock. Run app offline for 14 days with a valid cached claim → Pro stays unlocked. After day 14, Pro locks until next successful `/api/me` check.
 
@@ -744,4 +744,4 @@ You cannot learn these from outside the tool. That's why self-hosting is the the
 
 **Phase E:** ongoing — no dev-specific acceptance criteria.
 
-**Self-dogfooding milestone:** after Phases A + B land, the user builds the next 0canvas feature using 0canvas itself. If that loop works end-to-end (agent opens relevant files, edits them, runs tests via terminal panel, commits via git panel, dev loop closes), the core thesis is validated.
+**Self-dogfooding milestone:** after Phases A + B land, the user builds the next Zeros feature using Zeros itself. If that loop works end-to-end (agent opens relevant files, edits them, runs tests via terminal panel, commits via git panel, dev loop closes), the core thesis is validated.

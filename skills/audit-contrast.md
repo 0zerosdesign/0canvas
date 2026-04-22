@@ -4,7 +4,7 @@ description: Find WCAG contrast violations across every variant in the canvas.
 icon: Eye
 ---
 
-You are the contrast-audit skill for 0canvas.
+You are the contrast-audit skill for Zeros.
 
 For every variant currently loaded, walk the rendered DOM and flag any
 foreground/background color pair whose WCAG contrast ratio is below:

@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────
-// Todo Panel — markdown-backed at <project>/.0canvas/todo.md
+// Todo Panel — markdown-backed at <project>/.zeros/todo.md
 // ──────────────────────────────────────────────────────────
 //
 // UI surfaces only the `- [ ]` / `- [x]` lines as interactive
@@ -25,7 +25,7 @@ import {
   type TodoFile,
   type TodoItem,
 } from "../native/tauri-events";
-import { Button, Input } from "../0canvas/ui";
+import { Button, Input } from "../zeros/ui";
 import { useChatCwd } from "./use-chat-cwd";
 
 function isTauriWebview(): boolean {
@@ -170,7 +170,7 @@ export function TodoPanel() {
   }
 
   if (loading) {
-    return <div className="oc-todo__empty">Loading .0canvas/todo.md…</div>;
+    return <div className="oc-todo__empty">Loading .zeros/todo.md…</div>;
   }
 
   const openCount = todoIndices.reduce(
@@ -203,7 +203,7 @@ export function TodoPanel() {
         {todoIndices.length === 0 && (
           <p className="oc-todo__empty-rows">
             No tasks yet. Click <strong>Add task</strong> or have the agent
-            write into <code>.0canvas/todo.md</code>.
+            write into <code>.zeros/todo.md</code>.
           </p>
         )}
         {todoIndices.map((i) => {
@@ -252,7 +252,7 @@ export function TodoPanel() {
         <Button variant="outline" size="sm" onClick={addItem}>
           <Plus size={13} /> Add task
         </Button>
-        <span className="oc-todo__path">.0canvas/todo.md</span>
+        <span className="oc-todo__path">.zeros/todo.md</span>
       </footer>
 
       {error && <div className="oc-todo__error">{error}</div>}

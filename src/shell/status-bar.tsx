@@ -10,8 +10,8 @@
 // ============================================================
 import React from "react";
 import { GitBranch, Wifi, WifiOff, Loader2 } from "lucide-react";
-import { useWorkspace } from "../0canvas/store/store";
-import { StatusDot } from "../0canvas/ui";
+import { useWorkspace } from "../zeros/store/store";
+import { StatusDot } from "../zeros/ui";
 
 export function StatusBar() {
   const { state } = useWorkspace();

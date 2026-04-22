@@ -114,11 +114,11 @@ const API_ROWS = [
 ];
 
 const IDES = [
-  { name: "Claude Code", icon: "CC", cmd: "claude mcp add 0canvas", method: "MCP", color: "#216869" },
-  { name: "Cursor", icon: "Cu", cmd: "npx 0canvas@latest init --cursor", method: "Extension", color: "#3B8D89" },
-  { name: "Windsurf", icon: "Ws", cmd: "npx 0canvas@latest init --windsurf", method: "Extension", color: "#7A8F6B" },
-  { name: "VS Code", icon: "VS", cmd: "npx 0canvas@latest init --vscode", method: "Extension", color: "#C1784A" },
-  { name: "Antigravity", icon: "AG", cmd: "npx 0canvas@latest init --antigravity", method: "CLI", color: "#A55C48" },
+  { name: "Claude Code", icon: "CC", cmd: "claude mcp add Zeros", method: "MCP", color: "#216869" },
+  { name: "Cursor", icon: "Cu", cmd: "npx Zeros@latest init --cursor", method: "Extension", color: "#3B8D89" },
+  { name: "Windsurf", icon: "Ws", cmd: "npx Zeros@latest init --windsurf", method: "Extension", color: "#7A8F6B" },
+  { name: "VS Code", icon: "VS", cmd: "npx Zeros@latest init --vscode", method: "Extension", color: "#C1784A" },
+  { name: "Antigravity", icon: "AG", cmd: "npx Zeros@latest init --antigravity", method: "CLI", color: "#A55C48" },
 ];
 
 const RUNTIME_DEPS = [
@@ -365,7 +365,7 @@ export default function DocsPage() {
             </div>
             <div>
               <div className="text-[1rem] font-semibold tracking-[-0.03em] text-foreground">
-                0canvas demo
+                Zeros demo
               </div>
               <div className="text-[0.76rem] text-muted-foreground">
                 separate demo-only design tokens
@@ -376,7 +376,7 @@ export default function DocsPage() {
           <div className="flex items-center gap-3">
             <a
               className="hidden items-center gap-2 text-[0.88rem] font-medium text-muted-foreground transition-colors hover:text-foreground sm:inline-flex"
-              href="https://github.com/Withso/0canvas"
+              href="https://github.com/Withso/Zeros"
               rel="noopener noreferrer"
               target="_blank"
             >
@@ -384,7 +384,7 @@ export default function DocsPage() {
               <ExternalLink className="h-3.5 w-3.5" />
             </a>
             <button className="demo-primary-button" onClick={triggerCanvas} type="button">
-              Open 0canvas
+              Open Zeros
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
@@ -403,7 +403,7 @@ export default function DocsPage() {
                 Not published to npm yet
               </p>
               <p className="text-[0.9rem] leading-7">
-                Running <code className="demo-inline-code">npm install @zerosdesign/0canvas</code> still returns a
+                Running <code className="demo-inline-code">npm install @Withso/zeros</code> still returns a
                 404. Use the GitHub install path or build from source for now. The sections below walk through both.
               </p>
             </div>
@@ -424,7 +424,7 @@ export default function DocsPage() {
                   Inspect UI without the noise.
                 </h1>
                 <p className="max-w-[58ch] text-[1.08rem] leading-8 text-muted-foreground">
-                  This demo now uses its own quiet light-token system so it feels clearly separate from the main 0canvas
+                  This demo now uses its own quiet light-token system so it feels clearly separate from the main Zeros
                   app while still giving us hover, depth, and motion behavior to inspect during development.
                 </p>
               </div>
@@ -442,7 +442,7 @@ export default function DocsPage() {
               <div className="demo-card flex flex-wrap items-center gap-3 p-4">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Terminal className="h-4 w-4" />
-                  <code className="line-through text-[0.88rem]">npm install @zerosdesign/0canvas -D</code>
+                  <code className="line-through text-[0.88rem]">npm install @Withso/zeros -D</code>
                 </div>
                 <span className="demo-badge demo-badge-warning">publish pending</span>
               </div>
@@ -469,7 +469,7 @@ export default function DocsPage() {
                 <span className="text-[0.95rem] font-semibold text-foreground">Install directly from GitHub</span>
               </div>
               <CodeBlock
-                code={`# npm\nnpm install github:Withso/0canvas --save-dev\n\n# pnpm\npnpm add github:Withso/0canvas -D\n\n# yarn\nyarn add Withso/0canvas --dev`}
+                code={`# npm\nnpm install github:Withso/Zeros --save-dev\n\n# pnpm\npnpm add github:Withso/Zeros -D\n\n# yarn\nyarn add Withso/Zeros --dev`}
               />
             </div>
 
@@ -479,7 +479,7 @@ export default function DocsPage() {
                 <span className="text-[0.95rem] font-semibold text-foreground">Mount the overlay</span>
               </div>
               <CodeBlock
-                code={`import { ZeroCanvas } from "@zerosdesign/0canvas";\n\nfunction App() {\n  return (\n    <>\n      <YourApp />\n      <ZeroCanvas />\n    </>\n  );\n}`}
+                code={`import { Zeros } from "@Withso/zeros";\n\nfunction App() {\n  return (\n    <>\n      <YourApp />\n      <Zeros />\n    </>\n  );\n}`}
                 lang="tsx"
               />
             </div>
@@ -547,7 +547,7 @@ export default function DocsPage() {
           <div className="grid gap-6 md:grid-cols-2">
             <ShortcutGroup
               rows={[
-                { keys: "Ctrl+Shift+D", action: "Toggle 0canvas" },
+                { keys: "Ctrl+Shift+D", action: "Toggle Zeros" },
                 { keys: "I", action: "Start or stop inspect mode" },
                 { keys: "Ctrl+K", action: "Open command palette" },
                 { keys: "Esc", action: "Close overlay or cancel" },
@@ -604,7 +604,7 @@ export default function DocsPage() {
 │  Your App (React / Next.js / Vite / Remix)      │
 │                                                  │
 │  ┌────────────────────────────────────────────┐  │
-│  │  <ZeroCanvas />                            │  │
+│  │  <Zeros />                            │  │
 │  │                                            │  │
 │  │  ┌─ Toolbar ─────────────────────────────┐ │  │
 │  │  │ Layers │ Inspect │ Style │ IDE │ Ideas │ │  │
@@ -631,7 +631,7 @@ No server · No proxy · No iframe · Direct DOM inspection`}
               <h3 className="mb-3 text-[1rem] font-semibold tracking-[-0.02em] text-foreground">
                 1. Clone the repository
               </h3>
-              <CodeBlock code={`git clone https://github.com/Withso/0canvas.git\ncd 0canvas`} />
+              <CodeBlock code={`git clone https://github.com/Withso/Zeros.git\ncd Zeros`} />
             </div>
 
             <div className="demo-card p-5">
@@ -668,7 +668,7 @@ No server · No proxy · No iframe · Direct DOM inspection`}
                 5. Test locally
               </h3>
               <CodeBlock
-                code={`# Create a tarball\nnpm pack\n\n# Install the tarball elsewhere\nnpm install ../0canvas/zerosdesign-0canvas-0.0.1.tgz\n\n# Or use npm link\ncd 0canvas && npm link\ncd ../your-project && npm link @zerosdesign/0canvas`}
+                code={`# Create a tarball\nnpm pack\n\n# Install the tarball elsewhere\nnpm install ../Zeros/zerosdesign-Zeros-0.0.1.tgz\n\n# Or use npm link\ncd Zeros && npm link\ncd ../your-project && npm link @Withso/zeros`}
               />
             </div>
           </div>
@@ -711,7 +711,7 @@ No server · No proxy · No iframe · Direct DOM inspection`}
                 ))}
               </div>
               <p className="mt-4 text-[0.84rem] leading-6 text-muted-foreground">
-                Your host app needs React 18 or newer. 0canvas uses your existing React runtime.
+                Your host app needs React 18 or newer. Zeros uses your existing React runtime.
               </p>
             </div>
           </div>
@@ -748,12 +748,12 @@ No server · No proxy · No iframe · Direct DOM inspection`}
                 Open the overlay and inspect this calmer demo surface.
               </h2>
               <p className="text-[1rem] leading-8 text-muted-foreground">
-                Use <kbd className="demo-kbd">Ctrl+Shift+D</kbd> to launch 0canvas, then inspect the cards, hover states,
+                Use <kbd className="demo-kbd">Ctrl+Shift+D</kbd> to launch Zeros, then inspect the cards, hover states,
                 and transitions across this page.
               </p>
               <div className="flex justify-center">
                 <button className="demo-primary-button" onClick={triggerCanvas} type="button">
-                  Open 0canvas
+                  Open Zeros
                   <ArrowRight className="h-4 w-4" />
                 </button>
               </div>

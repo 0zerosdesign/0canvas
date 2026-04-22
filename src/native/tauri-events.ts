@@ -421,7 +421,7 @@ export async function notify(title: string, body?: string): Promise<void> {
 
 // ── Deep links (Phase 2-F) ────────────────────────────────
 //
-// Rust handles zero-canvas://open?path=... directly. Other routes
+// Rust handles zeros://open?path=... directly. Other routes
 // are forwarded as "deep-link" events for future handling.
 
 export async function onDeepLink(

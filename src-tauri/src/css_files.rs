@@ -94,7 +94,7 @@ pub fn write_css_file(
     }
     // Atomic write via sibling temp file + rename.
     let tmp = target.with_extension(format!(
-        "{}.0canvas-tmp",
+        "{}.zeros-tmp",
         target
             .extension()
             .and_then(|e| e.to_str())

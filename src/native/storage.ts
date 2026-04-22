@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────
-// Native Storage API — single entry point for 0canvas storage
+// Native Storage API — single entry point for Zeros storage
 // ──────────────────────────────────────────────────────────
 //
 // This module is the ONLY place the rest of the app imports
@@ -43,9 +43,9 @@ export {
   deleteProject,
   clearProjects,
   cleanupUnsavedProjects,
-} from "../0canvas/db/variant-db";
+} from "../zeros/db/variant-db";
 
-export type { StoredProject } from "../0canvas/db/variant-db";
+export type { StoredProject } from "../zeros/db/variant-db";
 
 export {
   saveProjectFile,
@@ -61,6 +61,6 @@ export {
   scheduleAutoSave,
   buildCurrentProjectFile,
   setBridgeSender,
-} from "../0canvas/format/oc-project-store";
+} from "../zeros/format/oc-project-store";
 
-export type { OCSyncMeta } from "../0canvas/format/oc-project-store";
+export type { OCSyncMeta } from "../zeros/format/oc-project-store";

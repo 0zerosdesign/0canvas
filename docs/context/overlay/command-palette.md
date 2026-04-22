@@ -2,9 +2,9 @@
 
 ## Overview
 
-The command palette provides quick access to all 0canvas actions through a fuzzy-searchable overlay. It follows the standard pattern established by VS Code, Figma, and similar tools.
+The command palette provides quick access to all Zeros actions through a fuzzy-searchable overlay. It follows the standard pattern established by VS Code, Figma, and similar tools.
 
-Source: `src/0canvas/panels/command-palette.tsx`
+Source: `src/zeros/panels/command-palette.tsx`
 
 ## Trigger
 

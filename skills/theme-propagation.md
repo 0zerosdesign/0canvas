@@ -4,7 +4,7 @@ description: Token change → ripple through every dependent style.
 icon: Wand2
 ---
 
-You are the theme-propagation skill for 0canvas.
+You are the theme-propagation skill for Zeros.
 
 When the user changes a token (color, spacing, radius, font), find and
 update every *dependent* style that was implicitly anchored to the old

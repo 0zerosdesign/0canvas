@@ -2,13 +2,13 @@
 
 ## Overview
 
-0canvas includes a breakpoint system for previewing and eventually editing designs at different viewport widths. The system connects the workspace toolbar, the global store state, and the canvas source node to provide responsive preview switching.
+Zeros includes a breakpoint system for previewing and eventually editing designs at different viewport widths. The system connects the workspace toolbar, the global store state, and the canvas source node to provide responsive preview switching.
 
 Key files:
-- `src/0canvas/store/store.tsx` -- `Breakpoint` type, `BREAKPOINT_WIDTHS`, `SET_BREAKPOINT` action
-- `src/0canvas/panels/workspace-toolbar.tsx` -- breakpoint toggle buttons
-- `src/0canvas/canvas/source-node.tsx` -- viewport preset buttons and resize behavior
-- `src/0canvas/panels/style-panel.tsx` -- breakpoint badge display
+- `src/zeros/store/store.tsx` -- `Breakpoint` type, `BREAKPOINT_WIDTHS`, `SET_BREAKPOINT` action
+- `src/zeros/panels/workspace-toolbar.tsx` -- breakpoint toggle buttons
+- `src/zeros/canvas/source-node.tsx` -- viewport preset buttons and resize behavior
+- `src/zeros/panels/style-panel.tsx` -- breakpoint badge display
 
 ## Breakpoint System
 
@@ -147,7 +147,7 @@ User clicks Tablet in toolbar
 
 ## User Workflow
 
-1. Open the 0canvas workspace
+1. Open the Zeros workspace
 2. The source node defaults to Laptop width (1280px)
 3. Click the Tablet icon in the toolbar
 4. The canvas source node smoothly resizes to 768px width

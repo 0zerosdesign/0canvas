@@ -6,16 +6,16 @@ The DOM Inspector is the core click-to-inspect system that lets users hover, sel
 
 | File | Lines (approx) | Purpose |
 |------|----------------|---------|
-| `src/0canvas/inspector/index.ts` | 150 | Barrel exports, `setInspectionTarget`, `resetInspectionTarget`, master `cleanup()` |
-| `src/0canvas/inspector/constants.ts` | 85 | `IGNORED_TAGS`, `OC_ATTR`, `STYLE_PROPS`, hardcoded design tokens for iframe context |
-| `src/0canvas/inspector/target.ts` | 32 | Shared mutable state for the inspection target document and iframe |
-| `src/0canvas/inspector/dom-walker.ts` | 570 | DOM traversal, element mapping, style extraction, snapshots, agent output |
-| `src/0canvas/inspector/overlay.ts` | 273 | Hover and select highlight overlays |
-| `src/0canvas/inspector/inspect-mode.ts` | 205 | Click-to-inspect interaction logic, mode switching, pause/resume |
-| `src/0canvas/inspector/event-manager.ts` | 61 | Listener tracking utility to prevent memory leaks |
-| `src/0canvas/inspector/feedback-pill.ts` | 587 | Floating feedback annotation card and feedback markers |
-| `src/0canvas/inspector/theme-pill.ts` | ~900 | Theme-specific color inspector popup with token picker |
-| `src/0canvas/inspector/component-detection.ts` | 253 | Framework-aware component name detection (React, Vue, Angular, Svelte) |
+| `src/zeros/inspector/index.ts` | 150 | Barrel exports, `setInspectionTarget`, `resetInspectionTarget`, master `cleanup()` |
+| `src/zeros/inspector/constants.ts` | 85 | `IGNORED_TAGS`, `OC_ATTR`, `STYLE_PROPS`, hardcoded design tokens for iframe context |
+| `src/zeros/inspector/target.ts` | 32 | Shared mutable state for the inspection target document and iframe |
+| `src/zeros/inspector/dom-walker.ts` | 570 | DOM traversal, element mapping, style extraction, snapshots, agent output |
+| `src/zeros/inspector/overlay.ts` | 273 | Hover and select highlight overlays |
+| `src/zeros/inspector/inspect-mode.ts` | 205 | Click-to-inspect interaction logic, mode switching, pause/resume |
+| `src/zeros/inspector/event-manager.ts` | 61 | Listener tracking utility to prevent memory leaks |
+| `src/zeros/inspector/feedback-pill.ts` | 587 | Floating feedback annotation card and feedback markers |
+| `src/zeros/inspector/theme-pill.ts` | ~900 | Theme-specific color inspector popup with token picker |
+| `src/zeros/inspector/component-detection.ts` | 253 | Framework-aware component name detection (React, Vue, Angular, Svelte) |
 
 ---
 
@@ -25,7 +25,7 @@ The DOM Inspector is the core click-to-inspect system that lets users hover, sel
 
 1. **Start inspection:** `startInspect(onSelect)` is called. This rebuilds the element map, attaches `mousemove` and `click` listeners to the target document (with `capture: true`), and sets `cursor: crosshair` on the body.
 
-2. **Hover:** As the user moves the mouse, `inspectHoverHandler` fires. It checks if the target element has `data-0canvas` (skip own UI), then looks up the element's ID in `elementMap` and calls `highlightElement(id, "hover")` to show a dashed blue overlay.
+2. **Hover:** As the user moves the mouse, `inspectHoverHandler` fires. It checks if the target element has `data-Zeros` (skip own UI), then looks up the element's ID in `elementMap` and calls `highlightElement(id, "hover")` to show a dashed blue overlay.
 
 3. **Click:** When the user clicks, `inspectHandler` fires. It:
    - Prevents default behavior and stops propagation
@@ -83,8 +83,8 @@ setOverlayPillCallbacks(
 
 Two parallel data structures track elements:
 
-- `elementMap: WeakMap<Element, string>` — DOM element to ZeroCanvas ID (e.g., `"oc-42"`)
-- `idToElement: Map<string, Element>` — ZeroCanvas ID back to DOM element
+- `elementMap: WeakMap<Element, string>` — DOM element to Zeros ID (e.g., `"oc-42"`)
+- `idToElement: Map<string, Element>` — Zeros ID back to DOM element
 
 Both are built by `rebuildElementMap()`, which walks the target document's body recursively up to depth 15.
 
@@ -105,7 +105,7 @@ Each element gets a sequential ID: `oc-1`, `oc-2`, etc. The counter resets when 
 
 These elements are skipped during DOM walking:
 
-- Elements with `data-0canvas` attribute or inside a `[data-0canvas]` ancestor
+- Elements with `data-Zeros` attribute or inside a `[data-Zeros]` ancestor
 - Tags in `IGNORED_TAGS`: `SCRIPT`, `STYLE`, `LINK`, `META`, `HEAD`, `NOSCRIPT`, `BR`, `WBR`
 - Zero-dimension elements with no children
 - Elements deeper than 15 levels
@@ -345,7 +345,7 @@ type ComponentInfo = {
 
 When a style change is applied, `flashElement(elementId)` creates a temporary green-bordered overlay that fades out:
 
-1. Creates an absolutely-positioned `<div>` with `data-0canvas="flash-overlay"`
+1. Creates an absolutely-positioned `<div>` with `data-Zeros="flash-overlay"`
 2. Styled with `border: 2px solid #22c55e` (green)
 3. Animated with `@keyframes oc-flash`: green box-shadow pulse fading to transparent over 1.5s
 4. Auto-removed after 1500ms
@@ -392,7 +392,7 @@ The inspector can capture full HTML/CSS snapshots of elements or entire pages:
 ### `capturePageSnapshot()`
 
 1. Deep-clones `targetDoc.body`
-2. Sanitizes: removes `<script>` tags, `on*` event handlers, `[data-0canvas]` elements
+2. Sanitizes: removes `<script>` tags, `on*` event handlers, `[data-Zeros]` elements
 3. Absolutifies relative URLs (images, srcset, CSS `url()`)
 4. Collects all CSS rules from stylesheets (including adopted stylesheets) and inline `<style>` tags
 5. Collects external stylesheet `<link>` tags as `@import` rules
@@ -401,7 +401,7 @@ The inspector can capture full HTML/CSS snapshots of elements or entire pages:
 
 ### `captureComponentSnapshot(elementId)`
 
-Same as page snapshot but scoped to a single element by ZeroCanvas ID.
+Same as page snapshot but scoped to a single element by Zeros ID.
 
 ### `pushVariantToMain(sourceElementId, newHtml, newCss?)`
 

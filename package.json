@@ -1,8 +1,8 @@
 {
-  "name": "@zerosdesign/0canvas",
+  "name": "@withso/zeros",
   "version": "0.0.5",
   "private": true,
-  "description": "Visual design tool for production code — Mac app (Tauri). Inspect elements, edit styles, push to git.",
+  "description": "Zeros — Visual design tool for production code. Mac app (Tauri). Inspect elements, edit styles, push to git.",
   "license": "MIT",
   "scripts": {
     "build:engine": "tsup",
@@ -71,11 +71,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/zerosdesign/0canvas.git"
+    "url": "https://github.com/Withso/zeros.git"
   },
-  "homepage": "https://github.com/zerosdesign/0canvas#readme",
+  "homepage": "https://github.com/Withso/zeros#readme",
   "bugs": {
-    "url": "https://github.com/zerosdesign/0canvas/issues"
+    "url": "https://github.com/Withso/zeros/issues"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

@@ -221,7 +221,7 @@ pub fn save_env_file(
 
     // Atomic write: temp file + rename.
     let tmp = target.with_extension(format!(
-        "{}.0canvas-tmp",
+        "{}.zeros-tmp",
         target
             .extension()
             .and_then(|e| e.to_str())

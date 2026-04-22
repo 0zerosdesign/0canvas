@@ -1,4 +1,4 @@
-# 0canvas → Tauri Mac App (Mac-only, browser overlay sunset)
+# Zeros → Tauri Mac App (Mac-only, browser overlay sunset)
 
 > **📌 Status (2026-04-20):** This is the execution plan behind
 > [PRODUCT_VISION_V3.md](PRODUCT_VISION_V3.md). Phases 0, 1A, 1B, 1C,
@@ -11,7 +11,7 @@
 
 ## Context
 
-**Decision (locked):** 0canvas becomes a Mac-only native app built on Tauri. The existing npm browser-overlay (`@zerosdesign/0canvas`) is sunsetted. The VS Code extension stays frozen. All future development targets one surface: a direct-download Mac app that designers install to edit production code visually with AI.
+**Decision (locked):** Zeros becomes a Mac-only native app built on Tauri. The existing npm browser-overlay (`@Withso/zeros`) is sunsetted. The VS Code extension stays frozen. All future development targets one surface: a direct-download Mac app that designers install to edit production code visually with AI.
 
 **Why this simplification wins:**
 - Testing matrix collapses from `N IDEs × M frameworks × 3 browsers × React versions × Tailwind configs` to `1 platform × M frameworks`
@@ -30,7 +30,7 @@
 **Feature contract — nothing regresses.** Every capability in the current codebase continues to work in the Mac app. The research inventory produced a 20-section list covering ~60 files; the Mac app's Phase 1 exit criteria is 100% of today's functionality running natively, before any new features are added.
 
 **Inspiration landscape (verified):**
-- **Clonk** (`clonk.ai`, also known as Komand) — **primary model for Mac app UX, pricing, and agent workflow.** Native Mac app, direct DMG from GitHub, no App Store. BYO-subscription pricing (Free with user's keys / $6.90 Lite / $59 Pro one-time). Skills system as markdown (`.claude/skills/`). Git worktrees for parallel agents. Claims "$1/app with BYO-keys vs $3,000+ elsewhere." Key difference: Clonk is **greenfield** (prompt → new app); 0canvas is **brownfield** (existing repo → visual edits). Adopt their shell, pricing, skills system, worktree pattern — reject their 1-shot app generator and boilerplate picker.
+- **Clonk** (`clonk.ai`, also known as Komand) — **primary model for Mac app UX, pricing, and agent workflow.** Native Mac app, direct DMG from GitHub, no App Store. BYO-subscription pricing (Free with user's keys / $6.90 Lite / $59 Pro one-time). Skills system as markdown (`.claude/skills/`). Git worktrees for parallel agents. Claims "$1/app with BYO-keys vs $3,000+ elsewhere." Key difference: Clonk is **greenfield** (prompt → new app); Zeros is **brownfield** (existing repo → visual edits). Adopt their shell, pricing, skills system, worktree pattern — reject their 1-shot app generator and boilerplate picker.
 - **Onlook** (`onlook.com`) — "Cursor for Designers." Visual editor on real Next.js + Tailwind code. Web-container-based (CodeSandbox SDK). Validates the visual-editing-on-production-code philosophy. We're choosing native over web for the reasons above.
 - **Commander** (`thecommander.app`) — Native Swift Mac app (~30 MB). Diff viewer, git worktree management, spawned coding-agent CLIs (Claude Code, Codex, OpenCode). Validates the "spawn `claude-code` as subprocess + worktree-parallel agents" pattern.
 - **Tauri vs Electron (2026):** Tauri wins on bundle size (~2–10 MB vs 80–200 MB), RAM (~50% less), cross-platform reach, and native feel. Effort gap is closed when you're not afraid of ~500 lines of Rust glue.
@@ -39,9 +39,9 @@
 
 ## Positioning (refined)
 
-0canvas is not a "design tool." It's a **design-first Mac app for people who ship production code** — designers editing real repos, AND solo developers / indie hackers who want a visual-canvas + AI-agent workflow that doesn't fight their existing habits. The addressable audience is everyone doing design-adjacent work on a real codebase.
+Zeros is not a "design tool." It's a **design-first Mac app for people who ship production code** — designers editing real repos, AND solo developers / indie hackers who want a visual-canvas + AI-agent workflow that doesn't fight their existing habits. The addressable audience is everyone doing design-adjacent work on a real codebase.
 
-| Persona | How they use 0canvas | What they need that others don't |
+| Persona | How they use Zeros | What they need that others don't |
 |---|---|---|
 | **Designer on real code** (no git comfort) | Visual edits via canvas → chat says "save my changes" → done | Minimal git UI (branch pill, Save Changes button), everything else handled by agent |
 | **Solo developer / indie hacker** | Primary IDE-lite for shipping a product. Canvas for UI work, integrated terminal + git panel + env editor for dev work, agent for everything in between | Feature parity with the power-user subset of VS Code (terminal, env, agents), without the cognitive overhead |
@@ -49,7 +49,7 @@
 
 The product must keep a clean designer on-ramp while exposing every developer-grade capability (integrated terminal, env editor, full git operations, multi-agent worktrees). These are NOT in tension: we hide developer panels behind tabs; designers who never open the Terminal tab never encounter it.
 
-**0canvas is not a VS Code fork.** It coexists with any IDE the user already runs. See the "VS Code & Other IDEs — Coexistence, Not a Fork" section below.
+**Zeros is not a VS Code fork.** It coexists with any IDE the user already runs. See the "VS Code & Other IDEs — Coexistence, Not a Fork" section below.
 
 ---
 
@@ -64,10 +64,10 @@ The product must keep a clean designer on-ramp while exposing every developer-gr
 7. **Git UX (dual-track):** Simple visual panel for the 80% common ops (branch, stage, commit, push, pull, diff). Agent chat + integrated terminal for the power-user 20% (rebase, cherry-pick, stash, conflict resolution). No Monaco, no code editor view; the repo's text editing lives in the user's own editor or in agent operations.
 8. **AI:** Prefer Claude CLI via Max subscription (zero API cost), `@anthropic-ai/sdk` API-key fallback, OpenAI as alt provider (incl. ChatGPT Pro via Codex path per Clonk). Keys in macOS keychain.
 9. **Pricing model:** One-time tiered (Free with BYO-key / ~$59 Pro) — no monthly SaaS. Copy Clonk's model.
-10. **Skills:** Markdown files at `.0canvas/skills/*.md`. User/community-extensible. No rebuild to add skills.
+10. **Skills:** Markdown files at `.zeros/skills/*.md`. User/community-extensible. No rebuild to add skills.
 11. **Parallel agents via git worktrees** — the Mac app's killer differentiator the overlay literally cannot have.
 12. **Embedded terminal:** `tauri-plugin-pty` + `xterm.js` in the webview. Multiple sessions, respects the opened project's cwd, is the universal power-user escape hatch.
-13. **VS Code coexistence (not fork):** Users can run VS Code/Cursor/Windsurf/Zed alongside 0canvas on the same repo. Git is the shared source of truth. 0canvas works whether or not those editors are installed.
+13. **VS Code coexistence (not fork):** Users can run VS Code/Cursor/Windsurf/Zed alongside Zeros on the same repo. Git is the shared source of truth. Zeros works whether or not those editors are installed.
 14. **Browser overlay sunset:** final `0.0.x` release, deprecate on npm, repo banner pointing to Mac app, migration guide for any existing users.
 
 ---
@@ -76,11 +76,11 @@ The product must keep a clean designer on-ramp while exposing every developer-gr
 
 ```
 ┌───────────────────────────────────────────┐
-│ Tauri App (0canvas.app)                   │
+│ Tauri App (Zeros.app)                   │
 │                                           │
 │  ┌─────────────────────────────────────┐  │
 │  │ WKWebView (React UI)                │  │
-│  │  - All existing src/0canvas/** code │  │
+│  │  - All existing src/zeros/** code │  │
 │  │  - Direct Tauri API access          │  │
 │  │  - Talks to engine via ws://        │  │
 │  └────────────┬────────────────────────┘  │
@@ -105,7 +105,7 @@ The product must keep a clean designer on-ramp while exposing every developer-gr
 
 **Three-process model inside one signed Mac app:**
 - **Rust core** handles windowing, menus, file dialogs, keychain, git (via `git2-rs`), auto-update, and spawning external CLIs.
-- **Node sidecar** is the existing V2 engine, launched at app startup via `Command::sidecar`. Runs unchanged from today's `npx 0canvas serve`.
+- **Node sidecar** is the existing V2 engine, launched at app startup via `Command::sidecar`. Runs unchanged from today's `npx Zeros serve`.
 - **Webview** renders the React UI — same components as today, but with native Tauri APIs available directly (no `PlatformAdapter` abstraction needed anymore).
 
 **Why no `PlatformAdapter` layer anymore:** the adapter pattern existed to gate features between browser and Mac. With browser dead, there's nothing to gate. Delete the abstraction, call Tauri APIs directly. Less code, less indirection, less debug surface.
@@ -114,7 +114,7 @@ The product must keep a clean designer on-ramp while exposing every developer-gr
 
 ## UI Architecture — Three-Column Layout
 
-Inspired by Clonk's shell pattern, adapted to foreground 0canvas's unique differentiator (the design canvas). The three columns are independent; only Column 2 and Column 3 are required for daily work. Column 1 can collapse to an icon rail.
+Inspired by Clonk's shell pattern, adapted to foreground Zeros's unique differentiator (the design canvas). The three columns are independent; only Column 2 and Column 3 are required for daily work. Column 1 can collapse to an icon rail.
 
 ```
 ┌──────────────┬────────────────────────┬──────────────────────────────────┐
@@ -149,13 +149,13 @@ Inspired by Clonk's shell pattern, adapted to foreground 0canvas's unique differ
 
 Fixed to ~260px when expanded, collapses to ~48px icon rail. Top-right corner has the collapse toggle.
 
-- **Top:** 0canvas logo. Beneath: `+ New Chat` button, `⚡ Skills` link (opens skills browser in column 2).
+- **Top:** Zeros logo. Beneath: `+ New Chat` button, `⚡ Skills` link (opens skills browser in column 2).
 - **CHATS section:** nested tree — folders (e.g. a project = folder), chats within each folder. Selected chat sets column 2's Chat tab context. Folder icon `+` adds a new folder.
 - **TERMINALS:** count badge; clicking opens the Terminal tab in column 2 and switches to that session.
 - **LOCALHOST:** auto-discovered local services (the engine's own `:24193`, any dev server the user ran via integrated terminal, postgres, etc.). Click an entry to open it as a preview tab in column 3.
 - **Bottom:** "What's new" (version changelog link), profile avatar with menu → **How to** (docs) · **Settings** (full page) · **Logout**.
 
-State persistence: which folder is expanded, current active chat, collapse state → `~/Library/Application Support/0canvas/ui-state.json` via `src/native/settings.ts`.
+State persistence: which folder is expanded, current active chat, collapse state → `~/Library/Application Support/Zeros/ui-state.json` via `src/native/settings.ts`.
 
 ### Column 2 — Agent Workspace (tabbed)
 
@@ -191,14 +191,14 @@ Fixed to ~440px wide (resizable). Top icon bar switches between 5 panels. Each p
 - Warning banner if the file is `.gitignore`'d correctly (reassurance for designers).
 
 **e. ☑ Todo**
-- Simple markdown-backed task list stored at `.0canvas/todo.md` (or per-chat in the chat metadata).
+- Simple markdown-backed task list stored at `.zeros/todo.md` (or per-chat in the chat metadata).
 - Checkboxes, drag-reorder, keyboard shortcuts.
 - Agent can write/update this file via Chat → items appear live.
 - This is the lightweight "what's next" panel — not a Linear/Jira replacement.
 
 ### Column 3 — Design Canvas (primary differentiator)
 
-Fills remaining width. This is where **all current 0canvas functionality lives** — nothing from today's overlay is dropped. High level:
+Fills remaining width. This is where **all current Zeros functionality lives** — nothing from today's overlay is dropped. High level:
 
 - **Top tab bar** — like today, but now includes: Browser Preview (default when project has a dev server running, the "http://localhost:XXXX" type tab), plus user-created canvas tabs. Per-tab state persisted.
 - **ReactFlow infinite canvas** — unchanged from today. Source node + variant nodes, auto-layout, pan/zoom, minimap, selection.
@@ -222,19 +222,19 @@ Column 3 can be hidden for a "chat + terminal only" workflow (e.g. when the user
 
 ## VS Code & Other IDEs — Coexistence, Not a Fork
 
-A common confusion worth addressing explicitly: **0canvas does not fork, replace, or depend on VS Code.**
+A common confusion worth addressing explicitly: **Zeros does not fork, replace, or depend on VS Code.**
 
-- 0canvas opens a **local folder** that happens to be a git repo. That folder was put there by whatever means the user chose — `git clone` in terminal, GitHub Desktop, VS Code's clone UI, or 0canvas's own "Clone from GitHub URL" button (Phase 4).
-- 0canvas performs git operations via `git2-rs` (Rust bindings to libgit2, the same library VS Code's git extension uses underneath). Independent of any editor.
-- Users can run VS Code, Cursor, Windsurf, Zed, or IntelliJ alongside 0canvas on the same repo. Both edit files, both respect git, no conflicts — because git is the shared source of truth.
-- The user's terminal inside 0canvas is a real shell with real `$PATH` — `code .`, `cursor .`, `claude`, `codex`, `gh` all just work if installed.
-- 0canvas does **not** ship a code editor. When a user wants to edit code text directly, they:
+- Zeros opens a **local folder** that happens to be a git repo. That folder was put there by whatever means the user chose — `git clone` in terminal, GitHub Desktop, VS Code's clone UI, or Zeros's own "Clone from GitHub URL" button (Phase 4).
+- Zeros performs git operations via `git2-rs` (Rust bindings to libgit2, the same library VS Code's git extension uses underneath). Independent of any editor.
+- Users can run VS Code, Cursor, Windsurf, Zed, or IntelliJ alongside Zeros on the same repo. Both edit files, both respect git, no conflicts — because git is the shared source of truth.
+- The user's terminal inside Zeros is a real shell with real `$PATH` — `code .`, `cursor .`, `claude`, `codex`, `gh` all just work if installed.
+- Zeros does **not** ship a code editor. When a user wants to edit code text directly, they:
   1. Ask the agent in Chat (which edits via tools)
   2. Run `code .` in the integrated terminal to open their preferred editor
   3. Use an external editor they already have open
-- **No VS Code extension is needed** on the 0canvas side. The frozen `extensions/vscode/` directory is not revived.
+- **No VS Code extension is needed** on the Zeros side. The frozen `extensions/vscode/` directory is not revived.
 
-This keeps 0canvas's scope focused: we are **the design canvas + the agent workspace + the git/env/terminal utility belt** — not another IDE trying to replace the user's chosen editor.
+This keeps Zeros's scope focused: we are **the design canvas + the agent workspace + the git/env/terminal utility belt** — not another IDE trying to replace the user's chosen editor.
 
 ---
 
@@ -253,7 +253,7 @@ Accessed via profile menu → Settings. Full-page overlay (hides the three-colum
 - **MCP Servers** — installed list (our engine's MCP appears here as built-in, plus any user-installed servers like Directus, Context7, Figma, Supabase, GitHub, etc.) with Authenticate / Toggle / Delete / Configure buttons. Recommended list below for one-click install (Context7, Figma MCP, Supabase, GitHub, Filesystem, Brave Search, Memory, Puppeteer, Slack, PostgreSQL — same catalog Clonk exposes).
 - **Debug** — log viewer, engine port, sidecar status, MCP connectivity tester, diagnostics export.
 
-Settings storage: `~/Library/Application Support/0canvas/settings.json` (non-secret) + macOS keychain (secrets). No database.
+Settings storage: `~/Library/Application Support/Zeros/settings.json` (non-secret) + macOS keychain (secrets). No database.
 
 ---
 
@@ -271,7 +271,7 @@ Settings storage: `~/Library/Application Support/0canvas/settings.json` (non-sec
 │   │   └── worktree.rs    (parallel-agent worktree orchestration)
 │   ├── Cargo.toml
 │   └── tauri.conf.json
-├── src/                   (React UI — existing src/0canvas/ moves here)
+├── src/                   (React UI — existing src/zeros/ moves here)
 │   ├── main.tsx           (Tauri webview entry)
 │   ├── app.tsx            (top-level)
 │   ├── panels/            (all existing panels)
@@ -337,21 +337,21 @@ Every item in today's codebase must work in the Mac app's Phase 1 exit. High-lev
 - `tsup.config.ts` — entry 2 (Vite plugin build) and entry 1's external-React config; keep engine build only
 - `package.json` — `./vite` export, `peerDependencies`, `peerDependenciesMeta`, `bin`, `main`, `module`, `types`, `exports`, `files` (all go away for an app, not a library)
 - `src/index.ts` — public export surface (inspector utilities, hooks, types as public API). React component mounts internally, not exported.
-- `src/0canvas/format/oc-project-store.ts` lines 128–186 — `downloadProjectFile` Blob/anchor, `importProjectFile` hidden file input
-- `src/0canvas/db/variant-db.ts` — entire IndexedDB layer
-- Iframe dual-mode fallbacks in `src/0canvas/inspector/target.ts`, `source-node.tsx`, `variant-node.tsx` — Mac app has one document
+- `src/zeros/format/oc-project-store.ts` lines 128–186 — `downloadProjectFile` Blob/anchor, `importProjectFile` hidden file input
+- `src/zeros/db/variant-db.ts` — entire IndexedDB layer
+- Iframe dual-mode fallbacks in `src/zeros/inspector/target.ts`, `source-node.tsx`, `variant-node.tsx` — Mac app has one document
 - Z-index `2147483646`/`2147483647` → `9999` (no host z-index war)
 
 **MIGRATE (same capability, different storage/transport):**
-- `oc-project-store.ts` IDB persistence (lines 37–54) → `~/Library/Application Support/0canvas/projects/{id}.0c` via Tauri fs
-- `oc-sync-meta` IDB store → `~/Library/Application Support/0canvas/sync-meta.json`
-- `style-panel.tsx:587` localStorage focus-mode pref → `~/Library/Application Support/0canvas/settings.json`
+- `oc-project-store.ts` IDB persistence (lines 37–54) → `~/Library/Application Support/Zeros/projects/{id}.0c` via Tauri fs
+- `oc-sync-meta` IDB store → `~/Library/Application Support/Zeros/sync-meta.json`
+- `style-panel.tsx:587` localStorage focus-mode pref → `~/Library/Application Support/Zeros/settings.json`
 - `AI_SETTINGS` localStorage → macOS keychain (via Tauri Rust command wrapping `security-framework`)
-- Hardcoded `ws://localhost:24193/ws` (`bridge/ws-client.ts:44`) → reads `window.__0CANVAS_PORT__` injected by Tauri `initialization_script`
+- Hardcoded `ws://localhost:24193/ws` (`bridge/ws-client.ts:44`) → reads `window.__ZEROS_PORT__` injected by Tauri `initialization_script`
 
 **KEEP UNCHANGED:**
 - Engine (`src/engine/**`) — all 11 files, WebSocket protocol, MCP tools, cache, watcher, resolver, writer, framework detector
-- All React UI (`src/0canvas/**`) except the deletions/migrations above
+- All React UI (`src/zeros/**`) except the deletions/migrations above
 - Bridge messages schema (`bridge/messages.ts`) — platform-neutral already
 - `tinyglobby` file discovery — just point at user-selected repo root
 - PostCSS-based CSS resolution, atomic temp-file-rename writes
@@ -361,7 +361,7 @@ Every item in today's codebase must work in the Mac app's Phase 1 exit. High-lev
 
 ## Phased Plan (v0.1 target: 15–19 weeks solo, updated for three-column shell)
 
-Scope expanded from the earlier plan: Phase 1 now includes the full three-column UI shell and Column 2's developer tools (terminal, env, todo). This is what makes 0canvas a credible design-first Mac IDE rather than just a design tool in a window.
+Scope expanded from the earlier plan: Phase 1 now includes the full three-column UI shell and Column 2's developer tools (terminal, env, todo). This is what makes Zeros a credible design-first Mac IDE rather than just a design tool in a window.
 
 ### Phase 0 — Cleanup & Storage Migration (✅ COMPLETED 2026-04-20)
 
@@ -375,7 +375,7 @@ Merged to `main` in two commits:
 - Build `src/native/storage.ts` — same API shape as today's IDB calls, but backed by filesystem (initially via Node fs during dev, Tauri fs after Phase 1)
 - Migrate `oc-project-store` IDB code paths to filesystem equivalent
 - Migrate localStorage settings → single `settings.json`
-- Fix hardcoded WS port — read from `window.__0CANVAS_PORT__` fallback 24193
+- Fix hardcoded WS port — read from `window.__ZEROS_PORT__` fallback 24193
 - Simplify `tsup.config.ts` to engine-only entry
 - Regression: every existing feature still works when running against local filesystem (dev mode with vanilla Vite harness for now)
 
@@ -383,14 +383,14 @@ Merged to `main` in two commits:
 
 ### Phase 1A — Tauri Shell + Sidecar + Column 3 parity ✅ SHIPPED
 
-**Goal:** "it's a Mac app." All existing 0canvas functionality runs inside Column 3 of the three-column layout, wrapped in a Tauri window.
+**Goal:** "it's a Mac app." All existing Zeros functionality runs inside Column 3 of the three-column layout, wrapped in a Tauri window.
 
 - Scaffold `src-tauri/` with `cargo tauri init`
 - Configure `tauri.conf.json`: window (1600×1000, resizable, min 1200×700), macOS title-bar style, CSP allowing `ws://localhost:*`, `http://localhost:*`
 - Write `src-tauri/src/sidecar.rs`: launch compiled engine via `Command::sidecar` on app start, kill on exit, restart on crash
 - Compile engine as **Bun single-file executable** via `bun build --compile` — critical for `@parcel/watcher` `.node` binary bundling (avoid `pkg`/`nexe` — fragile)
-- Write `src-tauri/src/main.rs`: read engine's `.0canvas/.port` file to discover actual port, inject into webview via `initialization_script` (exposes `window.__0CANVAS_PORT__` which `ws-client.ts` already reads — no overlay code change needed)
-- Wire `src/native/storage.ts` to Tauri fs API (swap IDB shim for `~/Library/Application Support/0canvas/projects/*.0c` real-file persistence)
+- Write `src-tauri/src/main.rs`: read engine's `.zeros/.port` file to discover actual port, inject into webview via `initialization_script` (exposes `window.__ZEROS_PORT__` which `ws-client.ts` already reads — no overlay code change needed)
+- Wire `src/native/storage.ts` to Tauri fs API (swap IDB shim for `~/Library/Application Support/Zeros/projects/*.0c` real-file persistence)
 - Build **three-column shell** layout: `src/app.tsx` renders `<Column1Nav /><Column2Workspace /><Column3Canvas />`. Column 1 is a placeholder (content in 1B); Column 3 wraps today's entire UI (canvas, panels, inspector) unchanged. Column 2 is placeholder with tab bar stub.
 - Build native menu: File (Open Folder, Open Recent, Close), Edit (Undo/Redo dispatched to store), View (Toggle Column 1/Column 3), Window, Help
 - Native file dialog for "Open Folder" → sets engine's working root → sidecar restarts with new cwd
@@ -399,7 +399,7 @@ Merged to `main` in two commits:
 
 **Exit criteria:**
 - `cargo tauri dev` opens Mac window, three-column skeleton visible, HMR works
-- Column 3 shows all current 0canvas features working identically to Phase 0 Vite harness
+- Column 3 shows all current Zeros features working identically to Phase 0 Vite harness
 - `cargo tauri build` produces a working `.app` (ad-hoc signed)
 - Sidecar auto-restarts on crash; no zombie Node processes on app quit
 - Open a folder → engine discovers framework + CSS files → overlay reflects them
@@ -410,7 +410,7 @@ Merged to `main` in two commits:
 
 - **Column 1:** implement
   - Logo + `+ New Chat` + `⚡ Skills`
-  - CHATS tree with folders (`0canvas-state.folders`, `0canvas-state.chats` stored in `settings.ts`)
+  - CHATS tree with folders (`Zeros-state.folders`, `Zeros-state.chats` stored in `settings.ts`)
   - LOCALHOST auto-discovery (poll common dev-server ports: 3000, 5173, 5432, 24193, …; show any that respond)
   - Profile dropdown (How to / Settings / Logout) — Settings button navigates to Settings page
   - Collapse toggle (top-right of column 1); collapsed state = icon rail
@@ -431,14 +431,14 @@ Merged to `main` in two commits:
 - **Terminal tab:** integrate `tauri-plugin-pty` (Rust) + `xterm.js` + `@xterm/addon-fit` (frontend). Spawn the user's `$SHELL` (default zsh). Cwd = current project root. Multi-session support (in-panel tabs). Font/colors match app theme.
 - **Git tab:** add `git2-rs` dep and `src-tauri/src/git.rs` exposing Tauri commands: `git_status`, `git_stage`, `git_unstage`, `git_stage_all`, `git_commit`, `git_push`, `git_pull`, `git_branch_list`, `git_branch_current`, `git_branch_switch`, `git_branch_create`, `git_diff_file`, `git_log_recent`. UI panel renders Unstaged/Staged tabs + commit box + branch pill + Push N / Pull buttons + Recent Commits list. Visual diff hooks into existing `panels/visual-diff.tsx`.
 - **Env tab:** glob for `.env*` files in project root. Render each as a tab inside the Env panel. Table editor: key/value rows, `+ Add Variable`, masked values with click-to-reveal. Writes via native fs atomically. Warns if file is not `.gitignore`'d.
-- **Todo tab:** markdown-backed at `.0canvas/todo.md`. Parses `- [ ]` / `- [x]` checkboxes; agent can edit this file directly; live reload on file change.
+- **Todo tab:** markdown-backed at `.zeros/todo.md`. Parses `- [ ]` / `- [x]` checkboxes; agent can edit this file directly; live reload on file change.
 - **Icon bar** in Column 2 top: switches between the 5 panels; keyboard shortcuts `⌘1`–`⌘5`.
 
 **Exit criteria:**
 - Terminal: `echo $SHELL` returns zsh; `ls` shows project root; can run `npm run dev` and see output
 - Git: edit a style → Unstaged list shows file → click to see visual diff → Stage All → Commit with auto-message → Push → `gh pr create` from terminal succeeds
 - Env: add `TEST_VAR=hello` → saves to `.env.local` → verify via `cat .env.local` in terminal
-- Todo: agent says "add a task: refactor theme panel" → `.0canvas/todo.md` gets the line → UI shows it
+- Todo: agent says "add a task: refactor theme panel" → `.zeros/todo.md` gets the line → UI shows it
 
 ### Phase 2 — Native Upgrades That Solve Current Pain Points ✅ SHIPPED (2-A..2-F)
 
@@ -456,7 +456,7 @@ Commits on `main`:
 - **Project workspace manager** (new route): recent projects list, "Open Folder", framework badge per project, per-project `.0c` persistence path. Lives as a Column 1 picker above CHATS, or a dedicated Home screen when no project is open.
 - **macOS keychain for API keys**: Rust command wrapping `security-framework`; storage API swap transparent to UI. `src/native/secrets.ts` replaces localStorage for sensitive values.
 - **Native notifications**: replace in-app toasts with `tauri-plugin-notification` for important events (agent completed, PR pushed)
-- **Deep link handler**: `zero-canvas://open?path=/Users/...` — for "Open in 0canvas" links later
+- **Deep link handler**: `zeros://open?path=/Users/...` — for "Open in Zeros" links later
 - **Settings page routing**: implement the Settings page spec from "Settings Page Spec" section. General + AI Models + Appearance + API Keys + MCP Servers + Debug tabs. The sidebar pattern shown in the Clonk screenshots.
 
 **Exit criteria:** opening a cloned repo, theme.css edits flow both ways without manual upload; workspace manager shows recent projects; API keys persist through app restart via keychain; Settings page is fully navigable with all tabs functional.
@@ -486,8 +486,8 @@ revert/reset from commit log). See §TODO.
 Shipped in commit `f29af21` (Phase 4 WIP bundle):
 - `src-tauri/src/ai_cli.rs` — subprocess bridge for `claude` / `codex`
 - `src-tauri/src/skills.rs` — markdown skills loader
-- `src/0canvas/lib/ai-cli.ts` — AsyncGenerator streaming bridge
-- `src/0canvas/lib/anthropic.ts` — direct Messages API streaming
+- `src/zeros/lib/ai-cli.ts` — AsyncGenerator streaming bridge
+- `src/zeros/lib/anthropic.ts` — direct Messages API streaming
 - `src/shell/mission-panel.tsx` — Mission Control dashboard
 - 5 skills in `skills/`: audit-contrast, clone-design, generate-variants, migrate-tokens, theme-propagation
 
@@ -500,7 +500,7 @@ allowlists. See §TODO.
 - Add `@anthropic-ai/sdk` next to `src/lib/openai.ts`. Extract `src/lib/ai-stream.ts` common streaming interface — panels become provider-agnostic dropdown.
 - **Prompt caching mandatory**: `cache_control: {type:"ephemeral"}` on system prompt and tool defs. Recoups cost within 2 messages.
 - **Claude CLI subprocess path** (Clonk/Commander pattern): if user has Claude Max, spawn `claude-code` via `shell::spawn` — zero API cost. Stream stdout/stderr back to chat panel via Tauri events. Provider dropdown: "Claude Max (CLI)", "Claude API", "OpenAI API".
-- **Skills system**: `skills/` directory with markdown files. Engine exposes skills via new MCP tool `0canvas_list_skills`. Skills picker in AI panel. Each skill = specialized system prompt + allowlisted MCP tool set.
+- **Skills system**: `skills/` directory with markdown files. Engine exposes skills via new MCP tool `Zeros_list_skills`. Skills picker in AI panel. Each skill = specialized system prompt + allowlisted MCP tool set.
 - Initial skills shipped:
   - `audit-contrast.md` — WCAG violations across all variants
   - `migrate-tokens.md` — rename/restructure tokens across codebase
@@ -524,11 +524,11 @@ allowlists. See §TODO.
 - **Code signing + notarization** via Tauri's build pipeline (`tauri signer` + `xcrun notarytool`) — Gatekeeper accepts silently on all user machines, no "unidentified developer" warnings
 - **Auto-update** via `tauri-plugin-updater` + signed static manifest on GitHub Pages/Releases → Sparkle-style seamless updates with cryptographic verification
 - **Signed DMG** with custom background, app icon, dock layout
-- **Deep link registration** (`zero-canvas://open?path=...`)
-- **Homebrew cask** — secondary install path for power users who prefer `brew install --cask 0canvas`
+- **Deep link registration** (`zeros://open?path=...`)
+- **Homebrew cask** — secondary install path for power users who prefer `brew install --cask Zeros`
 - **Landing page** with direct DMG download (primary) + Homebrew command (secondary)
 - **Migration docs** for any existing npm-overlay users
-- **Final npm release** — `@zerosdesign/0canvas@0.1.0` with deprecation banner pointing to the Mac app
+- **Final npm release** — `@Withso/zeros@0.1.0` with deprecation banner pointing to the Mac app
 
 **Exit criteria:**
 1. Signed + notarized DMG installs on clean Mac → Gatekeeper accepts silently, no warnings
@@ -564,10 +564,10 @@ are touched.
 
 ## Sunset Plan for Browser Overlay
 
-1. **Final release** — ship one last `@zerosdesign/0canvas@0.1.0` with:
-   - README banner pointing to 0canvas.app Mac download
+1. **Final release** — ship one last `@Withso/zeros@0.1.0` with:
+   - README banner pointing to Zeros.app Mac download
    - `console.warn` on mount: "The npm overlay is deprecated. Install the Mac app for full features."
-2. **npm deprecation** — `npm deprecate @zerosdesign/0canvas "Install the Mac app at 0canvas.app"`
+2. **npm deprecation** — `npm deprecate @Withso/zeros "Install the Mac app at Zeros.app"`
 3. **GitHub repo** — top-level notice; issues redirected
 4. **VS Code extension** — already frozen; no new publishes
 5. **Existing users** — free Pro license migration offer; `.0c` projects import via "Open Folder" in the Mac app (same format, filesystem-backed now)
@@ -581,8 +581,8 @@ are touched.
 | `@parcel/watcher` native `.node` won't bundle | Use Bun `--compile`. Validated path per engine research. |
 | WKWebView visual differences vs Chromium | Budget 2 days Phase 1 visual QA. Target macOS 14+ (modern WKWebView). Test `backdrop-filter`, `:has()`, `tw-animate-css`. |
 | Firewall prompt on engine start | Bind strictly to `127.0.0.1` (not `0.0.0.0` — note: today's server binds to `0.0.0.0` at `server.ts:194`, must change in Phase 1). |
-| Port collision | Engine already retries 24193–24200. Plumb `actualPort` from `.0canvas/.port` → webview. |
-| Keychain UX (Touch ID flows) | Test early in Phase 2. Fallback: encrypted file in `~/Library/Application Support/0canvas/` with passphrase. |
+| Port collision | Engine already retries 24193–24200. Plumb `actualPort` from `.zeros/.port` → webview. |
+| Keychain UX (Touch ID flows) | Test early in Phase 2. Fallback: encrypted file in `~/Library/Application Support/Zeros/` with passphrase. |
 | Rust learning curve | Scope Rust to ~600–800 lines calling `git2` + `security-framework` + `shell::spawn`. No idiomatic gymnastics. |
 | Engine binary size (Bun compile) | ~50 MB compressed. Acceptable for ~80 MB total app. |
 | Multi-client broadcast behavior | Engine broadcasts to all WS clients; a future "open multiple project windows" feature would need filtering. Note for Phase 6. |
@@ -597,9 +597,9 @@ are touched.
 
 **Delete entirely:**
 - `src/vite-plugin.ts`
-- `src/0canvas/db/variant-db.ts`
+- `src/zeros/db/variant-db.ts`
 - `src/index.ts` (public export surface) — replace with internal `src/main.tsx`
-- `src/0canvas/format/oc-project-store.ts` lines 128–186 (download/import UI)
+- `src/zeros/format/oc-project-store.ts` lines 128–186 (download/import UI)
 - `package.json` fields: `bin`, `main`, `module`, `types`, `exports`, `files`, `peerDependencies`, `peerDependenciesMeta`
 - `tsup.config.ts` entry 1 (browser lib) and entry 2 (Vite plugin); keep entry 3 (CLI/engine) for engine sidecar build, or replace with Bun compile script
 
@@ -619,25 +619,25 @@ are touched.
 - `scripts/build-sidecar.ts` — Bun compile for engine binary
 
 **Modify:**
-- `src/0canvas/bridge/ws-client.ts:44` — read port from `window.__0CANVAS_PORT__`
+- `src/zeros/bridge/ws-client.ts:44` — read port from `window.__ZEROS_PORT__`
 - `src/engine/server.ts:194` — bind to `127.0.0.1` not `0.0.0.0`
-- `src/0canvas/format/oc-project-store.ts` lines 37–54 — swap IDB for filesystem
-- `src/0canvas/panels/style-panel.tsx:587` — swap localStorage for settings file
-- `src/0canvas/themes/themes-page.tsx` — swap File System Access API for native fs + watcher
-- `src/0canvas/inspector/overlay.ts:76,82` — z-index to 9999
-- `src/0canvas/inspector/target.ts` — remove iframe dual-mode fallback (keep single-doc path)
-- `package.json` — becomes an app package (name `@zerosdesign/0canvas-mac`, private, Tauri scripts)
+- `src/zeros/format/oc-project-store.ts` lines 37–54 — swap IDB for filesystem
+- `src/zeros/panels/style-panel.tsx:587` — swap localStorage for settings file
+- `src/zeros/themes/themes-page.tsx` — swap File System Access API for native fs + watcher
+- `src/zeros/inspector/overlay.ts:76,82` — z-index to 9999
+- `src/zeros/inspector/target.ts` — remove iframe dual-mode fallback (keep single-doc path)
+- `package.json` — becomes an app package (name `@Withso/zeros-mac`, private, Tauri scripts)
 
 **Keep unchanged (100% reuse):**
 - All of `src/engine/**` (11 files)
-- All of `src/0canvas/canvas/**`
-- All of `src/0canvas/editors/**`
-- All of `src/0canvas/panels/**` (except specific modifications above)
-- All of `src/0canvas/store/**`
-- All of `src/0canvas/format/**` except `oc-project-store.ts` storage layer
-- All of `src/0canvas/inspector/**` except overlay z-index and iframe fallback
-- All of `src/0canvas/themes/**` except file access layer
-- `src/0canvas/bridge/messages.ts`, `bridge/use-bridge.tsx`
+- All of `src/zeros/canvas/**`
+- All of `src/zeros/editors/**`
+- All of `src/zeros/panels/**` (except specific modifications above)
+- All of `src/zeros/store/**`
+- All of `src/zeros/format/**` except `oc-project-store.ts` storage layer
+- All of `src/zeros/inspector/**` except overlay z-index and iframe fallback
+- All of `src/zeros/themes/**` except file access layer
+- `src/zeros/bridge/messages.ts`, `bridge/use-bridge.tsx`
 
 ---
 
@@ -672,8 +672,8 @@ are touched.
 **Phase 5 end-to-end:**
 1. Signed + notarized DMG installs on clean Mac; Gatekeeper accepts silently with no warnings
 2. Push a version bump → existing install receives signed update via `tauri-plugin-updater`, verifies signature, applies seamlessly
-3. `brew install --cask 0canvas` alternative path works for power users
-4. Deep link `zero-canvas://` opens the app correctly from a browser
+3. `brew install --cask Zeros` alternative path works for power users
+4. Deep link `zeros://` opens the app correctly from a browser
 
 **Regression guard every phase:** the parity-contract feature list is a checklist. Every PR merge runs through it in a manual smoke-test pass (~15 min). No automated end-to-end suite needed for v0.1 — manual QA against one contract is sufficient for solo-dev scope.
 

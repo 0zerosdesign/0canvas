@@ -10,10 +10,10 @@
 
 ---
 
-> `src/0canvas/panels/ai-chat-panel.tsx`
-> Supporting module: `src/0canvas/lib/openai.ts`
+> `src/zeros/panels/ai-chat-panel.tsx`
+> Supporting module: `src/zeros/lib/openai.ts`
 
-The AI Chat Panel is a context-aware AI design agent embedded in the 0canvas sidebar. It connects to AI providers, sends structured design context, streams responses with live visual preview, and offers per-property accept/reject controls.
+The AI Chat Panel is a context-aware AI design agent embedded in the Zeros sidebar. It connects to AI providers, sends structured design context, streams responses with live visual preview, and offers per-property accept/reject controls.
 
 ---
 
@@ -21,7 +21,7 @@ The AI Chat Panel is a context-aware AI design agent embedded in the 0canvas sid
 
 ### 1. ChatGPT (Proxy) — `provider: "chatgpt"`
 
-Uses a local proxy (`npx openai-oauth`, default `http://127.0.0.1:10531`) to access ChatGPT without an API key. The proxy handles OAuth, and 0canvas sends Chat Completions requests to `{proxyUrl}/v1/chat/completions`. No API key is needed; the proxy authenticates via the user's ChatGPT subscription.
+Uses a local proxy (`npx openai-oauth`, default `http://127.0.0.1:10531`) to access ChatGPT without an API key. The proxy handles OAuth, and Zeros sends Chat Completions requests to `{proxyUrl}/v1/chat/completions`. No API key is needed; the proxy authenticates via the user's ChatGPT subscription.
 
 ### 2. OpenAI (BYOK) — `provider: "openai"`
 
@@ -29,7 +29,7 @@ Direct OpenAI API access. The user enters their own API key in Settings. Request
 
 ### 3. IDE Agent — `provider: "ide"`
 
-Delegates to the VS Code extension's agent dispatch system. The browser sends an `AI_CHAT_REQUEST` message over the WebSocket bridge. The extension builds a rich markdown context, writes it to `.0canvas/ai-request.md`, and opens the IDE's chat panel (Cursor Composer, Copilot Chat, or Claude Code terminal) with a direct prompt. A 10-second timeout falls back to "Sent to IDE agent." if no response arrives.
+Delegates to the VS Code extension's agent dispatch system. The browser sends an `AI_CHAT_REQUEST` message over the WebSocket bridge. The extension builds a rich markdown context, writes it to `.zeros/ai-request.md`, and opens the IDE's chat panel (Cursor Composer, Copilot Chat, or Claude Code terminal) with a direct prompt. A 10-second timeout falls back to "Sent to IDE agent." if no response arrives.
 
 **Configuration check:** `isAiConfigured()` requires a proxy URL for ChatGPT, an API key for OpenAI, and always returns true for IDE mode.
 
@@ -68,7 +68,7 @@ When nothing is selected, the panel shows a prompt to select a variant or elemen
 ### `VARIANT_SYSTEM_PROMPT`
 
 ```
-You are the AI design agent for 0canvas. You redesign UI components.
+You are the AI design agent for Zeros. You redesign UI components.
 ```
 
 Key rules:
@@ -85,7 +85,7 @@ Key rules:
 ### `ELEMENT_SYSTEM_PROMPT`
 
 ```
-You are the AI design agent for 0canvas -- a visual design tool on production code.
+You are the AI design agent for Zeros -- a visual design tool on production code.
 The designer selects elements and asks you to make visual changes.
 ```
 
@@ -244,10 +244,10 @@ User types query
 
 | File | Role |
 |------|------|
-| `src/0canvas/panels/ai-chat-panel.tsx` | Main panel component |
-| `src/0canvas/lib/openai.ts` | AI client: streaming, settings persistence, model list |
-| `src/0canvas/bridge/use-bridge.tsx` | `useBridge`, `useBridgeStatus`, `useExtensionConnected` hooks |
-| `src/0canvas/bridge/messages.ts` | `BridgeMessage` type, `AI_CHAT_REQUEST`/`AI_CHAT_RESPONSE` |
-| `src/0canvas/store/store.tsx` | `useWorkspace`, `findElement`, `UPDATE_VARIANT`, `UPDATE_STYLE` |
-| `src/0canvas/inspector/index.ts` | `applyStyle()`, `flashElement()` for DOM manipulation |
-| `src/0canvas/ui/scroll-area.tsx` | `ScrollArea` component |
+| `src/zeros/panels/ai-chat-panel.tsx` | Main panel component |
+| `src/zeros/lib/openai.ts` | AI client: streaming, settings persistence, model list |
+| `src/zeros/bridge/use-bridge.tsx` | `useBridge`, `useBridgeStatus`, `useExtensionConnected` hooks |
+| `src/zeros/bridge/messages.ts` | `BridgeMessage` type, `AI_CHAT_REQUEST`/`AI_CHAT_RESPONSE` |
+| `src/zeros/store/store.tsx` | `useWorkspace`, `findElement`, `UPDATE_VARIANT`, `UPDATE_STYLE` |
+| `src/zeros/inspector/index.ts` | `applyStyle()`, `flashElement()` for DOM manipulation |
+| `src/zeros/ui/scroll-area.tsx` | `ScrollArea` component |

@@ -77,7 +77,7 @@ export class CSSFileWriter {
     lines[idx] = match[1] + newValue + match[3];
 
     // Write back atomically (write to temp, then rename)
-    const tmpPath = absPath + ".0canvas-tmp";
+    const tmpPath = absPath + ".zeros-tmp";
     try {
       fs.writeFileSync(tmpPath, lines.join("\n"), "utf-8");
       fs.renameSync(tmpPath, absPath);
@@ -160,7 +160,7 @@ export class CSSFileWriter {
     lines.splice(closingBraceLine, 0, newLine);
 
     // Atomic write
-    const tmpPath = absPath + ".0canvas-tmp";
+    const tmpPath = absPath + ".zeros-tmp";
     try {
       fs.writeFileSync(tmpPath, lines.join("\n"), "utf-8");
       fs.renameSync(tmpPath, absPath);

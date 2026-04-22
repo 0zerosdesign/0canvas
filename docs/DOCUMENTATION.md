@@ -1,4 +1,4 @@
-# 0canvas — Documentation Index
+# Zeros — Documentation Index
 
 > **⚠️ 2026-04-20 rewrite.** This file previously carried the full
 > engine-era module reference (40KB); that content is now in
@@ -12,7 +12,7 @@
 
 | If you want to understand... | Read |
 |---|---|
-| **What 0canvas is** (current vision) | [PRODUCT_VISION_V3.md](PRODUCT_VISION_V3.md) |
+| **What Zeros is** (current vision) | [PRODUCT_VISION_V3.md](PRODUCT_VISION_V3.md) |
 | **How the Mac app is being built** (phase plan, what's shipped) | [TAURI_MAC_APP_PLAN.md](TAURI_MAC_APP_PLAN.md) |
 | **How to run the app locally** | [TAURI_SETUP.md](TAURI_SETUP.md) |
 | **The engine internals** (CSS resolver, selector index, inspector, canvas, panels) | [PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md) §1-10 |
@@ -64,13 +64,13 @@ docs/
 | Code surface | Primary doc |
 |---|---|
 | `src/app-shell.tsx`, `src/shell/` (Col 1, Col 2 panels) | V3 §2-4 (gap: no per-module doc yet — see V3 TODO) |
-| `src/0canvas/engine/` (engine shell + styles) | PROJECT_ANALYSIS.md §5 |
-| `src/0canvas/canvas/` (variant canvas) | `context/canvas-variants/` |
-| `src/0canvas/inspector/` | `context/inspector/` |
-| `src/0canvas/panels/style-panel.tsx` | `context/style-panel/` |
-| `src/0canvas/themes/` | `context/themes/` |
-| `src/0canvas/bridge/` | `context/bridge-communication/` |
-| `src/0canvas/format/` | `context/format-persistence/` |
+| `src/zeros/engine/` (engine shell + styles) | PROJECT_ANALYSIS.md §5 |
+| `src/zeros/canvas/` (variant canvas) | `context/canvas-variants/` |
+| `src/zeros/inspector/` | `context/inspector/` |
+| `src/zeros/panels/style-panel.tsx` | `context/style-panel/` |
+| `src/zeros/themes/` | `context/themes/` |
+| `src/zeros/bridge/` | `context/bridge-communication/` |
+| `src/zeros/format/` | `context/format-persistence/` |
 | `src/engine/` (npm engine backend) | V2 §3-4 (still accurate for the npm channel) |
 | `src-tauri/src/` (Rust backend) | V3 §7 |
 | `src/native/` (Tauri JS bridge) | *no doc yet* — see V3 TODO |

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-// ZeroCanvas Setup Script
-// Usage: node 0canvas/setup.mjs
+// Zeros Setup Script
+// Usage: node zeros/setup.mjs
 
 import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
@@ -19,7 +19,7 @@ function findProjectRoot(startDir) {
 }
 
 function main() {
-  console.log('\n  ZeroCanvas Setup\n');
+  console.log('\n  Zeros Setup\n');
   const root = findProjectRoot(__dirname);
   if (!root) { console.log('  Error: No package.json found.'); process.exit(1); }
   const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf-8'));
@@ -31,7 +31,7 @@ function main() {
     else { console.log('  x ' + dep + ' (required)'); ok = false; }
   }
   if (!ok) { console.log('\n  React is required.'); process.exit(1); }
-  console.log('\n  Setup complete! Add <ZeroCanvas /> to your app.\n');
+  console.log('\n  Setup complete! Add <Zeros /> to your app.\n');
 }
 
 main();

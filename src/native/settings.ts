@@ -4,7 +4,7 @@
 //
 // Phase 0: localStorage-backed (works in Vite dev harness).
 // Phase 1: swap to Tauri fs (`~/Library/Application Support/
-// 0canvas/settings.json`) — same call sites, same interface.
+// zeros/settings.json`) — same call sites, same interface.
 //
 // ──────────────────────────────────────────────────────────
 

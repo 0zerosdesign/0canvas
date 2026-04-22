@@ -84,7 +84,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
         with:
           tagName: v${{ steps.version.outputs.version }}
-          releaseName: 0canvas v${{ steps.version.outputs.version }}
+          releaseName: Zeros v${{ steps.version.outputs.version }}
           releaseBody: |
             Auto-release from commit ${{ github.sha }}.
 

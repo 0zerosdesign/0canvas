@@ -2,10 +2,10 @@
 // Engine sidecar — spawn, track, shutdown, crash watchdog
 // ──────────────────────────────────────────────────────────
 //
-// The Node.js 0canvas engine runs as a child process of the
+// The Node.js Zeros engine runs as a child process of the
 // Tauri shell. It binds a local WebSocket + HTTP server on
 // 127.0.0.1:24193 (retries up to 24200) and writes the actual
-// port to `<project_root>/.0canvas/.port` after binding.
+// port to `<project_root>/.zeros/.port` after binding.
 //
 // Crash recovery: a lightweight watchdog task polls a TCP
 // connection against the bound port every 2 s. If the port
@@ -72,8 +72,8 @@ impl SidecarState {
 ///
 /// Layout differs between the dev tree and the bundled .app:
 ///
-/// Dev:     `<repo>/src-tauri/binaries/0canvas-engine-<triple>`
-/// Release: `<App>.app/Contents/MacOS/0canvas-engine`
+/// Dev:     `<repo>/src-tauri/binaries/zeros-engine-<triple>`
+/// Release: `<App>.app/Contents/MacOS/zeros-engine`
 ///          (Tauri STRIPS the `-<triple>` suffix on macOS/Linux.)
 fn locate_engine_binary() -> Result<PathBuf, String> {
     let triple = match std::env::consts::ARCH {
@@ -89,14 +89,14 @@ fn locate_engine_binary() -> Result<PathBuf, String> {
         .to_path_buf();
 
     let candidates: [PathBuf; 3] = [
-        exe_dir.join("0canvas-engine"),
-        exe_dir.join(format!("0canvas-engine-{}", triple)),
+        exe_dir.join("zeros-engine"),
+        exe_dir.join(format!("zeros-engine-{}", triple)),
         {
             let mut d = exe_dir.clone();
             d.pop();
             d.pop();
             d.push("binaries");
-            d.push(format!("0canvas-engine-{}", triple));
+            d.push(format!("zeros-engine-{}", triple));
             d
         },
     ];
@@ -123,7 +123,7 @@ fn port_reachable(port: u16) -> bool {
 }
 
 /// Spawn the engine with `project_root` as its working directory.
-/// Kills any previous child first, then polls for `<root>/.0canvas/.port`.
+/// Kills any previous child first, then polls for `<root>/.zeros/.port`.
 pub fn spawn_engine(state: &SidecarState, project_root: &Path) -> Result<u16, String> {
     spawn_engine_impl(&state.inner, project_root)
 }
@@ -138,7 +138,7 @@ fn spawn_engine_impl(inner: &Arc<SidecarInner>, project_root: &Path) -> Result<u
 
     let engine_bin = locate_engine_binary()?;
 
-    let port_file = project_root.join(".0canvas").join(".port");
+    let port_file = project_root.join(".zeros").join(".port");
     let _ = fs::remove_file(&port_file);
 
     let child = Command::new(&engine_bin)
@@ -167,7 +167,7 @@ fn spawn_engine_impl(inner: &Arc<SidecarInner>, project_root: &Path) -> Result<u
         if let Ok(content) = fs::read_to_string(&port_file) {
             if let Ok(port) = content.trim().parse::<u16>() {
                 *inner.port.lock().unwrap() = Some(port);
-                println!("[0canvas] engine ready on port {}", port);
+                println!("[Zeros] engine ready on port {}", port);
                 return Ok(port);
             }
         }
@@ -183,7 +183,7 @@ pub fn shutdown(state: &SidecarState) {
     if let Some(mut child) = state.inner.child.lock().unwrap().take() {
         let _ = child.kill();
         let _ = child.wait();
-        println!("[0canvas] engine stopped");
+        println!("[Zeros] engine stopped");
     }
     *state.inner.port.lock().unwrap() = None;
     *state.inner.root.lock().unwrap() = None;
@@ -236,17 +236,17 @@ pub fn start_watchdog(state: &SidecarState, app: AppHandle) {
             };
 
             eprintln!(
-                "[0canvas] engine unreachable on port {} after {} probes; respawning",
+                "[Zeros] engine unreachable on port {} after {} probes; respawning",
                 port, FAIL_THRESHOLD
             );
             fails = 0;
             match spawn_engine_impl(&inner, &root) {
                 Ok(new_port) => {
-                    println!("[0canvas] watchdog respawned engine on port {}", new_port);
+                    println!("[Zeros] watchdog respawned engine on port {}", new_port);
                     let _ = app.emit("engine-restarted", new_port);
                 }
                 Err(err) => {
-                    eprintln!("[0canvas] watchdog respawn failed: {}", err);
+                    eprintln!("[Zeros] watchdog respawn failed: {}", err);
                 }
             }
         }

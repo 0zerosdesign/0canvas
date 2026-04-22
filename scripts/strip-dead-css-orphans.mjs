@@ -23,13 +23,13 @@ import path from "node:path";
 
 const ROOT = path.resolve(process.cwd(), "src");
 const TARGETS = [
-  "0canvas/engine/0canvas-styles.ts",
-  "0canvas/engine/styles/canvas.ts",
-  "0canvas/engine/styles/command-palette.ts",
-  "0canvas/engine/styles/panels.ts",
-  "0canvas/engine/styles/settings.ts",
-  "0canvas/engine/styles/style-panel.ts",
-  "0canvas/engine/styles/toolbar.ts",
+  "zeros/engine/zeros-styles.ts",
+  "zeros/engine/styles/canvas.ts",
+  "zeros/engine/styles/command-palette.ts",
+  "zeros/engine/styles/panels.ts",
+  "zeros/engine/styles/settings.ts",
+  "zeros/engine/styles/style-panel.ts",
+  "zeros/engine/styles/toolbar.ts",
 ].map((p) => path.join(ROOT, p));
 
 function isOrphanScopeLine(line) {

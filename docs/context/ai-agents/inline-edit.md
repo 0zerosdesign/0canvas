@@ -6,8 +6,8 @@ The Inline AI Quick-Edit is a floating input panel that lets users describe a vi
 
 | File | Purpose |
 |------|---------|
-| `src/0canvas/panels/inline-edit.tsx` | React component: floating panel, phases, accept/reject, position calculation |
-| `src/0canvas/lib/ai-stream.ts` | Lightweight OpenAI streaming module: fetch + ReadableStream, no SDK dependency |
+| `src/zeros/panels/inline-edit.tsx` | React component: floating panel, phases, accept/reject, position calculation |
+| `src/zeros/lib/ai-stream.ts` | Lightweight OpenAI streaming module: fetch + ReadableStream, no SDK dependency |
 
 ---
 
@@ -69,7 +69,7 @@ api-key  -->  input  -->  streaming  -->  done  -->  [closed]
 Shown when no OpenAI API key is stored in localStorage.
 
 - Password input with `sk-...` placeholder
-- "Save" button stores the key via `setApiKey()` (writes to `localStorage["0canvas-openai-key"]`)
+- "Save" button stores the key via `setApiKey()` (writes to `localStorage["Zeros-openai-key"]`)
 - On save, transitions to `input` phase
 - Escape closes the panel
 
@@ -141,14 +141,14 @@ This is a lightweight, zero-dependency streaming module that calls the OpenAI Ch
 - **Model:** `gpt-4o-mini`
 - **Temperature:** 0.3 (low for predictable CSS output)
 - **Max tokens:** 512
-- **API key source:** `localStorage["0canvas-openai-key"]`
+- **API key source:** `localStorage["Zeros-openai-key"]`
 
 #### System prompt
 
 The AI is prompted to act as a CSS expert. It must respond ONLY with a CSS code block containing `property: value;` pairs -- no selectors, no curly braces, no explanations.
 
 ```
-You are a CSS expert inside a visual design tool called 0canvas.
+You are a CSS expert inside a visual design tool called Zeros.
 The user will describe a visual change they want on a selected HTML element.
 You MUST respond ONLY with a CSS code block containing property: value pairs.
 Do NOT include selectors or curly braces -- just the properties.

@@ -49,7 +49,7 @@ import {
   type GitConflict,
 } from "../native/tauri-events";
 import { getSetting, setSetting } from "../native/settings";
-import { Button, Textarea } from "../0canvas/ui";
+import { Button, Textarea } from "../zeros/ui";
 import { useChatCwd } from "./use-chat-cwd";
 
 const FORCE_PUSH_KEY = "git-allow-force-push";

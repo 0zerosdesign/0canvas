@@ -25,12 +25,12 @@ import {
   ListChecks,
   type LucideIcon,
 } from "lucide-react";
-import { EngineWorkspace } from "../0canvas/engine/0canvas-engine";
+import { EngineWorkspace } from "../zeros/engine/zeros-engine";
 import { GitPanel } from "./git-panel";
 import { TerminalPanel } from "./terminal-panel";
 import { EnvPanel } from "./env-panel";
 import { TodoPanel } from "./todo-panel";
-import { Button } from "../0canvas/ui";
+import { Button } from "../zeros/ui";
 
 type Col3Tab = "design" | "git" | "terminal" | "env" | "todo";
 
@@ -68,7 +68,7 @@ export function Column3() {
   }, []);
 
   return (
-    <div className="oc-column-3" data-0canvas-root="">
+    <div className="oc-column-3" data-Zeros-root="">
       <nav className="oc-column-3__tabs" role="tablist" data-tauri-drag-region>
         {TABS.map(({ id, label, icon: Icon }, idx) => {
           const isActive = tab === id;

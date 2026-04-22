@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────
-// ZeroCanvasEngine — The heart of 0canvas V2
+// ZerosEngine — The heart of Zeros V2
 // ──────────────────────────────────────────────────────────
 //
 // Standalone Node.js process that:
@@ -9,7 +9,7 @@
 //   - Exposes MCP endpoint for AI tools (Phase 1B)
 //
 // Usage:
-//   const engine = new ZeroCanvasEngine({ port: 24193 });
+//   const engine = new ZerosEngine({ port: 24193 });
 //   await engine.start();
 //
 // ──────────────────────────────────────────────────────────
@@ -25,7 +25,7 @@ import { TailwindWriter } from "./tailwind-writer";
 import { OCManager } from "./oc-manager";
 import { FileWatcher } from "./watcher";
 import { EngineServer } from "./server";
-import { ZeroCanvasMcp } from "./mcp";
+import { ZerosMcp } from "./mcp";
 import { AcpSessionManager } from "./acp/session-manager";
 import { detectFramework, findProjectRoot, type Framework } from "./framework-detector";
 import { createMessage, type EngineMessage } from "./types";
@@ -37,7 +37,7 @@ export interface EngineOptions {
   port?: number;
 }
 
-export class ZeroCanvasEngine {
+export class ZerosEngine {
   private cache: EngineCache;
   private resolver: CSSResolver;
   private writer: CSSFileWriter;
@@ -45,7 +45,7 @@ export class ZeroCanvasEngine {
   private ocManager: OCManager;
   private watcher: FileWatcher;
   private server: EngineServer;
-  private mcp: ZeroCanvasMcp | null = null;
+  private mcp: ZerosMcp | null = null;
   private acp: AcpSessionManager;
 
   private root: string;
@@ -156,19 +156,19 @@ export class ZeroCanvasEngine {
     const detection = detectFramework(this.root);
     this.framework = detection.framework;
 
-    console.log(`[0canvas] Project root: ${this.root}`);
-    console.log(`[0canvas] Framework: ${this.framework}`);
+    console.log(`[Zeros] Project root: ${this.root}`);
+    console.log(`[Zeros] Framework: ${this.framework}`);
 
     // 2. Build CSS selector index
     await this.cache.buildIndex();
     const stats = this.cache.stats();
-    console.log(`[0canvas] Index built: ${stats.selectors} selectors, ${stats.files} files, ${stats.tokens} tokens`);
+    console.log(`[Zeros] Index built: ${stats.selectors} selectors, ${stats.files} files, ${stats.tokens} tokens`);
 
     // 3. Start HTTP + WebSocket server
     this.actualPort = await this.server.start();
 
     // 4. Start MCP server (mounted on /mcp)
-    this.mcp = new ZeroCanvasMcp({
+    this.mcp = new ZerosMcp({
       root: this.root,
       cache: this.cache,
       resolver: this.resolver,
@@ -178,21 +178,21 @@ export class ZeroCanvasEngine {
       getSelection: () => this.currentSelection,
     });
     this.server.setMcpHandler((req, res) => this.mcp!.handleRequest(req, res));
-    console.log("[0canvas] MCP server mounted at /mcp");
+    console.log("[Zeros] MCP server mounted at /mcp");
 
     // Register the MCP endpoint with the ACP session manager. Every new ACP
     // session will tell its agent to connect to this endpoint — the agent
     // gets our 5 design tools natively, no per-agent config required.
     this.acp.registerMcpServer({
-      name: "0canvas",
+      name: "Zeros",
       url: `http://127.0.0.1:${this.actualPort}/mcp`,
     });
-    console.log(`[0canvas] MCP auto-attach enabled for ACP sessions`);
+    console.log(`[Zeros] MCP auto-attach enabled for ACP sessions`);
 
     // 5. Start file watcher
     await this.watcher.start();
 
-    // 5. Write .0canvas/.port file
+    // 5. Write .zeros/.port file
     this.writePortFile(this.actualPort);
 
     // 6. Generate .mcp.json if not present (for AI tool auto-discovery)
@@ -200,7 +200,7 @@ export class ZeroCanvasEngine {
 
     this.running = true;
     const elapsed = Date.now() - startTime;
-    console.log(`[0canvas] Engine ready on port ${this.actualPort} (${elapsed}ms)`);
+    console.log(`[Zeros] Engine ready on port ${this.actualPort} (${elapsed}ms)`);
   }
 
   /**
@@ -218,7 +218,7 @@ export class ZeroCanvasEngine {
     await this.server.stop();
     this.removePortFile();
 
-    console.log("[0canvas] Engine stopped");
+    console.log("[Zeros] Engine stopped");
   }
 
   // ── Message Routing ────────────────────────────────────
@@ -266,7 +266,7 @@ export class ZeroCanvasEngine {
 
   /**
    * Cache the latest selection reported by the browser. Exposed as the
-   * 0canvas_get_selection MCP tool so the agent sees what the designer is
+   * Zeros_get_selection MCP tool so the agent sees what the designer is
    * focused on without the user having to retype a selector.
    */
   private handleElementSelected(msg: EngineMessage): void {
@@ -409,7 +409,7 @@ export class ZeroCanvasEngine {
    */
   private async handleStyleChange(msg: EngineMessage, ws: WebSocket): Promise<void> {
     if (msg.type !== "STYLE_CHANGE") return;
-    console.log(`[0canvas] STYLE_CHANGE: ${msg.selector} { ${msg.property}: ${msg.value} }`);
+    console.log(`[Zeros] STYLE_CHANGE: ${msg.selector} { ${msg.property}: ${msg.value} }`);
 
     const location = await this.resolver.resolve(msg.selector, msg.property);
 
@@ -437,9 +437,9 @@ export class ZeroCanvasEngine {
     }));
 
     if (result.success) {
-      console.log(`[0canvas] Written: ${result.file}:${result.line}`);
+      console.log(`[Zeros] Written: ${result.file}:${result.line}`);
     } else {
-      console.warn(`[0canvas] Write failed: ${result.error}`);
+      console.warn(`[Zeros] Write failed: ${result.error}`);
     }
   }
 
@@ -479,13 +479,13 @@ export class ZeroCanvasEngine {
    */
   private async handleTailwindChange(msg: EngineMessage): Promise<void> {
     if (msg.type !== "TAILWIND_CLASS_CHANGE") return;
-    console.log(`[0canvas] TAILWIND_CLASS_CHANGE: ${msg.action} "${msg.className}" on ${msg.selector}`);
+    console.log(`[Zeros] TAILWIND_CLASS_CHANGE: ${msg.action} "${msg.className}" on ${msg.selector}`);
 
     const result = await this.tailwindWriter.writeClassChange(msg.selector, msg.action, msg.className);
     if (result.success) {
-      console.log(`[0canvas] Tailwind written: ${result.file}`);
+      console.log(`[Zeros] Tailwind written: ${result.file}`);
     } else {
-      console.warn(`[0canvas] Tailwind write failed: ${result.error}`);
+      console.warn(`[Zeros] Tailwind write failed: ${result.error}`);
     }
   }
 
@@ -503,24 +503,24 @@ export class ZeroCanvasEngine {
     );
 
     if (success) {
-      console.log(`[0canvas] Saved -> ${fileName}`);
+      console.log(`[Zeros] Saved -> ${fileName}`);
     }
   }
 
   /**
-   * AI_CHAT_REQUEST: Build context + write to .0canvas/ai-request.md
+   * AI_CHAT_REQUEST: Build context + write to .zeros/ai-request.md
    * Ported from extensions/vscode/src/handlers/ai-handler.ts
    * (minus VS Code clipboard/command APIs — just writes file)
    */
   private handleAIChatRequest(msg: EngineMessage, ws: WebSocket): void {
     if (msg.type !== "AI_CHAT_REQUEST") return;
-    console.log(`[0canvas] AI_CHAT_REQUEST: "${msg.query}"`);
+    console.log(`[Zeros] AI_CHAT_REQUEST: "${msg.query}"`);
 
     try {
       const contextMarkdown = buildAIContext(msg, this.root);
 
       // Write context to file
-      const contextDir = path.join(this.root, ".0canvas");
+      const contextDir = path.join(this.root, ".zeros");
       if (!fs.existsSync(contextDir)) {
         fs.mkdirSync(contextDir, { recursive: true });
       }
@@ -535,7 +535,7 @@ export class ZeroCanvasEngine {
         source: "engine",
         requestId: msg.id,
         success: true,
-        message: `Context saved to .0canvas/ai-request.md — your AI agent can read it from there.`,
+        message: `Context saved to .zeros/ai-request.md — your AI agent can read it from there.`,
       }));
     } catch (err) {
       this.server.send(ws, createMessage({
@@ -554,7 +554,7 @@ export class ZeroCanvasEngine {
    * When a browser connects, send ENGINE_READY + all .0c files.
    */
   private async handleConnect(ws: WebSocket): Promise<void> {
-    console.log("[0canvas] Browser connected");
+    console.log("[Zeros] Browser connected");
 
     // Send engine ready message
     this.server.send(ws, createMessage({
@@ -576,10 +576,10 @@ export class ZeroCanvasEngine {
           projectFile: JSON.stringify(project.content),
           filePath: project.relPath,
         }));
-        console.log(`[0canvas] Sent .0c -> browser: ${project.relPath}`);
+        console.log(`[Zeros] Sent .0c -> browser: ${project.relPath}`);
       }
     } catch (err) {
-      console.error("[0canvas] Failed to send .0c files:", err);
+      console.error("[Zeros] Failed to send .0c files:", err);
     }
   }
 
@@ -589,7 +589,7 @@ export class ZeroCanvasEngine {
     const relPath = path.relative(this.root, filePath);
 
     if (fileType === "css") {
-      console.log(`[0canvas] CSS ${type}: ${relPath}`);
+      console.log(`[Zeros] CSS ${type}: ${relPath}`);
       // Notify browser that a CSS file changed (so it can re-inspect if needed)
       this.server.broadcast(createMessage({
         type: "CSS_FILE_CHANGED",
@@ -599,7 +599,7 @@ export class ZeroCanvasEngine {
     }
 
     if (fileType === "oc") {
-      console.log(`[0canvas] .0c ${type}: ${relPath}`);
+      console.log(`[Zeros] .0c ${type}: ${relPath}`);
       // Notify browser about .0c file changes (external edits, e.g. git pull)
       this.server.broadcast(createMessage({
         type: "OC_FILE_CHANGED",
@@ -614,17 +614,17 @@ export class ZeroCanvasEngine {
 
   private writePortFile(port: number): void {
     try {
-      const dir = path.join(this.root, ".0canvas");
+      const dir = path.join(this.root, ".zeros");
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(path.join(dir, ".port"), String(port), "utf-8");
     } catch (err) {
-      console.error("[0canvas] Failed to write port file:", err);
+      console.error("[Zeros] Failed to write port file:", err);
     }
   }
 
   private removePortFile(): void {
     try {
-      const portFile = path.join(this.root, ".0canvas", ".port");
+      const portFile = path.join(this.root, ".zeros", ".port");
       if (fs.existsSync(portFile)) fs.unlinkSync(portFile);
     } catch {
       // Ignore cleanup errors
@@ -642,14 +642,14 @@ export class ZeroCanvasEngine {
       try {
         const config = {
           mcpServers: {
-            "0canvas": {
+            "Zeros": {
               type: "http",
               url: mcpUrl,
             },
           },
         };
         fs.writeFileSync(mcpJsonPath, JSON.stringify(config, null, 2), "utf-8");
-        console.log("[0canvas] Generated .mcp.json");
+        console.log("[Zeros] Generated .mcp.json");
       } catch {
         // Non-critical
       }
@@ -665,14 +665,14 @@ export class ZeroCanvasEngine {
         }
         const config = {
           servers: {
-            "0canvas": {
+            "Zeros": {
               type: "http",
               url: mcpUrl,
             },
           },
         };
         fs.writeFileSync(vscodeMcpPath, JSON.stringify(config, null, 2), "utf-8");
-        console.log("[0canvas] Generated .vscode/mcp.json");
+        console.log("[Zeros] Generated .vscode/mcp.json");
       } catch {
         // Non-critical
       }
@@ -690,7 +690,7 @@ function buildAIContext(
 ): string {
   const lines: string[] = [];
 
-  lines.push("# 0canvas Design Request");
+  lines.push("# Zeros Design Request");
   lines.push("");
   lines.push(`**Designer's request:** ${request.query}`);
   lines.push("");
@@ -730,7 +730,7 @@ function buildAIContext(
   }
 
   try {
-    const feedbackPath = path.join(workspaceRoot, ".0canvas", "feedback.md");
+    const feedbackPath = path.join(workspaceRoot, ".zeros", "feedback.md");
     if (fs.existsSync(feedbackPath)) {
       const feedback = fs.readFileSync(feedbackPath, "utf-8").trim();
       if (feedback) {

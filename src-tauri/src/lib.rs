@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────
-// 0canvas — Tauri Rust core
+// Zeros — Tauri Rust core
 // ──────────────────────────────────────────────────────────
 //
 // Phase 1A-2 wiring:
@@ -199,17 +199,17 @@ async fn open_project_folder_path(
     Ok(payload)
 }
 
-/// Parse a `zero-canvas://…` URL and trigger the matching action.
+/// Parse a `zeros://…` URL and trigger the matching action.
 /// Supported forms today:
-///   zero-canvas://open?path=/absolute/path/to/project
+///   zeros://open?path=/absolute/path/to/project
 ///
 /// Unknown actions are forwarded to the webview as `deep-link` events
 /// so frontend code can handle them without a Rust-side rebuild.
 fn handle_deep_link(app: &AppHandle, url: tauri::Url) {
-    println!("[0canvas] deep link: {}", url);
+    println!("[Zeros] deep link: {}", url);
     let host = url.host_str().unwrap_or("");
     // tauri::Url exposes url.path() too but the "open" action lives
-    // in host (zero-canvas://open?...) because there's no //user part.
+    // in host (zeros://open?...) because there's no //user part.
     let action = if !host.is_empty() {
         host.to_string()
     } else {
@@ -240,8 +240,8 @@ fn handle_deep_link(app: &AppHandle, url: tauri::Url) {
                         };
                         let _ = app_clone.emit("project-changed", payload);
                     }
-                    Ok(Err(err)) => eprintln!("[0canvas] deep-link spawn failed: {}", err),
-                    Err(err) => eprintln!("[0canvas] deep-link join failed: {}", err),
+                    Ok(Err(err)) => eprintln!("[Zeros] deep-link spawn failed: {}", err),
+                    Err(err) => eprintln!("[Zeros] deep-link join failed: {}", err),
                 }
             });
             return;
@@ -256,10 +256,10 @@ fn handle_deep_link(app: &AppHandle, url: tauri::Url) {
 ///
 /// 1. `cargo tauri dev` launches with CWD = `<repo>/src-tauri`; walk up one
 ///    so the engine operates on the repo itself (Phase 1A-1/1A-2 workflow).
-/// 2. `open 0canvas.app` from Finder launches with CWD = `/`; indexing `/`
+/// 2. `open Zeros.app` from Finder launches with CWD = `/`; indexing `/`
 ///    is useless and slow. Fall back to `$HOME` — the user will replace it
 ///    via Cmd+O on first use.
-/// 3. Anywhere else (e.g. `./0canvas.app/Contents/MacOS/zerocanvas`), use
+/// 3. Anywhere else (e.g. `./Zeros.app/Contents/MacOS/zeros`), use
 ///    the CWD as-is because the launcher probably meant something by it.
 fn default_project_root() -> PathBuf {
     let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
@@ -282,16 +282,16 @@ fn default_project_root() -> PathBuf {
 }
 
 fn build_app_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result<Menu<R>> {
-    // macOS app menu: 0canvas (app name), File, Edit, View, Window, Help
+    // macOS app menu: Zeros (app name), File, Edit, View, Window, Help
     // All standard PredefinedMenuItems; dynamic items (Open Folder, Toggle
     // Columns) land in Phase 1A-2c / 1B with their own handlers.
 
     let app_menu = Submenu::with_items(
         app,
-        "0canvas",
+        "Zeros",
         true,
         &[
-            &PredefinedMenuItem::about(app, Some("About 0canvas"), None)?,
+            &PredefinedMenuItem::about(app, Some("About Zeros"), None)?,
             &PredefinedMenuItem::separator(app)?,
             &PredefinedMenuItem::services(app, None)?,
             &PredefinedMenuItem::separator(app)?,
@@ -432,8 +432,8 @@ pub fn run() {
             let state = app.state::<SidecarState>();
             let root = default_project_root();
             match sidecar::spawn_engine(&state, &root) {
-                Ok(port) => println!("[0canvas] engine spawned on port {} at {:?}", port, root),
-                Err(err) => eprintln!("[0canvas] engine spawn failed: {}", err),
+                Ok(port) => println!("[Zeros] engine spawned on port {} at {:?}", port, root),
+                Err(err) => eprintln!("[Zeros] engine spawn failed: {}", err),
             }
 
             // Crash watchdog: polls the engine's TCP port and respawns
@@ -442,8 +442,8 @@ pub fn run() {
             // it doesn't race against the clean-quit shutdown.
             sidecar::start_watchdog(&state, app.handle().clone());
 
-            // Phase 2-F: listen for zero-canvas:// deep links. We support
-            // `zero-canvas://open?path=/Users/...` (open a known folder)
+            // Phase 2-F: listen for zeros:// deep links. We support
+            // `zeros://open?path=/Users/...` (open a known folder)
             // and pass everything else through to the webview as-is via
             // the `deep-link` event, in case JS wants to handle custom
             // paths later.
@@ -465,7 +465,7 @@ pub fn run() {
                     let handle = app_handle.clone();
                     tauri::async_runtime::spawn(async move {
                         if let Err(err) = open_project_folder(handle).await {
-                            eprintln!("[0canvas] open_folder menu error: {}", err);
+                            eprintln!("[Zeros] open_folder menu error: {}", err);
                         }
                     });
                 }
@@ -480,5 +480,5 @@ pub fn run() {
             }
         })
         .run(tauri::generate_context!())
-        .expect("error while running 0canvas");
+        .expect("error while running Zeros");
 }

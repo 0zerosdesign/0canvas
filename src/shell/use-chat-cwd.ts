@@ -11,7 +11,7 @@
 //     back to engine root, which is still a useful default)
 // ──────────────────────────────────────────────────────────
 
-import { useWorkspace } from "../0canvas/store/store";
+import { useWorkspace } from "../zeros/store/store";
 
 export function useChatCwd(): string | undefined {
   const { state } = useWorkspace();

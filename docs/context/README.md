@@ -1,4 +1,4 @@
-# 0canvas — Context Module Index
+# Zeros — Context Module Index
 
 > **2026-04-20.** This directory carries per-module reference docs for
 > the engine and overlay code, originally written for the V1/V2 era.
@@ -17,7 +17,7 @@
 Each module doc below is categorized by where its code lives in the
 Mac app, and how current the doc is:
 
-- **Engine / Col 3**: the code lives in `src/0canvas/**` + `src/engine/**`,
+- **Engine / Col 3**: the code lives in `src/zeros/**` + `src/engine/**`,
   runs as part of the Column 3 canvas.
 - **Shell / Col 1-2**: the code lives in `src/shell/**` — not covered
   by existing docs (see §Gaps).
@@ -95,7 +95,7 @@ Tied to Stream 1.5 of [../PRODUCT_VISION_V3.md §15](../PRODUCT_VISION_V3.md#15-
 - [ ] Remove the "IndexedDB primary" paragraphs; the current truth is
       "file-first via `native/storage.ts`". IDB is only used for
       ephemeral UI state (scroll position, etc.).
-- [ ] Document the `~/Library/Application Support/zero-canvas/` layout
+- [ ] Document the `~/Library/Application Support/zeros/` layout
       (projects, settings.json, keychain, logs).
 
 ### settings/
@@ -127,7 +127,7 @@ Tied to Stream 1.5 of [../PRODUCT_VISION_V3.md §15](../PRODUCT_VISION_V3.md#15-
 
 - [ ] Rename / clarify: "overlay" in the Mac-app era means Column 3.
       No FAB, no portal into `document.body` — it's just a column.
-- [ ] The V1 `<ZeroCanvas />` component is still shipped for the npm
+- [ ] The V1 `<Zeros />` component is still shipped for the npm
       distribution; note that distinction.
 
 ### extension/

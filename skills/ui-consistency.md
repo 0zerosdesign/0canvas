@@ -1,10 +1,10 @@
 ---
 name: UI Consistency
-description: Rules and constraints for making any UI change in 0canvas consistent with the Cursor 3 Agents Window design system. Read this BEFORE writing any UI code.
+description: Rules and constraints for making any UI change in Zeros consistent with the Cursor 3 Agents Window design system. Read this BEFORE writing any UI code.
 icon: Palette
 ---
 
-You are the UI-consistency skill for 0canvas. 0canvas is an IDE modelled visually on the **Cursor 3 "Glass" / Agents Window**. Every UI change you make — in `src/shell/**`, `src/app-shell.tsx`, `src/0canvas/**`, or any CSS file — must obey these rules.
+You are the UI-consistency skill for Zeros. Zeros is an IDE modelled visually on the **Cursor 3 "Glass" / Agents Window**. Every UI change you make — in `src/shell/**`, `src/app-shell.tsx`, `src/zeros/**`, or any CSS file — must obey these rules.
 
 **Read `RULES.md` first, pick the correct tokens and primitives, and only then write code. Never invent new values.**
 
@@ -14,7 +14,7 @@ You are the UI-consistency skill for 0canvas. 0canvas is an IDE modelled visuall
 
 1. **One token file.** `src/styles/design-tokens.css` is the single source of truth for every color, size, space, radius, shadow, duration, and z-index. You never create a second token file. You never put a raw value in a component that could have come from a token.
 2. **Semantic tokens only.** In components you reference `--surface-0`, `--text-on-surface`, `--primary`, `--radius-sm`, `--space-4`, `--text-12`, `--dur-fast`, `--z-dropdown`. You never reference a primitive token (`--grey-900`, `--blue-500`) outside `design-tokens.css`.
-3. **Primitives first.** For any visual element you import from `@/0canvas/ui` (`Button`, `Input`, `DropdownMenu`, `Card`, `Tabs`, `Dialog`, `Tooltip`, `Badge`, `Pill`, `StatusDot`, `Kbd`, `Divider`, `Icon`). If the variant you need doesn't exist, extend the primitive in `src/0canvas/ui/` — never write per-feature CSS.
+3. **Primitives first.** For any visual element you import from `@/Zeros/ui` (`Button`, `Input`, `DropdownMenu`, `Card`, `Tabs`, `Dialog`, `Tooltip`, `Badge`, `Pill`, `StatusDot`, `Kbd`, `Divider`, `Icon`). If the variant you need doesn't exist, extend the primitive in `src/zeros/ui/` — never write per-feature CSS.
 4. **`className` for layout only.** Tailwind utility classes allowed only for layout (`flex`, `gap-*`, `items-*`, `max-w-*`, `truncate`, `size-*`). Never color, typography, or spacing that bypasses tokens.
 5. **No inline visual `style={{}}`.** Allowed only for truly dynamic values (a swatch colour from user data, a runtime rect position, a drag-resize width).
 6. **No numeric z-index** in components. Use the token or let the primitive own it.
@@ -86,7 +86,7 @@ import {
   DropdownMenu,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter,
   Tooltip, Icon,
-} from "@/0canvas/ui";
+} from "@/Zeros/ui";
 ```
 
 Example (a chat composer pill with a model dropdown):
@@ -148,7 +148,7 @@ You should NEVER write a bespoke `useState(open)` + positioned `<div>` dropdown 
 - [ ] Surface tokens used, no hex bg / borders
 - [ ] Font sizes on the scale (10/11/12/13/15/18 only)
 - [ ] Paddings, gaps, radii on the scale
-- [ ] Every interactive element uses a primitive from `@/0canvas/ui`
+- [ ] Every interactive element uses a primitive from `@/Zeros/ui`
 - [ ] No inline `style={{}}` with static visuals
 - [ ] No numeric `z-index` in components
 - [ ] Container doesn't clip the dropdown (`overflow: hidden` on dropdown-host is forbidden)

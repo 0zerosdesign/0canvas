@@ -8,16 +8,16 @@
 ---
 
 > **Source files:**
-> - `src/0canvas/format/oc-project.ts` -- schema, validation, migration, conversion
-> - `src/0canvas/format/oc-project-store.ts` -- IndexedDB + filesystem sync
-> - `src/0canvas/format/oc-format.ts` -- variant node format (OCDocument / OCNode)
-> - `src/0canvas/format/oc-parser.ts` -- HTML/CSS to OC tree conversion
+> - `src/zeros/format/oc-project.ts` -- schema, validation, migration, conversion
+> - `src/zeros/format/oc-project-store.ts` -- IndexedDB + filesystem sync
+> - `src/zeros/format/oc-format.ts` -- variant node format (OCDocument / OCNode)
+> - `src/zeros/format/oc-parser.ts` -- HTML/CSS to OC tree conversion
 
 ---
 
 ## Overview
 
-A `.0c` file is the canonical representation of an entire 0canvas project. It is a JSON document containing metadata, workspace config, breakpoints, variables, pages, variants, annotations, feedback, history checkpoints, and integrity hashes. The format is designed to be portable (git-friendly), self-validating (Zod schemas + SHA-256 integrity), and dual-persisted (IndexedDB for speed, filesystem for portability).
+A `.0c` file is the canonical representation of an entire Zeros project. It is a JSON document containing metadata, workspace config, breakpoints, variables, pages, variants, annotations, feedback, history checkpoints, and integrity hashes. The format is designed to be portable (git-friendly), self-validating (Zod schemas + SHA-256 integrity), and dual-persisted (IndexedDB for speed, filesystem for portability).
 
 ---
 
@@ -166,7 +166,7 @@ Checkpoint {
 ```
 Integrity {
   hash:      string  (SHA-256 or FNV-1a fallback)
-  generator: string  (e.g. "0canvas@0.0.1")
+  generator: string  (e.g. "Zeros@0.0.1")
 }
 ```
 
@@ -186,7 +186,7 @@ All data entering or leaving the `.0c` format passes through Zod validation.
 
 ### IndexedDB (fast, live)
 
-The store uses the `idb` library to manage an IndexedDB database named `"0canvas-projects"` (version 1) with two object stores:
+The store uses the `idb` library to manage an IndexedDB database named `"Zeros-projects"` (version 1) with two object stores:
 
 | Store            | Key Path       | Purpose                        |
 |------------------|----------------|--------------------------------|

@@ -13,8 +13,8 @@ import {
   Settings as SettingsIcon,
   type LucideIcon,
 } from "lucide-react";
-import { Button, Tooltip } from "../0canvas/ui";
-import { useWorkspace } from "../0canvas/store/store";
+import { Button, Tooltip } from "../zeros/ui";
+import { useWorkspace } from "../zeros/store/store";
 
 export type ActivityView = "projects" | "chats" | "ports" | "search" | "settings";
 

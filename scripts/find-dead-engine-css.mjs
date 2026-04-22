@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Find dead engine-CSS rules — `.oc-*` class selectors defined
- * inside `src/0canvas/engine/styles/*.ts` template literals that
+ * inside `src/zeros/engine/styles/*.ts` template literals that
  * are never rendered by any TSX/TS file (and therefore target
  * nothing at runtime).
  *
@@ -15,8 +15,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 const ROOT = path.resolve(process.cwd(), "src");
-const STYLES_DIR = path.join(ROOT, "0canvas/engine/styles");
-const STYLES_MAIN = path.join(ROOT, "0canvas/engine/0canvas-styles.ts");
+const STYLES_DIR = path.join(ROOT, "zeros/engine/styles");
+const STYLES_MAIN = path.join(ROOT, "zeros/engine/zeros-styles.ts");
 
 function walk(dir, out = []) {
   for (const name of fs.readdirSync(dir)) {

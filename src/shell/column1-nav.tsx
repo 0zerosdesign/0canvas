@@ -34,14 +34,14 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { Button, Input } from "../0canvas/ui";
-import { useWorkspace, type ChatThread } from "../0canvas/store/store";
-import { getDefaultAgentId } from "../0canvas/panels/settings-page";
-import { useBridge } from "../0canvas/bridge/use-bridge";
+import { Button, Input } from "../zeros/ui";
+import { useWorkspace, type ChatThread } from "../zeros/store/store";
+import { getDefaultAgentId } from "../zeros/panels/settings-page";
+import { useBridge } from "../zeros/bridge/use-bridge";
 import type {
   AcpAgentsListMessage,
   BridgeRegistryAgent,
-} from "../0canvas/bridge/messages";
+} from "../zeros/bridge/messages";
 import {
   discoverLocalhostServices,
   openProjectFolder,
@@ -59,7 +59,7 @@ import {
 } from "../native/recent-projects";
 import { useUpdater } from "../native/updater";
 
-const DOCS_URL = "https://github.com/zerosdesign/0canvas#readme";
+const DOCS_URL = "https://github.com/Withso/zeros#readme";
 const COLLAPSE_KEY = "column-1-collapsed";
 const FOLDERS_COLLAPSED_KEY = "column-1-folders-collapsed";
 const LOCALHOST_COLLAPSED_KEY = "column-1-localhost-collapsed";
@@ -70,7 +70,7 @@ const LOCALHOST_VISIBLE_ROWS = 4;
 
 const POLL_INTERVAL_MS = 5000;
 
-/** URL that represents 0canvas itself — never a valid preview target. */
+/** URL that represents Zeros itself — never a valid preview target. */
 function selfOrigin(): string {
   if (typeof window === "undefined") return "";
   // In dev mode this is http://localhost:5173 (Vite serving our own app).
@@ -90,10 +90,10 @@ function useLocalhostServices() {
       try {
         const raw = await discoverLocalhostServices();
         // Mark our own dev-server URL as "self" so it renders
-        // disabled — clicking it would nest 0canvas inside 0canvas.
+        // disabled — clicking it would nest Zeros inside Zeros.
         const marked = raw.map((s) =>
           s.url === self && s.kind === "dev-server"
-            ? { ...s, kind: "engine" as const, label: "0canvas (self)" }
+            ? { ...s, kind: "engine" as const, label: "Zeros (self)" }
             : s,
         );
         if (!cancelled) setServices(marked);
@@ -431,7 +431,7 @@ export function Column1Nav() {
     } catch (err) {
       // Path went missing — drop it from the list so the user doesn't
       // keep hitting the same ghost entry.
-      console.warn("[0canvas] could not open project:", err);
+      console.warn("[Zeros] could not open project:", err);
       forgetProject(path);
       workspaceMenu.refresh();
     }
@@ -442,7 +442,7 @@ export function Column1Nav() {
     try {
       await openProjectFolder();
     } catch (err) {
-      console.warn("[0canvas] open folder failed:", err);
+      console.warn("[Zeros] open folder failed:", err);
     }
   };
 
@@ -474,7 +474,7 @@ export function Column1Nav() {
             <path d="M2 17l10 5 10-5" />
             <path d="M2 12l10 5 10-5" />
           </svg>
-          {!collapsed && <span className="oc-column-1__brand-name">0canvas</span>}
+          {!collapsed && <span className="oc-column-1__brand-name">Zeros</span>}
         </div>
         <Button
           variant="ghost"

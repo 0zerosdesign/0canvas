@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 // ──────────────────────────────────────────────────────────
-// Build the 0canvas engine as a Bun single-file executable
+// Build the Zeros engine as a Bun single-file executable
 // and place it at the path Tauri expects for sidecar binaries.
 // ──────────────────────────────────────────────────────────
 //
-// Output: src-tauri/binaries/0canvas-engine-<rustc-host-triple>
+// Output: src-tauri/binaries/zeros-engine-<rustc-host-triple>
 //
 // Why this layout:
 //   Tauri's `externalBin` feature appends the active Rust host
 //   target triple when looking for the sidecar binary at both
 //   build time (for bundling) and runtime (for spawn). So on
 //   an Apple-Silicon Mac we need
-//   `0canvas-engine-aarch64-apple-darwin` next to the app.
+//   `zeros-engine-aarch64-apple-darwin` next to the app.
 //
 // Known caveats (documented in the Tauri plan):
 //   @parcel/watcher's native `.node` binary does not bundle
@@ -57,7 +57,7 @@ if (!existsSync(entry)) {
 const binariesDir = resolve(repoRoot, "src-tauri/binaries");
 mkdirSync(binariesDir, { recursive: true });
 
-const outfile = resolve(binariesDir, `0canvas-engine-${mapping.rustTriple}`);
+const outfile = resolve(binariesDir, `zeros-engine-${mapping.rustTriple}`);
 
 const cmd = [
   "bun",

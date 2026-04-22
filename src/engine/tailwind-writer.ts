@@ -71,7 +71,7 @@ export class TailwindWriter {
           fs.writeFileSync(filePath, newContent, "utf-8");
 
           const relPath = path.relative(this.root, filePath);
-          console.log(`[0canvas] Tailwind: ${action} "${className}" in ${relPath}`);
+          console.log(`[Zeros] Tailwind: ${action} "${className}" in ${relPath}`);
 
           return {
             success: true,

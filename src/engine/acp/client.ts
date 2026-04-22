@@ -2,7 +2,7 @@
 // ACP Client — spawn an agent subprocess, wrap in ClientSideConnection
 // ──────────────────────────────────────────────────────────
 //
-// This is the 0canvas ↔ agent seam. We spawn the vendor's own published
+// This is the Zeros ↔ agent seam. We spawn the vendor's own published
 // CLI (claude-agent-acp, codex-acp, gemini, etc.) as a child process,
 // pipe its stdin/stdout through ACP's ndJsonStream, and expose the
 // resulting ClientSideConnection so the session-manager can drive it.
@@ -33,7 +33,7 @@ import { resolveLaunch, type RegistryAgent } from "./registry.js";
 
 /**
  * Callbacks the session-manager plugs in. Each call is proxied to the browser
- * over WebSocket; 0canvas itself never makes agent decisions.
+ * over WebSocket; Zeros itself never makes agent decisions.
  */
 export interface AcpClientCallbacks {
   onSessionUpdate(notification: SessionNotification): void;
@@ -123,7 +123,7 @@ export function startAcpClient(
   const stdoutWeb = Readable.toWeb(child.stdout) as ReadableStream<Uint8Array>;
   const stream = ndJsonStream(stdinWeb, stdoutWeb);
 
-  // The Client impl — everything the agent may ask of 0canvas. We forward to
+  // The Client impl — everything the agent may ask of Zeros. We forward to
   // the session-manager's callbacks; we never decide anything in here.
   const clientImpl: Client = {
     async sessionUpdate(params) {

@@ -1,10 +1,10 @@
 // ──────────────────────────────────────────────────────────
-// 0canvas Engine Protocol — Message types for engine ↔ overlay
+// Zeros Engine Protocol — Message types for engine ↔ overlay
 // ──────────────────────────────────────────────────────────
 //
 // Defines the WebSocket protocol between:
 //   - Browser overlay (connects as WebSocket client)
-//   - 0canvas Engine (Node.js process, WebSocket server)
+//   - Zeros Engine (Node.js process, WebSocket server)
 //
 // V2: The engine handles messages directly — no relay, no
 // VS Code extension required.
@@ -152,7 +152,7 @@ export interface ConnectedMessage extends BaseMessage {
 
 // ── ACP (Agent Client Protocol) ──────────────────────────
 //
-// 0canvas is an ACP *client*: it spawns the vendor's own published CLI
+// Zeros is an ACP *client*: it spawns the vendor's own published CLI
 // (claude-agent-acp, codex-acp, gemini, etc.) as a subprocess and drives
 // it via the shared ACP spec. The browser never talks to the agent
 // directly — every message below rides the engine's existing WebSocket.

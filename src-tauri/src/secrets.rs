@@ -6,9 +6,9 @@
 // login keychain under a single service name so they persist across
 // app restarts without ever touching settings.json.
 //
-// All entries live under service "0canvas" + the caller-chosen
+// All entries live under service "Zeros" + the caller-chosen
 // account string — for example, set("anthropic-api-key", "sk-…")
-// lands at (service=0canvas, account=anthropic-api-key).
+// lands at (service=Zeros, account=anthropic-api-key).
 //
 // The frontend never sees raw keychain APIs; it goes through the
 // three Tauri commands below. Non-macOS platforms get a stub that
@@ -17,7 +17,7 @@
 
 use serde::Serialize;
 
-const SERVICE: &str = "0canvas";
+const SERVICE: &str = "Zeros";
 
 #[derive(Debug, Serialize)]
 pub struct SecretError {

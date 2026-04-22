@@ -1,6 +1,6 @@
 # Attributions
 
-0canvas builds on the following open-source projects and assets.
+Zeros builds on the following open-source projects and assets.
 All are used under their respective licenses; see individual project
 repositories for full license text.
 
@@ -15,7 +15,7 @@ repositories for full license text.
 
 - **[Tauri](https://tauri.app)** (MIT / Apache-2.0) — native app shell.
 - **[@tauri-apps/plugin-deep-link](https://github.com/tauri-apps/plugins-workspace)**
-  (MIT / Apache-2.0) — `zero-canvas://` URL scheme.
+  (MIT / Apache-2.0) — `zeros://` URL scheme.
 - **[@tauri-apps/plugin-notification](https://github.com/tauri-apps/plugins-workspace)**
   (MIT / Apache-2.0) — native notifications.
 - **[@tauri-apps/plugin-pty](https://github.com/rajivshah3/tauri-plugin-pty)**

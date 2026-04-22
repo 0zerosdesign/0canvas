@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────
-// 0canvas Mac App — Three-Column Shell
+// Zeros Mac App — Three-Column Shell
 // ──────────────────────────────────────────────────────────
 //
 // Layout (Phase 1A-1 scaffold — column 1 and column 2 are
@@ -18,20 +18,20 @@
 // ──────────────────────────────────────────────────────────
 
 import React, { useEffect } from "react";
-import { WorkspaceProvider, useWorkspace, type ChatThread } from "./0canvas/store/store";
-import { hydrateAiApiKey } from "./0canvas/lib/openai";
-import { BridgeProvider } from "./0canvas/bridge/use-bridge";
-import { SelectionSync } from "./0canvas/acp/selection-sync";
-import { AutoConnect } from "./0canvas/engine/0canvas-engine";
-import { AcpSessionsProvider } from "./0canvas/acp/sessions-provider";
-import { loadCatalog } from "./0canvas/acp/model-catalog";
-import { injectStyles } from "./0canvas/engine/0canvas-styles";
+import { WorkspaceProvider, useWorkspace, type ChatThread } from "./zeros/store/store";
+import { hydrateAiApiKey } from "./zeros/lib/openai";
+import { BridgeProvider } from "./zeros/bridge/use-bridge";
+import { SelectionSync } from "./zeros/acp/selection-sync";
+import { AutoConnect } from "./zeros/engine/zeros-engine";
+import { AcpSessionsProvider } from "./zeros/acp/sessions-provider";
+import { loadCatalog } from "./zeros/acp/model-catalog";
+import { injectStyles } from "./zeros/engine/zeros-styles";
 import { Column1Nav } from "./shell/column1-nav";
 import { Column2Workspace } from "./shell/column2-workspace";
 import { Column3 } from "./shell/column3";
 import { TitleBar } from "./shell/title-bar";
 import { ActivityBar, type ActivityView } from "./shell/activity-bar";
-import { SettingsPage } from "./0canvas/panels/settings-page";
+import { SettingsPage } from "./zeros/panels/settings-page";
 import { onProjectChanged } from "./native/tauri-events";
 import { getSetting, setSetting } from "./native/settings";
 import { rememberProject } from "./native/recent-projects";
@@ -41,7 +41,7 @@ import "./shell/app-shell.css";
 const CHATS_STORAGE_KEY = "chats-v1";
 const ACTIVE_CHAT_KEY = "active-chat-id";
 
-// Inject the existing 0canvas overlay CSS exactly once at module load.
+// Inject the existing Zeros overlay CSS exactly once at module load.
 // The workspace panels inside Column 3 rely on it.
 injectStyles();
 
@@ -180,7 +180,7 @@ function ReloadOnProjectChange() {
     })();
 
     onProjectChanged((payload) => {
-      console.log("[0canvas] project changed", payload);
+      console.log("[Zeros] project changed", payload);
       rememberProject(payload.root);
       window.location.reload();
     }).then((fn) => {
@@ -214,7 +214,7 @@ function ShellRouter() {
       <div className="oc-app-root">
         <TitleBar />
         <div className="oc-app-body">
-          <div data-0canvas-root="" className="oc-settings-root">
+          <div data-Zeros-root="" className="oc-settings-root">
             <SettingsPage />
           </div>
         </div>

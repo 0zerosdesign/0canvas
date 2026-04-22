@@ -421,7 +421,7 @@ pub fn git_pull(state: tauri::State<'_, SidecarState>, cwd: Option<String>) -> R
         .find_reference(&refname)
         .map_err(|e| format!("find_reference: {}", e))?;
     reference
-        .set_target(fetch_commit.id(), "0canvas: fast-forward pull")
+        .set_target(fetch_commit.id(), "Zeros: fast-forward pull")
         .map_err(|e| format!("set_target: {}", e))?;
     repo.set_head(&refname).map_err(|e| e.to_string())?;
     repo.checkout_head(Some(CheckoutBuilder::new().force()))

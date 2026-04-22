@@ -77,7 +77,7 @@ export interface Registry {
 }
 
 /**
- * A registry agent plus 0canvas-side status fields. Mirrored on the bridge
+ * A registry agent plus Zeros-side status fields. Mirrored on the bridge
  * as `BridgeRegistryAgent` — keep fields in sync.
  */
 export interface EnrichedRegistryAgent extends RegistryAgent {
@@ -124,7 +124,7 @@ export class RegistryClient {
   private inFlight: Promise<Registry> | null = null;
 
   constructor(projectRoot: string) {
-    this.cachePath = path.join(projectRoot, ".0canvas", "acp", "registry.json");
+    this.cachePath = path.join(projectRoot, ".zeros", "acp", "registry.json");
   }
 
   /**

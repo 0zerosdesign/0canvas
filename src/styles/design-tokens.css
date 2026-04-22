@@ -1,5 +1,5 @@
 /* ============================================================
-   0canvas Design Tokens — SINGLE SOURCE OF TRUTH
+   Zeros Design Tokens — SINGLE SOURCE OF TRUTH
    ------------------------------------------------------------
    ONE file. ONE system. Every color, size, radius, space,
    font, shadow, duration, and z-index the app uses is named
@@ -523,7 +523,7 @@
 
      The previous --color--surface--*, --color--text--*,
      --color--border--*, --font-size-*, --font-weight-*,
-     --0canvas--*, --z-dialog, --z-project-sidebar family has
+     --Zeros--*, --z-dialog, --z-project-sidebar family has
      been migrated away (see `scripts/rename-legacy-aliases.mjs`
      history). New code must use the flat semantic tokens above.
      ---------------------------------------------------------- */

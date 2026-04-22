@@ -1,4 +1,4 @@
-# 0canvas Product Vision V3 — The Native Mac App
+# Zeros Product Vision V3 — The Native Mac App
 
 > **One native Mac app. The designer's workspace sitting beside every AI
 > agent, every git branch, every terminal. One project, one context,
@@ -39,14 +39,14 @@ V2 was built around the engine as a Node.js CLI + browser overlay:
 
 ```
 User's codebase
-  └── node_modules/@zerosdesign/0canvas/
+  └── node_modules/@Withso/zeros/
        └── Engine (Node.js, port 24193)
             ├── HTTP + WebSocket server
-            ├── Serves browser overlay (<ZeroCanvas />)
+            ├── Serves browser overlay (<Zeros />)
             └── MCP endpoint for AI tools
 ```
 
-The designer installed an npm package, ran `npx 0canvas serve`, and the
+The designer installed an npm package, ran `npx Zeros serve`, and the
 browser overlay appeared on `Ctrl+Shift+D`.
 
 ### V3 Vision
@@ -77,15 +77,15 @@ a separate protocol.
 
 | Aspect | V2 (npm engine + overlay) | V3 (native Mac app) |
 |---|---|---|
-| **Distribution** | `npm install @zerosdesign/0canvas` | Signed `.dmg` (Phase 5) / `brew install --cask` |
+| **Distribution** | `npm install @Withso/zeros` | Signed `.dmg` (Phase 5) / `brew install --cask` |
 | **Shell** | Web page in the user's browser | Native Tauri window, three columns |
-| **Engine** | Runs via `npx 0canvas serve` | Spawned as a Tauri sidecar on app launch |
+| **Engine** | Runs via `npx Zeros serve` | Spawned as a Tauri sidecar on app launch |
 | **Chat** | Single AI panel in the overlay | Dedicated column with model / effort / permission / branch / context / commands |
 | **Git** | Out of scope | First-class panel with `git2-rs` backend — branches, diffs, commits, push |
 | **Terminal** | Out of scope | PTY panel (`tauri-plugin-pty` + xterm.js) |
 | **Env files** | Out of scope | Env panel reading `.env*` with keychain-backed secret masking |
 | **AI auth** | BYOK (OpenAI API key) | OAuth via Claude CLI (`claude login`) OR BYO API key OR Codex CLI |
-| **Project mgmt** | One `.0c` file per codebase | Recent projects, workspace manager, folder-picker, deep links (`zero-canvas://`) |
+| **Project mgmt** | One `.0c` file per codebase | Recent projects, workspace manager, folder-picker, deep links (`zeros://`) |
 | **Cross-platform** | Any browser | macOS first (Tauri app). Other platforms follow. |
 | **Design system** | Ad-hoc per component | Locked: surface/border/type/spacing/radius/primitives (Passes 1-5) |
 
@@ -94,7 +94,7 @@ a separate protocol.
 **Designers already own one window where every tool they need to ship
 a change lives together.** Design happens *with* code, not beside it;
 AI agents work *with* designers, not through them; git history is *one
-click away*, not one context switch. Cursor did this for code; 0canvas
+click away*, not one context switch. Cursor did this for code; Zeros
 does it for design.
 
 ---
@@ -152,7 +152,7 @@ File: [src/shell/column1-nav.tsx](src/shell/column1-nav.tsx)
 
 ### What it shows
 
-- **Brand row** — 0canvas logo + collapse toggle.
+- **Brand row** — Zeros logo + collapse toggle.
 - **New Chat** — starts a fresh chat thread in Col 2.
 - **Skills** — opens the skills registry (markdown files under
   `skills/`).
@@ -169,7 +169,7 @@ File: [src/shell/column1-nav.tsx](src/shell/column1-nav.tsx)
 - Each project corresponds to a folder on disk.
 - The active project drives the engine's `root` (cwd), the git panel's
   repo, the terminal's initial cwd, and Col 3's iframe URL.
-- Recent projects persist in `~/Library/Application Support/zero-canvas/`
+- Recent projects persist in `~/Library/Application Support/zeros/`
   via `getSetting`/`setSetting`.
 
 ### What's missing (see §15 TODO)
@@ -192,7 +192,7 @@ File: [src/shell/column2-workspace.tsx](src/shell/column2-workspace.tsx)
 
 | Tab | Component | Status |
 |---|---|---|
-| Chat | [AIChatPanel](src/0canvas/panels/ai-chat-panel.tsx) | Shipped. Streams via `ai-cli.ts` or `anthropic.ts` depending on auth method. |
+| Chat | [AIChatPanel](src/zeros/panels/ai-chat-panel.tsx) | Shipped. Streams via `ai-cli.ts` or `anthropic.ts` depending on auth method. |
 | Git | [GitPanel](src/shell/git-panel.tsx) | Shipped (Phase 1C-Git). Branches, diff, stage, commit, push via `git2-rs` in [src-tauri/src/git.rs](src-tauri/src/git.rs). |
 | Terminal | [TerminalPanel](src/shell/terminal-panel.tsx) | Shipped. PTY via `tauri-plugin-pty`, xterm.js renderer. |
 | Env | [EnvPanel](src/shell/env-panel.tsx) | Shipped. Reads `.env*` files, masks secrets, writes via keychain when `SECRET_ACCOUNTS` flag is set. |
@@ -240,13 +240,13 @@ effort, `+` commands menu, image attach, skills menu, submit.
 
 The former browser overlay, embedded as a first-class column.
 
-File: [src/0canvas/engine/0canvas-engine.tsx](src/0canvas/engine/0canvas-engine.tsx)
+File: [src/zeros/engine/zeros-engine.tsx](src/zeros/engine/zeros-engine.tsx)
 
 ### Page tabs (top of Col 3)
 
 - **Design** — the workspace: workspace toolbar + variant canvas
   (preview iframe with device switcher) + right panel.
-- **Themes** — [ThemesPage](src/0canvas/themes/themes-page.tsx): token
+- **Themes** — [ThemesPage](src/zeros/themes/themes-page.tsx): token
   browser, theme file imports, theme diffs.
 - **Settings** — swaps in when activated from Col 1's profile menu.
   Tabs: `Back | General | AI Models | API Keys | Appearance |
@@ -255,9 +255,9 @@ File: [src/0canvas/engine/0canvas-engine.tsx](src/0canvas/engine/0canvas-engine.
 ### Right panel (under Design)
 
 Three modes driven by `state.designMode`:
-- `"style"` → [StylePanel](src/0canvas/panels/style-panel.tsx) — the
+- `"style"` → [StylePanel](src/zeros/panels/style-panel.tsx) — the
   Figma-style property editor.
-- `"ai"` → [AIChatPanel](src/0canvas/panels/ai-chat-panel.tsx).
+- `"ai"` → [AIChatPanel](src/zeros/panels/ai-chat-panel.tsx).
 - default → Feedback list.
 
 **Per V3's Col 2-owns-AI principle (§4), the `"ai"` mode should be
@@ -273,7 +273,7 @@ removed from Col 3.** See Stream 2 in §15.
 
 ### Engine bridge
 
-- [src/0canvas/bridge/use-bridge.ts](src/0canvas/bridge/use-bridge.ts)
+- [src/zeros/bridge/use-bridge.ts](src/zeros/bridge/use-bridge.ts)
   opens a WebSocket to the sidecar engine (port auto-discovered via
   the Tauri `get_engine_port` command).
 - Messages: `get_element_styles`, `apply_change`, `list_tokens`,
@@ -319,7 +319,7 @@ The engine is still exportable as an npm package. A future release
 can ship both:
 
 1. **Mac app** (primary) — Tauri window, sidecar engine.
-2. **npm package** — `npm install @zerosdesign/0canvas` + `npx 0canvas
+2. **npm package** — `npm install @Withso/zeros` + `npx Zeros
    serve` for users who can't install the Mac app (Windows/Linux dev,
    CI, remote workspaces).
 
@@ -376,7 +376,7 @@ The V2 vision is not dead; it's the *second* distribution channel.
 
 ### `.0c` file format
 
-Unchanged from V2. See [src/0canvas/format/oc-project.ts](src/0canvas/format/oc-project.ts):
+Unchanged from V2. See [src/zeros/format/oc-project.ts](src/zeros/format/oc-project.ts):
 
 ```typescript
 {
@@ -505,10 +505,10 @@ Open-core, same shape as V2:
 - Codesigning + notarization via Tauri's build pipeline (`tauri signer`
   + `xcrun notarytool`).
 - `tauri-plugin-updater` + signed static manifest for seamless updates.
-- `zero-canvas://` deep-link registration (`Finder:open in app`, etc.).
-- Homebrew cask: `brew install --cask 0canvas`.
+- `zeros://` deep-link registration (`Finder:open in app`, etc.).
+- Homebrew cask: `brew install --cask Zeros`.
 - Landing page with direct DMG download + Homebrew command.
-- Final `@zerosdesign/0canvas@0.1.0` npm release with deprecation
+- Final `@Withso/zeros@0.1.0` npm release with deprecation
   banner pointing to the Mac app (npm becomes a legacy / compatibility
   channel).
 
@@ -632,12 +632,12 @@ beyond. Each item has a short description + where the work is.
 ### Stream 2 — Remove AI from Col 3
 
 - [ ] Delete the `designMode === "ai"` branch in
-  [src/0canvas/engine/0canvas-engine.tsx:464-499](src/0canvas/engine/0canvas-engine.tsx#L464-L499).
+  [src/zeros/engine/zeros-engine.tsx:464-499](src/zeros/engine/zeros-engine.tsx#L464-L499).
 - [ ] Remove the AI toggle in
-  [src/0canvas/panels/workspace-toolbar.tsx](src/0canvas/panels/workspace-toolbar.tsx)
+  [src/zeros/panels/workspace-toolbar.tsx](src/zeros/panels/workspace-toolbar.tsx)
   (the "AI" button that sets `designMode: "ai"`).
 - [ ] Remove `"ai"` from the `designMode` union in
-  [src/0canvas/store/store.tsx](src/0canvas/store/store.tsx).
+  [src/zeros/store/store.tsx](src/zeros/store/store.tsx).
 - [ ] Verify the inline-edit and command-palette flows still dispatch
   into Col 2 chat (Phase 2-B already wired this, should be automatic).
 - [ ] Delete dead CSS: `.oc-ai-diff-btn`, `.oc-ai-provider-btn`, and
@@ -646,7 +646,7 @@ beyond. Each item has a short description + where the work is.
 ### Stream 3 — Project grouping in Col 1
 
 - [ ] Add `projectRoot: string` to the `ChatThread` schema in
-  [src/0canvas/store/store.tsx](src/0canvas/store/store.tsx).
+  [src/zeros/store/store.tsx](src/zeros/store/store.tsx).
 - [ ] Migration: existing chats get `projectRoot` from
   `get_engine_root` at boot; persist.
 - [ ] Column 1 nav: group chats by `projectRoot`. Each project is a
@@ -723,7 +723,7 @@ beyond. Each item has a short description + where the work is.
 ### Cross-cutting cleanup
 
 - [ ] Dead CSS: delete unused `.text-\[Npx\]` utility classes (defined
-  in `layout.ts` + `0canvas-styles.ts`, referenced zero times in
+  in `layout.ts` + `zeros-styles.ts`, referenced zero times in
   components).
 - [ ] Legacy engine bridge code from V1/V2 (WebSocket MCP duplication)
   audit: keep what's needed for the npm distribution, delete what's

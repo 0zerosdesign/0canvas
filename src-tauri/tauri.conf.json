@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "0canvas",
+  "productName": "Zeros",
   "version": "0.1.0",
-  "identifier": "design.zeros.oCanvas",
+  "identifier": "design.zeros.app",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "beforeBuildCommand": "pnpm build:ui",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "0canvas",
+        "title": "Zeros",
         "width": 1600,
         "height": 1000,
         "minWidth": 1200,
@@ -30,7 +30,7 @@
   "bundle": {
     "active": true,
     "targets": ["dmg", "app"],
-    "externalBin": ["binaries/0canvas-engine"],
+    "externalBin": ["binaries/zeros-engine"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -40,19 +40,19 @@
     "copyright": "© 2026 Zeros Design",
     "category": "DeveloperTool",
     "shortDescription": "Visual design tool for production code",
-    "longDescription": "0canvas is a design-first Mac app that lets designers and solo developers edit production React + Tailwind code visually, with git, an embedded terminal, and AI agent integration."
+    "longDescription": "Zeros is a design-first Mac app that lets designers and solo developers edit production React + Tailwind code visually, with git, an embedded terminal, and AI agent integration."
   },
   "plugins": {
     "deep-link": {
       "mobile": [],
       "desktop": {
-        "schemes": ["zero-canvas"]
+        "schemes": ["zeros"]
       }
     },
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQ3ODRFQTRCNENEQ0U2MUEKUldRYTV0eE1TK3FFUjB1d0hmcGg4N3AvTTlWYTRpN2JBSkk3bkZwWlVTN015UWRuNXN5cHVKckcK",
       "endpoints": [
-        "https://github.com/Withso/0canvas/releases/latest/download/latest.json"
+        "https://github.com/Withso/zeros/releases/latest/download/latest.json"
       ]
     }
   }

@@ -1,8 +1,8 @@
-# Adopting Zed's patterns for 0canvas
+# Adopting Zed's patterns for Zeros
 
 ## Context
 
-0canvas today is single-user, local-only. The V2 engine spawns Claude/Codex as CLI subprocesses and ferries messages over a custom MCP + WebSocket bridge. There is no agent loop, no shared session primitive, no multi-user anything. Zed has open-sourced three pieces of infrastructure that each fill a gap in 0canvas — but licensing and primitive-fit differ sharply across them. This plan maps what to borrow, what to skip, and in what order, framed for a **designer-first** product, not a code editor.
+Zeros today is single-user, local-only. The V2 engine spawns Claude/Codex as CLI subprocesses and ferries messages over a custom MCP + WebSocket bridge. There is no agent loop, no shared session primitive, no multi-user anything. Zed has open-sourced three pieces of infrastructure that each fill a gap in Zeros — but licensing and primitive-fit differ sharply across them. This plan maps what to borrow, what to skip, and in what order, framed for a **designer-first** product, not a code editor.
 
 Three buckets, ranked by ROI:
 
@@ -16,12 +16,12 @@ Three buckets, ranked by ROI:
 
 **What it is.** JSON-RPC 2.0 over stdio. Two trait surfaces (`Agent` and `Client`), streaming `SessionUpdate` notifications, rich `ToolCall` schema (`id`, `kind`, `status`, `content[]`, `locations[]`), permission gating via `session/request_permission`. Apache-2.0, SDKs in Rust/TS/Python/Java/Kotlin. Claude Code, Gemini CLI, and Codex all ship ACP bridges already.
 
-**Why it matters for 0canvas.** The current engine reinvents every wire: bespoke WebSocket framing, bespoke MCP dispatcher, bespoke CLI-subprocess streaming, bespoke chat-panel parsing of CSS-apply blocks. ACP replaces all of that with one well-defined contract — and you inherit Claude Code / Codex / Gemini as pluggable backends for free.
+**Why it matters for Zeros.** The current engine reinvents every wire: bespoke WebSocket framing, bespoke MCP dispatcher, bespoke CLI-subprocess streaming, bespoke chat-panel parsing of CSS-apply blocks. ACP replaces all of that with one well-defined contract — and you inherit Claude Code / Codex / Gemini as pluggable backends for free.
 
 **Strategic fork — two directions, both viable:**
 
-- **(a) 0canvas as ACP client.** Embed the TS SDK, spawn external agents as subprocesses. Immediate UX upgrade; no protocol design work.
-- **(b) 0canvas speaks ACP outward.** Implement the `Agent` trait. Zed / Neovim / any future ACP editor can drive 0canvas's design-aware agent from inside the user's existing workflow. Positioning shift: *0canvas is also an agent backend that carries design-system context.*
+- **(a) Zeros as ACP client.** Embed the TS SDK, spawn external agents as subprocesses. Immediate UX upgrade; no protocol design work.
+- **(b) Zeros speaks ACP outward.** Implement the `Agent` trait. Zed / Neovim / any future ACP editor can drive Zeros's design-aware agent from inside the user's existing workflow. Positioning shift: *Zeros is also an agent backend that carries design-system context.*
 
 **Recommendation: (a) first, (b) later.** (a) ships the UX win now; (b) becomes a distribution play once the design-aware tooling is mature enough to stand alone.
 
@@ -36,7 +36,7 @@ Three buckets, ranked by ROI:
 
 Zed's `crates/agent` + `crates/agent_ui` model: `Thread` entity with messages + tool-use state + `ActionLog` + `ProjectSnapshot`; native and ACP threads share the datamodel; `@`-mentions via `MessageEditor` + `mention_set.rs`; hardcoded security rules layered under user-defined tool permissions; `MAX_SUBAGENT_DEPTH=1` for specialized delegation.
 
-**Map to 0canvas:**
+**Map to Zeros:**
 
 - **Thread → design session.** Per-variant or per-component. Persist in `.0c`.
 - **Mentions → design-native context.** Not just files:
@@ -52,9 +52,9 @@ Zed's `crates/agent` + `crates/agent_ui` model: `Thread` entity with messages + 
 
 ## 3. Collab panel — borrow UX, replace the sync layer
 
-**Licensing reality (must flag).** Zed client is GPL-3.0, `crates/collab` server is **AGPL-3.0**. 0canvas cannot reuse the code commercially without going AGPL itself. Treat Zed as a reference architecture to read, not a dependency to vendor.
+**Licensing reality (must flag).** Zed client is GPL-3.0, `crates/collab` server is **AGPL-3.0**. Zeros cannot reuse the code commercially without going AGPL itself. Treat Zed as a reference architecture to read, not a dependency to vendor.
 
-**CRDT fit reality.** Zed uses a custom sequence CRDT with tombstones over a dual-rope — built for text. A design canvas is a tree of nodes with property maps. Wrong primitive. Pick a tree/map CRDT with a permissive license: **Loro** (Rust, MIT — good fit if 0canvas goes deeper into Tauri), **Automerge** (MIT, mature), or **Yjs** (MIT, largest ecosystem). Recommendation: prototype with Yjs (fastest to ship), revisit Loro if Tauri-side sync becomes core.
+**CRDT fit reality.** Zed uses a custom sequence CRDT with tombstones over a dual-rope — built for text. A design canvas is a tree of nodes with property maps. Wrong primitive. Pick a tree/map CRDT with a permissive license: **Loro** (Rust, MIT — good fit if Zeros goes deeper into Tauri), **Automerge** (MIT, mature), or **Yjs** (MIT, largest ecosystem). Recommendation: prototype with Yjs (fastest to ship), revisit Loro if Tauri-side sync becomes core.
 
 **Borrow these patterns:**
 
@@ -65,9 +65,9 @@ Zed's `crates/agent` + `crates/agent_ui` model: `Thread` entity with messages + 
 
 **The differentiating move (where Zed left room):**
 
-Zed's agent crates have **zero references** to Room / participant / presence primitives. The agent is not a participant — collaborators only see its edits land as yours. In 0canvas, **make the agent a first-class participant from day one**: own `replica_id`, presence color, cursor on the canvas, visible "following" by humans, interruptible mid-action. Same CRDT ops, same presence channel, no bifurcation.
+Zed's agent crates have **zero references** to Room / participant / presence primitives. The agent is not a participant — collaborators only see its edits land as yours. In Zeros, **make the agent a first-class participant from day one**: own `replica_id`, presence color, cursor on the canvas, visible "following" by humans, interruptible mid-action. Same CRDT ops, same presence channel, no bifurcation.
 
-This is the 0canvas pitch: *"the first collaborative design tool where an AI is a teammate, not a button."* It is net-new — not a catch-up feature.
+This is the Zeros pitch: *"the first collaborative design tool where an AI is a teammate, not a button."* It is net-new — not a catch-up feature.
 
 ---
 
@@ -81,18 +81,18 @@ This is the 0canvas pitch: *"the first collaborative design tool where an AI is 
 
 **Phase 4 — collab + agent-as-participant (quarter+).** Pick tree CRDT (Yjs first). Build a thin Node or Rust sync server. Ship presence + follow-along on the canvas. Wire the agent as a participant with its own replica_id. Voice deferred.
 
-**Phase 5 (stretch) — 0canvas speaks ACP outward.** Implement `Agent` trait; expose stdio entry point. 0canvas becomes an agent backend any ACP-capable editor can drive.
+**Phase 5 (stretch) — Zeros speaks ACP outward.** Implement `Agent` trait; expose stdio entry point. Zeros becomes an agent backend any ACP-capable editor can drive.
 
 ## Critical files to modify
 
 - `src/engine/index.ts` — dispatcher; ACP wiring plugs in here
 - `src/engine/mcp.ts` — tool definitions; map to ACP `ToolCall` shape (keep tool semantics, swap envelope)
 - `src/engine/oc-manager.ts` — add stable node UUIDs to `.0c` schema in Phase 3
-- `src/0canvas/panels/ai-chat-panel.tsx` — rebuild around `SessionUpdate` stream, tool cards, mentions
-- `src/0canvas/bridge/ws-client.ts` — carry ACP session updates instead of bespoke STYLE_CHANGE / AI_CHAT_REQUEST messages
-- `src/0canvas/store/store.tsx` — add session/thread model; keep provider switch
+- `src/zeros/panels/ai-chat-panel.tsx` — rebuild around `SessionUpdate` stream, tool cards, mentions
+- `src/zeros/bridge/ws-client.ts` — carry ACP session updates instead of bespoke STYLE_CHANGE / AI_CHAT_REQUEST messages
+- `src/zeros/store/store.tsx` — add session/thread model; keep provider switch
 
-## Reusable assets found in 0canvas
+## Reusable assets found in Zeros
 
 - `buildAiContextMarkdown()` in `ai-chat-panel.tsx` — keep; feeds ACP `ContentBlock[]`
 - `CanvasBridgeClient` — keep the transport; switch the payload to ACP
@@ -130,7 +130,7 @@ Apache-2.0 obligations: preserve copyright notices, include the license text in 
 
 ### Trademark — Apache-2.0 §6 grants no trademark rights
 
-- OK (nominative fair use in most jurisdictions): "0canvas integrates with Claude Code, OpenAI Codex, and Gemini CLI."
+- OK (nominative fair use in most jurisdictions): "Zeros integrates with Claude Code, OpenAI Codex, and Gemini CLI."
 - Not OK without written permission from the vendor: their logos, "official partner", "certified integration", co-branded marketing, implying endorsement.
 
 ### End-user authentication — the real question
@@ -143,26 +143,26 @@ User pastes their own Anthropic / OpenAI / Google API key. They become the vendo
 **(b) BYO consumer subscription (Claude Pro/Max, ChatGPT Plus, Google AI Studio login) — grey zone, needs legal review.**
 Consumer ToS for all three vendors historically restrict "automated or programmatic access" and account sharing. Public ToS does *not* explicitly address whether a third-party app may orchestrate the vendor's own CLI while the CLI authenticates to the user's consumer subscription.
 
-What makes (b) more defensible than it looks: **0canvas never touches credentials.** It spawns the vendor's *own published CLI* (Claude Code, Codex CLI, Gemini CLI) as a subprocess. The CLI handles auth. The vendor shipped that CLI knowing it can be invoked by other tools. This is fundamentally different from scraping a login or reverse-engineering a websocket — both of which are unambiguously prohibited.
+What makes (b) more defensible than it looks: **Zeros never touches credentials.** It spawns the vendor's *own published CLI* (Claude Code, Codex CLI, Gemini CLI) as a subprocess. The CLI handles auth. The vendor shipped that CLI knowing it can be invoked by other tools. This is fundamentally different from scraping a login or reverse-engineering a websocket — both of which are unambiguously prohibited.
 
-What makes (b) still risky: the vendor's enforcement posture is about *scale and framing*, not just technical mechanism. A big-enough userbase, or marketing that implies the subscription is being "used through 0canvas" rather than "by the user via their own CLI", invites attention.
+What makes (b) still risky: the vendor's enforcement posture is about *scale and framing*, not just technical mechanism. A big-enough userbase, or marketing that implies the subscription is being "used through Zeros" rather than "by the user via their own CLI", invites attention.
 
 ### "But Zed does this — isn't that proof it's legal?"
 
-Zed does integrate the same CLIs via ACP, and their product works with users' consumer subscriptions. That's evidence the architecture is viable; it is **not** a legal defense for 0canvas:
+Zed does integrate the same CLIs via ACP, and their product works with users' consumer subscriptions. That's evidence the architecture is viable; it is **not** a legal defense for Zeros:
 
 - Vendor-to-vendor commercial agreements are private. Zed may have direct contracts with Anthropic / OpenAI / Google that the public never sees. Claude Code specifically is a featured Zed integration — not accidental.
-- "Another company does this" never binds a third party. If 0canvas gets a cease-and-desist, "Zed does it too" doesn't help.
+- "Another company does this" never binds a third party. If Zeros gets a cease-and-desist, "Zed does it too" doesn't help.
 - Non-enforcement is not permission. Vendors often tolerate integrations until they stop tolerating them.
 
-**The real defense is the architecture**, not the precedent. That defense is: 0canvas spawns the vendor's own official CLI as a subprocess; the CLI handles authentication against credentials the vendor issued to that same user; 0canvas never sees, stores, forwards, or automates the credential itself; the user initiates every session. If that description holds, 0canvas's legal surface is similar to Zed's — and to any terminal emulator that runs a vendor CLI.
+**The real defense is the architecture**, not the precedent. That defense is: Zeros spawns the vendor's own official CLI as a subprocess; the CLI handles authentication against credentials the vendor issued to that same user; Zeros never sees, stores, forwards, or automates the credential itself; the user initiates every session. If that description holds, Zeros's legal surface is similar to Zed's — and to any terminal emulator that runs a vendor CLI.
 
-### 0canvas's own Terms of Service must
+### Zeros's own Terms of Service must
 
-- Require users to represent they own the API keys / subscriptions they bring, and have authority to use them with 0canvas.
+- Require users to represent they own the API keys / subscriptions they bring, and have authority to use them with Zeros.
 - Bind users to each vendor's then-current usage policy (link out to each).
 - Disclaim liability for user violations of vendor terms.
-- Prohibit credential sharing across 0canvas users.
+- Prohibit credential sharing across Zeros users.
 
 ### Recommended ship order
 
@@ -175,5 +175,5 @@ Zed does integrate the same CLIs via ACP, and their product works with users' co
 - Anthropic's stance on third-party commercial apps invoking Claude Code against an end user's Anthropic account (API or consumer).
 - OpenAI's stance on the same for Codex CLI.
 - Google's stance on the same for Gemini CLI.
-- Whether 0canvas's marketing copy needs vendor review (logos: yes; names: likely no; screenshots of vendor UI inside 0canvas: unclear).
+- Whether Zeros's marketing copy needs vendor review (logos: yes; names: likely no; screenshots of vendor UI inside Zeros: unclear).
 - Whether Tauri's packaging of Apache-2.0 CLIs requires a specific NOTICE / LICENSE bundling approach.

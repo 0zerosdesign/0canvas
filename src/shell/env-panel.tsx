@@ -32,7 +32,7 @@ import {
   type EnvFile,
   type EnvVar,
 } from "../native/tauri-events";
-import { Button, Input } from "../0canvas/ui";
+import { Button, Input } from "../zeros/ui";
 import { useChatCwd } from "./use-chat-cwd";
 
 function isTauriWebview(): boolean {

@@ -3,7 +3,7 @@
 > **🚧 Partially stale (2026-04-20).** In the Mac app, "overlay" means
 > **Column 3** — the engine workspace lives inside a native column,
 > not as a portal on `document.body`. No FAB toggle button, no
-> `data-0canvas=portal` injected div. The `<ZeroCanvas />` component
+> `data-Zeros=portal` injected div. The `<Zeros />` component
 > described below is still shipped for the npm distribution channel
 > (V2); the Mac app instead mounts `<EngineWorkspace />` directly
 > inside `<div className="oc-column-3">`. Command palette (Cmd+/) and
@@ -13,50 +13,50 @@
 
 ---
 
-The Overlay Engine is the root component and runtime that mounts the entire 0canvas design workspace as a floating overlay on top of any web page. It is the primary consumer-facing API of the package.
+The Overlay Engine is the root component and runtime that mounts the entire Zeros design workspace as a floating overlay on top of any web page. It is the primary consumer-facing API of the package.
 
 ## Source Files
 
 | File | Purpose |
 |------|---------|
-| `src/0canvas/engine/0canvas-engine.tsx` | Main `<ZeroCanvas />` component, `EngineWorkspace` layout, `useResizable` hook |
-| `src/0canvas/engine/0canvas-styles.ts` | Runtime CSS injection (`injectStyles` / `removeStyles`) — legacy monolith, still the active entry point |
-| `src/0canvas/engine/styles/index.ts` | Barrel file for the split CSS module system |
-| `src/0canvas/engine/styles/tokens.ts` | Design tokens (CSS custom properties) |
-| `src/0canvas/engine/styles/layout.ts` | Tailwind-style utility classes |
-| `src/0canvas/engine/styles/panels.ts` | Panel containers, sidebar, layers panel |
-| `src/0canvas/engine/styles/toolbar.ts` | Workspace toolbar and project dropdown |
-| `src/0canvas/engine/styles/canvas.ts` | Source node, variant node, resize handles, variant canvas |
-| `src/0canvas/engine/styles/style-panel.ts` | Style panel property rows, sections, tabs, computed view |
-| `src/0canvas/engine/styles/agent-panel.ts` | Agent panel IDE cards, status badges, MCP setup |
-| `src/0canvas/engine/styles/command-palette.ts` | Command palette overlay, input, item list |
-| `src/0canvas/engine/styles/settings.ts` | Settings page navigation and content area |
+| `src/zeros/engine/zeros-engine.tsx` | Main `<Zeros />` component, `EngineWorkspace` layout, `useResizable` hook |
+| `src/zeros/engine/zeros-styles.ts` | Runtime CSS injection (`injectStyles` / `removeStyles`) — legacy monolith, still the active entry point |
+| `src/zeros/engine/styles/index.ts` | Barrel file for the split CSS module system |
+| `src/zeros/engine/styles/tokens.ts` | Design tokens (CSS custom properties) |
+| `src/zeros/engine/styles/layout.ts` | Tailwind-style utility classes |
+| `src/zeros/engine/styles/panels.ts` | Panel containers, sidebar, layers panel |
+| `src/zeros/engine/styles/toolbar.ts` | Workspace toolbar and project dropdown |
+| `src/zeros/engine/styles/canvas.ts` | Source node, variant node, resize handles, variant canvas |
+| `src/zeros/engine/styles/style-panel.ts` | Style panel property rows, sections, tabs, computed view |
+| `src/zeros/engine/styles/agent-panel.ts` | Agent panel IDE cards, status badges, MCP setup |
+| `src/zeros/engine/styles/command-palette.ts` | Command palette overlay, input, item list |
+| `src/zeros/engine/styles/settings.ts` | Settings page navigation and content area |
 | `src/index.ts` | Public barrel exports for the npm package |
 
 ---
 
 ## How the Overlay Mounts on the Page
 
-The `<ZeroCanvas />` component uses a **React portal** to mount its UI directly onto `document.body`, completely separate from the host application's React tree.
+The `<Zeros />` component uses a **React portal** to mount its UI directly onto `document.body`, completely separate from the host application's React tree.
 
 ### Mount sequence:
 
-1. On mount, a `<div id="0canvas-portal">` container is created and appended to `document.body`. This container has `pointer-events: none` so it doesn't interfere with the host page.
-2. `injectStyles()` is called to inject a `<style id="0canvas-injected-styles">` element into `document.head` containing all ZeroCanvas CSS.
-3. `ReactDOM.createPortal()` renders ZeroCanvas UI into the portal container.
+1. On mount, a `<div id="Zeros-portal">` container is created and appended to `document.body`. This container has `pointer-events: none` so it doesn't interfere with the host page.
+2. `injectStyles()` is called to inject a `<style id="Zeros-injected-styles">` element into `document.head` containing all Zeros CSS.
+3. `ReactDOM.createPortal()` renders Zeros UI into the portal container.
 4. On unmount, `cleanup()` removes all inspector overlays, the portal container is removed from the DOM, and `removeStyles()` removes the injected `<style>` tag.
 
 ### Portal container attributes:
 
 ```html
-<div id="0canvas-portal"
-     data-0canvas="portal"
+<div id="Zeros-portal"
+     data-Zeros="portal"
      style="position:relative;z-index:2147483640;pointer-events:none;">
 ```
 
 ### Iframe guard:
 
-A constant `IFRAME_GUARD` checks `window.name === "0canvas-preview"` to prevent ZeroCanvas from mounting inside its own preview iframes.
+A constant `IFRAME_GUARD` checks `window.name === "Zeros-preview"` to prevent Zeros from mounting inside its own preview iframes.
 
 ---
 
@@ -66,7 +66,7 @@ When the overlay is open, the full component hierarchy is:
 
 ```
 ReactDOM.createPortal(
-  <div data-0canvas-root data-0canvas="root">       // Fixed overlay container
+  <div data-Zeros-root data-Zeros="root">       // Fixed overlay container
     <WorkspaceProvider>                               // Zustand-like store context
       <BridgeProvider>                                // WebSocket bridge to VS Code
         <AutoConnect>                                 // Auto-connects project on mount
@@ -75,7 +75,7 @@ ReactDOM.createPortal(
       </BridgeProvider>
     </WorkspaceProvider>
   </div>,
-  portalRef.current                                   // #0canvas-portal on document.body
+  portalRef.current                                   // #Zeros-portal on document.body
 )
 ```
 
@@ -99,7 +99,7 @@ When closed, a floating action button (FAB) is rendered at the configured `posit
 
 ```
 Closed state:  Portal renders <ToggleButton />
-Open state:    Portal renders <div data-0canvas-root> → full workspace
+Open state:    Portal renders <div data-Zeros-root> → full workspace
 Toggle:        setIsOpen(!prev) + onToggle?.(next)
 ```
 
@@ -193,7 +193,7 @@ The resize handle renders as a `.oc-resize-line` (1px line) that becomes a 3px b
 
 ### devOnly behavior:
 
-When `devOnly` is `true` (default), ZeroCanvas checks `process.env.NODE_ENV`. If it equals `"production"`, the component returns `null`. The check is done carefully to handle environments where `process` may not exist.
+When `devOnly` is `true` (default), Zeros checks `process.env.NODE_ENV`. If it equals `"production"`, the component returns `null`. The check is done carefully to handle environments where `process` may not exist.
 
 ---
 
@@ -201,39 +201,39 @@ When `devOnly` is `true` (default), ZeroCanvas checks `process.env.NODE_ENV`. If
 
 ### How it works
 
-All ZeroCanvas styles are defined as JavaScript template literal strings and injected into the page at runtime as a single `<style>` tag.
+All Zeros styles are defined as JavaScript template literal strings and injected into the page at runtime as a single `<style>` tag.
 
 ```typescript
 export function injectStyles(): void {
   if (document.getElementById(STYLE_ID)) return;   // idempotent
   const style = document.createElement("style");
-  style.id = "0canvas-injected-styles";
-  style.textContent = ZEROCANVAS_CSS;               // ~3300 lines of CSS
+  style.id = "Zeros-injected-styles";
+  style.textContent = ZEROS_CSS;               // ~3300 lines of CSS
   document.head.appendChild(style);
 }
 ```
 
 ### Scoping
 
-All CSS rules are scoped under `[data-0canvas-root]`. This is achieved by passing the scope selector `S = "[data-0canvas-root]"` to each CSS module function:
+All CSS rules are scoped under `[data-Zeros-root]`. This is achieved by passing the scope selector `S = "[data-Zeros-root]"` to each CSS module function:
 
 ```typescript
-const S = "[data-0canvas-root]";
+const S = "[data-Zeros-root]";
 // Every rule becomes:
-// [data-0canvas-root] .oc-toolbar { ... }
+// [data-Zeros-root] .oc-toolbar { ... }
 ```
 
-This ensures ZeroCanvas styles never leak into the host application.
+This ensures Zeros styles never leak into the host application.
 
 ### Targeted reset
 
-The tokens module includes a targeted CSS reset under `[data-0canvas-root]` that overrides any inherited styles from the host page, including `font-family`, `font-size`, `line-height`, `color`, `box-sizing`, and more. All overrides use `!important` to ensure isolation.
+The tokens module includes a targeted CSS reset under `[data-Zeros-root]` that overrides any inherited styles from the host page, including `font-family`, `font-size`, `line-height`, `color`, `box-sizing`, and more. All overrides use `!important` to ensure isolation.
 
 ---
 
 ## Styles Architecture (After A2 Split)
 
-The CSS was split from a single ~3300-line monolith (`0canvas-styles.ts`) into 9 focused module files in `src/0canvas/engine/styles/`:
+The CSS was split from a single ~3300-line monolith (`zeros-styles.ts`) into 9 focused module files in `src/zeros/engine/styles/`:
 
 | Module | Lines (approx) | Responsibility |
 |--------|----------------|----------------|
@@ -250,7 +250,7 @@ The CSS was split from a single ~3300-line monolith (`0canvas-styles.ts`) into 9
 The barrel file `styles/index.ts` combines all modules:
 
 ```typescript
-export const ZEROCANVAS_CSS = `
+export const ZEROS_CSS = `
 ${[
   tokensCSS(S),
   layoutCSS(S),
@@ -265,13 +265,13 @@ ${[
 `;
 ```
 
-Note: The legacy `0canvas-styles.ts` monolith still exists and is the active entry point used by `injectStyles()`. The split modules in `styles/` are the newer architecture but both contain the same CSS.
+Note: The legacy `zeros-styles.ts` monolith still exists and is the active entry point used by `injectStyles()`. The split modules in `styles/` are the newer architecture but both contain the same CSS.
 
 ---
 
 ## Design Token System
 
-ZeroCanvas uses a two-tier token system:
+Zeros uses a two-tier token system:
 
 ### Tier 1: Primitive scales
 
@@ -330,7 +330,7 @@ Additional shortcuts are handled by child components (Cmd+K for inline edit, Esc
 
 The package exports:
 
-- **Component:** `ZeroCanvas` (default and named export), `ZeroCanvasProps` type
+- **Component:** `Zeros` (default and named export), `ZerosProps` type
 - **Inspector utilities:** `buildElementTree`, `rebuildElementMap`, `getElementById`, `highlightElement`, `applyStyle`, `startInspect`, `stopInspect`, `isInspecting`, `generateAgentOutput`, `cleanup`, `setInspectionTarget`, `resetInspectionTarget`, `capturePageSnapshot`, `captureComponentSnapshot`, `pushVariantToMain`, `getElementOuterHTML`, `onForkElementRequest`, `onChangeRequest`, `renderFeedbackMarkers`, `clearFeedbackMarkers`, `onEditFeedbackRequest`
 - **Component detection:** `identifyElement`, `ComponentInfo`
 - **CSS injection:** `injectStyles`, `removeStyles`
@@ -346,4 +346,4 @@ The package exports:
 - **Full-screen mode:** The overlay currently fills the viewport but has no true full-screen (F11-style) mode.
 - **Responsive breakpoint in canvas:** The canvas shows the source page at a fixed or user-resized width, but there is no breakpoint ruler or preset breakpoint snapping for responsive design testing.
 - **Light theme:** The `theme` prop accepts `"light"` and `"auto"` but only the dark theme is implemented in the token system.
-- **Styles consolidation:** The legacy `0canvas-styles.ts` monolith and the split `styles/` modules contain duplicate CSS. These should be unified so only the split modules are the source of truth.
+- **Styles consolidation:** The legacy `zeros-styles.ts` monolith and the split `styles/` modules contain duplicate CSS. These should be unified so only the split modules are the source of truth.

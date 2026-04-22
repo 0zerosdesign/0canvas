@@ -6,7 +6,7 @@ Supporting libraries used by the Style Panel and visual editors.
 
 ## CSS Property Value Autocomplete (`lib/css-properties.ts`)
 
-> `src/0canvas/lib/css-properties.ts`
+> `src/zeros/lib/css-properties.ts`
 
 Provides a static lookup table of valid CSS keyword values for 40+ properties, and a fuzzy-matching function for autocomplete suggestions.
 
@@ -65,7 +65,7 @@ Called by the `AutocompleteInput` component in `style-panel.tsx` whenever the us
 
 ## Tailwind Detection & Classification (`lib/tailwind.ts`)
 
-> `src/0canvas/lib/tailwind.ts`
+> `src/zeros/lib/tailwind.ts`
 
 Detects whether CSS classes are Tailwind utilities and maps them to CSS property categories. Used by the Style Panel to conditionally render the TailwindEditor and by the TailwindEditor itself for grouping and autocomplete.
 
@@ -148,7 +148,7 @@ A curated list of ~160 commonly used Tailwind utility classes, organized by cate
 
 ## OpenAI Streaming Client (`lib/openai.ts`)
 
-> `src/0canvas/lib/openai.ts`
+> `src/zeros/lib/openai.ts`
 
 A generic streaming chat client for OpenAI-compatible APIs. Used by the AI chat panel and potentially other AI-powered features. Not directly used by the style panel editors, but part of the shared library layer.
 
@@ -177,7 +177,7 @@ interface AiSettings {
 }
 ```
 
-Settings are persisted to `localStorage` under key `"0canvas-ai-settings"`. Functions:
+Settings are persisted to `localStorage` under key `"Zeros-ai-settings"`. Functions:
 - `loadAiSettings()` -- loads and merges with defaults
 - `saveAiSettings(settings)` -- writes to localStorage
 - `isAiConfigured(settings)` -- checks if the selected provider has required config
@@ -223,7 +223,7 @@ interface OpenAIMessage {
 
 Standard OpenAI chat message format. System messages are extracted as `instructions` when using the Responses API format.
 
-### Usage in 0canvas
+### Usage in Zeros
 
 The AI streaming client powers the AI chat panel for design assistance queries. It is not used by the style panel editors directly, but it shares the same localStorage persistence pattern and is part of the same library layer. The `autoSendFeedback` setting (currently defaulting to `false`) was part of a feedback system that has been removed but the setting remains.
 

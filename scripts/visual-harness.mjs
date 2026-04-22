@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // ============================================================
-// 0canvas Visual Harness
+// Zeros Visual Harness
 //
 // Boots the Vite dev server, drives a headless Chromium to a
 // set of known routes/states, and writes PNG screenshots to

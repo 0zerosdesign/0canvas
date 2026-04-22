@@ -2,10 +2,10 @@
   "$schema": "https://zeros.design/schemas/oc-project-v1.json",
   "schemaVersion": 1,
   "project": {
-    "id": "proj-1776842696511",
+    "id": "proj-1776844680030",
     "name": "Untitled",
-    "createdAt": "2026-04-22T07:24:57.141Z",
-    "updatedAt": "2026-04-22T07:24:57.141Z",
+    "createdAt": "2026-04-22T07:58:00.649Z",
+    "updatedAt": "2026-04-22T07:58:00.649Z",
     "revision": 1
   },
   "workspace": {
@@ -45,6 +45,6 @@
   },
   "integrity": {
     "hash": "",
-    "generator": "0canvas@0.0.0"
+    "generator": "Zeros@0.0.0"
   }
 }

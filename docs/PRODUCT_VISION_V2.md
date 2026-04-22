@@ -1,4 +1,4 @@
-# 0canvas Product Vision V2 — The Universal Design Engine
+# Zeros Product Vision V2 — The Universal Design Engine
 
 > **⚠️ SUPERSEDED by [PRODUCT_VISION_V3.md](PRODUCT_VISION_V3.md) on
 > 2026-04-20.** V3 pivots to a native Tauri Mac app as the primary
@@ -24,7 +24,7 @@
 
 1. [Vision: What Changed](#1-vision-what-changed)
 2. [Core Experience Principles](#2-core-experience-principles)
-3. [The Engine — Heart of 0canvas](#3-the-engine--heart-of-0canvas)
+3. [The Engine — Heart of Zeros](#3-the-engine--heart-of-Zeros)
 4. [Engine Architecture & Technology](#4-engine-architecture--technology)
 5. [The .0c File — Living Design Document](#5-the-0c-file--living-design-document)
 6. [Browser Overlay — A Design Tool, Not a Dev Tool](#6-browser-overlay--a-design-tool-not-a-dev-tool)
@@ -53,14 +53,14 @@ This created hard dependencies: you needed VS Code (or a fork), you needed the e
 **The engine lives in the codebase. One install command. Everything works.**
 
 ```
-npm install @zerosdesign/0canvas
+npm install @Withso/zeros
 ```
 
 That's it. The next time the user runs their dev server, a design tool appears in the browser. No VS Code extension. No browser extension. No configuration file. No MCP setup. No WebSocket debugging. The user presses `Ctrl+Shift+D` and starts designing.
 
 ```
 User's Codebase
-  └── node_modules/@zerosdesign/0canvas/
+  └── node_modules/@Withso/zeros/
        └── The Engine (Node.js process)
             ├── Reads and writes CSS/source files directly
             ├── Serves the browser overlay
@@ -81,7 +81,7 @@ User's Codebase
 
 ### The Principle
 
-**0canvas is a design tool that happens to run in a browser.**
+**Zeros is a design tool that happens to run in a browser.**
 
 The user should never think about engines, bridges, protocols, or connections. They should think about colors, spacing, typography, and layout. Every technical detail operates silently under the hood. The only time the tool surfaces a technical notification is when something is broken and needs the user's attention.
 
@@ -105,7 +105,7 @@ If the engine is connected and working (which it should be 99% of the time), the
 **When something goes wrong:** A single, human-readable notification appears:
 
 ```
-"0canvas can't connect to your project. Is your dev server running?"
+"Zeros can't connect to your project. Is your dev server running?"
 ```
 
 Not:
@@ -120,11 +120,11 @@ The installation and setup experience:
 
 ```bash
 # Step 1: Install
-npm install @zerosdesign/0canvas
+npm install @Withso/zeros
 
 # Step 2: Add to your app (one line)
 # In your main entry file:
-import '@zerosdesign/0canvas';
+import '@Withso/zeros';
 
 # Step 3: Run your dev server
 npm run dev
@@ -153,21 +153,21 @@ The real app, running in a real browser, is the design surface. What the designe
 
 ### Principle 5: AI is a Silent Collaborator
 
-AI agents interact with 0canvas through MCP. The MCP server starts automatically with the engine. AI tools discover it automatically through config files the engine generates. The user never configures this.
+AI agents interact with Zeros through MCP. The MCP server starts automatically with the engine. AI tools discover it automatically through config files the engine generates. The user never configures this.
 
 When a designer makes changes and wants AI help, they describe what they want in the overlay's AI chat. The engine routes the request to whatever AI tool is available. The designer doesn't choose between "Cursor mode" or "Claude Code mode" — it just works.
 
 ---
 
-## 3. The Engine — Heart of 0canvas
+## 3. The Engine — Heart of Zeros
 
 ### What the Engine Is
 
-The engine is a standalone Node.js process that runs alongside the user's dev server. It is the brain of 0canvas — it reads the codebase, writes changes back to source files, serves the browser overlay, and exposes an MCP endpoint for AI tools.
+The engine is a standalone Node.js process that runs alongside the user's dev server. It is the brain of Zeros — it reads the codebase, writes changes back to source files, serves the browser overlay, and exposes an MCP endpoint for AI tools.
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│  0canvas Engine (Node.js process, port 24193)             │
+│  Zeros Engine (Node.js process, port 24193)             │
 │                                                          │
 │  ┌─────────────────────────────────────────────────────┐ │
 │  │  HTTP + WebSocket Server (single port)              │ │
@@ -193,11 +193,11 @@ The engine is a standalone Node.js process that runs alongside the user's dev se
 │                                                          │
 │  ┌─────────────────────────────────────────────────────┐ │
 │  │  MCP Server (Streamable HTTP)                       │ │
-│  │  ├── 0canvas_read_design_state                      │ │
-│  │  ├── 0canvas_get_element_styles                     │ │
-│  │  ├── 0canvas_list_tokens                            │ │
-│  │  ├── 0canvas_get_feedback                           │ │
-│  │  └── 0canvas_apply_change                           │ │
+│  │  ├── Zeros_read_design_state                      │ │
+│  │  ├── Zeros_get_element_styles                     │ │
+│  │  ├── Zeros_list_tokens                            │ │
+│  │  ├── Zeros_get_feedback                           │ │
+│  │  └── Zeros_apply_change                           │ │
 │  └─────────────────────────────────────────────────────┘ │
 └──────────────────────────────────────────────────────────┘
          │                              │
@@ -217,8 +217,8 @@ Users add the engine to their `dev` script:
 ```json
 {
   "scripts": {
-    "dev": "concurrently 'vite' '0canvas serve'",
-    "dev:design": "0canvas serve"
+    "dev": "concurrently 'vite' 'Zeros serve'",
+    "dev:design": "Zeros serve"
   }
 }
 ```
@@ -227,28 +227,28 @@ Or use the Vite plugin (convenience wrapper around the same engine):
 
 ```typescript
 // vite.config.ts
-import { zeroCanvas } from '@zerosdesign/0canvas/vite';
+import { zeros } from '@Withso/zeros/vite';
 
 export default defineConfig({
-  plugins: [react(), zeroCanvas()]
+  plugins: [react(), zeros()]
 });
 ```
 
 **Option B: Manual start**
 
 ```bash
-npx 0canvas serve
+npx Zeros serve
 ```
 
 Starts the engine on port 24193 (default), auto-detects project root, begins watching files.
 
 **Option C: Auto-start via package import**
 
-When the user imports `@zerosdesign/0canvas` in their app, the library attempts to connect to the engine on the default port. If no engine is running and the environment is development, the overlay shows a gentle prompt:
+When the user imports `@Withso/zeros` in their app, the library attempts to connect to the engine on the default port. If no engine is running and the environment is development, the overlay shows a gentle prompt:
 
 ```
-"Start the 0canvas engine to enable design editing:
- npx 0canvas serve"
+"Start the Zeros engine to enable design editing:
+ npx Zeros serve"
 ```
 
 ### What the Engine Does on Startup
@@ -261,9 +261,9 @@ When the user imports `@zerosdesign/0canvas` in their app, the library attempts 
 5. Find existing .0c files in the project
 6. Start HTTP + WebSocket server on port 24193
 7. Start file watcher (@parcel/watcher)
-8. Write .0canvas/.port file for overlay discovery
+8. Write .zeros/.port file for overlay discovery
 9. Generate .mcp.json if not present (for AI tool auto-discovery)
-10. Log one line: "0canvas engine ready on port 24193"
+10. Log one line: "Zeros engine ready on port 24193"
 ```
 
 Time budget: under 500ms for a typical project (50 CSS files, ~5000 rules).
@@ -296,7 +296,7 @@ Every dependency was chosen based on benchmarks for a daemon targeting <35MB mem
 | **HTTP server** | Node.js native `http` | Zero framework overhead. Shares port with WebSocket. Only 1-2 routes needed (MCP + health). |
 | **MCP transport** | `@modelcontextprotocol/sdk` (Streamable HTTP) | Official SDK. Single POST endpoint. All major AI tools support it. |
 | **Atomic file writes** | Manual (write-tmp-rename) | 10 lines of code, no dependency. POSIX-guaranteed atomic rename. |
-| **CLI framework** | Minimal (process.argv parsing) | No commander/yargs needed for `0canvas serve [--port N]`. |
+| **CLI framework** | Minimal (process.argv parsing) | No commander/yargs needed for `Zeros serve [--port N]`. |
 
 ### Memory Budget
 
@@ -378,7 +378,7 @@ Map<string, { value: string, file: string, line: number }>
 ```
 src/
   engine/
-    index.ts              — ZeroCanvasEngine class, lifecycle management
+    index.ts              — ZerosEngine class, lifecycle management
     server.ts             — HTTP + WebSocket server on single port
     css-resolver.ts       — Selector → file:line resolution via PostCSS
     css-writer.ts         — Atomic file writing with format preservation
@@ -391,7 +391,7 @@ src/
     cache.ts              — Selector index, file cache, token index
     types.ts              — Shared types for engine ↔ overlay messages
 
-  cli.ts                  — CLI entry point: npx 0canvas serve
+  cli.ts                  — CLI entry point: npx Zeros serve
   
   vite-plugin.ts          — Optional Vite wrapper (starts engine in-process)
 ```
@@ -400,16 +400,16 @@ src/
 
 ```bash
 # Start the engine (primary command)
-npx 0canvas serve
-npx 0canvas serve --port 24193
-npx 0canvas serve --root /path/to/project
+npx Zeros serve
+npx Zeros serve --port 24193
+npx Zeros serve --root /path/to/project
 
 # Create a new .0c project file
-npx 0canvas init
-npx 0canvas init --name "My App"
+npx Zeros init
+npx Zeros init --name "My App"
 
 # Check engine status
-npx 0canvas status
+npx Zeros status
 ```
 
 The CLI is minimal. `serve` is the only command most users ever run.
@@ -421,7 +421,7 @@ Startup:
   → Detect project root
   → Build indexes
   → Start server
-  → Write .0canvas/.port
+  → Write .zeros/.port
   → Write .mcp.json (if missing)
   → Ready
 
@@ -435,7 +435,7 @@ Shutdown (SIGTERM / SIGINT / SIGHUP):
   → Stop accepting connections
   → Close WebSocket clients gracefully
   → Stop file watcher
-  → Remove .0canvas/.port
+  → Remove .zeros/.port
   → Exit
 ```
 
@@ -450,7 +450,7 @@ The .0c file is NOT created by a CLI command or manually. It's created from the 
 ```
 User opens app in browser
   → Presses Ctrl+Shift+D
-  → 0canvas overlay appears
+  → Zeros overlay appears
   → If no .0c file exists: "Create a new design project?"
   → User clicks "Create" and names it
   → Engine creates the .0c file in the project root
@@ -569,7 +569,7 @@ When the user presses `Ctrl+Shift+D`, a full design tool appears:
 
 | Situation | What the user sees |
 |-----------|-------------------|
-| Engine not running | "Start the 0canvas engine to enable design editing. Run: `npx 0canvas serve`" |
+| Engine not running | "Start the Zeros engine to enable design editing. Run: `npx Zeros serve`" |
 | Engine disconnected mid-session | "Reconnecting..." (auto-retries silently). After 10s: "Connection lost. Your changes are saved locally." |
 | CSS write failed | "Couldn't update [filename]. The file may be read-only." |
 | .0c file conflict | "This design file was modified externally. Reload?" |
@@ -600,7 +600,7 @@ The engine starts an MCP server on the same port as the WebSocket. AI tools disc
 ```json
 {
   "mcpServers": {
-    "0canvas": {
+    "Zeros": {
       "type": "http",
       "url": "http://localhost:24193/mcp"
     }
@@ -616,11 +616,11 @@ This file is compatible with Claude Code, Cursor, and other MCP-aware tools. The
 
 | Tool | What it does | Who uses it |
 |------|-------------|-------------|
-| `0canvas_read_design_state` | Returns the .0c project file | AI agents wanting design context |
-| `0canvas_get_element_styles` | Computed styles + source location for a selector | AI agents making targeted CSS changes |
-| `0canvas_list_tokens` | All CSS custom properties (design tokens) | AI agents working with the design system |
-| `0canvas_get_feedback` | Pending feedback/change items | AI agents processing design requests |
-| `0canvas_apply_change` | Write a CSS change to source + notify browser | AI agents executing design changes |
+| `Zeros_read_design_state` | Returns the .0c project file | AI agents wanting design context |
+| `Zeros_get_element_styles` | Computed styles + source location for a selector | AI agents making targeted CSS changes |
+| `Zeros_list_tokens` | All CSS custom properties (design tokens) | AI agents working with the design system |
+| `Zeros_get_feedback` | Pending feedback/change items | AI agents processing design requests |
+| `Zeros_apply_change` | Write a CSS change to source + notify browser | AI agents executing design changes |
 
 ### AI Chat in the Overlay
 
@@ -645,7 +645,7 @@ The AI provider is configured once in settings. After that, the user just chats.
 
 API keys for direct AI features (OpenAI, Anthropic) are stored:
 
-1. **In the engine's local config:** `~/.0canvas/config.json` (user-global, never committed to git)
+1. **In the engine's local config:** `~/.zeros/config.json` (user-global, never committed to git)
 2. **In environment variables:** `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` (standard convention)
 3. **In the cloud account:** (future, after auth is implemented) encrypted, per-user
 
@@ -683,9 +683,9 @@ Auth and login are the **last implementation**, after the core design tool exper
 
 | Data | Storage | Reason |
 |------|---------|--------|
-| API keys | `~/.0canvas/config.json` | Security. Never in a repo. |
-| Auth tokens | `~/.0canvas/auth.json` | Session management. |
-| Engine preferences | `~/.0canvas/config.json` | User-specific settings. |
+| API keys | `~/.zeros/config.json` | Security. Never in a repo. |
+| Auth tokens | `~/.zeros/auth.json` | Session management. |
+| Engine preferences | `~/.zeros/config.json` | User-specific settings. |
 | UI state | Browser localStorage | Panel positions, theme preference. |
 
 **Goes to CLOUD (database, after auth):**
@@ -711,13 +711,13 @@ The cloud is for **identity, collaboration metadata, and secure storage**. The d
 ### Auth Flow
 
 ```
-User opens 0canvas overlay
+User opens Zeros overlay
   → Overlay works fully without login (free tier)
   
 User wants cloud features (sync, team, AI credits)
   → Clicks "Sign In" in the overlay
   → OAuth popup (GitHub / Google)
-  → Token stored locally in ~/.0canvas/auth.json
+  → Token stored locally in ~/.zeros/auth.json
   → Engine sends token with cloud API requests
   → Cloud features activate
 ```
@@ -758,24 +758,24 @@ Phase 1 is about building the universal engine and proving the core experience w
 
 ### Phase 1A: The Engine (Weeks 1-3)
 
-**Goal:** `npx 0canvas serve` works. Browser overlay connects. CSS changes write to source files.
+**Goal:** `npx Zeros serve` works. Browser overlay connects. CSS changes write to source files.
 
 | Task | Priority | Notes |
 |------|----------|-------|
 | Create `src/engine/` module | Critical | Migrate CSS resolver + writer from VS Code extension to pure Node.js |
-| Build `src/cli.ts` entry point | Critical | `npx 0canvas serve --port 24193` |
+| Build `src/cli.ts` entry point | Critical | `npx Zeros serve --port 24193` |
 | HTTP + WebSocket on single port | Critical | Node.js `http` + `ws`, no framework |
 | CSS selector index (PostCSS) | Critical | Parse all CSS files, build Map<selector, location> |
 | Incremental file watching | Critical | @parcel/watcher, re-parse only changed files |
 | .0c file manager | Critical | Create/read/write/delete from engine |
 | Atomic CSS file writing | Critical | Write-tmp-rename, preserves formatting |
-| Update `<ZeroCanvas />` component | Critical | Connect to engine WebSocket instead of Vite plugin relay |
+| Update `<Zeros />` component | Critical | Connect to engine WebSocket instead of Vite plugin relay |
 | Tailwind class writer | High | Modify className in JSX/TSX files |
 | Framework detection | Medium | Auto-detect React/Vue/Svelte/Next/Nuxt/Astro |
 
 ### Phase 1B: MCP Integration (Week 4)
 
-**Goal:** AI tools auto-discover and connect to 0canvas. No configuration needed.
+**Goal:** AI tools auto-discover and connect to Zeros. No configuration needed.
 
 | Task | Priority | Notes |
 |------|----------|-------|
@@ -846,7 +846,7 @@ Phase 1 is about building the universal engine and proving the core experience w
 **Date:** 2026-04-15
 **Decision:** Build the engine as a standalone Node.js CLI process, not a VS Code extension.
 **Rationale:** The VS Code extension approach locks out Claude Code, Codex, Lovable, Bolt, Replit, terminal-only workflows, and every non-VS-Code IDE. The standalone engine works with everything.
-**Trade-off:** Users run two commands (`npm run dev` + `npx 0canvas serve`) instead of one. Mitigated by the Vite plugin wrapper and npm script patterns.
+**Trade-off:** Users run two commands (`npm run dev` + `npx Zeros serve`) instead of one. Mitigated by the Vite plugin wrapper and npm script patterns.
 
 ### Decision 2: CLI-First, Not Vite-Plugin-First
 
@@ -859,8 +859,8 @@ Phase 1 is about building the universal engine and proving the core experience w
 
 **Date:** 2026-04-15
 **Decision:** Remove all MCP status indicators, connection badges, WebSocket status, WiFi icons, and "IDE & Agents" settings from the overlay UI.
-**Rationale:** 0canvas is a design tool. Designers don't care about MCP protocols or WebSocket states. Technical details should be invisible when working and human-readable when broken.
-**Trade-off:** Harder to debug connection issues. Mitigated by clear error messages and `npx 0canvas status` CLI command for diagnostics.
+**Rationale:** Zeros is a design tool. Designers don't care about MCP protocols or WebSocket states. Technical details should be invisible when working and human-readable when broken.
+**Trade-off:** Harder to debug connection issues. Mitigated by clear error messages and `npx Zeros status` CLI command for diagnostics.
 
 ### Decision 4: .0c Files on Disk, Not IndexedDB
 
@@ -911,5 +911,5 @@ Phase 1 is about building the universal engine and proving the core experience w
 | File/Directory | Action |
 |---|---|
 | `extensions/vscode/` | Freeze. Do not delete — may become optional enhancement later. |
-| `src/0canvas/bridge/` | Remove after engine migration. Bridge logic moves to engine. |
-| `.0canvas/.port` | Still used, but written by engine instead of Vite plugin. |
+| `src/zeros/bridge/` | Remove after engine migration. Bridge logic moves to engine. |
+| `.zeros/.port` | Still used, but written by engine instead of Vite plugin. |

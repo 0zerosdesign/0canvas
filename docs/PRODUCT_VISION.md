@@ -1,4 +1,4 @@
-# 0canvas Product Vision & Architecture Plan
+# Zeros Product Vision & Architecture Plan
 
 > **⚠️ SUPERSEDED — kept for historical reference only.**
 > This document describes the V1 vision (VS Code extension + browser
@@ -37,7 +37,7 @@ The tools that attempt to bridge this gap (Figma-to-code generators, design toke
 
 ### The Vision
 
-0canvas eliminates the handoff entirely. It is a design tool that operates **directly on production code**:
+Zeros eliminates the handoff entirely. It is a design tool that operates **directly on production code**:
 
 - A designer opens VS Code or Cursor
 - Pulls the latest code from git
@@ -74,13 +74,13 @@ The tools that attempt to bridge this gap (Figma-to-code generators, design toke
 
 ## 2. Current State Analysis
 
-### What 0canvas Is Today
+### What Zeros Is Today
 
-0canvas is a **React overlay library** (npm: `@zerosdesign/0canvas` v0.0.5) that embeds into any web app as a floating inspector. It's activated with `Ctrl+Shift+D` and provides:
+Zeros is a **React overlay library** (npm: `@Withso/zeros` v0.0.5) that embeds into any web app as a floating inspector. It's activated with `Ctrl+Shift+D` and provides:
 
 ```
 Consumer App (React/Vue/Svelte/any framework)
-    └── <ZeroCanvas /> component (portal on document.body)
+    └── <Zeros /> component (portal on document.body)
          ├── FAB toggle button (Ctrl+Shift+D)
          └── Full workspace overlay (when open)
               ├── AppSidebar (design/themes/settings navigation)
@@ -150,7 +150,7 @@ Key facts about the existing extension:
 - Polls an HTTP bridge server on port 24192 (this bridge server was removed from the main codebase)
 - Detects agent type: Cursor, Copilot, Claude Code, Codex
 - Auto-dispatches feedback markdown to the detected agent
-- Writes to `.0canvas/feedback.md` in workspace
+- Writes to `.zeros/feedback.md` in workspace
 
 ### What's Missing (Gap Analysis)
 
@@ -182,7 +182,7 @@ Key facts about the existing extension:
 ┌──────────────────────────────────────────────────────────────────┐
 │                      VS Code / Cursor                            │
 │  ┌────────────────────────────────────────────────────────────┐  │
-│  │  0canvas Extension (thin orchestrator)                     │  │
+│  │  Zeros Extension (thin orchestrator)                     │  │
 │  │  ┌──────────────┐ ┌──────────────┐ ┌───────────────────┐  │  │
 │  │  │ Custom Editor │ │ Dev Server   │ │ MCP Server        │  │  │
 │  │  │ Provider      │ │ Manager      │ │ (AI agent bridge) │  │  │
@@ -210,7 +210,7 @@ Key facts about the existing extension:
 │  ┌────────────────────────────────────────────────────────────┐  │
 │  │  Consumer App (real DOM, real CSS, real everything)         │  │
 │  │  ┌──────────────────────────────────────────────────────┐  │  │
-│  │  │  0canvas Overlay (Ctrl+Shift+D)                      │  │  │
+│  │  │  Zeros Overlay (Ctrl+Shift+D)                      │  │  │
 │  │  │                                                      │  │  │
 │  │  │  ┌────────┐ ┌──────────────────┐ ┌──────────────┐   │  │  │
 │  │  │  │ Layers │ │ Visual Canvas    │ │ Property     │   │  │  │
@@ -378,7 +378,7 @@ The `.0c` file is a JSON document that stores the complete design workspace stat
   // Integrity
   integrity: {
     hash: string,          // SHA-256 or FNV-1a
-    generator: string      // e.g. "0canvas@0.0.5"
+    generator: string      // e.g. "Zeros@0.0.5"
   }
 }
 ```
@@ -567,7 +567,7 @@ Dev server restarts / page refreshes / browser reopened
 
 ```
 1. Developer scaffolds project:
-   $ npx 0canvas init
+   $ npx Zeros init
    → Creates project.0c in repo root with detected framework and entry files
 
 2. Designer opens project.0c in VS Code:
@@ -602,7 +602,7 @@ The `.0c` file should be committed to the repo. It is:
 
 Recommended `.gitattributes`:
 ```
-*.0c merge=0canvas diff=json
+*.0c merge=Zeros diff=json
 ```
 
 ---
@@ -638,7 +638,7 @@ The centerpiece of the extension. When a user opens a `.0c` file, instead of sho
 ```typescript
 // custom-editor-provider.ts (conceptual)
 
-class ZeroCanvasEditorProvider implements vscode.CustomTextEditorProvider {
+class ZerosEditorProvider implements vscode.CustomTextEditorProvider {
 
   resolveCustomTextEditor(document: vscode.TextDocument, webviewPanel: vscode.WebviewPanel) {
     // Option A: Show a "Launch Canvas" UI in the webview
@@ -662,8 +662,8 @@ Registration in `package.json`:
 {
   "contributes": {
     "customEditors": [{
-      "viewType": "0canvas.designEditor",
-      "displayName": "0canvas Design Editor",
+      "viewType": "Zeros.designEditor",
+      "displayName": "Zeros Design Editor",
       "selector": [{ "filenamePattern": "*.0c" }],
       "priority": "default"
     }]
@@ -691,10 +691,10 @@ class DevServerManager {
     // 4. Return URL (e.g. http://localhost:5173)
   }
 
-  // Open the browser with 0canvas overlay active
+  // Open the browser with Zeros overlay active
   async openBrowser(url: string) {
-    // Open default browser to: url + ?0canvas=active
-    // The 0canvas library detects the query param and auto-opens
+    // Open default browser to: url + ?Zeros=active
+    // The Zeros library detects the query param and auto-opens
   }
 }
 ```
@@ -801,12 +801,12 @@ class GitAbstraction {
 {
   "contributes": {
     "commands": [
-      { "command": "0canvas.openDesign",      "title": "0canvas: Open Design Canvas" },
-      { "command": "0canvas.saveCheckpoint",   "title": "0canvas: Save Checkpoint" },
-      { "command": "0canvas.shareChanges",     "title": "0canvas: Share Changes" },
-      { "command": "0canvas.getLatest",        "title": "0canvas: Get Latest" },
-      { "command": "0canvas.sendToAgent",      "title": "0canvas: Send to AI Agent" },
-      { "command": "0canvas.init",             "title": "0canvas: Initialize Project" }
+      { "command": "Zeros.openDesign",      "title": "Zeros: Open Design Canvas" },
+      { "command": "Zeros.saveCheckpoint",   "title": "Zeros: Save Checkpoint" },
+      { "command": "Zeros.shareChanges",     "title": "Zeros: Share Changes" },
+      { "command": "Zeros.getLatest",        "title": "Zeros: Get Latest" },
+      { "command": "Zeros.sendToAgent",      "title": "Zeros: Send to AI Agent" },
+      { "command": "Zeros.init",             "title": "Zeros: Initialize Project" }
     ]
   }
 }
@@ -1979,7 +1979,7 @@ Individual changes can also be removed from anywhere in the list (not just the l
 
 ### Why This Is the Differentiator
 
-Most design-to-code tools generate code from designs. 0canvas does the opposite: it lets designers **change production code visually through design tokens**. The Themes module is the engine that makes this possible.
+Most design-to-code tools generate code from designs. Zeros does the opposite: it lets designers **change production code visually through design tokens**. The Themes module is the engine that makes this possible.
 
 No other tool in the competitive landscape offers this exact workflow: open a real CSS file with design tokens → see them visualized → change them visually → write back to the source file surgically. This is the feature that makes "pull, design, push" real.
 
@@ -2275,20 +2275,20 @@ The currently-stub Vite plugin becomes the browser-side WebSocket client:
 ```typescript
 // src/vite-plugin.ts (enhanced)
 
-export function zeroCanvas(options?: ZeroCanvasPluginOptions): Plugin {
+export function zeros(options?: ZerosPluginOptions): Plugin {
   return {
-    name: "0canvas",
+    name: "Zeros",
     apply: "serve",
 
     configureServer(server) {
-      // 1. Inject 0canvas WebSocket client into served pages
+      // 1. Inject Zeros WebSocket client into served pages
       // 2. Set up middleware to serve .0c file state
       // 3. Watch for .0c file changes and notify the overlay
     },
 
     transformIndexHtml(html) {
       // Inject <script> that connects to extension WebSocket
-      // and bootstraps the 0canvas overlay communication
+      // and bootstraps the Zeros overlay communication
     }
   };
 }
@@ -2302,7 +2302,7 @@ export function zeroCanvas(options?: ZeroCanvasPluginOptions): Plugin {
 
 ```
 1. Install VS Code or Cursor (if not already installed)
-2. Install 0canvas extension from marketplace
+2. Install Zeros extension from marketplace
 3. Done. No terminal. No configuration.
 ```
 
@@ -2317,7 +2317,7 @@ export function zeroCanvas(options?: ZeroCanvasPluginOptions): Plugin {
 │                                                         │
 │  2. GET LATEST                                          │
 │     VS Code Source Control tab → click "Pull" button    │
-│     (or 0canvas sidebar shows "Get Latest" button)      │
+│     (or Zeros sidebar shows "Get Latest" button)      │
 │                                                         │
 │  3. OPEN DESIGN CANVAS                                  │
 │     Double-click "project.0c" in file tree              │
@@ -2385,7 +2385,7 @@ export function zeroCanvas(options?: ZeroCanvasPluginOptions): Plugin {
 
 ```
 ┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
-│  0canvas Overlay │     │  VS Code Extension│     │  AI Agent        │
+│  Zeros Overlay │     │  VS Code Extension│     │  AI Agent        │
 │  (Browser)       │     │                  │     │  (Claude Code /  │
 │                  │     │  ┌────────────┐  │     │   Cursor / etc.) │
 │  Designer types: │────▶│  │ MCP Server │──┼────▶│                  │
@@ -2409,7 +2409,7 @@ The extension exposes these tools via MCP (Model Context Protocol) for AI agents
 // Returns the full .0c project state for AI context
 {
   name: "read_design_state",
-  description: "Read the current 0canvas design state including elements, tokens, variants, and feedback",
+  description: "Read the current Zeros design state including elements, tokens, variants, and feedback",
   returns: OCProjectFile
 }
 
@@ -2527,7 +2527,7 @@ Designer:
 | Git abstraction: save checkpoint | One-click commit from overlay sidebar | P1 |
 | Git abstraction: share changes | One-click push from overlay sidebar | P1 |
 | Git abstraction: get latest | One-click pull with .0c state reload | P1 |
-| `npx 0canvas init` CLI | Scaffold .0c file for existing projects | P1 |
+| `npx Zeros init` CLI | Scaffold .0c file for existing projects | P1 |
 
 **Milestone: Designer opens .0c → browser launches → designs visually → saves → pushes. Complete workflow.**
 
@@ -2563,7 +2563,7 @@ Designer:
 | Visual diff | Before/after comparison for checkpoints | P1 |
 | .0c merge conflict resolver | Visual tool for resolving .0c merge conflicts | P2 |
 
-**Milestone: 0canvas is a viable daily tool for production design work.**
+**Milestone: Zeros is a viable daily tool for production design work.**
 
 ### Phase 6: Polish & Ecosystem (Weeks 25+)
 
@@ -2582,7 +2582,7 @@ Designer:
 
 ### Direct Competitors
 
-| Tool | Approach | Strengths | Weaknesses | What 0canvas Can Learn |
+| Tool | Approach | Strengths | Weaknesses | What Zeros Can Learn |
 |------|----------|-----------|------------|----------------------|
 | **Pencil.dev** | VS Code extension with `.pen` files in git | MCP integration, bidirectional design-code, clean DX | IDE-only canvas (no real browser rendering), early-stage | `.pen` file format design, MCP integration pattern |
 | **Onlook** | Standalone Electron app, React-only | Open source (4.2k stars), two-way DOM-code sync | React-only, Electron overhead, no AI integration | DOM-to-source mapping approach, two-way sync architecture |
@@ -2594,24 +2594,24 @@ Designer:
 
 | Tool | Approach | Relevance |
 |------|----------|-----------|
-| **Figma Make** | AI generates code from Figma designs | Figma-to-code direction (opposite of 0canvas's code-first) |
+| **Figma Make** | AI generates code from Figma designs | Figma-to-code direction (opposite of Zeros's code-first) |
 | **v0 by Vercel** | AI generates UI from prompts | Competing vision for AI-generated design, Git-native |
 | **Webflow** | Visual web builder | Gold standard for visual editing UX, but walled garden |
 | **Plasmic** | Register components for visual editing | Component registration pattern for visual editing |
 | **Framer** | Visual builder generating React | Smooth design-to-code, but not on existing codebases |
 | **Penpot** | Open source design tool | Open source precedent, CSS Grid layout editing |
 
-### 0canvas Differentiation
+### Zeros Differentiation
 
 | Differentiator | Why It Matters |
 |---------------|----------------|
-| **Real browser rendering** | Unlike Pencil.dev/Cursor (WebView), 0canvas renders in the actual browser. What you see is exactly what ships. |
+| **Real browser rendering** | Unlike Pencil.dev/Cursor (WebView), Zeros renders in the actual browser. What you see is exactly what ships. |
 | **Framework agnostic** | Works with React, Vue, Svelte, Angular, plain HTML/CSS. Not locked to one framework. |
 | **Code-first, not generation** | Works on your existing codebase. No "generate and integrate" step. |
 | **Git-native .0c format** | Design state lives in the repo. Diffable, mergeable, reviewable. |
 | **AI agent agnostic** | Works with Claude Code, Cursor, Copilot, Windsurf — not locked to one AI. |
 | **Local-first** | No SaaS dependency. Everything runs on the designer's machine. |
-| **Library, not platform** | `<ZeroCanvas />` embeds into any app. The tool lives where the code lives. |
+| **Library, not platform** | `<Zeros />` embeds into any app. The tool lives where the code lives. |
 
 ### Market Position
 
@@ -2623,7 +2623,7 @@ Designer:
                          │
          Pencil.dev  ●   │      ● Framer
                          │
-     Cursor Visual ●     │  ● 0canvas (target)
+     Cursor Visual ●     │  ● Zeros (target)
                          │
           Builder.io ●   │
                          │
@@ -2631,7 +2631,7 @@ Designer:
          Separate from code    On production code
 ```
 
-0canvas targets the **upper-right quadrant**: high visual fidelity (real browser rendering) AND directly on production code.
+Zeros targets the **upper-right quadrant**: high visual fidelity (real browser rendering) AND directly on production code.
 
 ---
 
@@ -2763,7 +2763,7 @@ Most projects use a mix. The file writer applies the correct strategy per elemen
 
 3. **Marketplace timing:** When should the VS Code extension be published to the marketplace? Too early = bad reviews. Too late = missed adoption window.
 
-4. **Pencil.dev compatibility:** Should 0canvas read/write `.pen` files for interop? Or focus on .0c as a better format?
+4. **Pencil.dev compatibility:** Should Zeros read/write `.pen` files for interop? Or focus on .0c as a better format?
 
 5. **Open source strategy:** Full open source (like Penpot/Onlook) or proprietary with open-source components? Open source builds community but requires sustainable funding.
 
@@ -2785,11 +2785,11 @@ Most projects use a mix. The file writer applies the correct strategy per elemen
 ## Appendix B: File Structure (Target)
 
 ```
-0canvas/
+Zeros/
 ├── src/
-│   ├── 0canvas/
+│   ├── zeros/
 │   │   ├── canvas/              # ReactFlow canvas + nodes
-│   │   ├── engine/              # <ZeroCanvas /> entry component
+│   │   ├── engine/              # <Zeros /> entry component
 │   │   ├── format/              # .0c file format + persistence
 │   │   ├── inspector/           # DOM inspection utilities
 │   │   ├── panels/              # Sidebar, toolbar, layers, settings
@@ -2834,7 +2834,7 @@ Most projects use a mix. The file writer applies the correct strategy per elemen
 | Term | Definition |
 |------|-----------|
 | **.0c file** | JSON design document format. The "Figma file" that lives in git alongside code. |
-| **Overlay** | The 0canvas UI that appears on top of the running app in the browser (Ctrl+Shift+D). |
+| **Overlay** | The Zeros UI that appears on top of the running app in the browser (Ctrl+Shift+D). |
 | **Property editor** | Visual control for editing a CSS property (color picker, spacing slider, etc.). |
 | **Checkpoint** | Designer-friendly name for a git commit. "Save checkpoint" = commit. |
 | **Share** | Designer-friendly name for git push. "Share changes" = push (optionally create PR). |
@@ -2846,4 +2846,4 @@ Most projects use a mix. The file writer applies the correct strategy per elemen
 
 ---
 
-*This document is the strategic blueprint for 0canvas. It should be updated as decisions are made, questions are answered, and the roadmap progresses.*
+*This document is the strategic blueprint for Zeros. It should be updated as decisions are made, questions are answered, and the roadmap progresses.*

@@ -1,6 +1,6 @@
 # Visual Editors
 
-> `src/0canvas/editors/`
+> `src/zeros/editors/`
 
 The visual editors are specialized React components that replace raw property rows for certain CSS sections. Each editor provides a domain-specific UI that is more intuitive than editing raw CSS values. All editors follow the same integration pattern: they receive `elementId`, `selector`, and `styles`, and apply changes through the local store + DOM + bridge pipeline.
 

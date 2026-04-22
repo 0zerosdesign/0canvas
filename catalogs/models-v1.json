@@ -2,7 +2,7 @@
   "$schema": "./models-v1.schema.json",
   "version": 1,
   "updatedAt": "2026-04-21",
-  "notes": "Fallback model catalog for 0canvas. The app prefers ACP agent-advertised models (InitializeResponse._meta.models); this file fills in for agents that don't yet. Ship a PR when any vendor releases new models.",
+  "notes": "Fallback model catalog for Zeros. The app prefers ACP agent-advertised models (InitializeResponse._meta.models); this file fills in for agents that don't yet. Ship a PR when any vendor releases new models.",
   "families": {
     "claude": [
       { "value": "claude-opus-4-7[1m]", "label": "Claude Opus 4.7 (1M)", "badge": "1M" },

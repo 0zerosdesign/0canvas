@@ -29,45 +29,45 @@ const SRC = join(ROOT, "src");
 const ALLOWLIST = new Set([
   "src/styles/design-tokens.css",
   "src/styles/variables.css", // legacy re-export
-  "src/0canvas/ui/primitives.css",
+  "src/zeros/ui/primitives.css",
   // Parsers / lookup tables that describe CSS/Tailwind values — these
   // contain raw strings that describe what Tailwind classes MEAN but
   // are not themselves applied to the UI.
-  "src/0canvas/lib/tailwind.ts",
-  "src/0canvas/lib/css-properties.ts",
-  "src/0canvas/inspector/component-detection.ts",
-  "src/0canvas/themes/css-token-parser.ts",
-  "src/0canvas/themes/theme-color-resolver.ts",
+  "src/zeros/lib/tailwind.ts",
+  "src/zeros/lib/css-properties.ts",
+  "src/zeros/inspector/component-detection.ts",
+  "src/zeros/themes/css-token-parser.ts",
+  "src/zeros/themes/theme-color-resolver.ts",
   // Category palette — hex colors because alpha is concatenated
   // onto the string at runtime (impossible with CSS variables).
   // Values mirror the primitive token scale exactly.
-  "src/0canvas/editors/tailwind-editor.tsx",
+  "src/zeros/editors/tailwind-editor.tsx",
   // xterm.js theme object — the terminal emulator takes raw hex
   // strings in a JS object, cannot consume CSS custom properties.
   "src/shell/terminal-panel.tsx",
   // DOM inspector overlay color constants — injected into a user's
   // running app via inline styles, cannot rely on the shell token
   // scope.
-  "src/0canvas/inspector/constants.ts",
-  "src/0canvas/inspector/dom-walker.ts",
+  "src/zeros/inspector/constants.ts",
+  "src/zeros/inspector/dom-walker.ts",
   // Demo-only assets, not production code.
   "src/demo/style/variables.css",
   "src/demo/pages/docs.tsx",
   // Engine injected stylesheet — partial migration in progress.
   // Files on this list still contain legacy drift; remove as they
   // are migrated one-by-one.
-  "src/0canvas/engine/0canvas-styles.ts",
-  "src/0canvas/engine/styles/tokens.ts",       // token definitions (primitives live here)
-  "src/0canvas/engine/styles/layout.ts",       // tailwind arbitrary-value compat layer
-  "src/0canvas/engine/styles/agent-panel.ts",
-  "src/0canvas/engine/styles/canvas.ts",
-  "src/0canvas/engine/styles/panels.ts",
-  "src/0canvas/engine/styles/toolbar.ts",
-  "src/0canvas/engine/styles/index.ts",
+  "src/zeros/engine/zeros-styles.ts",
+  "src/zeros/engine/styles/tokens.ts",       // token definitions (primitives live here)
+  "src/zeros/engine/styles/layout.ts",       // tailwind arbitrary-value compat layer
+  "src/zeros/engine/styles/agent-panel.ts",
+  "src/zeros/engine/styles/canvas.ts",
+  "src/zeros/engine/styles/panels.ts",
+  "src/zeros/engine/styles/toolbar.ts",
+  "src/zeros/engine/styles/index.ts",
   // Inspector overlays with hand-rolled DOM strings — next wave.
-  "src/0canvas/inspector/feedback-pill.ts",
-  "src/0canvas/inspector/theme-pill.ts",
-  "src/0canvas/inspector/overlay.ts",
+  "src/zeros/inspector/feedback-pill.ts",
+  "src/zeros/inspector/theme-pill.ts",
+  "src/zeros/inspector/overlay.ts",
 ]);
 
 // Skip entire directories
@@ -212,7 +212,7 @@ function scanFile(absPath) {
   const lines = src.split(/\r?\n/);
   const isAllowlisted = ALLOWLIST.has(rel);
   const isCss = absPath.endsWith(".css");
-  const isPrimitivesCss = rel === "src/0canvas/ui/primitives.css";
+  const isPrimitivesCss = rel === "src/zeros/ui/primitives.css";
 
   lines.forEach((line, idx) => {
     const ln = idx + 1;

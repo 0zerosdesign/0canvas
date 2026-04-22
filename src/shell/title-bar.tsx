@@ -10,14 +10,14 @@
 // ============================================================
 import React from "react";
 import { GitBranch, Command } from "lucide-react";
-import { useWorkspace } from "../0canvas/store/store";
-import { Kbd } from "../0canvas/ui";
+import { useWorkspace } from "../zeros/store/store";
+import { Kbd } from "../zeros/ui";
 
 export function TitleBar() {
   const { state } = useWorkspace();
   const project = (state as any).project ?? null;
   const projectName =
-    project?.name || project?.root?.split(/[/\\]/).pop() || "0canvas";
+    project?.name || project?.root?.split(/[/\\]/).pop() || "Zeros";
   const branch = (project?.git as any)?.branch || "";
 
   return (

@@ -1,6 +1,6 @@
 ---
 name: Build UI Feature
-description: Step-by-step procedure for implementing any new UI feature in 0canvas so the result stays consistent with the Cursor 3 design system. Use this skill whenever you're about to create or modify a component, panel, or page.
+description: Step-by-step procedure for implementing any new UI feature in Zeros so the result stays consistent with the Cursor 3 design system. Use this skill whenever you're about to create or modify a component, panel, or page.
 icon: LayoutTemplate
 ---
 
@@ -38,7 +38,7 @@ Write the list out before writing JSX. Example for "a delete-project confirmatio
 - `<Button variant="ghost">` for cancel
 - `<Icon as={AlertTriangle} size="md">` in the header for the warning indicator
 
-If your list includes a primitive that doesn't exist yet in `/src/0canvas/ui/`, STOP and add it to the primitive library first. Never write a one-off class.
+If your list includes a primitive that doesn't exist yet in `/src/zeros/ui/`, STOP and add it to the primitive library first. Never write a one-off class.
 
 ---
 

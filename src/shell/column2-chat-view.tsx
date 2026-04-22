@@ -20,13 +20,13 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { MessageSquarePlus, Plus, Bot as BotIcon } from "lucide-react";
-import { Button } from "../0canvas/ui";
-import { useWorkspace, type ChatThread } from "../0canvas/store/store";
-import { useAcpSessions, useChatSession } from "../0canvas/acp/sessions-provider";
-import { AcpChat } from "../0canvas/acp/acp-chat";
-import { AgentsPanel } from "../0canvas/acp/agents-panel";
-import { envForChat } from "../0canvas/acp/composer-pills";
-import type { BridgeRegistryAgent } from "../0canvas/bridge/messages";
+import { Button } from "../zeros/ui";
+import { useWorkspace, type ChatThread } from "../zeros/store/store";
+import { useAcpSessions, useChatSession } from "../zeros/acp/sessions-provider";
+import { AcpChat } from "../zeros/acp/acp-chat";
+import { AgentsPanel } from "../zeros/acp/agents-panel";
+import { envForChat } from "../zeros/acp/composer-pills";
+import type { BridgeRegistryAgent } from "../zeros/bridge/messages";
 import { invoke } from "@tauri-apps/api/core";
 
 function newChatId(): string {

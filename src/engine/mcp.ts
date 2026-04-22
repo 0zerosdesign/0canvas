@@ -1,13 +1,13 @@
 // ──────────────────────────────────────────────────────────
-// 0canvas MCP Server — Exposes design state to AI agents
+// Zeros MCP Server — Exposes design state to AI agents
 // ──────────────────────────────────────────────────────────
 //
-// Provides 5 tools for AI agents to interact with 0canvas:
-//   1. 0canvas_read_design_state  — read .0c project file(s)
-//   2. 0canvas_get_element_styles — computed styles + source location
-//   3. 0canvas_list_tokens        — CSS custom properties
-//   4. 0canvas_get_feedback       — pending feedback items
-//   5. 0canvas_apply_change       — write CSS change to source file
+// Provides 5 tools for AI agents to interact with Zeros:
+//   1. Zeros_read_design_state  — read .0c project file(s)
+//   2. Zeros_get_element_styles — computed styles + source location
+//   3. Zeros_list_tokens        — CSS custom properties
+//   4. Zeros_get_feedback       — pending feedback items
+//   5. Zeros_apply_change       — write CSS change to source file
 //
 // Uses Streamable HTTP transport — mounted on the engine's
 // HTTP server at /mcp. Auto-discovered by AI tools via
@@ -38,7 +38,7 @@ export interface McpServerOptions {
   /**
    * Returns the latest selection the browser reported, or null when nothing
    * is selected. The engine caches the selection from ELEMENT_SELECTED bridge
-   * messages; MCP clients read it via the 0canvas_get_selection tool.
+   * messages; MCP clients read it via the Zeros_get_selection tool.
    */
   getSelection?: () => {
     selector: string;
@@ -49,7 +49,7 @@ export interface McpServerOptions {
   } | null;
 }
 
-export class ZeroCanvasMcp {
+export class ZerosMcp {
   private mcpServer: McpServer;
   private transport: StreamableHTTPServerTransport | null = null;
   private options: McpServerOptions;
@@ -58,7 +58,7 @@ export class ZeroCanvasMcp {
     this.options = options;
 
     this.mcpServer = new McpServer({
-      name: "0canvas",
+      name: "Zeros",
       version: "0.0.5",
     });
 
@@ -82,7 +82,7 @@ export class ZeroCanvasMcp {
     if (isInit || !this.transport) {
       // Create a new transport per session
       this.transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: () => `0canvas-${Date.now()}`,
+        sessionIdGenerator: () => `Zeros-${Date.now()}`,
       });
       await this.mcpServer.connect(this.transport);
     }
@@ -109,7 +109,7 @@ export class ZeroCanvasMcp {
     // Agents should call this before generating changes so they know
     // what element the user has in mind without being told.
     this.mcpServer.tool(
-      "0canvas_get_selection",
+      "Zeros_get_selection",
       "Returns the element the designer currently has selected in the canvas (selector, tag, class list, computed styles). Returns null when nothing is selected — in that case, ask the designer which element to work on rather than guessing. Always call this first before generating design changes.",
       {},
       async () => {
@@ -146,7 +146,7 @@ export class ZeroCanvasMcp {
 
     // 1. Read design state — returns the .0c project file JSON
     this.mcpServer.tool(
-      "0canvas_read_design_state",
+      "Zeros_read_design_state",
       "Returns the current .0c project file JSON, containing all variants, feedback items, and project metadata.",
       {},
       async () => {
@@ -177,7 +177,7 @@ export class ZeroCanvasMcp {
 
     // 2. Get element styles — source file locations for a selector
     this.mcpServer.tool(
-      "0canvas_get_element_styles",
+      "Zeros_get_element_styles",
       "Returns CSS source file locations for a given CSS selector, showing where each property is defined.",
       {
         selector: z.string().describe("CSS selector of the element (e.g. '.hero-title', '#main-nav')"),
@@ -225,7 +225,7 @@ export class ZeroCanvasMcp {
 
     // 3. List tokens — all CSS custom properties
     this.mcpServer.tool(
-      "0canvas_list_tokens",
+      "Zeros_list_tokens",
       "Returns all CSS custom properties (design tokens) found in CSS files in the workspace.",
       {},
       async () => {
@@ -257,8 +257,8 @@ export class ZeroCanvasMcp {
 
     // 4. Get feedback — pending feedback items from .0c files
     this.mcpServer.tool(
-      "0canvas_get_feedback",
-      "Returns all pending feedback items from the current 0canvas project.",
+      "Zeros_get_feedback",
+      "Returns all pending feedback items from the current Zeros project.",
       {},
       async () => {
         try {
@@ -307,7 +307,7 @@ export class ZeroCanvasMcp {
 
     // 5. Apply change — write CSS change + notify browser
     this.mcpServer.tool(
-      "0canvas_apply_change",
+      "Zeros_apply_change",
       "Applies a CSS property change to the source file for a given selector. The browser hot-reloads via the dev server's HMR.",
       {
         selector: z.string().describe("CSS selector to target (e.g. '.hero-title')"),

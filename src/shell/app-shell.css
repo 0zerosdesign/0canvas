@@ -1,5 +1,5 @@
 /* ──────────────────────────────────────────────────────────
- * 0canvas Mac App — Three-Column Shell
+ * Zeros Mac App — Three-Column Shell
  * ──────────────────────────────────────────────────────────
  *
  * Surface hierarchy (Pass 1):
@@ -45,8 +45,8 @@
  *
  * Icons:   16px for nav, 14px for inline, 12px for micro.
  *
- * Primitives — live in `src/0canvas/ui/` and are imported via
- * `src/0canvas/ui/primitives.css`. Use <Button/>, <Input/>,
+ * Primitives — live in `src/zeros/ui/` and are imported via
+ * `src/zeros/ui/primitives.css`. Use <Button/>, <Input/>,
  * <Textarea/>, <ScrollArea/> — do NOT add class-based button
  * primitives here. Feature-specific class rules below target
  * existing DOM that hasn't migrated to primitives yet.

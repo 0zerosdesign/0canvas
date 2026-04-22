@@ -14,9 +14,9 @@
 
 ---
 
-> `src/0canvas/bridge/messages.ts` -- message types
-> `src/0canvas/bridge/ws-client.ts` -- browser WebSocket client
-> `src/0canvas/bridge/use-bridge.tsx` -- React hooks
+> `src/zeros/bridge/messages.ts` -- message types
+> `src/zeros/bridge/ws-client.ts` -- browser WebSocket client
+> `src/zeros/bridge/use-bridge.tsx` -- React hooks
 > `src/vite-plugin.ts` -- WebSocket server in Vite plugin
 
 The WebSocket bridge is the real-time communication layer between the browser overlay, the Vite dev server, and the VS Code extension. It enables live CSS editing, source map resolution, project file sync, Tailwind class editing, and AI agent dispatch.
@@ -26,16 +26,16 @@ The WebSocket bridge is the real-time communication layer between the browser ov
 ## Architecture
 
 ```
-Browser (0canvas overlay)           VS Code Extension
+Browser (Zeros overlay)           VS Code Extension
      |                                    |
-     |  WebSocket (ws://localhost:PORT/__0canvas)
+     |  WebSocket (ws://localhost:PORT/__Zeros)
      |                                    |
      +-------> Vite Plugin (relay) <------+
                (WebSocketServer)
 ```
 
 **Three participants:**
-- **Browser** (`source: "browser"`) -- the 0canvas design overlay running in the user's app
+- **Browser** (`source: "browser"`) -- the Zeros design overlay running in the user's app
 - **Vite Plugin** (`source: "vite"`) -- the WebSocket relay server running inside Vite's dev server
 - **VS Code Extension** (`source: "extension"`) -- the editor-side client that reads/writes source files
 
@@ -98,16 +98,16 @@ interface BaseMessage {
 ### Setup
 
 ```typescript
-import { zeroCanvas } from "@zerosdesign/0canvas/vite";
+import { zeros } from "@Withso/zeros/vite";
 export default defineConfig({
-  plugins: [react(), zeroCanvas()],
+  plugins: [react(), zeros()],
 });
 ```
 
 ### WebSocket Server
 
 - Creates a `WebSocketServer` with `noServer: true` (piggybacks on Vite's HTTP server)
-- Intercepts HTTP `upgrade` requests at path `/__0canvas` (configurable via `wsPath` option)
+- Intercepts HTTP `upgrade` requests at path `/__Zeros` (configurable via `wsPath` option)
 - Handles both immediate and deferred `httpServer` availability (polls every 50ms up to 10s)
 
 ### Relay Logic
@@ -130,11 +130,11 @@ When a client disconnects:
 1. Remove from the `clients` Map
 2. Send `PEER_DISCONNECTED` to all remaining clients
 
-### Port File (`.0canvas/.port`)
+### Port File (`.zeros/.port`)
 
 On server start:
-1. Creates `.0canvas/` directory in the project root if it does not exist
-2. Writes the Vite dev server's port number to `.0canvas/.port`
+1. Creates `.zeros/` directory in the project root if it does not exist
+2. Writes the Vite dev server's port number to `.zeros/.port`
 3. The VS Code extension watches this file to auto-discover the WebSocket URL
 
 On `buildEnd`:
@@ -144,7 +144,7 @@ On `buildEnd`:
 
 ## Browser Client
 
-> `src/0canvas/bridge/ws-client.ts`
+> `src/zeros/bridge/ws-client.ts`
 
 ### `CanvasBridgeClient` Class
 
@@ -152,7 +152,7 @@ The browser-side WebSocket client. Uses the browser's native `WebSocket` API (no
 
 ### Connection
 
-- Derives the WebSocket URL from the page's own origin: `ws[s]://{host}/__0canvas`
+- Derives the WebSocket URL from the page's own origin: `ws[s]://{host}/__Zeros`
 - On open, sends a `CONNECTED` message with `source: "browser"` and capabilities `["style-edit", "element-select"]`
 
 ### Auto-Reconnect
@@ -200,7 +200,7 @@ When a message arrives with a `requestId` field:
 
 ## React Hooks
 
-> `src/0canvas/bridge/use-bridge.tsx`
+> `src/zeros/bridge/use-bridge.tsx`
 
 ### `BridgeProvider`
 
@@ -280,7 +280,7 @@ This is used by the style panel to send CSS changes to the extension for file wr
 ```
 1. Browser sends AI_CHAT_REQUEST { query, selector, styles, route }
 2. Extension builds rich markdown context (ai-context.ts)
-3. Extension writes context to .0canvas/ai-request.md
+3. Extension writes context to .zeros/ai-request.md
 4. Extension opens IDE chat (Cursor/Copilot/Claude Code) with direct prompt
 5. Agent processes the request and modifies source files
 6. Extension sends AI_CHAT_RESPONSE { success, message }
@@ -292,14 +292,14 @@ This is used by the style panel to send CSS changes to the extension for file wr
 ## Connection Lifecycle
 
 ```
-1. Vite dev server starts -> Vite plugin creates WebSocketServer at /__0canvas
-2. Vite plugin writes port to .0canvas/.port
+1. Vite dev server starts -> Vite plugin creates WebSocketServer at /__Zeros
+2. Vite plugin writes port to .zeros/.port
 3. VS Code extension detects .port file (filesystem watcher or polling)
-4. Extension connects: ws://localhost:{port}/__0canvas
+4. Extension connects: ws://localhost:{port}/__Zeros
 5. Extension sends CONNECTED { role: "extension", capabilities: ["css-write", "source-resolve"] }
 6. Vite sends PEER_CONNECTED { role: "extension" } (no recipients yet)
-7. User opens browser -> page loads -> 0canvas overlay initializes
-8. Browser connects: ws[s]://{host}/__0canvas
+7. User opens browser -> page loads -> Zeros overlay initializes
+8. Browser connects: ws[s]://{host}/__Zeros
 9. Browser sends CONNECTED { role: "browser", capabilities: ["style-edit", "element-select"] }
 10. Vite sends PEER_CONNECTED { role: "browser" } to extension
 11. Vite sends PEER_CONNECTED { role: "extension" } to browser
@@ -319,9 +319,9 @@ This is used by the style panel to send CSS changes to the extension for file wr
 
 | File | Role |
 |------|------|
-| `src/0canvas/bridge/messages.ts` | Shared message type definitions + helpers (browser side) |
-| `src/0canvas/bridge/ws-client.ts` | Browser WebSocket client class |
-| `src/0canvas/bridge/use-bridge.tsx` | React context provider and hooks |
+| `src/zeros/bridge/messages.ts` | Shared message type definitions + helpers (browser side) |
+| `src/zeros/bridge/ws-client.ts` | Browser WebSocket client class |
+| `src/zeros/bridge/use-bridge.tsx` | React context provider and hooks |
 | `src/vite-plugin.ts` | Vite plugin with WebSocket relay server |
 | `extensions/vscode/src/messages.ts` | Mirror of message types (extension side, kept in sync) |
 | `extensions/vscode/src/websocket-client.ts` | Extension WebSocket client class |

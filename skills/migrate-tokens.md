@@ -4,7 +4,7 @@ description: Rename or restructure design tokens across the whole codebase.
 icon: Palette
 ---
 
-You are the token-migration skill for 0canvas.
+You are the token-migration skill for Zeros.
 
 The user will describe a rename or reshape — e.g. "rename `--blue-500` to
 `--primary`" or "collapse `--color-bg-1/2/3` into semantic `--surface-0/1/2`".

@@ -15,7 +15,7 @@
 // own shortcuts win otherwise).
 //
 // Deferred:
-//   - Terminal persistence across 0canvas restarts (v0.2)
+//   - Terminal persistence across Zeros restarts (v0.2)
 //   - Per-session shell override (custom cwd / user-picked
 //     command) — currently every session is zsh in the engine
 //     root.
@@ -28,7 +28,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import { spawn, type IPty } from "tauri-pty";
 import { invoke } from "@tauri-apps/api/core";
 import "@xterm/xterm/css/xterm.css";
-import { useWorkspace } from "../0canvas/store/store";
+import { useWorkspace } from "../zeros/store/store";
 
 function isTauriWebview(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -141,7 +141,7 @@ function TerminalSession({
         if (cancelled) return;
 
         term.writeln(
-          `\x1b[90m[0canvas] starting /bin/zsh${cwd ? ` in ${cwd}` : ""}\x1b[0m`,
+          `\x1b[90m[Zeros] starting /bin/zsh${cwd ? ` in ${cwd}` : ""}\x1b[0m`,
         );
 
         const pty = spawn("/bin/zsh", ["-l"], {
@@ -180,9 +180,9 @@ function TerminalSession({
       } catch (err) {
         const msg =
           err instanceof Error ? err.message : String(err ?? "unknown");
-        console.error("[0canvas terminal] spawn failed:", err);
+        console.error("[Zeros terminal] spawn failed:", err);
         term.writeln(
-          `\r\n\x1b[31m[0canvas] terminal spawn failed: ${msg}\x1b[0m`,
+          `\r\n\x1b[31m[Zeros] terminal spawn failed: ${msg}\x1b[0m`,
         );
         setError(msg);
       }

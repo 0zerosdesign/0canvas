@@ -1,10 +1,10 @@
-# 0canvas × ACP — 100% native integration plan
+# Zeros × ACP — 100% native integration plan
 
 *This plan supersedes the ACP sections of `docs/ZED_ADOPTION.md` for implementation purposes. Collab is explicitly deferred. `ZED_ADOPTION.md` stays in the repo as the broader strategy doc.*
 
 ## Context
 
-0canvas today spawns Claude Code / Codex CLI as subprocesses, dispatches its own MCP tools, and parses streaming output in the chat panel — every wire is bespoke. The goal of this plan is to replace that with a **100% ACP-native integration**, modeled exactly on how Zed, JetBrains, Fabriqa, Tidewave, and Toad do it: no custom agent-side code, no custom registry, no custom auth. We embed the ACP SDK, fetch the shared registry, spawn agents as shipped, and the user's own credentials stay on the user's machine.
+Zeros today spawns Claude Code / Codex CLI as subprocesses, dispatches its own MCP tools, and parses streaming output in the chat panel — every wire is bespoke. The goal of this plan is to replace that with a **100% ACP-native integration**, modeled exactly on how Zed, JetBrains, Fabriqa, Tidewave, and Toad do it: no custom agent-side code, no custom registry, no custom auth. We embed the ACP SDK, fetch the shared registry, spawn agents as shipped, and the user's own credentials stay on the user's machine.
 
 The user's hard constraints:
 - **Zero custom writing.** Use ACP exactly as distributed. Inherit SDK and agent updates automatically.
@@ -26,7 +26,7 @@ Three corrections to assumptions that were shaping this plan, grounded in primar
 
 3. **Zed isn't blessed — it's structurally compliant.** Zed spawns the user's own locally-installed Claude Code as a child process; the user runs `/login` themselves; Zed never sees, stores, or proxies the OAuth token. That pattern fits inside Anthropic's "ordinary individual use of Claude Code and the Agent SDK" carve-out. The same carve-out protects Fabriqa, Tidewave, Toad, and JetBrains — all of whom are commercial closed-source ACP clients with no special Anthropic agreement. It can be revoked at any time ("without prior notice"), but as of today it is the sanctioned path.
 
-**What this means for 0canvas:** the architecture the user wants — zero custom code, agents run themselves, credentials never touch 0canvas — *is* the defensible architecture. The user's instinct is right even though the reasoning ("ACP protects us") is wrong. The protection comes from **how the integration executes**, not from the protocol name. The plan below is built to stay strictly inside that carve-out, and to have a clean API-key fallback that needs no carve-out at all.
+**What this means for Zeros:** the architecture the user wants — zero custom code, agents run themselves, credentials never touch Zeros — *is* the defensible architecture. The user's instinct is right even though the reasoning ("ACP protects us") is wrong. The protection comes from **how the integration executes**, not from the protocol name. The plan below is built to stay strictly inside that carve-out, and to have a clean API-key fallback that needs no carve-out at all.
 
 ---
 
@@ -39,7 +39,7 @@ Three corrections to assumptions that were shaping this plan, grounded in primar
 - Each agent has: `id`, `name`, `version` (semver), `description`, `distribution`, optional `repository`, `website`, `authors`, `license`, `icon`.
 - `distribution` is one of `binary` (per-platform archive + cmd/args/env), `npx` (npm package), or `uvx` (PyPI via uv). Installer formats (`.dmg`, `.pkg`, `.deb`, `.msi`) are explicitly out of scope.
 - Auto-update mechanism: **the registry itself is updated hourly by CI** in `github.com/agentclientprotocol/registry`. It polls npm, PyPI, and GitHub Releases for each agent and commits version bumps to `main`. Clients refetch the JSON; they don't need their own updater.
-- 0canvas fetches this JSON, caches it, diffs on refresh. Nothing custom.
+- Zeros fetches this JSON, caches it, diffs on refresh. Nothing custom.
 
 ### SDK
 
@@ -49,7 +49,7 @@ Three corrections to assumptions that were shaping this plan, grounded in primar
 
 ### Agents we plan to surface
 
-All 27 in the registry, shown in a Zed/Fabriqa-style picker. Minimum viable set for 0canvas v1:
+All 27 in the registry, shown in a Zed/Fabriqa-style picker. Minimum viable set for Zeros v1:
 - **Claude Agent** (`claude-acp`) — Apache-2.0 wrapper; delegates to `@anthropic-ai/claude-agent-sdk` + user's Claude binary. Supports three auth methods: Claude Subscription (Pro/Max OAuth), Anthropic Console (API key), Gateway (custom base URL).
 - **Codex CLI** (`codex-acp`)
 - **Gemini CLI** (`gemini`)
@@ -59,8 +59,8 @@ Every other agent in the registry shows up in the picker automatically. We do no
 
 ### Auth, the critical constraint
 
-- **0canvas never touches OAuth tokens, never stores API keys on behalf of an agent, never proxies requests.** Each agent handles its own auth via its own terminal flow. The user runs `claude /login` (or similar) inside the agent's TTY; the token lives in the user's OS keychain or the agent's own config dir.
-- When the ACP agent advertises multiple `AuthMethod`s at `initialize`, 0canvas presents them as radio options; the user picks; we call the agent's native auth command and get out of the way.
+- **Zeros never touches OAuth tokens, never stores API keys on behalf of an agent, never proxies requests.** Each agent handles its own auth via its own terminal flow. The user runs `claude /login` (or similar) inside the agent's TTY; the token lives in the user's OS keychain or the agent's own config dir.
+- When the ACP agent advertises multiple `AuthMethod`s at `initialize`, Zeros presents them as radio options; the user picks; we call the agent's native auth command and get out of the way.
 - This is exactly what the claude-agent-acp README + the registry's `AUTHENTICATION.md` specify. No custom work.
 
 ---
@@ -71,20 +71,20 @@ Every other agent in the registry shows up in the picker automatically. We do no
 
 Rip out the custom MCP dispatcher + bespoke Claude CLI spawn. Replace with:
 
-- New module `src/acp/client.ts` — thin wrapper around `ClientSideConnection` with 0canvas-specific handlers. **Thin** = no business logic in here, just dispatch.
-- New module `src/acp/registry.ts` — fetches the CDN JSON, caches to `.0canvas/registry.json`, exposes agent list.
+- New module `src/acp/client.ts` — thin wrapper around `ClientSideConnection` with Zeros-specific handlers. **Thin** = no business logic in here, just dispatch.
+- New module `src/acp/registry.ts` — fetches the CDN JSON, caches to `.zeros/registry.json`, exposes agent list.
 - New module `src/acp/session.ts` — per-session state: which agent, which auth method, thread id, pending permissions.
 - Rewrite `src/engine/index.ts`: engine's job becomes "host ClientSideConnection, broadcast SessionUpdates to the browser over the existing WebSocket."
-- Delete `src/engine/mcp.ts` as the primary dispatcher. Keep the 5 tool implementations (read state, get styles, list tokens, get feedback, apply CSS) **as ACP client-side methods** — `fs/read_text_file`, `fs/write_text_file`, plus custom 0canvas tool handlers invoked through the standard `session/request_permission` flow. ACP's spec explicitly contemplates this: the client is the trusted I/O layer, the agent asks permission to touch the workspace.
-- `src/0canvas/bridge/ws-client.ts` carries ACP `SessionUpdate` payloads, not custom `STYLE_CHANGE`/`AI_CHAT_REQUEST` messages.
+- Delete `src/engine/mcp.ts` as the primary dispatcher. Keep the 5 tool implementations (read state, get styles, list tokens, get feedback, apply CSS) **as ACP client-side methods** — `fs/read_text_file`, `fs/write_text_file`, plus custom Zeros tool handlers invoked through the standard `session/request_permission` flow. ACP's spec explicitly contemplates this: the client is the trusted I/O layer, the agent asks permission to touch the workspace.
+- `src/zeros/bridge/ws-client.ts` carries ACP `SessionUpdate` payloads, not custom `STYLE_CHANGE`/`AI_CHAT_REQUEST` messages.
 
 ### Phase 2 — Chat panel rebuilt around SessionUpdate stream
 
-`src/0canvas/panels/ai-chat-panel.tsx`:
+`src/zeros/panels/ai-chat-panel.tsx`:
 - Messages list consumes `UserMessageChunk` / `AgentMessageChunk` / `AgentThoughtChunk`.
 - Tool cards render from `ToolCall` + `ToolCallUpdate`. Each card shows `title`, `kind`-based icon, `status` progress, `content[]` body (markdown / diff / terminal).
 - Permission modal rendered from `session/request_permission` — one approve/deny per request.
-- Mentions (`@file`, `@selection`, images) via ACP's standard `ContentBlock[]`. 0canvas adds the design-context mentions from `ZED_ADOPTION.md` (`@color/primary`, `@Button`, etc.) **as client-side UI sugar** that expands into standard `ContentBlock` text — not a protocol extension.
+- Mentions (`@file`, `@selection`, images) via ACP's standard `ContentBlock[]`. Zeros adds the design-context mentions from `ZED_ADOPTION.md` (`@color/primary`, `@Button`, etc.) **as client-side UI sugar** that expands into standard `ContentBlock` text — not a protocol extension.
 - Keep `buildAiContextMarkdown()` and the existing system prompts; attach as initial `ContentBlock` on session creation.
 
 ### Phase 3 — Registry-driven agent picker (Zed/Fabriqa-style UI)
@@ -100,9 +100,9 @@ Per the screenshots the user shared:
 
 ### Phase 4 — Auth surfaces per agent, always inside the agent's terminal
 
-- When the user first selects an agent, 0canvas calls `initialize` → reads advertised `AuthMethod`s → renders a modal with those exact options.
-- Selecting "Claude Subscription" runs `claude /login` inside a small in-app terminal view; the user authenticates in their browser; the token lands in their `~/.claude/` config. 0canvas never sees the token.
-- Selecting "Anthropic Console" prompts for the API key; **store it in the OS keychain via Tauri's secure storage**, never in `.0c` or plaintext. On session start, pass as env var to the agent subprocess. (Even here, 0canvas is the key-holder per user choice — not routing through a subscription.)
+- When the user first selects an agent, Zeros calls `initialize` → reads advertised `AuthMethod`s → renders a modal with those exact options.
+- Selecting "Claude Subscription" runs `claude /login` inside a small in-app terminal view; the user authenticates in their browser; the token lands in their `~/.claude/` config. Zeros never sees the token.
+- Selecting "Anthropic Console" prompts for the API key; **store it in the OS keychain via Tauri's secure storage**, never in `.0c` or plaintext. On session start, pass as env var to the agent subprocess. (Even here, Zeros is the key-holder per user choice — not routing through a subscription.)
 - Selecting "Gateway" (Claude) sets `ANTHROPIC_BASE_URL` / `ANTHROPIC_CUSTOM_HEADERS` from user-provided settings.
 - Same pattern for every agent; each agent's `AuthMethod` list is authoritative.
 
@@ -117,8 +117,8 @@ Everything design-specific is **purely client-side rendering**, so we keep the "
 
 ## What we explicitly do NOT write
 
-- ❌ No 0canvas fork of `claude-agent-acp`, `codex-acp`, `gemini-cli`, or any agent. Use as shipped.
-- ❌ No 0canvas registry. Use `cdn.agentclientprotocol.com/registry/v1/latest/registry.json`.
+- ❌ No Zeros fork of `claude-agent-acp`, `codex-acp`, `gemini-cli`, or any agent. Use as shipped.
+- ❌ No Zeros registry. Use `cdn.agentclientprotocol.com/registry/v1/latest/registry.json`.
 - ❌ No OAuth flow code. Agents do their own.
 - ❌ No credential storage for subscription-based agents. API keys go to OS keychain at user's explicit request.
 - ❌ No proxying of vendor API calls. Agent subprocess talks to vendor directly.
@@ -135,29 +135,29 @@ Everything design-specific is **purely client-side rendering**, so we keep the "
 - OpenAI: OpenAI API key
 - Gemini: Google AI API key
 - Unambiguously permitted under each vendor's Commercial/API Business Terms.
-- 0canvas's marketing copy, onboarding, and first-run should default here.
+- Zeros's marketing copy, onboarding, and first-run should default here.
 
 ### Power-user opt-in — bring your own installed CLI (subscription path)
 
 - Enabled only if the user already has `claude` / `codex` / `gemini` on PATH with their own `/login` session.
-- 0canvas just spawns the existing CLI; the user's existing OAuth token (in `~/.claude/`, etc.) handles auth.
+- Zeros just spawns the existing CLI; the user's existing OAuth token (in `~/.claude/`, etc.) handles auth.
 - UI is explicit: *"Uses your locally-installed Claude Code. Subject to Anthropic's Terms of Service. Your credentials never leave your machine."*
 - This matches the Zed / Fabriqa / JetBrains pattern. Stays inside Anthropic's "ordinary individual use of Claude Code and the Agent SDK" carve-out.
 - Not a protected path: Anthropic can revoke at any time. Live with that risk consciously.
 
 ### Never ships, ever
 
-- Any flow where 0canvas ingests, stores, or forwards a user's Claude.ai / ChatGPT / Google AI consumer OAuth token.
-- Any "sign in with Claude" button hosted by 0canvas.
-- Any proxying of vendor API calls through 0canvas infrastructure.
-- Any marketing copy that frames the subscription as "used through 0canvas" — frame it as "the agent you installed, driven by 0canvas's design interface."
+- Any flow where Zeros ingests, stores, or forwards a user's Claude.ai / ChatGPT / Google AI consumer OAuth token.
+- Any "sign in with Claude" button hosted by Zeros.
+- Any proxying of vendor API calls through Zeros infrastructure.
+- Any marketing copy that frames the subscription as "used through Zeros" — frame it as "the agent you installed, driven by Zeros's design interface."
 
-### 0canvas ToS must include
+### Zeros ToS must include
 
 - User represents they own the API keys / subscriptions they bring.
 - User is bound by each vendor's then-current usage policy (link out).
-- 0canvas disclaims liability for user violations of vendor ToS.
-- No credential sharing between 0canvas users.
+- Zeros disclaims liability for user violations of vendor ToS.
+- No credential sharing between Zeros users.
 
 ### Proactive outreach
 
@@ -167,14 +167,14 @@ Everything design-specific is **purely client-side rendering**, so we keep the "
 
 ---
 
-## Critical files (current 0canvas) to modify
+## Critical files (current Zeros) to modify
 
 - `src/engine/index.ts` — rewrite as ACP session host
 - `src/engine/mcp.ts` — delete as primary dispatcher; port tool implementations to ACP client-side methods
 - `src/engine/oc-manager.ts` — unchanged for now
-- `src/0canvas/panels/ai-chat-panel.tsx` — rebuild around `SessionUpdate` stream, tool cards, permission modals
-- `src/0canvas/bridge/ws-client.ts` — carry ACP payloads
-- `src/0canvas/store/store.tsx` — replace `AiProvider` / `AiAuthMethod` fields with ACP session + agent + auth-method model
+- `src/zeros/panels/ai-chat-panel.tsx` — rebuild around `SessionUpdate` stream, tool cards, permission modals
+- `src/zeros/bridge/ws-client.ts` — carry ACP payloads
+- `src/zeros/store/store.tsx` — replace `AiProvider` / `AiAuthMethod` fields with ACP session + agent + auth-method model
 
 ## New modules to add
 
@@ -182,10 +182,10 @@ Everything design-specific is **purely client-side rendering**, so we keep the "
 - `src/acp/registry.ts` — registry fetch + cache + auto-detect installed CLIs
 - `src/acp/session.ts` — per-session state
 - `src/acp/auth.ts` — auth method routing (surface agent's own flow, never custom)
-- `src/0canvas/panels/agents-panel.tsx` — new Zed/Fabriqa-style registry UI
+- `src/zeros/panels/agents-panel.tsx` — new Zed/Fabriqa-style registry UI
 - `src-tauri/src/keychain.rs` — secure API-key storage (Tauri plugin)
 
-## Reusable from current 0canvas
+## Reusable from current Zeros
 
 - `buildAiContextMarkdown()` → attach as initial `ContentBlock` on `newSession`
 - `CanvasBridgeClient` transport → carry ACP `SessionUpdate` frames
@@ -215,14 +215,14 @@ Everything design-specific is **purely client-side rendering**, so we keep the "
 - [x] `registry.ts` fetches the CDN JSON and surfaces all 27 agents — Phase 1a
 - [x] Agents Panel matches Zed/Fabriqa screenshot UX (filter, tabs, install-state pills, auto-detect installed, resource links) — Phase 1a + Phase 3
 - [ ] ~~Install / Remove / Set default / Advanced options~~ — install is implicit via npx/uvx on first use, so the UI doesn't need an explicit install/remove action today. Revisit if/when we add binary-distribution agents that need explicit disk management.
-- [x] Claude Agent spawned via npx, user authenticates via API key (keychain) or subscription (CLI /login), session round-trips a tool call end-to-end without 0canvas touching the OAuth token — Phase 1c + Phase 2a
+- [x] Claude Agent spawned via npx, user authenticates via API key (keychain) or subscription (CLI /login), session round-trips a tool call end-to-end without Zeros touching the OAuth token — Phase 1c + Phase 2a
 - [x] Claude Agent works with API-key path; key lives in OS keychain, never in `.0c` or logs — Phase 1c
 - [x] Codex, Gemini work via the same auth surface — Phase 4 (dynamic authMethods)
 - [x] Chat panel renders `AgentMessageChunk`, `AgentThoughtChunk`, `ToolCall`, `ToolCallUpdate` — Phase 1c
 - [ ] `Plan`, `CurrentModeUpdate` rendering — still minimal (noop). Low priority; agents rarely emit them today.
 - [x] Permission modal gates every tool call that requires it — Phase 2d (risk-tinted, designer language)
 - [x] Existing 5 design tools round-trip through ACP as MCP-over-HTTP, auto-attached on every session — Phase 2a
-- [x] Upgrade path: bumping `@agentclientprotocol/sdk` picks up protocol updates; refetching registry picks up agent updates; neither requires 0canvas code changes — all registry + auth-method rendering is data-driven as of Phase 4
+- [x] Upgrade path: bumping `@agentclientprotocol/sdk` picks up protocol updates; refetching registry picks up agent updates; neither requires Zeros code changes — all registry + auth-method rendering is data-driven as of Phase 4
 
 ---
 
@@ -233,22 +233,22 @@ Phase 1 is fully closed. ACP is wired end-to-end: registry-driven picker, subpro
 ### What shipped
 
 **Engine (Node.js sidecar):**
-- `src/engine/acp/registry.ts` — fetches `cdn.agentclientprotocol.com/registry/v1/latest/registry.json`, caches to `.0canvas/acp/registry.json`, falls back to cache on network failure. Platform-aware `resolveLaunch()` resolves npx/uvx/binary invocation per agent.
+- `src/engine/acp/registry.ts` — fetches `cdn.agentclientprotocol.com/registry/v1/latest/registry.json`, caches to `.zeros/acp/registry.json`, falls back to cache on network failure. Platform-aware `resolveLaunch()` resolves npx/uvx/binary invocation per agent.
 - `src/engine/acp/client.ts` — spawns the vendor's own CLI, wraps stdio with `ndJsonStream`, constructs `ClientSideConnection`. Graceful SIGTERM → SIGKILL shutdown.
 - `src/engine/acp/session-manager.ts` — one subprocess per agent id, multiple sessions per subprocess. Pending-permission registry bridges the SDK's async callback to a browser round-trip.
 - `src/engine/index.ts` — 6 new `ACP_*` message handlers dispatch to the session manager; outbound traffic (SessionUpdate, permission prompt, stderr, exit) fans out over the existing WebSocket. Legacy MCP + `AI_CHAT_REQUEST` paths fully intact.
 - `src/engine/types.ts` — 16 new `ACP_*` message types; `createMessage<T>` tightened to narrow the discriminated union (fixes pre-existing tsc errors across the repo).
 
 **Browser (UI):**
-- `src/0canvas/acp/use-acp-session.tsx` — React hook over the bridge. Handles listAgents / startSession(agentId, {agentName, env}) / sendPrompt / cancel / respondToPermission. Text-chunk coalescing for scroll perf.
-- `src/0canvas/acp/agents-panel.tsx` — searchable list of all registry agents. Per-agent card: name, version, dist kind (npx/uvx/binary), id, description, Start button.
-- `src/0canvas/acp/auth-modal.tsx` (1c) — method picker. Known vendors (Anthropic, OpenAI, Google) get API-key input + subscription opt-in; unknown agents bypass the modal and start directly. API keys persist to the OS Keychain via `src/native/secrets.ts`.
-- `src/0canvas/acp/acp-chat.tsx` — messages, agent thoughts, tool-call cards, permission bar, Send/Stop composer. Compliance micro-line under the composer ("Credentials stay with the agent CLI").
-- `src/0canvas/acp/acp-mode.tsx` — orchestrates picker → auth → chat. Back from auth returns to picker; back from chat resets session state (subprocess stays warm under the session manager).
-- `src/0canvas/panels/ai-chat-panel.tsx` — added `Zap`-icon toggle in the existing header. In ACP mode, the panel body is replaced with `<AcpMode />`; title flips to "ACP · Beta"; legacy state preserved across toggles.
+- `src/zeros/acp/use-acp-session.tsx` — React hook over the bridge. Handles listAgents / startSession(agentId, {agentName, env}) / sendPrompt / cancel / respondToPermission. Text-chunk coalescing for scroll perf.
+- `src/zeros/acp/agents-panel.tsx` — searchable list of all registry agents. Per-agent card: name, version, dist kind (npx/uvx/binary), id, description, Start button.
+- `src/zeros/acp/auth-modal.tsx` (1c) — method picker. Known vendors (Anthropic, OpenAI, Google) get API-key input + subscription opt-in; unknown agents bypass the modal and start directly. API keys persist to the OS Keychain via `src/native/secrets.ts`.
+- `src/zeros/acp/acp-chat.tsx` — messages, agent thoughts, tool-call cards, permission bar, Send/Stop composer. Compliance micro-line under the composer ("Credentials stay with the agent CLI").
+- `src/zeros/acp/acp-mode.tsx` — orchestrates picker → auth → chat. Back from auth returns to picker; back from chat resets session state (subprocess stays warm under the session manager).
+- `src/zeros/panels/ai-chat-panel.tsx` — added `Zap`-icon toggle in the existing header. In ACP mode, the panel body is replaced with `<AcpMode />`; title flips to "ACP · Beta"; legacy state preserved across toggles.
 
 **Shared:**
-- `src/0canvas/bridge/messages.ts` — mirror of engine types; `import type` from `@agentclientprotocol/sdk` so the wire stays honest to the spec.
+- `src/zeros/bridge/messages.ts` — mirror of engine types; `import type` from `@agentclientprotocol/sdk` so the wire stays honest to the spec.
 
 Builds: engine (tsup) and UI (vite) both green. `tsc --noEmit` clean for all new code.
 
@@ -268,7 +268,7 @@ Builds: engine (tsup) and UI (vite) both green. `tsc --noEmit` clean for all new
 
 4. **Pick Claude Agent → Auth modal appears.** Two options:
    - **Anthropic API key (Recommended)** — paste `sk-ant-...` into the input. Click Continue. Key is stored in the macOS Keychain via `src/native/secrets.ts` (falls back to localStorage in the plain-browser dev harness) and injected as `ANTHROPIC_API_KEY` when the subprocess spawns. On subsequent sessions, the field pre-fills from the keychain.
-   - **Use my installed Claude CLI** — relies on your existing `claude /login` session. 0canvas spawns the CLI clean; the CLI reads its own config dir for credentials. 0canvas never sees the OAuth token.
+   - **Use my installed Claude CLI** — relies on your existing `claude /login` session. Zeros spawns the CLI clean; the CLI reads its own config dir for credentials. Zeros never sees the OAuth token.
 5. **Session starts.** Under the hood:
    - Engine calls `ensureAgent("claude-acp", { env })` → spawns `npx --yes @agentclientprotocol/claude-agent-acp@0.30.0` with the chosen env
    - First run downloads the npm package (~15–30s). Subsequent runs are instant.
@@ -295,7 +295,7 @@ Builds: engine (tsup) and UI (vite) both green. `tsc --noEmit` clean for all new
 
 ### Inspecting what happened
 
-- **Registry cache on disk:** `.0canvas/acp/registry.json` — the exact JSON fetched from the CDN, plus a `fetchedAt` timestamp.
+- **Registry cache on disk:** `.zeros/acp/registry.json` — the exact JSON fetched from the CDN, plus a `fetchedAt` timestamp.
 - **Agent stderr:** currently logged to the engine's stdout and broadcast to the browser (stored in `session.stderrLog`, max 200 lines). Not surfaced in the UI yet — inspect via React DevTools on the hook state.
 - **Engine logs:** look for `[acp claude-acp]` prefixed lines in the Tauri console / engine stdout.
 
@@ -309,19 +309,19 @@ Builds: engine (tsup) and UI (vite) both green. `tsc --noEmit` clean for all new
 
 ## Phase 2a — agent gets the canvas
 
-The value-unlock milestone. Claude now *has tools*: it can read the design state, inspect elements, list tokens, read feedback, and apply CSS changes — all via the 0canvas MCP endpoint, auto-attached to every ACP session. Zero agent-side config; all five tools show up automatically.
+The value-unlock milestone. Claude now *has tools*: it can read the design state, inspect elements, list tokens, read feedback, and apply CSS changes — all via the Zeros MCP endpoint, auto-attached to every ACP session. Zero agent-side config; all five tools show up automatically.
 
 ### What shipped
 
 - [src/engine/acp/session-manager.ts](src/engine/acp/session-manager.ts) — new `registerMcpServer(handle)` / `unregisterMcpServer(name)`. Every `newSession` auto-injects registered servers into the ACP `mcpServers` array. Spec-native wire: `{ type: "http", name, url, headers }`.
-- [src/engine/index.ts](src/engine/index.ts) — after the HTTP server binds its port, the engine registers `{ name: "0canvas", url: "http://127.0.0.1:<port>/mcp" }` with the session manager. The existing MCP endpoint (already used by external agents) is now also wired into ACP sessions.
-- [src/0canvas/acp/acp-chat.tsx](src/0canvas/acp/acp-chat.tsx) — tool-card renderer recognizes the 5 design tool names by substring match and renders design-native treatment: vendor-colored border, semantic icon (Palette / Target / FileText / MessageSquare / Zap), friendly label ("Apply CSS change" not "mcp__0canvas__apply_change"), inline summary of the call args (e.g. `.hero { color: #3B82F6 }`).
+- [src/engine/index.ts](src/engine/index.ts) — after the HTTP server binds its port, the engine registers `{ name: "Zeros", url: "http://127.0.0.1:<port>/mcp" }` with the session manager. The existing MCP endpoint (already used by external agents) is now also wired into ACP sessions.
+- [src/zeros/acp/acp-chat.tsx](src/zeros/acp/acp-chat.tsx) — tool-card renderer recognizes the 5 design tool names by substring match and renders design-native treatment: vendor-colored border, semantic icon (Palette / Target / FileText / MessageSquare / Zap), friendly label ("Apply CSS change" not "mcp__Zeros__apply_change"), inline summary of the call args (e.g. `.hero { color: #3B82F6 }`).
 
 ### How to verify end-to-end
 
 With Phase 1c's smoke test already passing, try:
 
-1. **"What design tokens do we have?"** — Agent calls `list_tokens`. You'll see a green-bordered tool card with a palette icon labeled "Read design tokens · 0canvas". Agent's reply enumerates the real `--foo-bar` names from your CSS.
+1. **"What design tokens do we have?"** — Agent calls `list_tokens`. You'll see a green-bordered tool card with a palette icon labeled "Read design tokens · Zeros". Agent's reply enumerates the real `--foo-bar` names from your CSS.
 2. **"Change `--color-primary` to `#3B82F6`."** — Agent calls `apply_change`. Tool card shows `--color-primary { --color-primary: #3B82F6 }` or similar summary. CSS file edits on disk; HMR reloads the iframe.
 3. **"List all pending feedback."** — Agent calls `get_feedback`. If your `.0c` file has any pending items, they come back.
 
@@ -339,18 +339,18 @@ The agent now sees what the designer is pointing at, and the canvas follows what
 
 ### What shipped
 
-- [src/0canvas/acp/selection-sync.tsx](src/0canvas/acp/selection-sync.tsx) — effect-only component. Watches `state.selectedElementId`; when it changes, sends `ELEMENT_SELECTED` (selector + tag + class list + computed styles) over the bridge. Null selection sends an empty payload to clear the cache upstream.
+- [src/zeros/acp/selection-sync.tsx](src/zeros/acp/selection-sync.tsx) — effect-only component. Watches `state.selectedElementId`; when it changes, sends `ELEMENT_SELECTED` (selector + tag + class list + computed styles) over the bridge. Null selection sends an empty payload to clear the cache upstream.
 - [src/app-shell.tsx](src/app-shell.tsx) — mounts `<SelectionSync />` once under `BridgeProvider` so it runs app-wide.
 - [src/engine/index.ts](src/engine/index.ts) — new `handleElementSelected` caches the latest payload in `this.currentSelection`; MCP server is handed a getter so the 6th tool always reads fresh data without tight coupling.
-- [src/engine/mcp.ts](src/engine/mcp.ts) — new tool **`0canvas_get_selection`**. Returns `{ selector, tagName, className, computedStyles, updatedAt }` or `{ selection: null, hint: "Nothing selected..." }`. The agent SHOULD call this first on every turn.
-- [src/0canvas/store/store.tsx](src/0canvas/store/store.tsx) — new `findBySelector(elements, selector)` helper, mirror of the existing `findElement(elements, id)`.
-- [src/0canvas/acp/acp-chat.tsx](src/0canvas/acp/acp-chat.tsx) — follow-along effect. When a 0canvas tool call streams in with a `selector` in its rawInput, the component resolves the element in the workspace tree, dispatches `SELECT_ELEMENT`, and calls `flashElement` so the overlay highlights it. Idempotent per tool-call id. `MousePointer2` icon added for the selection tool.
+- [src/engine/mcp.ts](src/engine/mcp.ts) — new tool **`Zeros_get_selection`**. Returns `{ selector, tagName, className, computedStyles, updatedAt }` or `{ selection: null, hint: "Nothing selected..." }`. The agent SHOULD call this first on every turn.
+- [src/zeros/store/store.tsx](src/zeros/store/store.tsx) — new `findBySelector(elements, selector)` helper, mirror of the existing `findElement(elements, id)`.
+- [src/zeros/acp/acp-chat.tsx](src/zeros/acp/acp-chat.tsx) — follow-along effect. When a Zeros tool call streams in with a `selector` in its rawInput, the component resolves the element in the workspace tree, dispatches `SELECT_ELEMENT`, and calls `flashElement` so the overlay highlights it. Idempotent per tool-call id. `MousePointer2` icon added for the selection tool.
 
 ### How to verify
 
-1. **Selection round-trip.** Select any element in the canvas. Ask Claude: *"What element do I have selected?"* — Agent calls `0canvas_get_selection` (green MousePointer2 card), reports the selector and tag.
-2. **Follow-along on inspect.** With nothing selected, ask: *"Look at `.hero-title` and tell me its current color."* — Agent calls `0canvas_get_element_styles` with `{ selector: ".hero-title" }`. The canvas selects and flashes `.hero-title` as the tool call streams in.
-3. **Follow-along on apply.** Ask: *"Change `.hero-title` padding to 2rem."* — Agent calls `0canvas_apply_change`. Canvas jumps to the element before the write lands; the designer sees what's about to be touched.
+1. **Selection round-trip.** Select any element in the canvas. Ask Claude: *"What element do I have selected?"* — Agent calls `Zeros_get_selection` (green MousePointer2 card), reports the selector and tag.
+2. **Follow-along on inspect.** With nothing selected, ask: *"Look at `.hero-title` and tell me its current color."* — Agent calls `Zeros_get_element_styles` with `{ selector: ".hero-title" }`. The canvas selects and flashes `.hero-title` as the tool call streams in.
+3. **Follow-along on apply.** Ask: *"Change `.hero-title` padding to 2rem."* — Agent calls `Zeros_apply_change`. Canvas jumps to the element before the write lands; the designer sees what's about to be touched.
 4. **Null selection.** Clear selection (Esc), ask: *"What am I looking at?"* — Agent gets `{ selection: null, hint: "..." }` and asks the designer which element to focus on, rather than guessing.
 
 ---
@@ -361,10 +361,10 @@ Designer types `@` and picks project-native context from a keyboard-driven list:
 
 ### What shipped
 
-- [src/0canvas/acp/mentions.ts](src/0canvas/acp/mentions.ts) — `collectMentions(workspaceState)` walks themes/variants/feedback/selection into a unified `MentionItem[]`; `filterMentions` is position-ranked fuzzy; `detectMentionTrigger` returns the current trigger range when the caret sits inside an unterminated `@...`; `expandMentionsInText` replaces every token with its live expansion at send time.
-- [src/0canvas/acp/mention-picker.tsx](src/0canvas/acp/mention-picker.tsx) — popover list with per-kind icons (MousePointer2 / Palette / Layers / MessageCircle), active highlight, `mousedown` picks (beats textarea blur), scroll-into-view as the keyboard highlight moves.
-- [src/0canvas/acp/use-acp-session.tsx](src/0canvas/acp/use-acp-session.tsx) — `sendPrompt(text, displayText?)`. The UI shows `displayText`, the agent receives `text`. Default keeps them the same.
-- [src/0canvas/acp/acp-chat.tsx](src/0canvas/acp/acp-chat.tsx) — mention plumbing: caret tracking, trigger detection, arrow/Enter/Tab/Escape keyboard nav, insert-and-advance, and `expandMentionsInText` called on send so the wire gets `design token --color-primary (values: default=#3B82F6, light=#2563EB)` while the user sees `@token:--color-primary`.
+- [src/zeros/acp/mentions.ts](src/zeros/acp/mentions.ts) — `collectMentions(workspaceState)` walks themes/variants/feedback/selection into a unified `MentionItem[]`; `filterMentions` is position-ranked fuzzy; `detectMentionTrigger` returns the current trigger range when the caret sits inside an unterminated `@...`; `expandMentionsInText` replaces every token with its live expansion at send time.
+- [src/zeros/acp/mention-picker.tsx](src/zeros/acp/mention-picker.tsx) — popover list with per-kind icons (MousePointer2 / Palette / Layers / MessageCircle), active highlight, `mousedown` picks (beats textarea blur), scroll-into-view as the keyboard highlight moves.
+- [src/zeros/acp/use-acp-session.tsx](src/zeros/acp/use-acp-session.tsx) — `sendPrompt(text, displayText?)`. The UI shows `displayText`, the agent receives `text`. Default keeps them the same.
+- [src/zeros/acp/acp-chat.tsx](src/zeros/acp/acp-chat.tsx) — mention plumbing: caret tracking, trigger detection, arrow/Enter/Tab/Escape keyboard nav, insert-and-advance, and `expandMentionsInText` called on send so the wire gets `design token --color-primary (values: default=#3B82F6, light=#2563EB)` while the user sees `@token:--color-primary`.
 
 ### How to verify
 
@@ -382,11 +382,11 @@ Designer types `@` and picks project-native context from a keyboard-driven list:
 
 ## Phase 2d — designer-language permission modal
 
-The permission bar speaks Designer, not Engineer. When the agent asks permission for a recognized 0canvas tool, the prompt carries a one-line summary of the action (tool-specific), a body explaining what's about to happen, and for `apply_change` a compact before → after diff of the CSS value. Reads tint the bar green (low risk); writes stay amber. Option buttons normalise noisy kind names ("allow_once" → "Allow once", "reject_always" → "Always block") without stomping anything the agent spelled out clearly.
+The permission bar speaks Designer, not Engineer. When the agent asks permission for a recognized Zeros tool, the prompt carries a one-line summary of the action (tool-specific), a body explaining what's about to happen, and for `apply_change` a compact before → after diff of the CSS value. Reads tint the bar green (low risk); writes stay amber. Option buttons normalise noisy kind names ("allow_once" → "Allow once", "reject_always" → "Always block") without stomping anything the agent spelled out clearly.
 
 ### What shipped
 
-- [src/0canvas/acp/acp-chat.tsx](src/0canvas/acp/acp-chat.tsx) — each `DESIGN_TOOLS` entry can expose a `describePermission(rawInput, ctx)` that returns `{ headline, body?, diff?, risk }`. `PermissionBar` matches the tool by title, pulls the prompt, looks up the element by selector to compute the "before" value for diffs, and renders the risk-tinted bar. Unknown tools fall through to the original behaviour.
+- [src/zeros/acp/acp-chat.tsx](src/zeros/acp/acp-chat.tsx) — each `DESIGN_TOOLS` entry can expose a `describePermission(rawInput, ctx)` that returns `{ headline, body?, diff?, risk }`. `PermissionBar` matches the tool by title, pulls the prompt, looks up the element by selector to compute the "before" value for diffs, and renders the risk-tinted bar. Unknown tools fall through to the original behaviour.
 - Option labels pass through `friendlyOptionLabel(name, kind)` which only rewrites the noisy kind-only strings ("allow_once", "reject_always") so bespoke agent copy keeps shining through.
 
 ### How to verify
@@ -404,7 +404,7 @@ Completed `apply_change` tool calls stop looking like status dots and start read
 
 ### What shipped
 
-- [src/0canvas/acp/acp-chat.tsx](src/0canvas/acp/acp-chat.tsx) — new `applyReceipts` state keyed by `toolCallId`. The existing follow-along effect captures the pre-change CSS value at first observation of the tool call (same moment it grabs the selector to flash the canvas), so by the time the card re-renders completed, `before` still reflects what was on disk before the agent wrote.
+- [src/zeros/acp/acp-chat.tsx](src/zeros/acp/acp-chat.tsx) — new `applyReceipts` state keyed by `toolCallId`. The existing follow-along effect captures the pre-change CSS value at first observation of the tool call (same moment it grabs the selector to flash the canvas), so by the time the card re-renders completed, `before` still reflects what was on disk before the agent wrote.
 - New `ApplyChangeReceipt` component renders inside `ToolCallCard` whenever we have a captured receipt AND status is `completed` or `failed`. Shows: selector header, monospace `− prop: before;` / `+ prop: after;` diff, optional source path/line from `ToolCall.locations[0]`. Failed writes strike through the `+` line to make "we didn't apply this" unmissable.
 - Pending `apply_change` cards still show the raw one-line summary so the streaming status is legible; the receipt takes over once the tool settles.
 
@@ -417,17 +417,17 @@ Completed `apply_change` tool calls stop looking like status dots and start read
 
 ---
 
-## Phase 2f — styling alignment on the 0canvas design system
+## Phase 2f — styling alignment on the Zeros design system
 
 The ACP surface now rides the same design tokens as the legacy `oc-chat-*` surface instead of arbitrary Tailwind `white/30` / `emerald-500/20` / `[#1a1a1a]` colors. One set of typography, one palette, one spacing grid — toggling the `⚡` button swaps the *body* of the panel, not the visual language.
 
 ### What shipped
 
-- [src/0canvas/engine/0canvas-styles.ts](src/0canvas/engine/0canvas-styles.ts) — a dedicated ~450-line `oc-acp-*` block appended to `ZEROCANVAS_CSS`. Covers: surface wrapper, subheader, message roles (user/agent/thought/system mirror `oc-ai-msg-*` tokens), tool cards + design vs generic variants, apply-change receipt + row states, permission bar with `-low` and `-high` risk tints, composer input/send/stop (mirrors `oc-ai-input-row`), mention picker (mirrors `oc-slash-menu`), registry rows, auth method cards + field + disclaimer + actions, plus small states (error, empty, loading).
-- [src/0canvas/acp/acp-chat.tsx](src/0canvas/acp/acp-chat.tsx) — swapped every color-bearing Tailwind utility for the new classes. `oc-acp-surface` on the root, `oc-acp-subheader` with `oc-chat-iconbtn` for the back button, `oc-acp-body` + `oc-acp-messages`, message rows use `oc-acp-msg oc-acp-msg-{role}`, tool cards use `oc-acp-tool oc-acp-tool-design` for recognized 0canvas tools, receipts use the token-backed `oc-acp-receipt-*` stack, permission bar branches on `oc-acp-perm-low` / `oc-acp-perm-high`, composer uses `oc-acp-input` / `oc-acp-send-btn` / `oc-acp-stop-btn`.
-- [src/0canvas/acp/agents-panel.tsx](src/0canvas/acp/agents-panel.tsx) — `oc-acp-reg-*` for search, list, row, avatar, title, version/dist badges, Start button, footer.
-- [src/0canvas/acp/auth-modal.tsx](src/0canvas/acp/auth-modal.tsx) — `oc-acp-auth-*` for the subheader, method cards, key field, disclaimer, cancel/continue actions.
-- [src/0canvas/acp/mention-picker.tsx](src/0canvas/acp/mention-picker.tsx) — `oc-acp-menu-*` classes, positioned to the composer row which now has `position: relative`.
+- [src/zeros/engine/zeros-styles.ts](src/zeros/engine/zeros-styles.ts) — a dedicated ~450-line `oc-acp-*` block appended to `ZEROS_CSS`. Covers: surface wrapper, subheader, message roles (user/agent/thought/system mirror `oc-ai-msg-*` tokens), tool cards + design vs generic variants, apply-change receipt + row states, permission bar with `-low` and `-high` risk tints, composer input/send/stop (mirrors `oc-ai-input-row`), mention picker (mirrors `oc-slash-menu`), registry rows, auth method cards + field + disclaimer + actions, plus small states (error, empty, loading).
+- [src/zeros/acp/acp-chat.tsx](src/zeros/acp/acp-chat.tsx) — swapped every color-bearing Tailwind utility for the new classes. `oc-acp-surface` on the root, `oc-acp-subheader` with `oc-chat-iconbtn` for the back button, `oc-acp-body` + `oc-acp-messages`, message rows use `oc-acp-msg oc-acp-msg-{role}`, tool cards use `oc-acp-tool oc-acp-tool-design` for recognized Zeros tools, receipts use the token-backed `oc-acp-receipt-*` stack, permission bar branches on `oc-acp-perm-low` / `oc-acp-perm-high`, composer uses `oc-acp-input` / `oc-acp-send-btn` / `oc-acp-stop-btn`.
+- [src/zeros/acp/agents-panel.tsx](src/zeros/acp/agents-panel.tsx) — `oc-acp-reg-*` for search, list, row, avatar, title, version/dist badges, Start button, footer.
+- [src/zeros/acp/auth-modal.tsx](src/zeros/acp/auth-modal.tsx) — `oc-acp-auth-*` for the subheader, method cards, key field, disclaimer, cancel/continue actions.
+- [src/zeros/acp/mention-picker.tsx](src/zeros/acp/mention-picker.tsx) — `oc-acp-menu-*` classes, positioned to the composer row which now has `position: relative`.
 
 ### How to verify
 
@@ -455,9 +455,9 @@ The side panel now speaks the Zed/Fabriqa dialect: install-state badges, a PATH 
 
 - [src/engine/acp/registry.ts](src/engine/acp/registry.ts) — `detectInstalled(agent)` probes the user's PATH for the vendor's CLI (`claude`, `codex`, `gemini`, `copilot`) via `which`/`where`. A new `listEnriched()` runs probes in parallel and returns `EnrichedRegistryAgent[]` with `installed: boolean` and `launchKind: "npx" | "uvx" | "binary" | "unavailable"`.
 - [src/engine/acp/session-manager.ts](src/engine/acp/session-manager.ts) — `listAgents()` / `refreshRegistry()` now return the enriched shape so the wire stays spec-honest without a parallel RPC.
-- [src/engine/types.ts](src/engine/types.ts), [src/0canvas/bridge/messages.ts](src/0canvas/bridge/messages.ts) — `BridgeRegistryAgent` gained `installed?: boolean` + `launchKind?`. No new message types; just two fields on the existing `ACP_AGENTS_LIST` payload.
-- [src/0canvas/acp/agents-panel.tsx](src/0canvas/acp/agents-panel.tsx) — tabs strip with live counts, risk-tinted pill on each row (Installed / Available / Unavailable), per-row meta (repo / site / license). Installed-first sort means the first row is always the fastest path to a live session.
-- [src/0canvas/engine/0canvas-styles.ts](src/0canvas/engine/0canvas-styles.ts) — `oc-acp-reg-tabs`, `oc-acp-reg-tab{,-active,-count}`, `oc-acp-reg-pill{,-installed,-available,-unavailable}`, `oc-acp-reg-meta` all token-backed.
+- [src/engine/types.ts](src/engine/types.ts), [src/zeros/bridge/messages.ts](src/zeros/bridge/messages.ts) — `BridgeRegistryAgent` gained `installed?: boolean` + `launchKind?`. No new message types; just two fields on the existing `ACP_AGENTS_LIST` payload.
+- [src/zeros/acp/agents-panel.tsx](src/zeros/acp/agents-panel.tsx) — tabs strip with live counts, risk-tinted pill on each row (Installed / Available / Unavailable), per-row meta (repo / site / license). Installed-first sort means the first row is always the fastest path to a live session.
+- [src/zeros/engine/zeros-styles.ts](src/zeros/engine/zeros-styles.ts) — `oc-acp-reg-tabs`, `oc-acp-reg-tab{,-active,-count}`, `oc-acp-reg-pill{,-installed,-available,-unavailable}`, `oc-acp-reg-meta` all token-backed.
 
 ### How to verify
 
@@ -477,11 +477,11 @@ For Claude specifically, a Gateway (advanced) card now exposes `ANTHROPIC_BASE_U
 ### What shipped
 
 - [src/engine/acp/session-manager.ts](src/engine/acp/session-manager.ts) — new `initializeAgent(agentId)` spawns the subprocess with empty env and returns the initialize response. If the user later supplies an env through `ACP_NEW_SESSION`, the existing `sameEnv` guard dispose-and-respawns so the agent sees the right env at fork time.
-- [src/engine/types.ts](src/engine/types.ts), [src/0canvas/bridge/messages.ts](src/0canvas/bridge/messages.ts) — new `ACP_INIT_AGENT` request + `ACP_AGENT_INITIALIZED` response wire messages carrying the raw `InitializeResponse`.
+- [src/engine/types.ts](src/engine/types.ts), [src/zeros/bridge/messages.ts](src/zeros/bridge/messages.ts) — new `ACP_INIT_AGENT` request + `ACP_AGENT_INITIALIZED` response wire messages carrying the raw `InitializeResponse`.
 - [src/engine/index.ts](src/engine/index.ts) — `handleAcpMessage` dispatches `ACP_INIT_AGENT`. No other changes; the existing `ACP_NEW_SESSION` path stays the single source of truth for session creation.
-- [src/0canvas/acp/use-acp-session.tsx](src/0canvas/acp/use-acp-session.tsx) — new `initAgent(agentId)` control method.
-- [src/0canvas/acp/acp-mode.tsx](src/0canvas/acp/acp-mode.tsx) — new `loading` screen between picker and auth while we fetch initialize. If the agent advertises zero interactive methods (agent-kind only), AuthModal auto-confirms and we jump straight to chat.
-- [src/0canvas/acp/auth-modal.tsx](src/0canvas/acp/auth-modal.tsx) — full rewrite: `buildOptions()` translates advertised `AuthMethod`s into an `Option` union (env_var / terminal / agent), with per-vendor enrichment and a synthetic Gateway option for `claude-acp`. Env vars persist to the OS keychain; the modal pre-fills from there on next open.
+- [src/zeros/acp/use-acp-session.tsx](src/zeros/acp/use-acp-session.tsx) — new `initAgent(agentId)` control method.
+- [src/zeros/acp/acp-mode.tsx](src/zeros/acp/acp-mode.tsx) — new `loading` screen between picker and auth while we fetch initialize. If the agent advertises zero interactive methods (agent-kind only), AuthModal auto-confirms and we jump straight to chat.
+- [src/zeros/acp/auth-modal.tsx](src/zeros/acp/auth-modal.tsx) — full rewrite: `buildOptions()` translates advertised `AuthMethod`s into an `Option` union (env_var / terminal / agent), with per-vendor enrichment and a synthetic Gateway option for `claude-acp`. Env vars persist to the OS keychain; the modal pre-fills from there on next open.
 - `AGENT_AUTH_CONFIG` grew a `supportsGateway` + `gatewayVars` hook so the Gateway card is config-driven, not hardcoded inside JSX.
 
 ### How to verify
@@ -500,9 +500,9 @@ Two client-only additions that make subagent spawning legible without a protocol
 
 ### What shipped
 
-- [src/0canvas/acp/acp-chat.tsx](src/0canvas/acp/acp-chat.tsx) — `matchSubagent(tool)` returns a `SubagentInfo` for any tool call whose title matches `task|spawn_agent|delegate|subagent` OR whose `rawInput` declares `subagent_type`. `ToolCallCard` branches: design-tool cards stay green, subagent cards get the new purple treatment with a `GitBranch` icon and a "Subagent" vendor pill.
+- [src/zeros/acp/acp-chat.tsx](src/zeros/acp/acp-chat.tsx) — `matchSubagent(tool)` returns a `SubagentInfo` for any tool call whose title matches `task|spawn_agent|delegate|subagent` OR whose `rawInput` declares `subagent_type`. `ToolCallCard` branches: design-tool cards stay green, subagent cards get the new purple treatment with a `GitBranch` icon and a "Subagent" vendor pill.
 - New `DESIGN_AUDITS` table (`a11y audit`, `token audit`, `polish pass`) renders as clickable chips above the composer. Each chip inserts a starter prompt into the textarea so the designer can tweak scope / selector before sending — nothing is sent automatically.
-- [src/0canvas/engine/0canvas-styles.ts](src/0canvas/engine/0canvas-styles.ts) — `oc-acp-tool-subagent` (purple-tinted variant of the tool card), `oc-acp-quicks` (composer quick-launch strip), `oc-acp-quick-chip`. All purely additive; no existing class changed meaning.
+- [src/zeros/engine/zeros-styles.ts](src/zeros/engine/zeros-styles.ts) — `oc-acp-tool-subagent` (purple-tinted variant of the tool card), `oc-acp-quicks` (composer quick-launch strip), `oc-acp-quick-chip`. All purely additive; no existing class changed meaning.
 
 ### How to verify
 

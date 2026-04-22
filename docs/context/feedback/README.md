@@ -5,10 +5,10 @@
 The feedback system lets designers annotate elements in the live preview with comments, categorized by intent and severity. Feedback items are collected in a panel, can be copied to the clipboard as structured markdown for AI agents, and can optionally be auto-dispatched to a connected agent via the WebSocket bridge.
 
 Key files:
-- `src/0canvas/store/store.tsx` -- FeedbackItem type, store actions, reducer
-- `src/0canvas/engine/0canvas-engine.tsx` -- feedback panel UI, auto-send logic, feedback marker rendering
-- `src/0canvas/inspector/feedback-pill.ts` -- the floating annotation card that appears on click
-- `src/0canvas/canvas/source-node.tsx` -- registers feedback callbacks and renders markers
+- `src/zeros/store/store.tsx` -- FeedbackItem type, store actions, reducer
+- `src/zeros/engine/zeros-engine.tsx` -- feedback panel UI, auto-send logic, feedback marker rendering
+- `src/zeros/inspector/feedback-pill.ts` -- the floating annotation card that appears on click
+- `src/zeros/canvas/source-node.tsx` -- registers feedback callbacks and renders markers
 
 ## FeedbackItem Structure
 
@@ -66,7 +66,7 @@ When the user clicks an element in the source iframe, the inspector system:
 
 ### Step 3: The Feedback Pill
 
-The pill (`src/0canvas/inspector/feedback-pill.ts`) is a floating card injected directly into the target document (the iframe). It contains three rows:
+The pill (`src/zeros/inspector/feedback-pill.ts`) is a floating card injected directly into the target document (the iframe). It contains three rows:
 
 **Row 1 -- Header:**
 - Component name badge (detected via `identifyElement()`) with a code icon
@@ -138,7 +138,7 @@ The source node's chrome bar shows a Send button when pending feedback exists. C
 1. Filters feedback items with `status === "pending"`
 2. Builds structured markdown:
    ```markdown
-   # ZeroCanvas Feedback (N items)
+   # Zeros Feedback (N items)
 
    ## Feedback Items
 
@@ -153,12 +153,12 @@ The source node's chrome bar shows a Send button when pending feedback exists. C
 ### Send to Agent via Extension
 
 The VS Code extension sidebar can trigger "Send Feedback to Agent" which:
-1. Writes feedback to `.0canvas/feedback.md` in the project root
+1. Writes feedback to `.zeros/feedback.md` in the project root
 2. Triggers the agent chat in the connected IDE
 
 ### Auto-Send Pipeline
 
-In `0canvas-engine.tsx`, when `aiSettings.autoSendFeedback` is enabled and a bridge connection exists:
+In `zeros-engine.tsx`, when `aiSettings.autoSendFeedback` is enabled and a bridge connection exists:
 
 1. The engine watches `feedbackItems` for newly added items (length increase)
 2. For each new pending item, it sends an `AI_CHAT_REQUEST` message via the bridge:

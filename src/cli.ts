@@ -1,21 +1,21 @@
 // ──────────────────────────────────────────────────────────
-// 0canvas CLI
+// Zeros CLI
 // ──────────────────────────────────────────────────────────
 //
 // Usage:
-//   npx 0canvas serve           — Start the engine
-//   npx 0canvas serve --port N  — Custom port (default: 24193)
-//   npx 0canvas serve --root .  — Custom project root
-//   npx 0canvas init            — Scaffold project.0c
-//   npx 0canvas status          — Check engine health
-//   npx 0canvas --help          — Show usage
+//   npx Zeros serve           — Start the engine
+//   npx Zeros serve --port N  — Custom port (default: 24193)
+//   npx Zeros serve --root .  — Custom project root
+//   npx Zeros init            — Scaffold project.0c
+//   npx Zeros status          — Check engine health
+//   npx Zeros --help          — Show usage
 //
 // ──────────────────────────────────────────────────────────
 
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { detectFramework, findProjectRoot } from "./engine/framework-detector";
-import { createEmptyProjectFile, serializeProjectFile } from "./0canvas/format/oc-project";
+import { createEmptyProjectFile, serializeProjectFile } from "./zeros/format/oc-project";
 
 // ── Generate project ID ───────────────────────────────────
 
@@ -39,7 +39,7 @@ function runInit(cwd: string, nameOverride?: string) {
     process.exit(1);
   }
 
-  console.log("\n  \x1b[36m0canvas\x1b[0m  Initializing project...\n");
+  console.log("\n  \x1b[36mZeros\x1b[0m  Initializing project...\n");
 
   const detection = detectFramework(cwd);
   const projectName = nameOverride || detection.projectName;
@@ -66,7 +66,7 @@ function runInit(cwd: string, nameOverride?: string) {
   console.log(`\n  \x1b[32m\u2713\x1b[0m Created \x1b[1mproject.0c\x1b[0m\n`);
   console.log("  \x1b[2mNext steps:\x1b[0m");
   console.log("  1. Start the engine:");
-  console.log("     \x1b[36mnpx 0canvas serve\x1b[0m");
+  console.log("     \x1b[36mnpx Zeros serve\x1b[0m");
   console.log("  2. Start your dev server:");
   console.log("     \x1b[36mnpm run dev\x1b[0m");
   console.log("  3. Open your app in the browser and press Ctrl+Shift+D.\n");
@@ -78,15 +78,15 @@ async function runServe(cwd: string, port: number, rootOverride?: string) {
   const root = rootOverride ? path.resolve(rootOverride) : findProjectRoot(cwd);
 
   console.log("");
-  console.log("  \x1b[36m0canvas\x1b[0m  Starting engine...");
+  console.log("  \x1b[36mZeros\x1b[0m  Starting engine...");
   console.log("");
 
   // Dynamic import to avoid loading heavy deps for other commands
-  const { ZeroCanvasEngine } = await import("./engine/index");
-  const engine = new ZeroCanvasEngine({ root, port });
+  const { ZerosEngine } = await import("./engine/index");
+  const engine = new ZerosEngine({ root, port });
 
   const shutdown = async () => {
-    console.log("\n[0canvas] Shutting down...");
+    console.log("\n[Zeros] Shutting down...");
     await engine.stop();
     process.exit(0);
   };
@@ -115,7 +115,7 @@ async function runStatus(port: number) {
     const res = await fetch(url);
     const data = await res.json();
 
-    console.log("\n  \x1b[36m0canvas\x1b[0m  Engine Status\n");
+    console.log("\n  \x1b[36mZeros\x1b[0m  Engine Status\n");
     console.log(`  Status:       \x1b[32m${data.status}\x1b[0m`);
     console.log(`  Version:      ${data.version}`);
     console.log(`  Connections:  ${data.connections}`);
@@ -126,8 +126,8 @@ async function runStatus(port: number) {
     }
     console.log("");
   } catch {
-    console.log("\n  \x1b[33m0canvas engine is not running on port " + port + ".\x1b[0m");
-    console.log("  Start it with: \x1b[36mnpx 0canvas serve\x1b[0m\n");
+    console.log("\n  \x1b[33mZeros engine is not running on port " + port + ".\x1b[0m");
+    console.log("  Start it with: \x1b[36mnpx Zeros serve\x1b[0m\n");
   }
 }
 
@@ -135,13 +135,13 @@ async function runStatus(port: number) {
 
 function showHelp() {
   console.log(`
-  \x1b[36m0canvas\x1b[0m — Design tool that runs on your production code
+  \x1b[36mZeros\x1b[0m — Design tool that runs on your production code
 
   \x1b[1mUsage:\x1b[0m
-    npx 0canvas <command> [options]
+    npx Zeros <command> [options]
 
   \x1b[1mCommands:\x1b[0m
-    serve         Start the 0canvas engine (design server)
+    serve         Start the Zeros engine (design server)
     init          Scaffold a project.0c file
     status        Check if the engine is running
 
@@ -153,10 +153,10 @@ function showHelp() {
     --name <n>    Override the project name
 
   \x1b[1mExamples:\x1b[0m
-    npx 0canvas serve
-    npx 0canvas serve --port 3001
-    npx 0canvas init --name "my-app"
-    npx 0canvas status
+    npx Zeros serve
+    npx Zeros serve --port 3001
+    npx Zeros init --name "my-app"
+    npx Zeros status
 `);
 }
 

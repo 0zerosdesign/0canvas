@@ -48,15 +48,15 @@ const KNOWN_PORTS: &[(u16, &str, &str)] = &[
     (5432, "database", "Postgres"),
     (6379, "database", "Redis"),
     (27017, "database", "MongoDB"),
-    // 0canvas engine
-    (24193, "engine", "0canvas engine"),
-    (24194, "engine", "0canvas engine"),
-    (24195, "engine", "0canvas engine"),
-    (24196, "engine", "0canvas engine"),
-    (24197, "engine", "0canvas engine"),
-    (24198, "engine", "0canvas engine"),
-    (24199, "engine", "0canvas engine"),
-    (24200, "engine", "0canvas engine"),
+    // Zeros engine
+    (24193, "engine", "Zeros engine"),
+    (24194, "engine", "Zeros engine"),
+    (24195, "engine", "Zeros engine"),
+    (24196, "engine", "Zeros engine"),
+    (24197, "engine", "Zeros engine"),
+    (24198, "engine", "Zeros engine"),
+    (24199, "engine", "Zeros engine"),
+    (24200, "engine", "Zeros engine"),
 ];
 
 fn port_is_open(port: u16) -> bool {

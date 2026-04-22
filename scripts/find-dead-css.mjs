@@ -16,7 +16,7 @@ import path from "node:path";
 const ROOT = path.resolve(process.cwd(), "src");
 const CSS_FILES = [
   "shell/app-shell.css",
-  "0canvas/ui/primitives.css",
+  "zeros/ui/primitives.css",
   "styles/design-tokens.css",
 ].map((p) => path.join(ROOT, p));
 

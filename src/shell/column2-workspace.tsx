@@ -23,8 +23,8 @@ import {
 } from "lucide-react";
 import { Column2ChatView } from "./column2-chat-view";
 import { MissionPanel } from "./mission-panel";
-import { useWorkspace } from "../0canvas/store/store";
-import { Button } from "../0canvas/ui";
+import { useWorkspace } from "../zeros/store/store";
+import { Button } from "../zeros/ui";
 
 type TabId = "chat" | "mission";
 
@@ -100,11 +100,11 @@ export function Column2Workspace() {
         } ${activeTab === "mission" ? "is-mission" : ""}`}
         role="tabpanel"
       >
-        {/* ACP session UI is scoped under [data-0canvas-root] for
+        {/* ACP session UI is scoped under [data-Zeros-root] for
             engine-injected tokens. Remount per-chat via the chatKey
             so state flips cleanly when the user switches chats. */}
         {activeTab === "chat" && (
-          <div data-0canvas-root="" className="oc-column-2__chat-root">
+          <div data-Zeros-root="" className="oc-column-2__chat-root">
             <Column2ChatView key={chatKey} />
           </div>
         )}

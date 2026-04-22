@@ -212,7 +212,7 @@ export class EngineServer {
     // MCP endpoint (Streamable HTTP)
     if (url.pathname === "/mcp" && this.mcpHandler) {
       this.mcpHandler(req, res).catch((err) => {
-        console.error("[0canvas] MCP request error:", err);
+        console.error("[Zeros] MCP request error:", err);
         if (!res.headersSent) {
           res.writeHead(500, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ error: "Internal server error" }));
@@ -239,7 +239,7 @@ export class EngineServer {
     // Default response
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({
-      name: "0canvas-engine",
+      name: "zeros-engine",
       health: "/health",
       ws: "/ws",
       mcp: "/mcp",

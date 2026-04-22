@@ -1,8 +1,8 @@
 # Style Panel
 
-> `src/0canvas/panels/style-panel.tsx`
+> `src/zeros/panels/style-panel.tsx`
 
-The Style Panel is the primary CSS inspection and editing interface in 0canvas. It occupies the right side of the workspace (280px fixed width) and provides a visual, section-based CSS editor for the currently selected DOM element. All edits apply instantly to the live preview via inline styles and, when the bridge is connected, write back to source files through the VS Code extension.
+The Style Panel is the primary CSS inspection and editing interface in Zeros. It occupies the right side of the workspace (280px fixed width) and provides a visual, section-based CSS editor for the currently selected DOM element. All edits apply instantly to the live preview via inline styles and, when the bridge is connected, write back to source files through the VS Code extension.
 
 ---
 

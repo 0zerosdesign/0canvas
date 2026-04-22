@@ -1,10 +1,10 @@
-# 0canvas (ZeroCanvas) — Complete Project Analysis & Documentation
+# Zeros — Complete Project Analysis & Documentation
 
 > **⚠️ PARTIAL STATUS (2026-04-20):** This document was written for the
 > V1/V2 browser-overlay era. Sections 1-10 (module breakdown, engine
 > architecture, state management, MCP integration, tech stack) **still
 > accurately describe the engine code that now lives inside Column 3**
-> of the Tauri Mac app (`src/0canvas/**` + `src/engine/**`). Sections
+> of the Tauri Mac app (`src/zeros/**` + `src/engine/**`). Sections
 > 11-13 (status / limitations / roadmap) are SUPERSEDED by V3.
 > For the current product truth read:
 > - [PRODUCT_VISION_V3.md](PRODUCT_VISION_V3.md) — the vision
@@ -14,10 +14,10 @@
 
 ---
 
-> **Package:** `@zerosdesign/0canvas`
+> **Package:** `@Withso/zeros`
 > **Version:** 0.0.5 (npm — legacy channel; see V3)
 > **License:** MIT
-> **Repository:** `Withso/0canvas`
+> **Repository:** `Withso/Zeros`
 > **Original Design:** [Figma Design File](https://www.figma.com/design/pHn0A8C25STCmSniuSFuQp/Design-Collaboration-Tool)
 
 ---
@@ -42,7 +42,7 @@
 
 ## 1. Executive Summary
 
-**ZeroCanvas** (codenamed `0canvas`) is a **visual feedback engine for AI-powered development**. It is a browser overlay tool that allows designers and developers to inspect live DOM elements, edit CSS styles in real-time, create design variants by "forking" pages or components, annotate designs, and send structured feedback/instructions to AI coding agents (like Claude Code, Cursor, Windsurf, VS Code Copilot, etc.) — all without leaving the browser.
+**Zeros** is a **visual feedback engine for AI-powered development**. It is a browser overlay tool that allows designers and developers to inspect live DOM elements, edit CSS styles in real-time, create design variants by "forking" pages or components, annotate designs, and send structured feedback/instructions to AI coding agents (like Claude Code, Cursor, Windsurf, VS Code Copilot, etc.) — all without leaving the browser.
 
 **The goal:** Bridge the gap between visual design intent and AI-powered code generation. Instead of describing what you want in text, you visually inspect, edit, annotate, and fork your live UI, then send structured instructions directly to an AI agent via the Model Context Protocol (MCP).
 
@@ -51,10 +51,10 @@
 ## 2. What This Project Does
 
 ### Core Value Proposition
-ZeroCanvas enables a workflow where:
+Zeros enables a workflow where:
 
 1. **A developer runs their web app** (any framework: React, Vue, Svelte, Angular, etc.)
-2. **They add `<ZeroCanvas />` to their app** — a single React component
+2. **They add `<Zeros />` to their app** — a single React component
 3. **A floating overlay appears** with a full design workspace (toggle via `Ctrl+Shift+D`)
 4. **They inspect elements** by clicking on them in the live page
 5. **They edit CSS properties** live in a style panel
@@ -85,7 +85,7 @@ Think of it as **browser DevTools + Figma + AI agent communication** combined in
 │                          │ DOM Inspection                   │
 │                          │                                  │
 │  ┌─────────────────────────────────────────────────────┐   │
-│  │          ZeroCanvas Overlay (Portal)                  │   │
+│  │          Zeros Overlay (Portal)                  │   │
 │  │  ┌──────────┐ ┌──────────┐ ┌──────────────────┐    │   │
 │  │  │  Toolbar  │ │  Layers  │ │  ReactFlow Canvas │    │   │
 │  │  │  Panel    │ │  Panel   │ │  (Source+Variants) │    │   │
@@ -124,9 +124,9 @@ Think of it as **browser DevTools + Figma + AI agent communication** combined in
 
 ### Step-by-Step Flow
 
-1. **Portal Rendering:** The `<ZeroCanvas />` component creates a portal on `document.body` with an extremely high z-index (`2147483640`), ensuring it floats above everything in the consumer's app.
+1. **Portal Rendering:** The `<Zeros />` component creates a portal on `document.body` with an extremely high z-index (`2147483640`), ensuring it floats above everything in the consumer's app.
 
-2. **Iframe Isolation:** The consumer's app is loaded inside an `<iframe name="0canvas-preview">`. The ZeroCanvas component detects when running inside this iframe and returns `null` (iframe guard), preventing recursive rendering.
+2. **Iframe Isolation:** The consumer's app is loaded inside an `<iframe name="Zeros-preview">`. The Zeros component detects when running inside this iframe and returns `null` (iframe guard), preventing recursive rendering.
 
 3. **DOM Inspection:** The `dom-inspector.ts` module inspects the iframe's `contentDocument`. It walks the DOM tree, builds an element map, generates selectors, extracts computed styles, and provides hover/select overlays.
 
@@ -145,16 +145,16 @@ Think of it as **browser DevTools + Figma + AI agent communication** combined in
 ### File Structure
 
 ```
-0canvas/
+Zeros/
 ├── index.html                    # Dev app HTML entry point
-├── package.json                  # npm package config (@zerosdesign/0canvas)
+├── package.json                  # npm package config (@Withso/zeros)
 ├── package.publish.json          # Publish-specific package.json
 ├── tsup.config.ts                # Build config (dual CJS/ESM + MCP CLI binary)
 ├── vite.config.ts                # Vite dev server config (React + Tailwind)
 ├── tsconfig.build.json           # TypeScript build config
 ├── postcss.config.mjs            # PostCSS config
 ├── setup.mjs                     # Setup script
-├── 0canvas.deps.json          # Dependency metadata
+├── Zeros.deps.json          # Dependency metadata
 ├── DOCUMENTATION.md              # Existing detailed docs
 ├── ATTRIBUTIONS.md               # Third-party attributions
 ├── guidelines/
@@ -179,7 +179,7 @@ Think of it as **browser DevTools + Figma + AI agent communication** combined in
 │   │   │   └── workspace.tsx     # Dev testing workspace
 │   │   │
 │   │   └── components/
-│   │       ├── 0canvas-engine.tsx      # Main <ZeroCanvas /> component
+│   │       ├── zeros-engine.tsx      # Main <Zeros /> component
 │   │       ├── dom-inspector.ts           # DOM tree walking, highlighting, snapshots
 │   │       ├── source-node.tsx            # Main preview node (resizable iframe)
 │   │       ├── variant-node.tsx           # Variant card node (srcdoc iframe)
@@ -202,7 +202,7 @@ Think of it as **browser DevTools + Figma + AI agent communication** combined in
 │   │       ├── oc-project-store.ts       # IndexedDB persistence + import/export
 │   │       ├── variant-db.ts             # IndexedDB for variants + waitlist
 │   │       ├── clipboard.ts              # Copy-to-clipboard utility
-│   │       ├── 0canvas-styles.ts      # Runtime CSS injection
+│   │       ├── zeros-styles.ts      # Runtime CSS injection
 │   │       └── ui/                       # Radix-based UI primitives
 │   │
 │   └── mcp/
@@ -230,7 +230,7 @@ The project uses **two build pipelines**:
 
 ## 5. Module Breakdown
 
-### 5.1 ZeroCanvas Engine (`0canvas-engine.tsx`)
+### 5.1 Zeros Engine (`zeros-engine.tsx`)
 - **Role:** Main entry component that consumers import
 - **What it does:** Creates a portal overlay, handles keyboard shortcut (`Ctrl+Shift+D`), manages open/close state, renders the full workspace, polls MCP bridge every 2 seconds, auto-saves `.0c` project file to IndexedDB (500ms debounce), loads existing project on mount
 - **Key props:** `position`, `defaultOpen`, `theme`, `shortcut`, `devOnly`, `zIndex`, `onToggle`
@@ -316,7 +316,7 @@ The project uses **two build pipelines**:
 
 | Category | Feature | Status |
 |----------|---------|--------|
-| **Core** | `<ZeroCanvas />` React component with portal overlay | Done |
+| **Core** | `<Zeros />` React component with portal overlay | Done |
 | **Core** | Keyboard shortcut toggle (`Ctrl+Shift+D`) | Done |
 | **Core** | FAB toggle button (configurable position) | Done |
 | **Core** | Production guard (`devOnly` prop) | Done |
@@ -422,7 +422,7 @@ A structured JSON representation of individual UI variants:
 - **Bidirectional parsing:** `htmlToOCDocument()` ↔ `ocDocumentToHtml()`
 
 ### .0c Project File
-A single JSON file representing the entire ZeroCanvas project:
+A single JSON file representing the entire Zeros project:
 - Schema version 1, validated with Zod
 - Contains: project metadata, workspace config, breakpoints, design variables, pages, variants, annotations, feedback, history checkpoints
 - SHA-256 integrity hash
@@ -432,11 +432,11 @@ A single JSON file representing the entire ZeroCanvas project:
 
 | Database | Store | Key | Purpose |
 |----------|-------|-----|---------|
-| `0canvas-db` | `variants` | `id` | Individual VariantData objects |
-| `0canvas-db` | `waitlist` | `id` | Individual FeedbackItem objects |
-| `0canvas-db` | `projects` | `id` | StoredProject (project + variants + feedback) |
-| `0canvas-projects` | `oc-projects` | `project.id` | Full OCProjectFile objects |
-| `0canvas-projects` | `oc-sync-meta` | `projectId` | Sync tracking metadata |
+| `Zeros-db` | `variants` | `id` | Individual VariantData objects |
+| `Zeros-db` | `waitlist` | `id` | Individual FeedbackItem objects |
+| `Zeros-db` | `projects` | `id` | StoredProject (project + variants + feedback) |
+| `Zeros-projects` | `oc-projects` | `project.id` | Full OCProjectFile objects |
+| `Zeros-projects` | `oc-sync-meta` | `projectId` | Sync tracking metadata |
 
 Auto-cleanup: Variants older than 7 days are removed automatically.
 
@@ -445,7 +445,7 @@ Auto-cleanup: Variants older than 7 days are removed automatically.
 ## 9. MCP Integration (AI Agent Bridge)
 
 ### HTTP Bridge (`bridge.ts`)
-- **Port:** 24192 (configurable via `ZEROCANVAS_PORT` env var)
+- **Port:** 24192 (configurable via `ZEROS_PORT` env var)
 - **Transport:** HTTP REST with CORS enabled
 
 | Method | Path | Description |
@@ -468,33 +468,33 @@ Auto-cleanup: Variants older than 7 days are removed automatically.
 
 | Tool | Description |
 |------|-------------|
-| `0canvas_get_pending` | List pending feedback items |
-| `0canvas_get_variant` | Get variant HTML/CSS/metadata |
-| `0canvas_resolve_feedback` | Mark feedback as resolved |
-| `0canvas_push_changes` | Push modified HTML/CSS to variant preview |
-| `0canvas_list_variants` | List all variants |
-| `0canvas_get_project` | Get project info |
-| `0canvas_watch` | Long-poll for new feedback |
-| `0canvas_get_variant_tree` | Get .0c JSON tree for variant |
-| `0canvas_update_node` | Update node in .0c tree |
-| `0canvas_add_node` | Insert node into .0c tree |
-| `0canvas_delete_node` | Remove node from .0c tree |
-| `0canvas_set_variable` | Set design variable/token |
-| `0canvas_get_variables` | List design variables |
-| `0canvas_get_project_file` | Get full .0c project file |
-| `0canvas_save_project_file` | Save .0c project file (with revision conflict detection) |
-| `0canvas_get_project_meta` | Get project summary metadata |
-| `0canvas_write_project_to_workspace` | Write .0c file to workspace path |
+| `Zeros_get_pending` | List pending feedback items |
+| `Zeros_get_variant` | Get variant HTML/CSS/metadata |
+| `Zeros_resolve_feedback` | Mark feedback as resolved |
+| `Zeros_push_changes` | Push modified HTML/CSS to variant preview |
+| `Zeros_list_variants` | List all variants |
+| `Zeros_get_project` | Get project info |
+| `Zeros_watch` | Long-poll for new feedback |
+| `Zeros_get_variant_tree` | Get .0c JSON tree for variant |
+| `Zeros_update_node` | Update node in .0c tree |
+| `Zeros_add_node` | Insert node into .0c tree |
+| `Zeros_delete_node` | Remove node from .0c tree |
+| `Zeros_set_variable` | Set design variable/token |
+| `Zeros_get_variables` | List design variables |
+| `Zeros_get_project_file` | Get full .0c project file |
+| `Zeros_save_project_file` | Save .0c project file (with revision conflict detection) |
+| `Zeros_get_project_meta` | Get project summary metadata |
+| `Zeros_write_project_to_workspace` | Write .0c file to workspace path |
 
 ### CLI Binary
 ```bash
-npx @zerosdesign/0canvas mcp
+npx @Withso/zeros mcp
 # or
-0canvas-mcp
+zeros-mcp
 ```
 
 ### IDE Setup Examples
-- **Claude Code:** `claude mcp add 0canvas -- npx @zerosdesign/0canvas mcp`
+- **Claude Code:** `claude mcp add Zeros -- npx @Withso/zeros mcp`
 - **Cursor/Windsurf/VS Code:** Extension-based
 - **Antigravity:** CLI-based
 
@@ -587,7 +587,7 @@ All core features listed in Section 6 are implemented and functional:
 ---
 
 *Analysis completed on 2026-04-02*
-*Source: `Withso/0canvas` repository — full codebase review*
+*Source: `Withso/Zeros` repository — full codebase review*
 
 ---
 
@@ -595,7 +595,7 @@ All core features listed in Section 6 are implemented and functional:
 
 This document's module breakdown (§5), state management (§7), data
 formats (§8), and MCP integration (§9) still accurately describe the
-engine code that lives under [src/0canvas/](src/0canvas/) and
+engine code that lives under [src/zeros/](src/zeros/) and
 [src/engine/](src/engine/). What's missing, as of 2026-04-20:
 
 ### New surfaces to document

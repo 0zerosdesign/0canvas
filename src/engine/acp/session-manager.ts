@@ -105,7 +105,7 @@ export class AcpSessionManager {
 
   /**
    * Register an MCP server to be attached to every new ACP session. The engine
-   * calls this after it binds its port so the 0canvas design-state MCP endpoint
+   * calls this after it binds its port so the Zeros design-state MCP endpoint
    * becomes reachable to the spawned agent.
    */
   registerMcpServer(server: McpServerHandle): void {
@@ -231,7 +231,7 @@ export class AcpSessionManager {
     await this.ensureAgent(agentId, { env: opts?.env });
     const live = this.requireAgent(agentId);
 
-    // Combine registered MCP servers (0canvas design-state endpoint) with any
+    // Combine registered MCP servers (Zeros design-state endpoint) with any
     // the caller wanted to add on top. This is how the agent picks up our 5
     // design tools without any agent-side config.
     const mcpServers = [

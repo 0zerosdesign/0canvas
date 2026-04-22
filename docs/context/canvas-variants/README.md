@@ -2,11 +2,11 @@
 
 ## Overview
 
-The canvas system is the central workspace of 0canvas. It uses [ReactFlow](https://reactflow.dev/) to provide an infinite, pannable, zoomable canvas where the user sees a live preview of their app alongside forked design variants. The architecture lives across three main files:
+The canvas system is the central workspace of Zeros. It uses [ReactFlow](https://reactflow.dev/) to provide an infinite, pannable, zoomable canvas where the user sees a live preview of their app alongside forked design variants. The architecture lives across three main files:
 
-- `src/0canvas/canvas/variant-canvas.tsx` -- orchestrates the ReactFlow canvas, node layout, and all fork/delete/finalize actions
-- `src/0canvas/canvas/source-node.tsx` -- the live app preview (main iframe)
-- `src/0canvas/canvas/variant-node.tsx` -- each forked variant card (isolated srcdoc iframe)
+- `src/zeros/canvas/variant-canvas.tsx` -- orchestrates the ReactFlow canvas, node layout, and all fork/delete/finalize actions
+- `src/zeros/canvas/source-node.tsx` -- the live app preview (main iframe)
+- `src/zeros/canvas/variant-node.tsx` -- each forked variant card (isolated srcdoc iframe)
 
 ## ReactFlow Infinite Canvas
 
@@ -20,11 +20,11 @@ The canvas system is the central workspace of 0canvas. It uses [ReactFlow](https
 - **Controls:** zoom in/out buttons (no interactive toggle)
 - **Fit view:** on mount with 0.2 padding, max zoom capped at 1x
 
-During canvas interactions (pan, zoom, drag), a style guard is injected that sets `pointer-events: none` on all iframes inside `[data-0canvas]`. This prevents iframes from stealing mouse events mid-drag.
+During canvas interactions (pan, zoom, drag), a style guard is injected that sets `pointer-events: none` on all iframes inside `[data-Zeros]`. This prevents iframes from stealing mouse events mid-drag.
 
 ## SourceNode: Live App Preview
 
-The SourceNode renders the user's actual running application inside an iframe (`<iframe name="0canvas-preview">`). It loads `window.location.href` so the preview is always the current page.
+The SourceNode renders the user's actual running application inside an iframe (`<iframe name="Zeros-preview">`). It loads `window.location.href` so the preview is always the current page.
 
 ### Viewport Presets
 
@@ -103,7 +103,7 @@ Uses ReactFlow's `<NodeResizer>` with invisible handles (edge-drag only):
 The variant's iframe is built from its `html` and `css` fields (preferring `modifiedHtml`/`modifiedCss` when present):
 
 1. CSS is split into `@import` rules and regular rules
-2. Internal rules are filtered out -- anything matching `[data-0canvas`, `.react-flow`, `--xy-`, or `--oc-` is stripped
+2. Internal rules are filtered out -- anything matching `[data-Zeros`, `.react-flow`, `--xy-`, or `--oc-` is stripped
 3. A minimal reset is injected: `box-sizing: border-box`, `body { margin: 0 }`
 4. The HTML is placed directly in `<body>`
 
@@ -190,7 +190,7 @@ When using the AI chat panel (designMode = "ai"), the user can send the full var
 
 ## Visual Diff (Before/After Comparison)
 
-`src/0canvas/panels/visual-diff.tsx` provides a slider-based comparison overlay:
+`src/zeros/panels/visual-diff.tsx` provides a slider-based comparison overlay:
 
 - Shows two iframes stacked: "Before" (original html/css) and "After" (modified html/css)
 - A draggable slider wipes between them using CSS `clip-path: inset(...)` 
@@ -210,7 +210,7 @@ This ensures the layers panel and style panel always reflect whichever node is a
 
 ## User Workflow
 
-1. Open the 0canvas overlay (Ctrl+Shift+D)
+1. Open the Zeros overlay (Ctrl+Shift+D)
 2. The live app loads in the SourceNode iframe on the canvas
 3. Click a responsive preset to adjust the viewport (e.g., Tablet 768px)
 4. Click "Fork Page" to capture the entire page as a variant

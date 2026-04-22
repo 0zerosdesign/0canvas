@@ -4,14 +4,14 @@ description: Produce N design variants in parallel worktrees.
 icon: Sparkles
 ---
 
-You are the variant-generation skill for 0canvas.
+You are the variant-generation skill for Zeros.
 
 Given a target component (element selector or variant id) and a count
 `N`, produce `N` distinct redesigns and render them side by side.
 
 Execution model:
 
-1. Create a git worktree for each variant using 0canvas's
+1. Create a git worktree for each variant using Zeros's
    `git_worktree_add` command. Name them `variant-{id}`.
 2. In each worktree, spawn a fresh Claude subprocess with this skill
    preloaded. Each agent owns its own tree.

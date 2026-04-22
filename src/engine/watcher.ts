@@ -41,7 +41,7 @@ export class FileWatcher {
         this.root,
         (err, events) => {
           if (err) {
-            console.error("[0canvas] Watcher error:", err);
+            console.error("[Zeros] Watcher error:", err);
             return;
           }
           for (const event of events) {
@@ -54,15 +54,15 @@ export class FileWatcher {
             "**/dist/**",
             "**/.next/**",
             "**/build/**",
-            "**/.0canvas/**",
+            "**/.zeros/**",
             "**/.git/**",
-            "**/*.0canvas-tmp",
+            "**/*.zeros-tmp",
           ],
         }
       );
-      console.log("[0canvas] File watcher started (native)");
+      console.log("[Zeros] File watcher started (native)");
     } catch (err) {
-      console.warn("[0canvas] Native file watcher unavailable, falling back to polling:", err);
+      console.warn("[Zeros] Native file watcher unavailable, falling back to polling:", err);
       // In fallback mode, the cache is still rebuilt on manual triggers
       // (e.g., when a WebSocket message requests fresh data)
     }

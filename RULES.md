@@ -1,4 +1,4 @@
-# 0canvas Development Rules
+# Zeros Development Rules
 
 > These rules MUST be followed by every contributor — human **and** AI — working on this project. They exist to keep the UI consistent, top-class, and Cursor-like. Breaking them is treated as a failing review.
 
@@ -12,18 +12,18 @@ Every file MUST be placed in the correct folder:
 
 | Content | Location |
 |---------|----------|
-| 0canvas core engine | `/src/0canvas/engine/` |
-| DOM inspector | `/src/0canvas/inspector/` |
-| Canvas components | `/src/0canvas/canvas/` |
-| Panel components | `/src/0canvas/panels/` |
-| Editors (style panel) | `/src/0canvas/editors/` |
-| Themes system | `/src/0canvas/themes/` |
-| .0c file format | `/src/0canvas/format/` |
-| State management | `/src/0canvas/store/` |
-| Database/IndexedDB | `/src/0canvas/db/` |
-| Utilities & libs | `/src/0canvas/lib/`, `/src/0canvas/utils/` |
-| **UI primitives (atoms + molecules + organisms)** | `/src/0canvas/ui/` |
-| ACP bridge | `/src/0canvas/acp/` |
+| Zeros core engine | `/src/zeros/engine/` |
+| DOM inspector | `/src/zeros/inspector/` |
+| Canvas components | `/src/zeros/canvas/` |
+| Panel components | `/src/zeros/panels/` |
+| Editors (style panel) | `/src/zeros/editors/` |
+| Themes system | `/src/zeros/themes/` |
+| .0c file format | `/src/zeros/format/` |
+| State management | `/src/zeros/store/` |
+| Database/IndexedDB | `/src/zeros/db/` |
+| Utilities & libs | `/src/zeros/lib/`, `/src/zeros/utils/` |
+| **UI primitives (atoms + molecules + organisms)** | `/src/zeros/ui/` |
+| ACP bridge | `/src/zeros/acp/` |
 | MCP server | `/src/mcp/` |
 | **Design tokens (ONE file)** | `/src/styles/design-tokens.css` |
 | App shell (Tauri window chrome) | `/src/shell/` |
@@ -35,7 +35,7 @@ Every file MUST be placed in the correct folder:
 
 NEVER put component code inside page files (import them).
 NEVER put styling logic inside utility files.
-NEVER put a new primitive outside `/src/0canvas/ui/`.
+NEVER put a new primitive outside `/src/zeros/ui/`.
 
 ---
 
@@ -110,7 +110,7 @@ If no semantic token fits, STOP. Do not invent. Either:
 
 ## Rule 11: Primitive-first (the shadcn rule)
 
-Every visual element uses a component from `/src/0canvas/ui/`. Per-feature classes that duplicate primitive behavior are forbidden in new code.
+Every visual element uses a component from `/src/zeros/ui/`. Per-feature classes that duplicate primitive behavior are forbidden in new code.
 
 | Need | Primitive |
 |---|---|
@@ -131,7 +131,7 @@ Every visual element uses a component from `/src/0canvas/ui/`. Per-feature class
 | Divider | `<Divider orientation="…">` |
 | Icon wrapper | `<Icon as={Lucide} size="sm|md|lg">` |
 
-If a primitive is missing, extend `/src/0canvas/ui/` first — **never** write per-feature CSS. A variant missing? Add it to the existing primitive with a new `variant` prop value and document it here.
+If a primitive is missing, extend `/src/zeros/ui/` first — **never** write per-feature CSS. A variant missing? Add it to the existing primitive with a new `variant` prop value and document it here.
 
 ---
 
@@ -247,7 +247,7 @@ Props must be named clearly. Lean on shadcn conventions: `variant`, `size`, `asC
 
 ## Rule 9: npm Package CSS Delivery (engine)
 
-The 0canvas engine ships as an npm package; its CSS is injected at runtime from `src/0canvas/engine/0canvas-styles.ts`. Engine styles MUST reference the same semantic tokens as the shell (no duplicate palette). Engine styles are scoped under `[data-0canvas-root]`.
+The Zeros engine ships as an npm package; its CSS is injected at runtime from `src/zeros/engine/zeros-styles.ts`. Engine styles MUST reference the same semantic tokens as the shell (no duplicate palette). Engine styles are scoped under `[data-Zeros-root]`.
 
 ---
 
@@ -314,7 +314,7 @@ Before every UI-touching commit, verify:
 - [ ] No off-scale `border-radius: Npx` (N ∉ {4,6,8,12})
 - [ ] No numeric `z-index` in components
 - [ ] `style={{}}` contains no static visual properties (color/bg/padding/margin/fontSize/border)
-- [ ] Every new interactive element uses a primitive from `/src/0canvas/ui/`
+- [ ] Every new interactive element uses a primitive from `/src/zeros/ui/`
 - [ ] `pnpm check:ui` passes
 - [ ] `pnpm build:ui` compiles clean
 
