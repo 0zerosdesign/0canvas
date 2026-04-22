@@ -5,6 +5,11 @@
   "description": "Zeros — Visual design tool for production code. Mac app (Electron). Inspect elements, edit styles, push to git.",
   "license": "MIT",
   "main": "dist-electron/main.cjs",
+  "electronmon": {
+    "patterns": [
+      "dist-electron/**/*"
+    ]
+  },
   "scripts": {
     "build:engine": "tsup",
     "watch:engine": "tsup --watch",
@@ -15,11 +20,9 @@
     "serve:engine": "node dist-engine/cli.js",
     "electron:compile": "tsup --config electron/tsup.config.ts",
     "electron:compile:watch": "tsup --config electron/tsup.config.ts --watch",
-    "electron:dev": "pnpm electron:compile && concurrently -k -n vite,electron -c cyan,magenta \"pnpm dev\" \"wait-on http://localhost:5173 && env -u ELECTRON_RUN_AS_NODE electron .\"",
+    "electron:dev": "concurrently -k -n vite,main,engine,app -c cyan,magenta,yellow,green \"pnpm dev\" \"tsup --config electron/tsup.config.ts --watch\" \"tsup --watch\" \"wait-on http://localhost:5173 dist-electron/main.cjs dist-engine/cli.js && env -u ELECTRON_RUN_AS_NODE electronmon .\"",
     "electron:rebuild": "electron-rebuild --only node-pty,keytar",
     "electron:build": "pnpm build:sidecar && pnpm electron:compile && pnpm build:ui && electron-builder --config electron-builder.yml",
-    "electron:build:local": "pnpm build:sidecar && pnpm electron:compile && pnpm build:ui && electron-builder --config electron-builder.yml --config.appId=design.zeros.app.local --config.productName='Zeros Local' --config.afterPack=./scripts/electron-after-pack.cjs",
-    "electron:sign": "codesign --force --deep --sign - 'release/mac-arm64/Zeros Local.app'",
     "check:ui": "node scripts/check-ui-consistency.mjs",
     "snap:ui": "node scripts/visual-harness.mjs"
   },
@@ -60,6 +63,7 @@
     "concurrently": "^9.2.1",
     "electron": "^33.4.11",
     "electron-builder": "^26.8.1",
+    "electronmon": "^2.0.4",
     "tailwindcss": "^4.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.0.0",

@@ -19,7 +19,7 @@
 // ──────────────────────────────────────────────────────────
 
 import { spawn, type ChildProcess } from "node:child_process";
-import { existsSync, readFileSync, statSync, unlinkSync } from "node:fs";
+import { existsSync, readFileSync, statSync, unlinkSync, watchFile, unwatchFile } from "node:fs";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
@@ -53,33 +53,53 @@ function archTriple(): string {
   throw new Error(`unsupported arch: ${process.arch}`);
 }
 
-/** Find the bun-compiled engine binary. Two layouts:
- *    Dev:     <repo>/binaries/zeros-engine-<triple>   (pnpm build:sidecar)
- *    Release: <App>.app/Contents/Resources/zeros-engine
- *             (electron-builder extraResources rewrites the filename). */
-function locateEngineBinary(): string {
+/** Resolve the engine to spawn. Two very different paths:
+ *
+ *  PROD (app.isPackaged): spawn the bun-compiled standalone binary
+ *    at Contents/Resources/zeros-engine. One-process, pre-bundled,
+ *    no Node runtime needed.
+ *
+ *  DEV (pnpm electron:dev): spawn `node dist-engine/cli.js` — the
+ *    tsup-built JS. tsup --watch rebuilds this file in <50ms on
+ *    every src/cli.ts / src/engine/** edit, so dev iteration is
+ *    ~20× faster than waiting for `bun build --compile`. The
+ *    runEngineWatcher() below SIGTERMs the running engine on
+ *    dist-engine/cli.js mtime change; the watchdog respawns it
+ *    with the new code within 6s.
+ *
+ *  Returned value: { cmd, args } — caller hands these to spawn(). */
+function resolveEngineSpawn(): { cmd: string; args: string[] } {
   const triple = archTriple();
-  const candidates: string[] = [];
 
   if (app.isPackaged) {
-    candidates.push(path.join(process.resourcesPath, "zeros-engine"));
-    candidates.push(path.join(process.resourcesPath, `zeros-engine-${triple}`));
-  } else {
-    // __dirname is <repo>/dist-electron/, so repo root is one up.
-    const repoRoot = path.resolve(__dirname, "..");
-    candidates.push(
-      path.join(repoRoot, "binaries", `zeros-engine-${triple}`),
+    const candidates = [
+      path.join(process.resourcesPath, "zeros-engine"),
+      path.join(process.resourcesPath, `zeros-engine-${triple}`),
+    ];
+    for (const p of candidates) {
+      if (existsSync(p)) return { cmd: p, args: [] };
+    }
+    throw new Error(
+      `engine binary not found. Tried:\n${candidates
+        .map((p) => `  ${p}`)
+        .join("\n")}\nRun \`pnpm build:sidecar\` first.`,
     );
   }
 
-  for (const p of candidates) {
-    if (existsSync(p)) return p;
+  // Dev: prefer tsup-built JS so edits in src/engine/** hot-rebuild
+  // without a 300ms bun compile. Falls back to the bun binary for
+  // anyone running Electron without the engine watcher.
+  const repoRoot = path.resolve(__dirname, "..");
+  const devJs = path.join(repoRoot, "dist-engine", "cli.js");
+  if (existsSync(devJs)) {
+    return { cmd: process.execPath, args: [devJs] };
   }
-
+  const devBin = path.join(repoRoot, "binaries", `zeros-engine-${triple}`);
+  if (existsSync(devBin)) {
+    return { cmd: devBin, args: [] };
+  }
   throw new Error(
-    `engine binary not found. Tried:\n${candidates
-      .map((p) => `  ${p}`)
-      .join("\n")}\nRun \`pnpm build:sidecar\` first.`,
+    `engine not found in dev mode. Run \`pnpm electron:dev\` (which runs tsup --watch) or \`pnpm build:sidecar\`.`,
   );
 }
 
@@ -127,7 +147,7 @@ function killCurrentChild(): void {
 export async function spawnEngine(projectRoot: string): Promise<number> {
   killCurrentChild();
 
-  const engineBin = locateEngineBinary();
+  const { cmd, args: engineArgs } = resolveEngineSpawn();
   const portFile = path.join(projectRoot, ".zeros", ".port");
   try {
     unlinkSync(portFile);
@@ -142,8 +162,8 @@ export async function spawnEngine(projectRoot: string): Promise<number> {
   const isPackaged = app.isPackaged;
   const stdioMode = isPackaged ? "pipe" : "inherit";
   const child = spawn(
-    engineBin,
-    ["serve", "--root", projectRoot, "--port", "24193"],
+    cmd,
+    [...engineArgs, "serve", "--root", projectRoot, "--port", "24193"],
     {
       cwd: projectRoot,
       stdio: stdioMode as "pipe" | "inherit",
@@ -240,6 +260,40 @@ export function currentPort(): number | null {
 
 export function currentRoot(): string | null {
   return state.root;
+}
+
+/** Dev-only: watch dist-engine/cli.js for rebuild events and SIGTERM
+ *  the running engine when it changes. The watchdog detects the dead
+ *  port within 6s and respawns with the new code. Called from
+ *  main.ts after startWatchdog(); no-op in packaged builds. */
+export function startEngineCodeWatcher(): void {
+  if (app.isPackaged) return;
+  const repoRoot = path.resolve(__dirname, "..");
+  const cliPath = path.join(repoRoot, "dist-engine", "cli.js");
+  // fs.watchFile polls mtime every N ms. Simpler + more portable than
+  // fs.watch (which has platform-specific event semantics and misses
+  // the atomic-rewrite pattern tsup uses on macOS).
+  watchFile(cliPath, { interval: 500 }, (curr, prev) => {
+    if (curr.mtimeMs === prev.mtimeMs) return;
+    const child = state.child;
+    if (!child || child.killed) return;
+    // eslint-disable-next-line no-console
+    console.log("[Zeros] engine code changed — respawning");
+    try {
+      child.kill("SIGTERM");
+    } catch {
+      /* watchdog will respawn regardless */
+    }
+  });
+  // Clean up the watcher on quit so the interval doesn't leak across
+  // electronmon restarts.
+  app.on("before-quit", () => {
+    try {
+      unwatchFile(cliPath);
+    } catch {
+      /* already unwatched */
+    }
+  });
 }
 
 /** Starts a 2-second TCP heartbeat against the engine's bound port.

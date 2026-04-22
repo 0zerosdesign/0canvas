@@ -44,6 +44,7 @@ import {
   defaultProjectRoot,
   shutdown as shutdownSidecar,
   spawnEngine,
+  startEngineCodeWatcher,
   startWatchdog,
 } from "./sidecar";
 import { installAppMenu } from "./menu";
@@ -190,6 +191,10 @@ app.whenReady().then(async () => {
   // Watchdog runs for the life of the process; shutdown() clears its
   // timer so it doesn't race the clean-quit path.
   startWatchdog();
+
+  // Dev-only: when tsup rewrites dist-engine/cli.js we SIGTERM the
+  // running engine; watchdog respawns it with the fresh code.
+  startEngineCodeWatcher();
 
   const win = createMainWindow();
   setMainWindow(win);
