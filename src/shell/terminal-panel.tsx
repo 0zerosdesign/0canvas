@@ -25,18 +25,30 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Plus, X as XIcon } from "lucide-react";
 import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
-import { spawn, type IPty } from "tauri-pty";
+import { spawn as tauriPtySpawn, type IPty as TauriIPty } from "tauri-pty";
 import "@xterm/xterm/css/xterm.css";
 import { useWorkspace } from "../zeros/store/store";
-import { isTauri, nativeInvoke } from "../native/runtime";
+import { isElectron, isNativeRuntime, isTauri, nativeInvoke } from "../native/runtime";
+import { spawn as electronPtySpawn, type IPtyShim } from "../native/pty-shim";
 
-// NOTE: the current terminal uses `tauri-pty` directly, so it only
-// works in the Tauri build. Phase 6 swaps this for node-pty over IPC
-// so it also works under Electron. Until then, `isTauri()` is the
-// right guard here (not `isNativeRuntime()`) — spinning up xterm with
-// tauri-pty in an Electron window would explode on import.
+// Minimal IPty shape both runtimes implement. tauri-pty's IPty and
+// the Electron shim's IPtyShim both satisfy this — we unify at the
+// call site so the lifecycle code below doesn't branch per method.
+type IPty = TauriIPty | IPtyShim;
+
+function spawnPty(
+  shell: string,
+  args: string[],
+  opts: { name?: string; cols?: number; rows?: number; cwd?: string },
+): IPty {
+  if (isElectron()) {
+    return electronPtySpawn(shell, args, opts);
+  }
+  return tauriPtySpawn(shell, args, opts);
+}
+
 async function resolveProjectRoot(): Promise<string | undefined> {
-  if (!isTauri()) return undefined;
+  if (!isNativeRuntime()) return undefined;
   try {
     const root = await nativeInvoke<string | null>("get_engine_root");
     return root ?? undefined;
@@ -100,8 +112,8 @@ function TerminalSession({
 
   useEffect(() => {
     if (!hostRef.current) return;
-    if (!isTauri()) {
-      setError("Integrated terminal requires the Mac app (pnpm tauri:dev).");
+    if (!isNativeRuntime()) {
+      setError("Integrated terminal requires the Mac app.");
       return;
     }
 
@@ -145,7 +157,7 @@ function TerminalSession({
           `\x1b[90m[Zeros] starting /bin/zsh${cwd ? ` in ${cwd}` : ""}\x1b[0m`,
         );
 
-        const pty = spawn("/bin/zsh", ["-l"], {
+        const pty = spawnPty("/bin/zsh", ["-l"], {
           name: "xterm-256color",
           cols: term.cols,
           rows: term.rows,

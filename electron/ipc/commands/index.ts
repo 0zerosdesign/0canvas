@@ -33,6 +33,7 @@ import { loadTodoFile, saveTodoFile } from "./todo";
 import { pickCssFile, readCssFile, writeCssFile } from "./css-files";
 import { skillsList } from "./skills";
 import { discoverLocalhostServices } from "./localhost";
+import { ptyKill, ptyResize, ptySpawn, ptyWrite } from "./pty";
 import {
   gitBranchCreate,
   gitBranchDelete,
@@ -122,5 +123,13 @@ export function registerAllCommands(): void {
   setCommand("skills_list", skillsList);
   setCommand("discover_localhost_services", discoverLocalhostServices);
 
-  // Phases 6-7 append their own setCommand calls here as they land.
+  // Phase 6 — PTY (terminal) via node-pty. Commands aren't in the
+  // initial router table (Rust used tauri-plugin-pty, not a Tauri
+  // command), so setCommand adds them as new entries.
+  setCommand("pty_spawn", ptySpawn);
+  setCommand("pty_write", ptyWrite);
+  setCommand("pty_resize", ptyResize);
+  setCommand("pty_kill", ptyKill);
+
+  // Phase 7 appends its own setCommand calls here when it lands.
 }

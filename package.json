@@ -19,6 +19,7 @@
     "electron:compile": "tsup --config electron/tsup.config.ts",
     "electron:compile:watch": "tsup --config electron/tsup.config.ts --watch",
     "electron:dev": "pnpm electron:compile && concurrently -k -n vite,electron -c cyan,magenta \"pnpm dev\" \"wait-on http://localhost:5173 && env -u ELECTRON_RUN_AS_NODE electron .\"",
+    "electron:rebuild": "electron-rebuild --only node-pty,keytar",
     "check:ui": "node scripts/check-ui-consistency.mjs",
     "snap:ui": "node scripts/visual-harness.mjs"
   },
@@ -39,6 +40,7 @@
     "idb": "^8.0.3",
     "keytar": "^7.9.0",
     "lucide-react": "^0.400.0",
+    "node-pty": "^1.1.0",
     "postcss": "^8.4.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -52,6 +54,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.0.4",
     "@playwright/test": "^1.59.1",
     "@tailwindcss/cli": "^4.0.0",
     "@tailwindcss/vite": "^4.2.2",
@@ -90,7 +93,8 @@
     "onlyBuiltDependencies": [
       "electron",
       "esbuild",
-      "keytar"
+      "keytar",
+      "node-pty"
     ]
   }
 }
