@@ -54,6 +54,10 @@ extraResources:
 
 # ── macOS ────────────────────────────────────────────────
 mac:
+  # Explicit icon so the packaged .app uses the Zeros logo rather
+  # than the generic Electron atom. Without this the Dock icon is
+  # indistinguishable from any other Electron app the user has open.
+  icon: build/icons/icon.icns
   target:
     - target: dmg
       arch:

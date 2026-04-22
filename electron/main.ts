@@ -33,7 +33,7 @@ try {
   // ignore — can't even write to /tmp
 }
 
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, nativeImage } from "electron";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -154,7 +154,35 @@ function createMainWindow(): BrowserWindow {
 // zeros:// URLs get dropped).
 setupDeepLink();
 
+/** Give the Dock icon the Zeros brand in both dev and prod, and add
+ *  a "Dev" badge in dev so the user can visually tell the unpackaged
+ *  dev instance apart from an installed /Applications/Zeros.app.
+ *
+ *  In packaged builds electron-builder writes the icon into the bundle's
+ *  Info.plist, so `app.dock.setIcon()` is only strictly necessary in
+ *  dev. Calling it in both modes is idempotent — prod just overwrites
+ *  with the same image. */
+function setupDockBrand(): void {
+  if (process.platform !== "darwin") return;
+  const iconPath = app.isPackaged
+    ? path.join(process.resourcesPath, "..", "..", "Resources", "icon.icns")
+    : path.join(__dirname, "..", "build", "icons", "icon.png");
+  try {
+    const image = nativeImage.createFromPath(iconPath);
+    if (!image.isEmpty()) app.dock?.setIcon(image);
+  } catch {
+    /* icon missing is cosmetic — carry on */
+  }
+  // Dev-mode badge — tiny "Dev" label rendered on top of the Dock
+  // icon by macOS. Disappears when the app quits.
+  if (!app.isPackaged) {
+    app.dock?.setBadge("Dev");
+  }
+}
+
 app.whenReady().then(async () => {
+  setupDockBrand();
+
   // Install the native app menu (File > Open Folder, Edit, View, etc).
   // Safe to call before the window exists — macOS associates the
   // menu with the app, not a specific window.

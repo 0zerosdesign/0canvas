@@ -19,7 +19,7 @@
 // ──────────────────────────────────────────────────────────
 
 import { spawn, type ChildProcess } from "node:child_process";
-import { existsSync, readFileSync, statSync, unlinkSync, watchFile, unwatchFile } from "node:fs";
+import { existsSync, readFileSync, statSync, unlinkSync } from "node:fs";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
@@ -59,15 +59,14 @@ function archTriple(): string {
  *    at Contents/Resources/zeros-engine. One-process, pre-bundled,
  *    no Node runtime needed.
  *
- *  DEV (pnpm electron:dev): spawn `node dist-engine/cli.js` — the
- *    tsup-built JS. tsup --watch rebuilds this file in <50ms on
- *    every src/cli.ts / src/engine/** edit, so dev iteration is
- *    ~20× faster than waiting for `bun build --compile`. The
- *    runEngineWatcher() below SIGTERMs the running engine on
- *    dist-engine/cli.js mtime change; the watchdog respawns it
- *    with the new code within 6s.
+ *  DEV (pnpm electron:dev): spawn `bun src/cli.ts serve …` directly.
+ *    bun handles TS + ESM/CJS interop natively (the agentclientprotocol
+ *    sdk is ESM-only; node-run tsup CJS output hits ERR_REQUIRE_ESM).
+ *    No build step; edits in src/engine/** take effect on the next
+ *    engine respawn triggered by startEngineCodeWatcher() below.
  *
- *  Returned value: { cmd, args } — caller hands these to spawn(). */
+ *    Falls back to the pre-built bun binary at
+ *    binaries/zeros-engine-<triple> if bun isn't on PATH. */
 function resolveEngineSpawn(): { cmd: string; args: string[] } {
   const triple = archTriple();
 
@@ -86,21 +85,40 @@ function resolveEngineSpawn(): { cmd: string; args: string[] } {
     );
   }
 
-  // Dev: prefer tsup-built JS so edits in src/engine/** hot-rebuild
-  // without a 300ms bun compile. Falls back to the bun binary for
-  // anyone running Electron without the engine watcher.
   const repoRoot = path.resolve(__dirname, "..");
-  const devJs = path.join(repoRoot, "dist-engine", "cli.js");
-  if (existsSync(devJs)) {
-    return { cmd: process.execPath, args: [devJs] };
+  const cliSrc = path.join(repoRoot, "src", "cli.ts");
+
+  // Dev default: run TS source directly with bun. Zero build step.
+  if (existsSync(cliSrc)) {
+    // Look for bun on PATH. `which` is synchronous here but cheap —
+    // only runs once per spawnEngine call.
+    const bunPath = resolveBunPath();
+    if (bunPath) return { cmd: bunPath, args: [cliSrc] };
   }
+
+  // Fallback: pre-compiled bun binary (dev without bun on PATH, or
+  // `pnpm build:sidecar` was run and the binary is fresher).
   const devBin = path.join(repoRoot, "binaries", `zeros-engine-${triple}`);
   if (existsSync(devBin)) {
     return { cmd: devBin, args: [] };
   }
   throw new Error(
-    `engine not found in dev mode. Run \`pnpm electron:dev\` (which runs tsup --watch) or \`pnpm build:sidecar\`.`,
+    `engine not found in dev mode. Install bun (https://bun.sh) or run \`pnpm build:sidecar\`.`,
   );
+}
+
+function resolveBunPath(): string | null {
+  // spawnSync is imported lazily to avoid adding boot-time cost when
+  // we're in prod and don't need to probe for bun.
+  try {
+    const { spawnSync } = require("node:child_process") as typeof import("node:child_process");
+    const result = spawnSync("which", ["bun"], { encoding: "utf-8" });
+    if (result.status !== 0) return null;
+    const p = (result.stdout ?? "").trim();
+    return p && existsSync(p) ? p : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Tiny TCP probe (500ms timeout) — matches the Rust port_reachable. */
@@ -262,37 +280,63 @@ export function currentRoot(): string | null {
   return state.root;
 }
 
-/** Dev-only: watch dist-engine/cli.js for rebuild events and SIGTERM
- *  the running engine when it changes. The watchdog detects the dead
- *  port within 6s and respawns with the new code. Called from
- *  main.ts after startWatchdog(); no-op in packaged builds. */
+/** Dev-only: watch engine TypeScript sources and SIGTERM the running
+ *  engine when any of them change. The watchdog detects the dead port
+ *  within 6s and respawns (via bun src/cli.ts) with the fresh code.
+ *  No-op in packaged builds. */
 export function startEngineCodeWatcher(): void {
   if (app.isPackaged) return;
   const repoRoot = path.resolve(__dirname, "..");
-  const cliPath = path.join(repoRoot, "dist-engine", "cli.js");
-  // fs.watchFile polls mtime every N ms. Simpler + more portable than
-  // fs.watch (which has platform-specific event semantics and misses
-  // the atomic-rewrite pattern tsup uses on macOS).
-  watchFile(cliPath, { interval: 500 }, (curr, prev) => {
-    if (curr.mtimeMs === prev.mtimeMs) return;
+  const cliSrc = path.join(repoRoot, "src", "cli.ts");
+  const engineDir = path.join(repoRoot, "src", "engine");
+
+  // `recursive: true` is supported on macOS + Windows (not Linux, but
+  // we're macOS-only). Gives us events for every nested file in
+  // src/engine/** with a single watcher.
+  let watchers: Array<import("node:fs").FSWatcher> = [];
+
+  const triggerRespawn = () => {
     const child = state.child;
     if (!child || child.killed) return;
     // eslint-disable-next-line no-console
-    console.log("[Zeros] engine code changed — respawning");
+    console.log("[Zeros] engine source changed — respawning");
     try {
       child.kill("SIGTERM");
     } catch {
       /* watchdog will respawn regardless */
     }
-  });
-  // Clean up the watcher on quit so the interval doesn't leak across
-  // electronmon restarts.
-  app.on("before-quit", () => {
-    try {
-      unwatchFile(cliPath);
-    } catch {
-      /* already unwatched */
+  };
+
+  try {
+    const { watch } = require("node:fs") as typeof import("node:fs");
+    // Coalesce bursts of events (editors save in multiple writes).
+    let scheduled: NodeJS.Timeout | null = null;
+    const onChange = () => {
+      if (scheduled) clearTimeout(scheduled);
+      scheduled = setTimeout(triggerRespawn, 250);
+    };
+    if (existsSync(cliSrc)) watchers.push(watch(cliSrc, onChange));
+    if (existsSync(engineDir)) {
+      watchers.push(watch(engineDir, { recursive: true }, onChange));
     }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[Zeros] engine source watcher setup failed: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    );
+  }
+
+  app.on("before-quit", () => {
+    for (const w of watchers) {
+      try {
+        w.close();
+      } catch {
+        /* best-effort */
+      }
+    }
+    watchers = [];
   });
 }
 

@@ -20,7 +20,7 @@
     "serve:engine": "node dist-engine/cli.js",
     "electron:compile": "tsup --config electron/tsup.config.ts",
     "electron:compile:watch": "tsup --config electron/tsup.config.ts --watch",
-    "electron:dev": "concurrently -k -n vite,main,engine,app -c cyan,magenta,yellow,green \"pnpm dev\" \"tsup --config electron/tsup.config.ts --watch\" \"tsup --watch\" \"wait-on http://localhost:5173 dist-electron/main.cjs dist-engine/cli.js && env -u ELECTRON_RUN_AS_NODE electronmon .\"",
+    "electron:dev": "concurrently -k -n vite,main,app -c cyan,magenta,green \"pnpm dev\" \"tsup --config electron/tsup.config.ts --watch\" \"wait-on http://localhost:5173 dist-electron/main.cjs && env -u ELECTRON_RUN_AS_NODE electronmon .\"",
     "electron:rebuild": "electron-rebuild --only node-pty,keytar",
     "electron:build": "pnpm build:sidecar && pnpm electron:compile && pnpm build:ui && electron-builder --config electron-builder.yml",
     "check:ui": "node scripts/check-ui-consistency.mjs",
