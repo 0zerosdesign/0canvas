@@ -6,6 +6,7 @@ node_modules/
 dist/
 dist-engine/
 dist-electron/
+release/
 /lib/
 *.tgz
 out/

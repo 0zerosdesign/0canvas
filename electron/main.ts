@@ -19,7 +19,23 @@
 //   content extends under the traffic lights.
 // ──────────────────────────────────────────────────────────
 
+// === EARLIEST TRACE (packaged app debug) ===
+// Runs before any imports that could fail silently so we get at
+// least one line in /tmp proving main.cjs executed. Remove after
+// Phase 9 stabilises.
+try {
+  require("node:fs").writeFileSync(
+    "/tmp/zeros-boot.log",
+    `[${new Date().toISOString()}] main.cjs loaded, argv=${JSON.stringify(process.argv)}\n`,
+    { flag: "a" },
+  );
+} catch (err) {
+  // ignore — can't even write to /tmp
+}
+
 import { app, BrowserWindow } from "electron";
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { registerIpcHandlers } from "./ipc/router";
 import { registerAllCommands } from "./ipc/commands";
@@ -33,6 +49,46 @@ import {
 import { installAppMenu } from "./menu";
 import { setupDeepLink } from "./deep-link";
 import { setupUpdater } from "./updater";
+
+// Packaged GUI apps detach from the terminal so `console.log` /
+// `console.error` vanish. To debug production startup, mirror
+// everything into a rotating log file under the user's app-data
+// directory. Tail it with: `tail -f ~/Library/Logs/Zeros/main.log`.
+function setupLogFile(): void {
+  const logDir = path.join(os.homedir(), "Library", "Logs", "Zeros");
+  try {
+    fs.mkdirSync(logDir, { recursive: true });
+  } catch {
+    /* can't make the log dir — nothing to do */
+    return;
+  }
+  const logPath = path.join(logDir, "main.log");
+  const stream = fs.createWriteStream(logPath, { flags: "a" });
+  const origLog = console.log.bind(console);
+  const origErr = console.error.bind(console);
+  const stamp = () => new Date().toISOString();
+  console.log = (...args: unknown[]) => {
+    stream.write(`[${stamp()}] ${args.map(String).join(" ")}\n`);
+    origLog(...args);
+  };
+  console.error = (...args: unknown[]) => {
+    stream.write(`[${stamp()}] ERROR ${args.map(String).join(" ")}\n`);
+    origErr(...args);
+  };
+  // Surface unhandled errors into the log — otherwise the app dies
+  // silently and we have no trace.
+  process.on("uncaughtException", (err) => {
+    stream.write(`[${stamp()}] UNCAUGHT ${err.stack ?? err.message ?? err}\n`);
+  });
+  process.on("unhandledRejection", (reason) => {
+    stream.write(`[${stamp()}] UNHANDLED ${String(reason)}\n`);
+  });
+  console.log(
+    `[Zeros] main log: ${logPath} | packaged=${app.isPackaged} cwd=${process.cwd()}`,
+  );
+}
+
+setupLogFile();
 
 const DEV_URL = process.env.ELECTRON_RENDERER_URL ?? "http://localhost:5173";
 const isDev = !app.isPackaged;

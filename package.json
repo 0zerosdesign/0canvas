@@ -20,6 +20,8 @@
     "electron:compile:watch": "tsup --config electron/tsup.config.ts --watch",
     "electron:dev": "pnpm electron:compile && concurrently -k -n vite,electron -c cyan,magenta \"pnpm dev\" \"wait-on http://localhost:5173 && env -u ELECTRON_RUN_AS_NODE electron .\"",
     "electron:rebuild": "electron-rebuild --only node-pty,keytar",
+    "electron:build": "pnpm build:sidecar && pnpm electron:compile && pnpm build:ui && electron-builder --config electron-builder.yml",
+    "electron:sign": "codesign --force --deep --sign - release/mac-arm64/Zeros.app",
     "check:ui": "node scripts/check-ui-consistency.mjs",
     "snap:ui": "node scripts/visual-harness.mjs"
   },
@@ -66,6 +68,7 @@
     "@vitejs/plugin-react": "^5.1.4",
     "concurrently": "^9.2.1",
     "electron": "^33.4.11",
+    "electron-builder": "^26.8.1",
     "tailwindcss": "^4.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.0.0",
@@ -93,6 +96,7 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "electron",
+      "electron-builder",
       "esbuild",
       "keytar",
       "node-pty"

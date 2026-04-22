@@ -1,0 +1,143 @@
+# ──────────────────────────────────────────────────────────
+# electron-builder config — Zeros macOS .app + .dmg
+# ──────────────────────────────────────────────────────────
+#
+# Unsigned build path. Because we don't have an Apple Developer
+# cert, macOS flags the downloaded .app with the com.apple.quarantine
+# xattr and Gatekeeper blocks it with "damaged" / "unidentified
+# developer" errors. User runs this once after install:
+#
+#   xattr -cr /Applications/Zeros.app
+#
+# to strip the quarantine flag. After that the app launches
+# normally. Once we have a Developer ID cert, flip mac.identity
+# back on and drop this workaround.
+#
+# ──────────────────────────────────────────────────────────
+
+appId: design.zeros.app
+productName: Zeros
+copyright: © 2026 Zeros Design
+
+# Hook: deep ad-hoc re-sign the .app after packaging. electron-
+# builder's default sign-with-null-identity produces an invalid
+# signature on arm64 (see scripts/electron-after-pack.cjs for the
+# full story). This hook re-signs the bundle so macOS doesn't
+# silently exit the app on launch.
+afterPack: ./scripts/electron-after-pack.cjs
+# Source the version from package.json at build time.
+
+# Where electron-builder looks for the bundled JS + assets.
+# main.cjs and preload.cjs come from `tsup` (pnpm electron:compile),
+# the renderer assets come from `vite build`.
+directories:
+  output: release
+  buildResources: src-tauri/icons
+
+# Files to include in the .app bundle.
+files:
+  - dist-electron/**/*
+  - dist/**/*
+  - package.json
+  - "!node_modules/**/*"
+  # Explicitly include ONLY the production dependencies we actually
+  # need at runtime. electron-builder otherwise auto-detects from
+  # package.json, but the Tauri cruft (tauri-pty, @tauri-apps/*)
+  # balloons the bundle for no benefit in the Electron ship path.
+  - node_modules/electron-updater/**/*
+  - node_modules/keytar/**/*
+  - node_modules/node-pty/**/*
+  - node_modules/simple-git/**/*
+  - node_modules/builder-util-runtime/**/*
+  - node_modules/js-yaml/**/*
+  - node_modules/lodash.escaperegexp/**/*
+  - node_modules/lodash.isequal/**/*
+  - node_modules/semver/**/*
+  - node_modules/tiny-typed-emitter/**/*
+  - node_modules/lru-cache/**/*
+  - node_modules/debug/**/*
+  - node_modules/yallist/**/*
+  - node_modules/ms/**/*
+
+# The bun-compiled engine binary sits outside dist-electron, so bundle
+# it as an extra resource. Renderer code at runtime reaches it via
+# process.resourcesPath/zeros-engine (handled in electron/sidecar.ts).
+extraResources:
+  - from: src-tauri/binaries/zeros-engine-aarch64-apple-darwin
+    to: zeros-engine
+    filter:
+      - "**/*"
+
+# ── macOS ────────────────────────────────────────────────
+mac:
+  target:
+    - target: dmg
+      arch:
+        - arm64
+    - target: zip
+      arch:
+        - arm64
+  category: public.app-category.developer-tools
+  # Ad-hoc sign only (identity: null skips Developer ID signing,
+  # relies on xattr -cr workaround for Gatekeeper).
+  identity: null
+  # Prevents electron-builder from trying to notarize / hardened-
+  # runtime an unsigned build. Not required here because we have
+  # no cert anyway.
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  # zeros:// protocol — electron-builder writes the CFBundleURLTypes
+  # block into Info.plist so macOS LaunchServices routes zeros://
+  # URLs to our .app.
+  extendInfo:
+    CFBundleURLTypes:
+      - CFBundleURLName: Zeros
+        CFBundleURLSchemes:
+          - zeros
+        CFBundleTypeRole: Viewer
+  # No icon config yet — src-tauri/icons/icon.icns will be picked
+  # up via buildResources above.
+
+dmg:
+  # Window layout for the drag-to-install image
+  sign: false
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+  window:
+    width: 540
+    height: 380
+
+# ── Auto-updater metadata ────────────────────────────────
+#
+# electron-updater reads latest-mac.yml from GitHub Releases to
+# decide when an update is available. The `publish` block here
+# tells electron-builder where to upload when you eventually run
+# `electron-builder --publish`. For now (no Apple cert, manual
+# uploads), keep this inert but present so the channel is correct.
+publish:
+  provider: github
+  owner: Withso
+  repo: zeros
+  # Releases created by `gh release create` — the YAML file drops
+  # into the same release so the app can find it.
+  releaseType: release
+
+# ── Native module rebuild ────────────────────────────────
+#
+# electron-builder's npmRebuild rebuilds native modules against
+# Electron's Node ABI automatically as part of the pack step.
+# Covers node-pty + keytar without a separate electron-rebuild
+# invocation.
+npmRebuild: true
+
+# asar compression — smaller bundle, faster boot.
+asar: true
+# But keep native binaries outside asar so dyld can dlopen them.
+asarUnpack:
+  - "**/node_modules/keytar/**/*"
+  - "**/node_modules/node-pty/**/*"
