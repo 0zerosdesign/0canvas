@@ -1,5 +1,12 @@
 name: Release
 
+# Manual-only trigger. Run with:
+#   gh workflow run release.yml
+# Or from the Actions tab in GitHub. Every invocation builds a
+# fresh Zeros .dmg + .zip + latest-mac.yml and publishes them to
+# GitHub Releases. The installed app's auto-updater picks them up
+# on next launch.
+
 on:
   workflow_dispatch:
 
@@ -30,15 +37,7 @@ jobs:
           node-version: 20
           cache: pnpm
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Rust cache
-        uses: swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri
-
-      - name: Setup Bun
+      - name: Setup Bun (for engine sidecar compile)
         uses: oven-sh/setup-bun@v2
 
       - name: Compute version from commit count
@@ -49,44 +48,76 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Computed version: $VERSION"
 
-      - name: Write version into manifests
+      - name: Write version into package.json
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           node -e '
             const fs = require("fs");
             const v = process.env.VERSION;
-            const pkgPath = "package.json";
-            const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
+            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
             pkg.version = v;
-            fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
-            const confPath = "src-tauri/tauri.conf.json";
-            const conf = JSON.parse(fs.readFileSync(confPath, "utf8"));
-            conf.version = v;
-            fs.writeFileSync(confPath, JSON.stringify(conf, null, 2) + "\n");
+            fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
           '
-          # Cargo.toml — BSD sed (macOS runner) needs the '' arg after -i.
-          sed -i '' "s/^version = \".*\"/version = \"$VERSION\"/" src-tauri/Cargo.toml
 
       - name: Install JS dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build engine sidecar
+      - name: Build engine sidecar (bun → binaries/zeros-engine-*)
         run: pnpm build:sidecar
 
-      - name: Build and publish Tauri app
-        uses: tauri-apps/tauri-action@v0
+      - name: Compile Electron main + preload
+        run: pnpm electron:compile
+
+      - name: Build Vite renderer
+        run: pnpm build:ui
+
+      - name: Package .dmg + .zip with electron-builder
+        # electron-builder rebuilds native modules (keytar, node-pty)
+        # against Electron's Node ABI as part of the pack step. The
+        # afterPack hook runs `codesign --force --deep --sign -` to
+        # produce a valid ad-hoc signature for arm64 — the user strips
+        # quarantine after install with `xattr -cr /Applications/Zeros.app`.
+        run: pnpm exec electron-builder --config electron-builder.yml
+
+      - name: Publish GitHub release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
-        with:
-          tagName: v${{ steps.version.outputs.version }}
-          releaseName: Zeros v${{ steps.version.outputs.version }}
-          releaseBody: |
-            Auto-release from commit ${{ github.sha }}.
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          TAG="v${VERSION}"
 
-            The installed app will pick this up via the auto-updater on next launch.
-          releaseDraft: false
-          prerelease: false
-          includeUpdaterJson: true
+          # Release notes — include the mandatory xattr step so first-
+          # time installers don't hit Gatekeeper's "damaged" error.
+          BODY=$(cat <<EOF
+          Auto-release from commit \`${GITHUB_SHA}\`.
+
+          ## Install
+
+          1. Download \`Zeros-${VERSION}-arm64.dmg\` below.
+          2. Drag **Zeros.app** into \`/Applications\`.
+          3. Strip the quarantine attribute (unsigned build):
+             \`\`\`bash
+             xattr -cr /Applications/Zeros.app
+             \`\`\`
+          4. Launch from Spotlight / Finder.
+
+          Already-installed apps pick this up via the auto-updater on
+          next launch.
+          EOF
+          )
+
+          # Make the release-create idempotent: delete any prior release
+          # or tag with the same version first, then re-create.
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release delete "$TAG" --yes --repo "$GITHUB_REPOSITORY"
+            git push --delete origin "$TAG" 2>/dev/null || true
+          fi
+
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Zeros v${VERSION}" \
+            --notes "$BODY" \
+            release/Zeros-${VERSION}-arm64.dmg \
+            release/Zeros-${VERSION}-arm64-mac.zip \
+            release/latest-mac.yml
