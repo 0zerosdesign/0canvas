@@ -18,7 +18,8 @@
     "electron:dev": "pnpm electron:compile && concurrently -k -n vite,electron -c cyan,magenta \"pnpm dev\" \"wait-on http://localhost:5173 && env -u ELECTRON_RUN_AS_NODE electron .\"",
     "electron:rebuild": "electron-rebuild --only node-pty,keytar",
     "electron:build": "pnpm build:sidecar && pnpm electron:compile && pnpm build:ui && electron-builder --config electron-builder.yml",
-    "electron:sign": "codesign --force --deep --sign - release/mac-arm64/Zeros.app",
+    "electron:build:local": "pnpm build:sidecar && pnpm electron:compile && pnpm build:ui && electron-builder --config electron-builder.yml --config.appId=design.zeros.app.local --config.productName='Zeros Local' --config.afterPack=./scripts/electron-after-pack.cjs",
+    "electron:sign": "codesign --force --deep --sign - 'release/mac-arm64/Zeros Local.app'",
     "check:ui": "node scripts/check-ui-consistency.mjs",
     "snap:ui": "node scripts/visual-harness.mjs"
   },
