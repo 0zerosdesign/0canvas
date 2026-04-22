@@ -17,6 +17,12 @@ import {
   openProjectFolder,
   openProjectFolderPath,
 } from "./sidecar";
+import {
+  openInstallTerminal,
+  openInTerminal,
+  revealInFinder,
+  shellOpenUrl,
+} from "./shell";
 
 export function registerAllCommands(): void {
   // Phase 2 — sidecar + project folder
@@ -26,5 +32,11 @@ export function registerAllCommands(): void {
   setCommand("open_project_folder_path", openProjectFolderPath);
   setCommand("open_cloned_project", openClonedProject);
 
-  // Phases 3-7 append their own setCommand calls here as they land.
+  // Phase 3 — shell helpers
+  setCommand("shell_open_url", shellOpenUrl);
+  setCommand("reveal_in_finder", revealInFinder);
+  setCommand("open_in_terminal", openInTerminal);
+  setCommand("open_install_terminal", openInstallTerminal);
+
+  // Phases 4-7 append their own setCommand calls here as they land.
 }

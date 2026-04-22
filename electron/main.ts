@@ -30,6 +30,8 @@ import {
   spawnEngine,
   startWatchdog,
 } from "./sidecar";
+import { installAppMenu } from "./menu";
+import { setupDeepLink } from "./deep-link";
 
 const DEV_URL = process.env.ELECTRON_RENDERER_URL ?? "http://localhost:5173";
 const isDev = !app.isPackaged;
@@ -61,7 +63,18 @@ function createMainWindow(): BrowserWindow {
   return win;
 }
 
+// Deep-link setup must happen BEFORE app.whenReady() so the
+// single-instance lock is acquired and macOS's open-url handler is
+// registered inside will-finish-launching (otherwise cold-launched
+// zeros:// URLs get dropped).
+setupDeepLink();
+
 app.whenReady().then(async () => {
+  // Install the native app menu (File > Open Folder, Edit, View, etc).
+  // Safe to call before the window exists — macOS associates the
+  // menu with the app, not a specific window.
+  installAppMenu();
+
   // IPC plumbing BEFORE the window loads so any command fired during
   // boot (ws-client's `get_engine_port` probe, store rehydrate, etc.)
   // finds a registered handler instead of "No handler for 'zeros:invoke'".
