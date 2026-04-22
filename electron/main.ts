@@ -50,12 +50,37 @@ import { installAppMenu } from "./menu";
 import { setupDeepLink } from "./deep-link";
 import { setupUpdater } from "./updater";
 
+// ──────────────────────────────────────────────────────────
+// Dev / prod environment separation
+// ──────────────────────────────────────────────────────────
+// `pnpm electron:dev` runs an unpackaged app; we want it to behave
+// like a distinct "Zeros Dev" application so it doesn't share
+// state with a packaged /Applications/Zeros.app the user also has
+// installed. Shared state corrupts easily — localStorage of one
+// would wipe the other, IndexedDB races, etc.
+//
+// This must run BEFORE anything reads app.getName() or
+// app.getPath("userData") — deep-link setup, log file init, window
+// construction all depend on these. Must also run before app.ready.
+if (!app.isPackaged) {
+  app.setName("Zeros Dev");
+  // appData = ~/Library/Application Support on macOS.
+  app.setPath(
+    "userData",
+    path.join(app.getPath("appData"), "Zeros Dev"),
+  );
+}
+
+const APP_LABEL = app.getName(); // "Zeros" in prod, "Zeros Dev" in dev
+
 // Packaged GUI apps detach from the terminal so `console.log` /
 // `console.error` vanish. To debug production startup, mirror
 // everything into a rotating log file under the user's app-data
-// directory. Tail it with: `tail -f ~/Library/Logs/Zeros/main.log`.
+// directory. Tail it with:
+//   tail -f ~/Library/Logs/Zeros/main.log          # prod
+//   tail -f "~/Library/Logs/Zeros Dev/main.log"    # dev
 function setupLogFile(): void {
-  const logDir = path.join(os.homedir(), "Library", "Logs", "Zeros");
+  const logDir = path.join(os.homedir(), "Library", "Logs", APP_LABEL);
   try {
     fs.mkdirSync(logDir, { recursive: true });
   } catch {
@@ -84,7 +109,7 @@ function setupLogFile(): void {
     stream.write(`[${stamp()}] UNHANDLED ${String(reason)}\n`);
   });
   console.log(
-    `[Zeros] main log: ${logPath} | packaged=${app.isPackaged} cwd=${process.cwd()}`,
+    `[${APP_LABEL}] main log: ${logPath} | packaged=${app.isPackaged} cwd=${process.cwd()}`,
   );
 }
 
@@ -99,7 +124,9 @@ function createMainWindow(): BrowserWindow {
     height: 1000,
     minWidth: 1200,
     minHeight: 700,
-    title: "Zeros",
+    // Window title flips with the app identity so users can tell
+    // dev and prod apart at a glance when both are open.
+    title: APP_LABEL,
     titleBarStyle: "hiddenInset",
     backgroundColor: "#0a0a0a",
     webPreferences: {

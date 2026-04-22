@@ -33,7 +33,11 @@ import {
 } from "./sidecar";
 import { emitEvent } from "./ipc/events";
 
-const SCHEME = "zeros";
+// Dev and prod register different URL schemes so macOS LaunchServices
+// routes to the right instance. Packaged .app → zeros://,
+// `pnpm electron:dev` → zeros-dev://. Prevents a dev build from
+// stealing zeros:// links meant for the installed prod app.
+const SCHEME = app.isPackaged ? "zeros" : "zeros-dev";
 
 /** Register zeros:// as a default protocol client. Must be called
  *  EARLY (before app.whenReady) on Windows/Linux because the OS
