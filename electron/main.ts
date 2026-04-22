@@ -140,7 +140,13 @@ function createMainWindow(): BrowserWindow {
 
   if (isDev) {
     void win.loadURL(DEV_URL);
-    win.webContents.openDevTools({ mode: "detach" });
+    // DevTools stays closed by default. Toggle with ⌥⌘I (macOS) /
+    // Ctrl+Shift+I (Win/Linux) when you actually need it. Opt in at
+    // launch with `ZEROS_DEVTOOLS=1 pnpm electron:dev` if you want
+    // it to open every run.
+    if (process.env.ZEROS_DEVTOOLS === "1") {
+      win.webContents.openDevTools({ mode: "detach" });
+    }
   } else {
     void win.loadFile(path.join(__dirname, "..", "dist", "index.html"));
   }
