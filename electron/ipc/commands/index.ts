@@ -35,6 +35,14 @@ import { skillsList } from "./skills";
 import { discoverLocalhostServices } from "./localhost";
 import { ptyKill, ptyResize, ptySpawn, ptyWrite } from "./pty";
 import {
+  aiCliCancel,
+  aiCliCheck,
+  aiCliIsAuthenticated,
+  aiCliRunLogin,
+  claudeSpawn,
+  codexSpawn,
+} from "./ai-cli";
+import {
   gitBranchCreate,
   gitBranchDelete,
   gitBranchList,
@@ -131,5 +139,12 @@ export function registerAllCommands(): void {
   setCommand("pty_resize", ptyResize);
   setCommand("pty_kill", ptyKill);
 
-  // Phase 7 appends its own setCommand calls here when it lands.
+  // Phase 7 — AI CLI subprocess spawning (claude / codex) with NDJSON
+  // streaming out to `ai-stream-event` events.
+  setCommand("ai_cli_check", aiCliCheck);
+  setCommand("ai_cli_is_authenticated", aiCliIsAuthenticated);
+  setCommand("ai_cli_cancel", aiCliCancel);
+  setCommand("ai_cli_run_login", aiCliRunLogin);
+  setCommand("claude_spawn", claudeSpawn);
+  setCommand("codex_spawn", codexSpawn);
 }
