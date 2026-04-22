@@ -24,6 +24,16 @@ import {
   shellOpenUrl,
 } from "./shell";
 import {
+  keychainDelete,
+  keychainGet,
+  keychainSet,
+} from "./secrets";
+import { listEnvFiles, saveEnvFile } from "./env-files";
+import { loadTodoFile, saveTodoFile } from "./todo";
+import { pickCssFile, readCssFile, writeCssFile } from "./css-files";
+import { skillsList } from "./skills";
+import { discoverLocalhostServices } from "./localhost";
+import {
   gitBranchCreate,
   gitBranchDelete,
   gitBranchList,
@@ -98,5 +108,19 @@ export function registerAllCommands(): void {
   setCommand("git_revert_commit", gitRevertCommit);
   setCommand("git_reset_hard", gitResetHard);
 
-  // Phases 5-7 append their own setCommand calls here as they land.
+  // Phase 5 — keychain / env / todo / css / skills / localhost
+  setCommand("keychain_set", keychainSet);
+  setCommand("keychain_get", keychainGet);
+  setCommand("keychain_delete", keychainDelete);
+  setCommand("list_env_files", listEnvFiles);
+  setCommand("save_env_file", saveEnvFile);
+  setCommand("load_todo_file", loadTodoFile);
+  setCommand("save_todo_file", saveTodoFile);
+  setCommand("pick_css_file", pickCssFile);
+  setCommand("read_css_file", readCssFile);
+  setCommand("write_css_file", writeCssFile);
+  setCommand("skills_list", skillsList);
+  setCommand("discover_localhost_services", discoverLocalhostServices);
+
+  // Phases 6-7 append their own setCommand calls here as they land.
 }
