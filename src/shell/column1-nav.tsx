@@ -51,7 +51,7 @@ import {
   git,
   openClonedProject,
   type LocalhostService,
-} from "../native/tauri-events";
+} from "../native/native";
 import { getSetting, setSetting } from "../native/settings";
 import {
   loadRecentProjects,

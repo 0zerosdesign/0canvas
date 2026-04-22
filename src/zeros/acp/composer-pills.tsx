@@ -426,7 +426,7 @@ export function BranchPill({
     setError(null);
     (async () => {
       try {
-        const { git } = await import("../../native/tauri-events");
+        const { git } = await import("../../native/native");
         const list = await git.branchList(cwd);
         if (!cancelled) {
           setBranches(
@@ -452,7 +452,7 @@ export function BranchPill({
     setBusy(true);
     setError(null);
     try {
-      const { git } = await import("../../native/tauri-events");
+      const { git } = await import("../../native/native");
       await git.branchSwitch(name, cwd);
       onSwitched?.(name);
       setOpen(false);

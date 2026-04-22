@@ -40,7 +40,7 @@ import {
   AVAILABLE_MODELS,
 } from "../lib/openai";
 import { checkCli, isCliAuthenticated, runCliLogin } from "../lib/ai-cli";
-import { shellOpenUrl } from "../../native/tauri-events";
+import { shellOpenUrl } from "../../native/native";
 import {
   getSecret,
   setSecret,

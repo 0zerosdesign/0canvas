@@ -25,27 +25,10 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Plus, X as XIcon } from "lucide-react";
 import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
-import { spawn as tauriPtySpawn, type IPty as TauriIPty } from "tauri-pty";
 import "@xterm/xterm/css/xterm.css";
 import { useWorkspace } from "../zeros/store/store";
-import { isElectron, isNativeRuntime, isTauri, nativeInvoke } from "../native/runtime";
-import { spawn as electronPtySpawn, type IPtyShim } from "../native/pty-shim";
-
-// Minimal IPty shape both runtimes implement. tauri-pty's IPty and
-// the Electron shim's IPtyShim both satisfy this — we unify at the
-// call site so the lifecycle code below doesn't branch per method.
-type IPty = TauriIPty | IPtyShim;
-
-function spawnPty(
-  shell: string,
-  args: string[],
-  opts: { name?: string; cols?: number; rows?: number; cwd?: string },
-): IPty {
-  if (isElectron()) {
-    return electronPtySpawn(shell, args, opts);
-  }
-  return tauriPtySpawn(shell, args, opts);
-}
+import { isNativeRuntime, nativeInvoke } from "../native/runtime";
+import { spawn as spawnPty, type IPtyShim as IPty } from "../native/pty-shim";
 
 async function resolveProjectRoot(): Promise<string | undefined> {
   if (!isNativeRuntime()) return undefined;

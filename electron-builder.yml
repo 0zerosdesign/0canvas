@@ -30,18 +30,14 @@ afterPack: ./scripts/electron-after-pack.cjs
 # the renderer assets come from `vite build`.
 directories:
   output: release
-  buildResources: src-tauri/icons
+  buildResources: build/icons
 
 # Files to include in the .app bundle. electron-builder auto-walks
 # the production-dependency tree based on package.json's
 # "dependencies" so all transitive deps (fs-extra, etc.) come along.
-# An earlier revision tried to hand-curate the node_modules allow-
-# list and missed fs-extra, causing electron-updater to throw at
-# module-load time and silently exit the packaged app. Never again.
-# Tauri deps (@tauri-apps/*, tauri-pty) are technically listed in
-# dependencies during the migration parallel phase; they get
-# bundled too, but the runtime never imports them when isElectron()
-# is true, so the overhead is wasted bytes rather than broken code.
+# Past regression: a hand-curated allow-list missed fs-extra and
+# electron-updater threw at module-load time, silently exiting the
+# packaged app with no log trail. Never again — trust the auto-walk.
 files:
   - dist-electron/**/*
   - dist/**/*
@@ -83,8 +79,8 @@ mac:
         CFBundleURLSchemes:
           - zeros
         CFBundleTypeRole: Viewer
-  # No icon config yet — src-tauri/icons/icon.icns will be picked
-  # up via buildResources above.
+  # icon auto-resolved via directories.buildResources (build/icons/).
+  # electron-builder picks up `icon.icns` or generates one from pngs.
 
 dmg:
   # Window layout for the drag-to-install image

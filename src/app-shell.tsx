@@ -32,7 +32,7 @@ import { Column3 } from "./shell/column3";
 import { TitleBar } from "./shell/title-bar";
 import { ActivityBar, type ActivityView } from "./shell/activity-bar";
 import { SettingsPage } from "./zeros/panels/settings-page";
-import { onProjectChanged } from "./native/tauri-events";
+import { onProjectChanged } from "./native/native";
 import { nativeInvoke } from "./native/runtime";
 import { getSetting, setSetting } from "./native/settings";
 import { rememberProject } from "./native/recent-projects";

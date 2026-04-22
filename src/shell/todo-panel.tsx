@@ -24,7 +24,7 @@ import {
   saveTodoFile,
   type TodoFile,
   type TodoItem,
-} from "../native/tauri-events";
+} from "../native/native";
 import { isNativeRuntime } from "../native/runtime";
 import { Button, Input } from "../zeros/ui";
 import { useChatCwd } from "./use-chat-cwd";
@@ -161,7 +161,7 @@ export function TodoPanel() {
   if (!isNativeRuntime()) {
     return (
       <div className="oc-todo__empty">
-        Todo editor requires the Mac app (pnpm tauri:dev).
+        Todo editor requires the Mac app (pnpm electron:dev).
       </div>
     );
   }

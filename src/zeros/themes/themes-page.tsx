@@ -42,25 +42,21 @@ import {
   pickCssFile,
   readCssFile,
   writeCssFile,
-} from "../../native/tauri-events";
+} from "../../native/native";
 
 // ── File picker ──────────────────────────────────────────
 
 type PickedCssFile =
-  | { kind: "tauri"; path: string; name: string; content: string }
+  | { kind: "native"; path: string; name: string; content: string }
   | { kind: "fsa"; handle: FileSystemFileHandle; name: string; content: string };
 
 import { isNativeRuntime } from "../../native/runtime";
 
-function isTauriWebview(): boolean {
-  return isNativeRuntime();
-}
-
 async function pickCSSFile(): Promise<PickedCssFile | null> {
-  if (isTauriWebview()) {
+  if (isNativeRuntime()) {
     const file = await pickCssFile();
     if (!file) return null;
-    return { kind: "tauri", path: file.path, name: file.name, content: file.content };
+    return { kind: "native", path: file.path, name: file.name, content: file.content };
   }
   try {
     const [handle] = await (window as unknown as {
@@ -500,7 +496,7 @@ export function ThemesPage() {
       id: fileId,
       name: result.name,
       handle: result.kind === "fsa" ? result.handle : null,
-      path: result.kind === "tauri" ? result.path : null,
+      path: result.kind === "native" ? result.path : null,
       content: result.content,
       tokens,
       themes: themes.length > 0 ? themes : [{ id: "default", name: "Default", isDefault: true }],

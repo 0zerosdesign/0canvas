@@ -47,7 +47,7 @@ import {
   type GitDiff,
   type GitBranch as GitBranchInfo,
   type GitConflict,
-} from "../native/tauri-events";
+} from "../native/native";
 import { isNativeRuntime } from "../native/runtime";
 import { getSetting, setSetting } from "../native/settings";
 import { Button, Textarea } from "../zeros/ui";

@@ -22,7 +22,7 @@ import { useBridge } from "../bridge/use-bridge";
 import type { BridgeMessage } from "../bridge/messages";
 import { streamChat, isAiConfigured, saveAiSettings, type OpenAIMessage } from "../lib/openai";
 import { runCliLogin } from "../lib/ai-cli";
-import { listSkills, type Skill } from "../../native/tauri-events";
+import { listSkills, type Skill } from "../../native/native";
 import { applyStyle, flashElement } from "../inspector";
 import { ScrollArea } from "../ui/scroll-area";
 import { Button, Textarea } from "../ui";
@@ -477,7 +477,7 @@ function OpenProjectMenu() {
     setOpen(false);
     if (!root) return;
     try {
-      const mod = await import("../../native/tauri-events");
+      const mod = await import("../../native/native");
       if (kind === "terminal") await mod.openInTerminal(root);
       else await mod.revealInFinder(root);
     } catch (err) {
@@ -541,7 +541,7 @@ function BranchSwitcherPill() {
 
   const refresh = useCallback(async () => {
     try {
-      const mod = await import("../../native/tauri-events");
+      const mod = await import("../../native/native");
       const list = await mod.git.branchList();
       setBranches(list);
     } catch {
@@ -580,7 +580,7 @@ function BranchSwitcherPill() {
     if (busy) return;
     setBusy(true);
     try {
-      const mod = await import("../../native/tauri-events");
+      const mod = await import("../../native/native");
       await mod.git.branchSwitch(name);
       await refresh();
       setOpen(false);

@@ -1,22 +1,23 @@
 // ──────────────────────────────────────────────────────────
-// Zeros Native Runtime — unified façade for Tauri + Electron
+// Zeros Native Runtime — Electron IPC façade
 // ──────────────────────────────────────────────────────────
 //
-// Every React call site that needs the desktop shell (git, keychain,
-// terminal, folder dialogs, deep links, sidecar engine, etc.) goes
-// through this module. It feature-detects which runtime is active and
-// routes to the matching IPC layer with the same call shape on both
-// sides, so components don't branch.
+// Every React call site that needs the desktop shell (git,
+// keychain, terminal, folder dialogs, deep links, sidecar engine,
+// etc.) goes through this module. Feature-detects whether we're
+// running inside the packaged Electron app vs a plain browser
+// (`pnpm dev`) and routes IPC accordingly.
 //
-// Detection convention (matches both shells' injected globals):
-//   Tauri    → `window.__TAURI_INTERNALS__` set by Tauri at webview boot
-//   Electron → `window.__ZEROS_NATIVE__`    set by our preload script
+// Detection: `window.__ZEROS_NATIVE__` is set by the preload
+// script (electron/preload.ts). When present, we're running
+// inside Electron's renderer and all native commands are
+// available. When absent, we're in a browser-only Vite dev
+// harness — read-style façade functions return empty / null,
+// write-style ones throw "requires the Mac app".
 //
-// IMPORTANT: prefer calling `isNativeRuntime()` rather than either
-// specific check — components should be runtime-agnostic. Use the
-// runtime-specific helpers only when behaviour genuinely differs
-// (e.g., Tauri's `@tauri-apps/plugin-notification` vs Electron's
-// `Notification` API).
+// The `isNativeRuntime()` alias survives from the dual-runtime
+// era (Tauri + Electron) so existing call sites keep working. In
+// practice it's now a synonym for `isElectron()`.
 // ──────────────────────────────────────────────────────────
 
 interface ZerosNativeBridge {
@@ -27,7 +28,6 @@ interface ZerosNativeBridge {
 declare global {
   interface Window {
     __ZEROS_NATIVE__?: ZerosNativeBridge;
-    __TAURI_INTERNALS__?: unknown;
   }
 }
 
@@ -35,34 +35,27 @@ export function isElectron(): boolean {
   return typeof window !== "undefined" && !!window.__ZEROS_NATIVE__;
 }
 
-export function isTauri(): boolean {
-  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-}
-
+/** Back-compat alias — same semantics as isElectron() now that
+ *  Tauri is removed. Kept so existing call sites keep compiling;
+ *  prefer isElectron() in new code. */
 export function isNativeRuntime(): boolean {
-  return isElectron() || isTauri();
+  return isElectron();
 }
 
 /** Short name of the active runtime for diagnostics / log lines. */
-export function runtimeName(): "electron" | "tauri" | "browser" {
-  if (isElectron()) return "electron";
-  if (isTauri()) return "tauri";
-  return "browser";
+export function runtimeName(): "electron" | "browser" {
+  return isElectron() ? "electron" : "browser";
 }
 
-/** Call a native command. Errors from the underlying bridge surface
- *  via the promise rejection — callers handle them the same way they
- *  handled Tauri's `invoke()` rejections. */
+/** Call a native command. Errors from the underlying bridge
+ *  surface via the promise rejection — callers handle them the
+ *  same way they did under Tauri's `invoke()`. */
 export async function nativeInvoke<T>(
   cmd: string,
   args?: Record<string, unknown>,
 ): Promise<T> {
   if (isElectron()) {
     return window.__ZEROS_NATIVE__!.invoke<T>(cmd, args);
-  }
-  if (isTauri()) {
-    const { invoke } = await import("@tauri-apps/api/core");
-    return invoke<T>(cmd, args);
   }
   throw new Error(
     `[Zeros] nativeInvoke("${cmd}") called without a native runtime — ` +
@@ -71,19 +64,15 @@ export async function nativeInvoke<T>(
 }
 
 /** Subscribe to a named event emitted from the main process.
- *  Returns an unsubscribe function. In browser-only dev mode, no-ops
- *  (returns a no-op unsubscribe) so callers don't need to guard. */
+ *  Returns an unsubscribe function. In browser-only dev mode
+ *  no-ops (returns a no-op unsubscribe) so callers don't need
+ *  to guard. */
 export async function nativeListen<T = unknown>(
   event: string,
   handler: (payload: T) => void,
 ): Promise<() => void> {
   if (isElectron()) {
     return window.__ZEROS_NATIVE__!.on<T>(event, handler);
-  }
-  if (isTauri()) {
-    const { listen } = await import("@tauri-apps/api/event");
-    const unlisten = await listen<T>(event, (e) => handler(e.payload));
-    return unlisten;
   }
   return () => {};
 }

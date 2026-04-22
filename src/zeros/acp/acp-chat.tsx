@@ -150,7 +150,7 @@ export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps
   useEffect(() => {
     let cancelled = false;
     const refresh = async () => {
-      const { isNativeRuntime, git } = await import("../../native/tauri-events");
+      const { isNativeRuntime, git } = await import("../../native/native");
       if (!isNativeRuntime()) return;
       try {
         const st = await git.status(chatFolder);
