@@ -21,6 +21,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { existsSync, readFileSync, statSync, unlinkSync } from "node:fs";
 import net from "node:net";
+import os from "node:os";
 import path from "node:path";
 import { app } from "electron";
 import { emitEvent } from "./ipc/events";
@@ -135,14 +136,42 @@ export async function spawnEngine(projectRoot: string): Promise<number> {
     /* file may not exist; fine */
   }
 
+  // In packaged builds we must pipe stdio and forward to a log file —
+  // `inherit` sends to the parent's stdout which is detached for a
+  // macOS GUI bundle, so engine logs (including bind failures) vanish.
+  // In dev we can keep `inherit` so logs reach the terminal.
+  const isPackaged = app.isPackaged;
+  const stdioMode = isPackaged ? "pipe" : "inherit";
   const child = spawn(
     engineBin,
     ["serve", "--root", projectRoot, "--port", "24193"],
     {
       cwd: projectRoot,
-      stdio: "inherit",
+      stdio: stdioMode as "pipe" | "inherit",
     },
   );
+
+  if (isPackaged) {
+    // Mirror the engine's output into a rotating log alongside the
+    // main log. Easiest path to diagnose engine-side crashes in a
+    // shipped build.
+    const engineLogPath = path.join(
+      os.homedir(),
+      "Library",
+      "Logs",
+      "Zeros",
+      "engine.log",
+    );
+    try {
+      const logStream = require("node:fs").createWriteStream(engineLogPath, {
+        flags: "a",
+      });
+      child.stdout?.pipe(logStream);
+      child.stderr?.pipe(logStream);
+    } catch {
+      /* unable to create log stream — engine just runs dark */
+    }
+  }
 
   state.child = child;
   state.root = projectRoot;

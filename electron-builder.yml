@@ -19,11 +19,9 @@ appId: design.zeros.app
 productName: Zeros
 copyright: © 2026 Zeros Design
 
-# Hook: deep ad-hoc re-sign the .app after packaging. electron-
-# builder's default sign-with-null-identity produces an invalid
-# signature on arm64 (see scripts/electron-after-pack.cjs for the
-# full story). This hook re-signs the bundle so macOS doesn't
-# silently exit the app on launch.
+# Deep ad-hoc re-sign after packaging — electron-builder's default
+# identity:null sign is incomplete on arm64 and macOS Gatekeeper
+# rejects it silently. See scripts/electron-after-pack.cjs.
 afterPack: ./scripts/electron-after-pack.cjs
 # Source the version from package.json at build time.
 
@@ -34,30 +32,20 @@ directories:
   output: release
   buildResources: src-tauri/icons
 
-# Files to include in the .app bundle.
+# Files to include in the .app bundle. electron-builder auto-walks
+# the production-dependency tree based on package.json's
+# "dependencies" so all transitive deps (fs-extra, etc.) come along.
+# An earlier revision tried to hand-curate the node_modules allow-
+# list and missed fs-extra, causing electron-updater to throw at
+# module-load time and silently exit the packaged app. Never again.
+# Tauri deps (@tauri-apps/*, tauri-pty) are technically listed in
+# dependencies during the migration parallel phase; they get
+# bundled too, but the runtime never imports them when isElectron()
+# is true, so the overhead is wasted bytes rather than broken code.
 files:
   - dist-electron/**/*
   - dist/**/*
   - package.json
-  - "!node_modules/**/*"
-  # Explicitly include ONLY the production dependencies we actually
-  # need at runtime. electron-builder otherwise auto-detects from
-  # package.json, but the Tauri cruft (tauri-pty, @tauri-apps/*)
-  # balloons the bundle for no benefit in the Electron ship path.
-  - node_modules/electron-updater/**/*
-  - node_modules/keytar/**/*
-  - node_modules/node-pty/**/*
-  - node_modules/simple-git/**/*
-  - node_modules/builder-util-runtime/**/*
-  - node_modules/js-yaml/**/*
-  - node_modules/lodash.escaperegexp/**/*
-  - node_modules/lodash.isequal/**/*
-  - node_modules/semver/**/*
-  - node_modules/tiny-typed-emitter/**/*
-  - node_modules/lru-cache/**/*
-  - node_modules/debug/**/*
-  - node_modules/yallist/**/*
-  - node_modules/ms/**/*
 
 # The bun-compiled engine binary sits outside dist-electron, so bundle
 # it as an extra resource. Renderer code at runtime reaches it via
@@ -135,9 +123,11 @@ publish:
 # invocation.
 npmRebuild: true
 
-# asar compression — smaller bundle, faster boot.
+# asar compression — smaller bundle, faster boot. Works with the
+# afterPack re-sign because deep signing doesn't touch the asar's
+# content hash recorded in Info.plist ElectronAsarIntegrity.
 asar: true
-# But keep native binaries outside asar so dyld can dlopen them.
+# Native .node binaries must live outside asar so dyld can dlopen.
 asarUnpack:
   - "**/node_modules/keytar/**/*"
   - "**/node_modules/node-pty/**/*"
