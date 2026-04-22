@@ -16,6 +16,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { spawn } from "node:child_process";
 
 const REGISTRY_URL =
   "https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json";
@@ -74,6 +75,36 @@ export interface Registry {
   version: string;
   agents: RegistryAgent[];
 }
+
+/**
+ * A registry agent plus 0canvas-side status fields. Mirrored on the bridge
+ * as `BridgeRegistryAgent` — keep fields in sync.
+ */
+export interface EnrichedRegistryAgent extends RegistryAgent {
+  /**
+   * True when the vendor's CLI is already on PATH (e.g. user has Claude Code
+   * installed). For npx/uvx agents that have no independent CLI, this stays
+   * false — the agent will still run, it just spawns via npx on first use.
+   */
+  installed: boolean;
+  /** Platform-resolved launch method. `"unavailable"` = no runnable dist on host. */
+  launchKind: "npx" | "uvx" | "binary" | "unavailable";
+}
+
+/**
+ * Map of registry agent id → candidate CLI binary names to probe on PATH.
+ * Hand-curated for the 4 agents we explicitly support; unlisted agents
+ * fall through to `installed: false` (fine — they still run via npx/uvx).
+ *
+ * This is the one and only per-agent table in the integration. Everything
+ * else is driven by the upstream registry JSON.
+ */
+const AGENT_PATH_PROBES: Record<string, string[]> = {
+  "claude-acp": ["claude"],
+  "codex-acp": ["codex"],
+  gemini: ["gemini"],
+  "github-copilot-cli": ["copilot", "gh-copilot"],
+};
 
 /** Detect the current host platform tag as used in the registry schema. */
 export function currentPlatform(): Platform | null {
@@ -151,6 +182,23 @@ export class RegistryClient {
   async findById(id: string): Promise<RegistryAgent | null> {
     const reg = await this.fetch();
     return reg.agents.find((a) => a.id === id) ?? null;
+  }
+
+  /**
+   * Same as `listRunnable`, plus an `installed` flag per agent (PATH probe
+   * for the vendor's own CLI) and a resolved `launchKind`. Runs the PATH
+   * probes in parallel so the total cost is one `which` timeout.
+   */
+  async listEnriched(): Promise<EnrichedRegistryAgent[]> {
+    const agents = await this.listRunnable();
+    const plat = currentPlatform();
+    return Promise.all(
+      agents.map(async (a) => ({
+        ...a,
+        installed: await detectInstalled(a),
+        launchKind: resolveLaunchKind(a, plat),
+      })),
+    );
   }
 
   private isFresh(fetchedAt: number): boolean {
@@ -231,4 +279,43 @@ export function resolveLaunch(agent: RegistryAgent): {
   }
 
   throw new Error(`Agent ${agent.id} has no supported distribution type`);
+}
+
+/**
+ * Probe the user's PATH for this agent's CLI binary. Returns true only if
+ * the binary was hand-installed by the user; npx-only agents always return
+ * false here (they can still run on first use via the npm cache).
+ */
+export async function detectInstalled(agent: RegistryAgent): Promise<boolean> {
+  const probes = AGENT_PATH_PROBES[agent.id] ?? [];
+  if (probes.length === 0) return false;
+  for (const bin of probes) {
+    if (await resolveOnPath(bin)) return true;
+  }
+  return false;
+}
+
+function resolveOnPath(bin: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const cmd = process.platform === "win32" ? "where" : "which";
+    try {
+      const child = spawn(cmd, [bin], { stdio: "ignore" });
+      child.once("error", () => resolve(false));
+      child.once("exit", (code) => resolve(code === 0));
+    } catch {
+      resolve(false);
+    }
+  });
+}
+
+function resolveLaunchKind(
+  agent: RegistryAgent,
+  plat: Platform | null,
+): EnrichedRegistryAgent["launchKind"] {
+  if (agent.distribution.npx) return "npx";
+  if (agent.distribution.uvx) return "uvx";
+  if (agent.distribution.binary && plat && agent.distribution.binary[plat]) {
+    return "binary";
+  }
+  return "unavailable";
 }

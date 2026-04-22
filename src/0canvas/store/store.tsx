@@ -266,11 +266,39 @@ export type PendingChatSubmission = {
   source: "inline-edit" | "feedback" | "manual";
 };
 
+/** How much reasoning effort the model should spend before replying.
+ *  Mapped per-agent to the right flag/env on session spawn. */
+export type ChatEffort = "low" | "medium" | "high" | "xhigh";
+
+/** Permission gate for tool-call execution within a chat. */
+export type ChatPermissionMode =
+  | "full"         // auto-approve everything
+  | "auto-edit"    // auto-approve reads + file edits
+  | "ask"          // prompt before writes/commands
+  | "plan-only";   // agent plans but doesn't execute
+
 export type ChatThread = {
   id: string;
   /** Absolute path of the project this chat belongs to, or "" for the
-   *  ambient "No project" folder when 0canvas hasn't been rooted yet. */
+   *  ambient "No project" folder when 0canvas hasn't been rooted yet.
+   *  Doubles as the cwd for the ACP session, git panel, terminal, env. */
   folder: string;
+  /** ACP agent id bound to this chat. null means "pick the default agent
+   *  when the session first starts" — set once and immutable thereafter. */
+  agentId: string | null;
+  /** Human label for the agent (e.g. "Claude Agent"). Cached on chat
+   *  creation so the header can render without a registry lookup. */
+  agentName: string | null;
+  /** Model id (agent-specific — e.g. "claude-opus-4-7" for claude-acp).
+   *  null means "use the agent's default". Changing forces session respawn
+   *  because most agents read the model from env at spawn time. */
+  model: string | null;
+  /** Reasoning effort — mapped to each agent's flag/env at spawn. */
+  effort: ChatEffort;
+  /** Permission gate. Plumbed via ACP session/set_mode when the agent
+   *  advertises mode support; otherwise stored and applied to new
+   *  sessions. */
+  permissionMode: ChatPermissionMode;
   title: string;
   createdAt: number;
   updatedAt: number;
@@ -352,6 +380,7 @@ type Action =
   | { type: "SET_ACTIVE_CHAT"; id: string | null }
   | { type: "DELETE_CHAT"; id: string }
   | { type: "UPDATE_CHAT_TITLE"; id: string; title: string }
+  | { type: "UPDATE_CHAT_SETTINGS"; id: string; updates: Partial<Pick<ChatThread, "model" | "effort" | "permissionMode" | "agentId" | "agentName">> }
   | { type: "TOUCH_CHAT"; id: string }
   // Auto-submit into Column 2 chat (Phase 2-B)
   | { type: "ENQUEUE_CHAT_SUBMISSION"; submission: PendingChatSubmission }
@@ -536,6 +565,15 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
         ...state,
         chats: state.chats.map((c) =>
           c.id === action.id ? { ...c, title: action.title, updatedAt: Date.now() } : c,
+        ),
+      };
+    case "UPDATE_CHAT_SETTINGS":
+      return {
+        ...state,
+        chats: state.chats.map((c) =>
+          c.id === action.id
+            ? { ...c, ...action.updates, updatedAt: Date.now() }
+            : c,
         ),
       };
     case "TOUCH_CHAT":

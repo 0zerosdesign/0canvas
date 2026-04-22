@@ -36,6 +36,12 @@ import {
 } from "lucide-react";
 import { Button, Input } from "../0canvas/ui";
 import { useWorkspace, type ChatThread } from "../0canvas/store/store";
+import { getDefaultAgentId } from "../0canvas/panels/settings-page";
+import { useBridge } from "../0canvas/bridge/use-bridge";
+import type {
+  AcpAgentsListMessage,
+  BridgeRegistryAgent,
+} from "../0canvas/bridge/messages";
 import {
   discoverLocalhostServices,
   openProjectFolder,
@@ -56,6 +62,11 @@ import { useUpdater } from "../native/updater";
 const DOCS_URL = "https://github.com/zerosdesign/0canvas#readme";
 const COLLAPSE_KEY = "column-1-collapsed";
 const FOLDERS_COLLAPSED_KEY = "column-1-folders-collapsed";
+const LOCALHOST_COLLAPSED_KEY = "column-1-localhost-collapsed";
+
+/** Visible rows in LOCALHOST before the list scrolls. Keeps the profile
+ * footer pinned even when many dev servers are running. */
+const LOCALHOST_VISIBLE_ROWS = 4;
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -262,6 +273,17 @@ export function Column1Nav() {
   const [foldersCollapsed, setFoldersCollapsed] = useState<Record<string, boolean>>(() =>
     getSetting<Record<string, boolean>>(FOLDERS_COLLAPSED_KEY, {}),
   );
+  const [localhostCollapsed, setLocalhostCollapsed] = useState<boolean>(() =>
+    getSetting<boolean>(LOCALHOST_COLLAPSED_KEY, false),
+  );
+
+  const toggleLocalhost = () => {
+    setLocalhostCollapsed((prev) => {
+      const next = !prev;
+      setSetting(LOCALHOST_COLLAPSED_KEY, next);
+      return next;
+    });
+  };
 
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
@@ -279,17 +301,72 @@ export function Column1Nav() {
     });
   };
 
+  const bridge = useBridge();
+
   const handleNewChat = useCallback(async () => {
     const folder = await getCurrentProjectFolder();
+
+    // Resolve the default agent. User preference wins; otherwise pick
+    // the first installed agent in the registry; otherwise leave it
+    // unset and let the Chat tab prompt the user to pick one.
+    let agentId = getDefaultAgentId();
+    let agentName: string | null = null;
+    if (bridge) {
+      try {
+        const resp = await bridge.request<AcpAgentsListMessage>(
+          { type: "ACP_LIST_AGENTS" },
+          10_000,
+        );
+        const found =
+          (agentId && resp.agents.find((a) => a.id === agentId)) ||
+          resp.agents.find((a) => a.installed) ||
+          null;
+        if (found) {
+          agentId = found.id;
+          agentName = found.name;
+        }
+      } catch {
+        /* registry unreachable — chat is still usable; header will prompt */
+      }
+    }
+
     const chat: ChatThread = {
       id: newChatId(),
       folder,
+      agentId,
+      agentName,
+      model: null,
+      effort: "medium",
+      permissionMode: "ask",
       title: "New chat",
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
     dispatch({ type: "ADD_CHAT", chat });
-  }, [dispatch]);
+  }, [dispatch, bridge]);
+
+  // ⌘N — new chat from anywhere. Skipped when focus is inside an
+  // editable surface (input, textarea, contenteditable) so we don't
+  // override browser/native "new line" behavior in those contexts.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.shiftKey || e.altKey) return;
+      if (e.key.toLowerCase() !== "n") return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        target?.isContentEditable
+      ) {
+        return;
+      }
+      e.preventDefault();
+      void handleNewChat();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [handleNewChat]);
 
   const handleSelectChat = (id: string) => {
     dispatch({ type: "SET_ACTIVE_CHAT", id });
@@ -416,7 +493,7 @@ export function Column1Nav() {
           variant="ghost"
           className="oc-column-1__action"
           onClick={handleNewChat}
-          title={collapsed ? "New Chat" : undefined}
+          title={collapsed ? "New Chat (⌘N)" : "⌘N"}
         >
           <MessageSquarePlus size={16} />
           {!collapsed && <span>New Chat</span>}
@@ -586,18 +663,45 @@ export function Column1Nav() {
             )}
           </section>
 
-          <section className="oc-column-1__section">
-            <h3 className="oc-column-1__section-title">
-              LOCALHOST
-              <span className="oc-column-1__section-badge">{services.length}</span>
-            </h3>
-            {services.length === 0 ? (
+        </>
+      )}
+
+      <div className="oc-column-1__spacer" />
+
+      {!collapsed && (
+        <section className="oc-column-1__section oc-column-1__localhost">
+          <Button
+            variant="ghost"
+            className="oc-column-1__section-header"
+            onClick={toggleLocalhost}
+            aria-expanded={!localhostCollapsed}
+            title={localhostCollapsed ? "Expand localhost" : "Collapse localhost"}
+          >
+            {localhostCollapsed ? (
+              <ChevronRight size={12} />
+            ) : (
+              <ChevronDown size={12} />
+            )}
+            <span className="oc-column-1__section-title-text">LOCALHOST</span>
+            <span className="oc-column-1__section-badge">{services.length}</span>
+          </Button>
+          {!localhostCollapsed && (
+            services.length === 0 ? (
               <p className="oc-column-1__placeholder">
-                No dev servers detected. Start your app's dev server (e.g. <code>pnpm dev</code>)
-                and this list will update within a few seconds.
+                No dev servers detected. Start your app's dev server
+                (e.g. <code>pnpm dev</code>) and this list will update within a few seconds.
               </p>
             ) : (
-              <div className="oc-column-1__services">
+              <div
+                className="oc-column-1__services"
+                style={{
+                  maxHeight:
+                    services.length > LOCALHOST_VISIBLE_ROWS
+                      ? `calc(${LOCALHOST_VISIBLE_ROWS} * 30px)`
+                      : undefined,
+                  overflowY: services.length > LOCALHOST_VISIBLE_ROWS ? "auto" : undefined,
+                }}
+              >
                 {services.map((s) => (
                   <ServiceRow
                     key={s.port}
@@ -607,12 +711,10 @@ export function Column1Nav() {
                   />
                 ))}
               </div>
-            )}
-          </section>
-        </>
+            )
+          )}
+        </section>
       )}
-
-      <div className="oc-column-1__spacer" />
 
       <footer className="oc-column-1__footer" ref={profileMenu.rootRef}>
         {profileMenu.open && (

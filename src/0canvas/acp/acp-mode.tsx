@@ -3,11 +3,14 @@
 // ──────────────────────────────────────────────────────────
 //
 // Owns the useAcpSession instance and the current "screen" inside the
-// ACP surface. Three screens, linear flow:
+// ACP surface. Four screens, linear flow:
 //
 //   picker   — user chooses an agent from the live registry
-//   auth     — user picks an auth method (API key or subscription)
-//              — skipped for agents without a known auth config
+//   loading  — we spawn the agent subprocess + read its initialize response
+//              so the auth screen can render advertised methods
+//   auth     — user picks an auth method (API key / subscription / ...)
+//              — skipped entirely when the agent advertises no interactive
+//              methods (handles its own auth internally)
 //   chat     — live session with the agent
 //
 // Back from auth returns to picker; back from chat calls session.reset()
@@ -16,33 +19,44 @@
 // ──────────────────────────────────────────────────────────
 
 import React, { useCallback, useState } from "react";
+import { Loader2 } from "lucide-react";
+import type { InitializeResponse } from "@agentclientprotocol/sdk";
 import { useAcpSession } from "./use-acp-session";
 import { AgentsPanel } from "./agents-panel";
 import { AcpChat } from "./acp-chat";
-import { AuthModal, AGENT_AUTH_CONFIG, type AuthChoice } from "./auth-modal";
+import { AuthModal, type AuthChoice } from "./auth-modal";
 import type { BridgeRegistryAgent } from "../bridge/messages";
 
-type Screen = "picker" | "auth" | "chat";
+type Screen = "picker" | "loading" | "auth" | "chat";
 
 export function AcpMode() {
   const session = useAcpSession();
   const [screen, setScreen] = useState<Screen>("picker");
   const [pendingAgent, setPendingAgent] = useState<BridgeRegistryAgent | null>(null);
+  const [initialize, setInitialize] = useState<InitializeResponse | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  const handlePickAgent = useCallback((agent: BridgeRegistryAgent) => {
-    setPendingAgent(agent);
-    // Agents with no known auth config (e.g. auggie, qoder) get started
-    // directly — they handle their own auth via the registry's env or
-    // the agent's own interactive flow.
-    if (!AGENT_AUTH_CONFIG[agent.id]) {
-      session.startSession(agent.id, { agentName: agent.name }).catch(() => {
-        /* surfaced via session.error */
-      });
-      setScreen("chat");
-      return;
-    }
-    setScreen("auth");
-  }, [session]);
+  const handlePickAgent = useCallback(
+    async (agent: BridgeRegistryAgent) => {
+      setPendingAgent(agent);
+      setInitialize(null);
+      setLoadError(null);
+      setScreen("loading");
+
+      try {
+        // Spawns the subprocess with empty env and reads initialize.authMethods.
+        // If the agent advertises no interactive methods we auto-start a session
+        // from inside AuthModal — so only two screens are visible here.
+        const init = await session.initAgent(agent.id);
+        setInitialize(init);
+        setScreen("auth");
+      } catch (err) {
+        setLoadError(err instanceof Error ? err.message : String(err));
+        setScreen("loading");
+      }
+    },
+    [session],
+  );
 
   const handleAuthConfirm = useCallback(
     (choice: AuthChoice) => {
@@ -62,19 +76,46 @@ export function AcpMode() {
 
   const handleAuthBack = useCallback(() => {
     setPendingAgent(null);
+    setInitialize(null);
     setScreen("picker");
   }, []);
 
   const handleChatBack = useCallback(() => {
     session.reset();
     setPendingAgent(null);
+    setInitialize(null);
     setScreen("picker");
   }, [session]);
+
+  if (screen === "loading" && pendingAgent) {
+    return (
+      <div className="oc-acp-surface">
+        <div className="oc-acp-loading">
+          {loadError ? (
+            <div className="oc-acp-error">
+              <div className="min-w-0">
+                <div className="oc-acp-error-title">
+                  Couldn't reach {pendingAgent.name}
+                </div>
+                <div>{loadError}</div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Starting {pendingAgent.name}...
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (screen === "auth" && pendingAgent) {
     return (
       <AuthModal
         agent={pendingAgent}
+        initialize={initialize}
         onConfirm={handleAuthConfirm}
         onBack={handleAuthBack}
       />

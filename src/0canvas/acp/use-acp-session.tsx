@@ -20,6 +20,7 @@ import type {
   NewSessionResponse,
   RequestPermissionRequest,
   RequestPermissionResponse,
+  SessionMode,
   SessionNotification,
   StopReason,
   ToolCall,
@@ -27,6 +28,7 @@ import type {
 } from "@agentclientprotocol/sdk";
 import type {
   AcpAgentsListMessage,
+  AcpAgentInitializedMessage,
   AcpErrorMessage,
   AcpPromptCompleteMessage,
   AcpPromptFailedMessage,
@@ -75,6 +77,26 @@ export type SessionStatus =
   | "streaming"      // prompt turn in progress
   | "failed";        // last operation errored; details in `error`
 
+/** Token accounting accumulated from ACP session notifications + turn
+ *  completion. `size`/`used` come from `usage_update` notifications
+ *  (context window view); `inputTokens`/`outputTokens` come from the
+ *  PromptResponse.usage at turn end. */
+export interface AcpUsage {
+  /** Total context window the model is using (tokens). */
+  size: number;
+  /** Tokens currently in context. */
+  used: number;
+  /** Lifetime input tokens sent to the agent this session. */
+  inputTokens: number;
+  /** Lifetime output tokens emitted by the agent this session. */
+  outputTokens: number;
+  /** Cached token counts reported by the agent, when available. */
+  cachedReadTokens: number;
+  cachedWriteTokens: number;
+  /** Tokens spent on reasoning / thought traces, when reported. */
+  thoughtTokens: number;
+}
+
 export interface AcpSessionState {
   agentId: string | null;
   agentName: string | null;
@@ -87,6 +109,13 @@ export interface AcpSessionState {
   stderrLog: string[];
   error: string | null;
   lastStopReason: StopReason | null;
+  /** Modes advertised by the agent at session creation, if any. */
+  availableModes: SessionMode[];
+  /** Currently active mode id (echoed back by session/set_mode and
+   *  current_mode_update notifications). */
+  currentModeId: string | null;
+  /** Token accounting for the context pill + usage popover. */
+  usage: AcpUsage;
 }
 
 export interface StartSessionOptions {
@@ -99,22 +128,43 @@ export interface StartSessionOptions {
 export interface AcpSessionControls {
   /** Fetch the registry. Force=true refetches from CDN. */
   listAgents(force?: boolean): Promise<BridgeRegistryAgent[]>;
+  /** Spawn the agent (if needed) and return its initialize response so the
+   *  auth screen can render the advertised auth methods. Lets the UI honour
+   *  whatever the agent tells us without hardcoding per-vendor methods. */
+  initAgent(agentId: string): Promise<InitializeResponse>;
   /** Create a new session with the given agent id. */
   startSession(agentId: string, options?: StartSessionOptions): Promise<void>;
   /** Send a user prompt. Enqueues a user message immediately.
    *  `displayText` is what the UI shows (may contain @tokens); `text` is
    *  what goes over the wire (with mentions expanded). When omitted,
-   *  `text` is used for both. */
-  sendPrompt(text: string, displayText?: string): Promise<void>;
+   *  `text` is used for both. Optional `attachments` are ACP ContentBlocks
+   *  (e.g. images) appended to the prompt after the text block. */
+  sendPrompt(
+    text: string,
+    displayText?: string,
+    attachments?: ContentBlock[],
+  ): Promise<void>;
   /** Cancel the in-flight prompt (if any). */
   cancel(): Promise<void>;
   /** Resolve a pending permission request. */
   respondToPermission(response: RequestPermissionResponse): void;
+  /** Change the ACP session mode (calls `session/set_mode`). */
+  setMode?(modeId: string): Promise<void>;
   /** Clear the session and return to idle. Does not kill the agent subprocess. */
   reset(): void;
 }
 
 const MAX_STDERR_LINES = 200;
+
+export const BLANK_USAGE: AcpUsage = {
+  size: 0,
+  used: 0,
+  inputTokens: 0,
+  outputTokens: 0,
+  cachedReadTokens: 0,
+  cachedWriteTokens: 0,
+  thoughtTokens: 0,
+};
 
 export function useAcpSession(): AcpSessionState & AcpSessionControls {
   const bridge = useBridge();
@@ -131,6 +181,9 @@ export function useAcpSession(): AcpSessionState & AcpSessionControls {
     stderrLog: [],
     error: null,
     lastStopReason: null,
+    availableModes: [],
+    currentModeId: null,
+    usage: BLANK_USAGE,
   });
 
   // Mutable view of live state, so listener callbacks don't close over stale refs.
@@ -222,6 +275,20 @@ export function useAcpSession(): AcpSessionState & AcpSessionControls {
     [bridge],
   );
 
+  const initAgent = useCallback<AcpSessionControls["initAgent"]>(
+    async (agentId) => {
+      if (!bridge) throw new Error("Engine not connected");
+      const resp = await bridge.request<
+        AcpAgentInitializedMessage | AcpErrorMessage
+      >({ type: "ACP_INIT_AGENT", agentId }, 60_000);
+      if (resp.type === "ACP_ERROR") {
+        throw new Error(resp.message);
+      }
+      return resp.initialize;
+    },
+    [bridge],
+  );
+
   const startSession = useCallback<AcpSessionControls["startSession"]>(
     async (agentId, options) => {
       if (!bridge) throw new Error("Engine not connected");
@@ -238,6 +305,9 @@ export function useAcpSession(): AcpSessionState & AcpSessionControls {
         pendingPermission: null,
         stderrLog: [],
         lastStopReason: null,
+        availableModes: [],
+        currentModeId: null,
+        usage: BLANK_USAGE,
       }));
 
       try {
@@ -263,6 +333,8 @@ export function useAcpSession(): AcpSessionState & AcpSessionControls {
           sessionId: resp.session.sessionId,
           session: resp.session,
           initialize: resp.initialize,
+          availableModes: resp.session.modes?.availableModes ?? [],
+          currentModeId: resp.session.modes?.currentModeId ?? null,
           error: null,
         }));
       } catch (err) {
@@ -376,12 +448,16 @@ export function useAcpSession(): AcpSessionState & AcpSessionControls {
       stderrLog: [],
       error: null,
       lastStopReason: null,
+      availableModes: [],
+      currentModeId: null,
+      usage: BLANK_USAGE,
     });
   }, []);
 
   return {
     ...state,
     listAgents,
+    initAgent,
     startSession,
     sendPrompt,
     cancel,
@@ -394,7 +470,7 @@ export function useAcpSession(): AcpSessionState & AcpSessionControls {
 // Fold a SessionNotification into the running message list
 // ──────────────────────────────────────────────────────────
 
-function applyUpdate(
+export function applyUpdate(
   messages: AcpMessage[],
   notification: SessionNotification,
 ): AcpMessage[] {

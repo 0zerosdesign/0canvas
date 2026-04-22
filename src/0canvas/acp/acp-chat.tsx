@@ -9,8 +9,8 @@
 //
 // ──────────────────────────────────────────────────────────
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useWorkspace, findBySelector } from "../store/store";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useWorkspace, findBySelector, type ChatThread } from "../store/store";
 import { flashElement } from "../inspector";
 import {
   collectMentions,
@@ -40,6 +40,10 @@ import {
   MessageSquare,
   Zap,
   MousePointer2,
+  GitBranch,
+  Accessibility,
+  Layers,
+  Sparkles,
 } from "lucide-react";
 import type {
   RequestPermissionRequest,
@@ -52,13 +56,32 @@ import type {
   AcpToolMessage,
 } from "./use-acp-session";
 import { Button, Textarea } from "../ui";
+import {
+  ModelPill,
+  EffortPill,
+  PermissionsPill,
+  BranchPill,
+  ContextPill,
+} from "./composer-pills";
+import { Image as ImageIcon } from "lucide-react";
 
 interface AcpChatProps {
   session: AcpSessionState & AcpSessionControls;
   onBack: () => void;
+  /** Optional right-aligned header slot (e.g. a "+ new chat" picker).
+   *  When provided the default back button is hidden and the slot
+   *  takes over header actions. Keeps the component reusable between
+   *  the AcpMode picker flow (needs "back") and the Column-2 chat
+   *  flow (needs "+ new"). */
+  headerActions?: React.ReactNode;
+  /** When this chat is backed by a ChatThread in the store (Column 2
+   *  flow), the composer shows model/effort/permissions pills and
+   *  persists changes. Picker/beta flows pass no chatId and get a
+   *  minimal composer. */
+  chatId?: string;
 }
 
-export function AcpChat({ session, onBack }: AcpChatProps) {
+export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps) {
   const [input, setInput] = useState("");
   const [caret, setCaret] = useState(0);
   const [mentionHighlight, setMentionHighlight] = useState(0);
@@ -73,6 +96,58 @@ export function AcpChat({ session, onBack }: AcpChatProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { state: workspaceState, dispatch } = useWorkspace();
   const followedToolsRef = useRef<Set<string>>(new Set());
+
+  // Chat-thread-backed composer settings. When `chatId` is absent
+  // (picker/beta flows) this returns null and the pills render stubs.
+  const chatThread = chatId
+    ? workspaceState.chats.find((c) => c.id === chatId) ?? null
+    : null;
+  const updateChatSettings = useCallback(
+    (
+      updates: Partial<
+        Pick<ChatThread, "model" | "effort" | "permissionMode" | "agentId" | "agentName">
+      >,
+    ) => {
+      if (!chatId) return;
+      dispatch({ type: "UPDATE_CHAT_SETTINGS", id: chatId, updates });
+    },
+    [chatId, dispatch],
+  );
+
+  // Branch pill reads git.status() lazily — we don't wire a refresh
+  // loop here because the Git panel in Col 3 owns that cadence. The
+  // pill is mostly a navigation affordance: clicking it flips to the
+  // Git tab where the full switcher lives.
+  const [gitBranch, setGitBranch] = useState<string | null>(null);
+  const [gitAhead, setGitAhead] = useState<number>(0);
+  const [gitBehind, setGitBehind] = useState<number>(0);
+  const chatFolder = chatThread?.folder || undefined;
+  useEffect(() => {
+    let cancelled = false;
+    if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) {
+      return;
+    }
+    const refresh = async () => {
+      try {
+        const { git } = await import("../../native/tauri-events");
+        const st = await git.status(chatFolder);
+        if (cancelled) return;
+        setGitBranch(st.branch ?? null);
+        setGitAhead(st.ahead ?? 0);
+        setGitBehind(st.behind ?? 0);
+      } catch {
+        /* not a git repo, or engine not up yet */
+      }
+    };
+    void refresh();
+    // Refresh every 10s so ahead/behind counters stay fresh while the
+    // user commits/fetches in the Git tab or external terminal.
+    const interval = window.setInterval(refresh, 10_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [session.sessionId, chatFolder]);
 
   // ── Mention picker plumbing ───────────────────────────────
   const mentionTrigger = detectMentionTrigger(input, caret);
@@ -125,6 +200,19 @@ export function AcpChat({ session, onBack }: AcpChatProps) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [session.messages, session.pendingPermission, session.status]);
+
+  // ⌘K — focus the composer from anywhere in the app. Cursor-style
+  // shortcut; scoped to avoid clobbering ⌘K inside native inputs.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.shiftKey || e.altKey) return;
+      if (e.key.toLowerCase() !== "k") return;
+      e.preventDefault();
+      textareaRef.current?.focus();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   // Follow-along — when the agent calls apply_change or get_element_styles
   // with a selector, jump the canvas to that element and flash it. Same
@@ -180,18 +268,94 @@ export function AcpChat({ session, onBack }: AcpChatProps) {
     }
   }, [session.messages, workspaceState.elements, dispatch]);
 
+  // Attachments for the next prompt — ACP image ContentBlocks queued by
+  // the paperclip/image button. Cleared on send or manual dismissal.
+  const [attachments, setAttachments] = useState<
+    Array<{ id: string; name: string; mimeType: string; data: string; size: number }>
+  >([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const canSend =
     session.status === "ready" &&
     !session.pendingPermission &&
-    input.trim().length > 0;
+    (input.trim().length > 0 || attachments.length > 0);
 
   const handleSend = () => {
     if (!canSend) return;
     const displayText = input.trim();
     const wireText = expandMentionsInText(displayText, workspaceState);
+    const extraBlocks = attachments.map((a) => ({
+      type: "image" as const,
+      mimeType: a.mimeType,
+      data: a.data,
+    }));
     setInput("");
-    session.sendPrompt(wireText, displayText).catch(() => {
+    setAttachments([]);
+    session.sendPrompt(wireText, displayText, extraBlocks).catch(() => {
       /* error surfaces via session.error */
+    });
+  };
+
+  /** Read a File into a base64 data payload (sans the `data:...;base64,`
+   *  prefix — ACP's image block wants the raw base64 + a separate
+   *  mimeType field). */
+  const readFileAsBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        if (typeof result !== "string") {
+          reject(new Error("Failed to read file"));
+          return;
+        }
+        const comma = result.indexOf(",");
+        resolve(comma === -1 ? result : result.slice(comma + 1));
+      };
+      reader.onerror = () => reject(reader.error ?? new Error("read error"));
+      reader.readAsDataURL(file);
+    });
+
+  const handleImageChoose = () => fileInputRef.current?.click();
+  const handleImageFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const additions: typeof attachments = [];
+    for (const file of Array.from(files)) {
+      if (!file.type.startsWith("image/")) continue;
+      try {
+        const data = await readFileAsBase64(file);
+        additions.push({
+          id: `att-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          name: file.name,
+          mimeType: file.type,
+          data,
+          size: file.size,
+        });
+      } catch {
+        /* silently skip files that fail to read */
+      }
+    }
+    if (additions.length > 0) {
+      setAttachments((prev) => [...prev, ...additions]);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removeAttachment = (id: string) => {
+    setAttachments((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  const insertQuickLaunch = (prompt: string) => {
+    // Drop the starter prompt into the composer so the user can tweak or send
+    // as-is. Expanding @-mentions still happens at send time.
+    const next = input.trim() ? `${input.trim()} ${prompt}` : prompt;
+    setInput(next);
+    requestAnimationFrame(() => {
+      const ta = textareaRef.current;
+      if (!ta) return;
+      ta.focus();
+      const pos = next.length;
+      ta.setSelectionRange(pos, pos);
+      setCaret(pos);
     });
   };
 
@@ -255,15 +419,17 @@ export function AcpChat({ session, onBack }: AcpChatProps) {
   return (
     <div className="oc-acp-surface">
       <header className="oc-acp-subheader">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          type="button"
-          onClick={onBack}
-          title="Back to agents"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-        </Button>
+        {!headerActions && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            type="button"
+            onClick={onBack}
+            title="Back to agents"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+          </Button>
+        )}
         <Bot
           className="w-3.5 h-3.5 flex-shrink-0"
           style={{ color: "var(--text-primary-light)" }}
@@ -273,26 +439,50 @@ export function AcpChat({ session, onBack }: AcpChatProps) {
             {session.agentName ?? session.agentId ?? "ACP"}
           </div>
           <div className="oc-acp-subheader-sub">
-            {session.sessionId
-              ? `session ${session.sessionId.slice(0, 8)}…`
-              : "no session"}
-            {session.status === "streaming" && " · streaming"}
-            {session.lastStopReason && session.status !== "streaming"
-              ? ` · ${session.lastStopReason}`
+            {session.status === "streaming" && "streaming…"}
+            {session.status !== "streaming" && session.lastStopReason
+              ? session.lastStopReason
+              : session.status === "ready"
+              ? "ready"
+              : session.status === "starting"
+              ? "connecting…"
               : ""}
           </div>
         </div>
+        {headerActions}
       </header>
 
       {session.error && (
         <div className="oc-acp-error">
           <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-          <div className="min-w-0">
-            <div className="oc-acp-error-title">Error</div>
+          <div className="min-w-0" style={{ flex: 1 }}>
+            <div className="oc-acp-error-title">Something went wrong</div>
             <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
               {session.error}
             </div>
           </div>
+          {session.status === "failed" && session.agentId && (
+            <Button
+              variant="outline"
+              size="sm"
+              type="button"
+              onClick={() => {
+                if (!session.agentId) return;
+                // Force a fresh session with the same agent + cwd. Drops
+                // the failed state and re-runs ensureSession under the hood.
+                void session
+                  .startSession(session.agentId, {
+                    agentName: session.agentName ?? undefined,
+                  })
+                  .catch(() => {
+                    /* error will re-render here */
+                  });
+              }}
+              title="Retry — restart the session with the same agent"
+            >
+              Retry
+            </Button>
+          )}
         </div>
       )}
 
@@ -328,15 +518,36 @@ export function AcpChat({ session, onBack }: AcpChatProps) {
       )}
 
       <div className="oc-acp-composer">
-        <div className="oc-acp-composer-row">
-          {pickerOpen && (
-            <MentionPicker
-              items={filteredMentions}
-              highlightIndex={mentionHighlight}
-              onHover={setMentionHighlight}
-              onPick={insertMention}
-            />
-          )}
+        {pickerOpen && (
+          <MentionPicker
+            items={filteredMentions}
+            highlightIndex={mentionHighlight}
+            onHover={setMentionHighlight}
+            onPick={insertMention}
+          />
+        )}
+        {attachments.length > 0 && (
+          <div className="oc-acp-attachments" role="list">
+            {attachments.map((a) => (
+              <div key={a.id} className="oc-acp-attachment" role="listitem">
+                <Palette className="w-3 h-3" />
+                <span className="oc-acp-attachment-name" title={a.name}>
+                  {a.name}
+                </span>
+                <button
+                  type="button"
+                  className="oc-acp-attachment-x"
+                  onClick={() => removeAttachment(a.id)}
+                  title="Remove attachment"
+                  aria-label="Remove attachment"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="oc-acp-composer-card">
           <Textarea
             ref={textareaRef}
             value={input}
@@ -345,49 +556,176 @@ export function AcpChat({ session, onBack }: AcpChatProps) {
             onKeyUp={handleCaretSync}
             onClick={handleCaretSync}
             onSelect={handleCaretSync}
-            rows={2}
+            rows={1}
             placeholder={
               session.status === "ready"
-                ? "Message the agent... @ for tokens, variants, feedback"
+                ? 'Type your message… "/" for commands, "@" for files'
                 : session.status === "streaming"
-                ? "Agent is responding..."
+                ? "Agent is responding…"
                 : session.status === "starting"
-                ? "Starting session..."
-                : "Waiting for session..."
+                ? "Starting session…"
+                : "Waiting for session…"
             }
-            className="oc-acp-input"
+            className="oc-acp-composer-input"
             disabled={session.status === "starting"}
           />
-          {session.status === "streaming" ? (
+          <div className="oc-acp-composer-toolbar">
+            {chatThread && (
+              <>
+                <ModelPill
+                  agentId={chatThread.agentId}
+                  initialize={session.initialize}
+                  value={chatThread.model}
+                  onChange={(v) => updateChatSettings({ model: v })}
+                />
+                <EffortPill
+                  value={chatThread.effort}
+                  onChange={(v) => updateChatSettings({ effort: v })}
+                />
+                <span className="oc-acp-toolbar-sep" aria-hidden />
+              </>
+            )}
             <Button
-              variant="destructive"
-              size="sm"
+              variant="ghost"
+              size="icon-sm"
               type="button"
-              onClick={() => session.cancel()}
-              className="oc-acp-stop-btn"
-              title="Cancel current turn"
+              title="Attach image"
+              onClick={handleImageChoose}
             >
-              <Square className="w-3 h-3" /> Stop
+              <ImageIcon size={13} />
             </Button>
-          ) : (
-            <Button
-              variant="primary"
-              size="sm"
-              type="button"
-              onClick={handleSend}
-              disabled={!canSend}
-              className="oc-acp-send-btn"
-              title="Send (Enter)"
-            >
-              <Send className="w-3 h-3" /> Send
-            </Button>
-          )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              style={{ display: "none" }}
+              onChange={(e) => void handleImageFiles(e.target.files)}
+            />
+            {DESIGN_AUDITS.length > 0 && (
+              <DesignAuditsPill
+                onPick={(p) => insertQuickLaunch(p)}
+                disabled={session.status === "streaming"}
+              />
+            )}
+            <div className="oc-acp-toolbar-spacer" />
+            {session.status === "streaming" ? (
+              <Button
+                variant="destructive"
+                size="icon-sm"
+                type="button"
+                onClick={() => session.cancel()}
+                title="Cancel current turn"
+              >
+                <Square className="w-3 h-3" />
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                size="icon-sm"
+                type="button"
+                onClick={handleSend}
+                disabled={!canSend}
+                title="Send (Enter)"
+              >
+                <Send className="w-3 h-3" />
+              </Button>
+            )}
+          </div>
         </div>
-        <div className="oc-acp-composer-hint">
-          <Info className="w-3 h-3" />
-          Credentials stay with the agent CLI. 0canvas never touches your tokens.
-        </div>
+        {chatThread && (
+          <div className="oc-acp-composer-footer">
+            <BranchPill
+              branch={gitBranch}
+              ahead={gitAhead}
+              behind={gitBehind}
+              cwd={chatThread.folder || undefined}
+              onSwitched={(name) => {
+                setGitBranch(name);
+                setGitAhead(0);
+                setGitBehind(0);
+              }}
+            />
+            <PermissionsPill
+              availableModes={session.availableModes}
+              currentModeId={session.currentModeId}
+              onAgentModeChange={(modeId) => {
+                void session.setMode?.(modeId);
+              }}
+              value={chatThread.permissionMode}
+              onChange={(v) => updateChatSettings({ permissionMode: v })}
+            />
+            <div className="oc-acp-toolbar-spacer" />
+            <ContextPill usage={session.usage} />
+          </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+// ── Design-audits pill — collapsed quick-launch for a11y/token audits
+
+function DesignAuditsPill({
+  onPick,
+  disabled,
+}: {
+  onPick: (prompt: string) => void;
+  disabled: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc, true);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc, true);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div ref={rootRef} className="oc-chat-dropdown-root">
+      <button
+        type="button"
+        className="oc-chat-toolbar-pill"
+        title="Design audits"
+        onClick={() => setOpen((v) => !v)}
+        disabled={disabled}
+      >
+        <Sparkles size={11} />
+        <span>Audits</span>
+      </button>
+      {open && (
+        <div className="oc-chat-dropdown-menu">
+          <div className="oc-chat-dropdown-section-label">Quick launch</div>
+          {DESIGN_AUDITS.map((q) => (
+            <button
+              key={q.id}
+              type="button"
+              className="oc-chat-dropdown-item"
+              onClick={() => {
+                onPick(q.prompt);
+                setOpen(false);
+              }}
+            >
+              <q.icon className="w-3 h-3" />
+              <span className="oc-chat-dropdown-item-label">{q.label}</span>
+              <span className="oc-chat-dropdown-item-hint">{q.hint}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -566,6 +904,90 @@ function matchDesignTool(title: string): DesignToolEntry | null {
   return null;
 }
 
+// ──────────────────────────────────────────────────────────
+// Subagent detection (Phase 5)
+// ──────────────────────────────────────────────────────────
+//
+// The ACP `SpawnAgentTool` call shows up in the stream as a regular
+// ToolCall. claude-agent-sdk's built-in is "Task"; other agents name it
+// differently. Match permissively by title or by rawInput having a
+// subagent_type key.
+
+const SUBAGENT_TITLE_PATTERN = /^(task|spawn_?agent|delegate|subagent)$/i;
+
+/**
+ * Starter prompts that nudge the agent to spawn a focused subagent. Each
+ * chip drops the prompt into the composer so the designer can tweak the
+ * selector / scope before sending. Nothing about these is protocol
+ * extension — they're just good opening lines for the agents that
+ * support SpawnAgentTool (claude-agent-acp's Task, Codex's delegation, …).
+ */
+export interface DesignAudit {
+  id: string;
+  label: string;
+  hint: string;
+  icon: React.ComponentType<{ className?: string }>;
+  prompt: string;
+}
+
+const DESIGN_AUDITS: DesignAudit[] = [
+  {
+    id: "a11y",
+    label: "a11y audit",
+    hint: "Delegate accessibility review to a subagent",
+    icon: Accessibility,
+    prompt:
+      "Spawn an a11y-auditor subagent: review @selection (or the full design state if nothing is selected) for WCAG issues — contrast, focus order, target sizes, missing ARIA. Report findings with the offending selectors.",
+  },
+  {
+    id: "tokens",
+    label: "token audit",
+    hint: "Consolidate duplicate/close-but-different design tokens",
+    icon: Layers,
+    prompt:
+      "Spawn a token-consolidator subagent: scan all design tokens, group near-duplicates, and propose a consolidated set with a per-component migration list. Don't apply changes yet.",
+  },
+  {
+    id: "polish",
+    label: "polish pass",
+    hint: "Scan for tiny visual-consistency wins",
+    icon: Sparkles,
+    prompt:
+      "Spawn a design-polish subagent: look at the current canvas for inconsistencies (spacing rhythm off-grid, border-radius mismatches, one-off font-sizes). Suggest fixes ranked by visual impact; don't apply changes yet.",
+  },
+];
+
+export interface SubagentInfo {
+  /** Which subagent role the parent agent is invoking, if declared. */
+  subagentType?: string;
+  /** One-line description of the job the parent handed off. */
+  description?: string;
+}
+
+function matchSubagent(tool: AcpToolMessage): SubagentInfo | null {
+  if (SUBAGENT_TITLE_PATTERN.test(tool.title)) {
+    const input = tool.rawInput as
+      | { subagent_type?: string; description?: string; prompt?: string }
+      | undefined;
+    return {
+      subagentType: input?.subagent_type,
+      description:
+        input?.description ??
+        (typeof input?.prompt === "string" ? input.prompt.slice(0, 160) : undefined),
+    };
+  }
+  const input = tool.rawInput as
+    | { subagent_type?: string; description?: string }
+    | undefined;
+  if (input && typeof input.subagent_type === "string") {
+    return {
+      subagentType: input.subagent_type,
+      description: input.description,
+    };
+  }
+  return null;
+}
+
 /**
  * Camel-case / style-object lookup of a CSS property on a workspace element
  * matched by its canonical selector. Used only for the before→after in the
@@ -592,9 +1014,16 @@ function ToolCallCard({
   receipt: ApplyReceipt | null;
 }) {
   const design = matchDesignTool(tool.title);
-  const Icon = design?.icon ?? Wrench;
-  const label = design?.label ?? tool.title;
-  const summary = design?.summarize?.(tool.rawInput) ?? null;
+  const subagent = !design ? matchSubagent(tool) : null;
+  const Icon = design?.icon ?? (subagent ? GitBranch : Wrench);
+  const label = design?.label
+    ?? (subagent
+      ? subagent.subagentType
+        ? `Delegated to ${subagent.subagentType}`
+        : "Subagent delegation"
+      : tool.title);
+  const summary =
+    design?.summarize?.(tool.rawInput) ?? subagent?.description ?? null;
   // Persistent receipt only for apply_change that has both a captured before
   // snapshot and a completed or failed status — we don't clutter pending
   // cards with a diff that isn't final yet.
@@ -604,6 +1033,16 @@ function ToolCallCard({
     (tool.status === "completed" || tool.status === "failed");
   const sourcePath = tool.locations?.[0]?.path;
   const sourceLine = tool.locations?.[0]?.line;
+  const cardClass = design
+    ? "oc-acp-tool oc-acp-tool-design"
+    : subagent
+    ? "oc-acp-tool oc-acp-tool-subagent"
+    : "oc-acp-tool";
+  const vendorLabel = design
+    ? "0canvas"
+    : subagent
+    ? "Subagent"
+    : null;
 
   const statusIcon =
     tool.status === "completed" ? (
@@ -629,13 +1068,15 @@ function ToolCallCard({
     );
 
   return (
-    <div className={`oc-acp-tool ${design ? "oc-acp-tool-design" : ""}`}>
+    <div className={cardClass}>
       <div className="oc-acp-tool-head">
         <Icon className="oc-acp-tool-icon w-3.5 h-3.5" />
         <div className="oc-acp-tool-body">
           <div className="oc-acp-tool-title">
             {label}
-            {design && <span className="oc-acp-tool-vendor">0canvas</span>}
+            {vendorLabel && (
+              <span className="oc-acp-tool-vendor">{vendorLabel}</span>
+            )}
           </div>
           {!hasReceipt && summary ? (
             <div className="oc-acp-tool-summary">{summary}</div>

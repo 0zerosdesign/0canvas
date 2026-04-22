@@ -52,16 +52,20 @@ export type EnvFile = {
   gitignored: boolean;
 };
 
-export async function listEnvFiles(): Promise<EnvFile[]> {
+export async function listEnvFiles(cwd?: string): Promise<EnvFile[]> {
   if (!isTauriWebview()) return [];
   const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<EnvFile[]>("list_env_files");
+  return invoke<EnvFile[]>("list_env_files", { cwd });
 }
 
-export async function saveEnvFile(path: string, variables: EnvVar[]): Promise<void> {
+export async function saveEnvFile(
+  path: string,
+  variables: EnvVar[],
+  cwd?: string,
+): Promise<void> {
   if (!isTauriWebview()) throw new Error("Env editing requires the Mac app");
   const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<void>("save_env_file", { path, variables });
+  return invoke<void>("save_env_file", { cwd, path, variables });
 }
 
 // ── Todo list ─────────────────────────────────────────────
@@ -80,16 +84,16 @@ export type TodoFile = {
   items: TodoItem[];
 };
 
-export async function loadTodoFile(): Promise<TodoFile | null> {
+export async function loadTodoFile(cwd?: string): Promise<TodoFile | null> {
   if (!isTauriWebview()) return null;
   const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<TodoFile>("load_todo_file");
+  return invoke<TodoFile>("load_todo_file", { cwd });
 }
 
-export async function saveTodoFile(raw: string): Promise<void> {
+export async function saveTodoFile(raw: string, cwd?: string): Promise<void> {
   if (!isTauriWebview()) throw new Error("Todo editing requires the Mac app");
   const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<void>("save_todo_file", { raw });
+  return invoke<void>("save_todo_file", { cwd, raw });
 }
 
 // ── Git ───────────────────────────────────────────────────
@@ -187,52 +191,104 @@ export type GitWorktree = {
   isCurrent: boolean;
 };
 
+/** Every git op takes an optional `cwd`. When provided, Rust uses that
+ *  path instead of the global engine root. The frontend passes the
+ *  active chat's folder so each chat's Git panel is scoped to its
+ *  own project — multiple projects can be live at once. */
 export const git = {
-  status: () => gitInvoke<GitStatus>("git_status"),
-  stageFile: (path: string) => gitInvoke<void>("git_stage_file", { path }),
-  unstageFile: (path: string) => gitInvoke<void>("git_unstage_file", { path }),
-  stageAll: () => gitInvoke<void>("git_stage_all"),
-  unstageAll: () => gitInvoke<void>("git_unstage_all"),
-  commit: (message: string) =>
-    gitInvoke<{ sha: string; summary: string }>("git_commit", { message }),
-  push: () => gitInvoke<void>("git_push"),
-  pull: () => gitInvoke<void>("git_pull"),
-  pushForce: () => gitInvoke<void>("git_push_force"),
-  diffFile: (path: string, staged: boolean) =>
-    gitInvoke<GitDiff>("git_diff_file", { path, staged }),
-  logRecent: (limit = 10) =>
-    gitInvoke<GitCommit[]>("git_log_recent", { limit }),
-  branchList: () => gitInvoke<GitBranch[]>("git_branch_list"),
-  branchSwitch: (name: string) =>
-    gitInvoke<void>("git_branch_switch", { name }),
-  branchCreate: (name: string, checkout: boolean) =>
-    gitInvoke<void>("git_branch_create", { name, checkout }),
-  branchDelete: (name: string) =>
-    gitInvoke<void>("git_branch_delete", { name }),
-  // Phase 3 additions
-  suggestCommitMessage: () =>
-    gitInvoke<string>("git_suggest_commit_message"),
-  remoteUrl: () => gitInvoke<string | null>("git_remote_url"),
-  discardFile: (path: string) =>
-    gitInvoke<void>("git_discard_file", { path }),
-  fileAtHead: (path: string) =>
-    gitInvoke<GitFileVersion>("git_file_at_head", { path }),
+  status: (cwd?: string) => gitInvoke<GitStatus>("git_status", { cwd }),
+  stageFile: (path: string, cwd?: string) =>
+    gitInvoke<void>("git_stage_file", { cwd, path }),
+  unstageFile: (path: string, cwd?: string) =>
+    gitInvoke<void>("git_unstage_file", { cwd, path }),
+  stageAll: (cwd?: string) => gitInvoke<void>("git_stage_all", { cwd }),
+  unstageAll: (cwd?: string) => gitInvoke<void>("git_unstage_all", { cwd }),
+  commit: (message: string, cwd?: string) =>
+    gitInvoke<{ sha: string; summary: string }>("git_commit", { cwd, message }),
+  push: (cwd?: string) => gitInvoke<void>("git_push", { cwd }),
+  pull: (cwd?: string) => gitInvoke<void>("git_pull", { cwd }),
+  pushForce: (cwd?: string) => gitInvoke<void>("git_push_force", { cwd }),
+  diffFile: (path: string, staged: boolean, cwd?: string) =>
+    gitInvoke<GitDiff>("git_diff_file", { cwd, path, staged }),
+  logRecent: (limit = 10, cwd?: string) =>
+    gitInvoke<GitCommit[]>("git_log_recent", { cwd, limit }),
+  branchList: (cwd?: string) =>
+    gitInvoke<GitBranch[]>("git_branch_list", { cwd }),
+  branchSwitch: (name: string, cwd?: string) =>
+    gitInvoke<void>("git_branch_switch", { cwd, name }),
+  branchCreate: (name: string, checkout: boolean, cwd?: string) =>
+    gitInvoke<void>("git_branch_create", { cwd, name, checkout }),
+  branchDelete: (name: string, cwd?: string) =>
+    gitInvoke<void>("git_branch_delete", { cwd, name }),
+  suggestCommitMessage: (cwd?: string) =>
+    gitInvoke<string>("git_suggest_commit_message", { cwd }),
+  remoteUrl: (cwd?: string) =>
+    gitInvoke<string | null>("git_remote_url", { cwd }),
+  discardFile: (path: string, cwd?: string) =>
+    gitInvoke<void>("git_discard_file", { cwd, path }),
+  fileAtHead: (path: string, cwd?: string) =>
+    gitInvoke<GitFileVersion>("git_file_at_head", { cwd, path }),
   clone: (url: string, destination: string) =>
     gitInvoke<string>("git_clone", { url, destination }),
-  worktreeList: () => gitInvoke<GitWorktree[]>("git_worktree_list"),
-  worktreeAdd: (name: string, path: string, branch: string | null) =>
-    gitInvoke<string>("git_worktree_add", { name, path, branch }),
-  worktreeRemove: (name: string) =>
-    gitInvoke<void>("git_worktree_remove", { name }),
-  conflictList: () => gitInvoke<GitConflict[]>("git_conflict_list"),
-  resolveOurs: (path: string) =>
-    gitInvoke<void>("git_resolve_file_ours", { path }),
-  resolveTheirs: (path: string) =>
-    gitInvoke<void>("git_resolve_file_theirs", { path }),
-  revertCommit: (sha: string) =>
-    gitInvoke<string>("git_revert_commit", { sha }),
-  resetHard: (sha: string) => gitInvoke<void>("git_reset_hard", { sha }),
+  worktreeList: (cwd?: string) =>
+    gitInvoke<GitWorktree[]>("git_worktree_list", { cwd }),
+  worktreeAdd: (
+    name: string,
+    path: string,
+    branch: string | null,
+    cwd?: string,
+  ) => gitInvoke<string>("git_worktree_add", { cwd, name, path, branch }),
+  worktreeRemove: (name: string, cwd?: string) =>
+    gitInvoke<void>("git_worktree_remove", { cwd, name }),
+  conflictList: (cwd?: string) =>
+    gitInvoke<GitConflict[]>("git_conflict_list", { cwd }),
+  resolveOurs: (path: string, cwd?: string) =>
+    gitInvoke<void>("git_resolve_file_ours", { cwd, path }),
+  resolveTheirs: (path: string, cwd?: string) =>
+    gitInvoke<void>("git_resolve_file_theirs", { cwd, path }),
+  revertCommit: (sha: string, cwd?: string) =>
+    gitInvoke<string>("git_revert_commit", { cwd, sha }),
+  resetHard: (sha: string, cwd?: string) =>
+    gitInvoke<void>("git_reset_hard", { cwd, sha }),
 };
+
+/** Returns a `git`-shaped namespace where every call is pre-bound to
+ *  `cwd`. Panels call this once per active chat, then use the result
+ *  without threading cwd through every call site. */
+export function gitForCwd(cwd: string | undefined) {
+  return {
+    status: () => git.status(cwd),
+    stageFile: (path: string) => git.stageFile(path, cwd),
+    unstageFile: (path: string) => git.unstageFile(path, cwd),
+    stageAll: () => git.stageAll(cwd),
+    unstageAll: () => git.unstageAll(cwd),
+    commit: (message: string) => git.commit(message, cwd),
+    push: () => git.push(cwd),
+    pull: () => git.pull(cwd),
+    pushForce: () => git.pushForce(cwd),
+    diffFile: (path: string, staged: boolean) =>
+      git.diffFile(path, staged, cwd),
+    logRecent: (limit = 10) => git.logRecent(limit, cwd),
+    branchList: () => git.branchList(cwd),
+    branchSwitch: (name: string) => git.branchSwitch(name, cwd),
+    branchCreate: (name: string, checkout: boolean) =>
+      git.branchCreate(name, checkout, cwd),
+    branchDelete: (name: string) => git.branchDelete(name, cwd),
+    suggestCommitMessage: () => git.suggestCommitMessage(cwd),
+    remoteUrl: () => git.remoteUrl(cwd),
+    discardFile: (path: string) => git.discardFile(path, cwd),
+    fileAtHead: (path: string) => git.fileAtHead(path, cwd),
+    worktreeList: () => git.worktreeList(cwd),
+    worktreeAdd: (name: string, path: string, branch: string | null) =>
+      git.worktreeAdd(name, path, branch, cwd),
+    worktreeRemove: (name: string) => git.worktreeRemove(name, cwd),
+    conflictList: () => git.conflictList(cwd),
+    resolveOurs: (path: string) => git.resolveOurs(path, cwd),
+    resolveTheirs: (path: string) => git.resolveTheirs(path, cwd),
+    revertCommit: (sha: string) => git.revertCommit(sha, cwd),
+    resetHard: (sha: string) => git.resetHard(sha, cwd),
+  };
+}
 
 // ── Skills (Phase 4) ─────────────────────────────────────
 

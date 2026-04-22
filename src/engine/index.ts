@@ -245,10 +245,12 @@ export class ZeroCanvasEngine {
         break;
       case "ACP_LIST_AGENTS":
       case "ACP_NEW_SESSION":
+      case "ACP_INIT_AGENT":
       case "ACP_AUTHENTICATE":
       case "ACP_PROMPT":
       case "ACP_CANCEL":
       case "ACP_PERMISSION_RESPONSE":
+      case "ACP_SET_MODE":
         await this.handleAcpMessage(msg, ws);
         break;
       case "CONNECTED":
@@ -318,6 +320,21 @@ export class ZeroCanvasEngine {
           }));
           return;
         }
+        case "ACP_INIT_AGENT": {
+          // Spawns the subprocess with empty env (if not already running)
+          // so the auth screen can read the agent's advertised auth methods.
+          // Providing a real env later (via ACP_NEW_SESSION) will transparently
+          // respawn the subprocess — see session-manager `sameEnv` handling.
+          const initialize = await this.acp.initializeAgent(msg.agentId);
+          this.server.send(ws, createMessage({
+            type: "ACP_AGENT_INITIALIZED",
+            source: "engine",
+            requestId: msg.id,
+            agentId: msg.agentId,
+            initialize,
+          }));
+          return;
+        }
         case "ACP_AUTHENTICATE": {
           await this.acp.authenticate(msg.agentId, msg.methodId);
           this.server.send(ws, createMessage({
@@ -359,6 +376,18 @@ export class ZeroCanvasEngine {
         }
         case "ACP_PERMISSION_RESPONSE": {
           this.acp.answerPermission(msg.permissionId, msg.response);
+          return;
+        }
+        case "ACP_SET_MODE": {
+          await this.acp.setMode(msg.agentId, msg.sessionId, msg.modeId);
+          this.server.send(ws, createMessage({
+            type: "ACP_MODE_CHANGED",
+            source: "engine",
+            requestId: msg.id,
+            agentId: msg.agentId,
+            sessionId: msg.sessionId,
+            modeId: msg.modeId,
+          }));
           return;
         }
       }

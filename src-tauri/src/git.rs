@@ -46,6 +46,17 @@ fn root_from_state(state: &SidecarState) -> Result<PathBuf, String> {
         .ok_or_else(|| "no project root".to_string())
 }
 
+/// Resolve the project root for a git op. When the frontend supplies
+/// `cwd` (the active chat's folder), use that; otherwise fall back to
+/// the engine's global root. Lets per-chat git ops work without
+/// reloading the whole project.
+fn resolve_root(state: &SidecarState, cwd: Option<String>) -> Result<PathBuf, String> {
+    match cwd {
+        Some(s) if !s.is_empty() => Ok(PathBuf::from(s)),
+        _ => root_from_state(state),
+    }
+}
+
 /// RemoteCallbacks wired up to fall through to whatever git credential
 /// helper the user already has configured for the remote. This mirrors
 /// what `git push` / `git pull` would do themselves.
@@ -137,8 +148,8 @@ fn categorise(status: Status) -> (Option<(&'static str, bool)>, Option<(&'static
 }
 
 #[tauri::command]
-pub fn git_status(state: tauri::State<'_, SidecarState>) -> Result<GitStatus, String> {
-    let root = root_from_state(&state)?;
+pub fn git_status(state: tauri::State<'_, SidecarState>, cwd: Option<String>) -> Result<GitStatus, String> {
+    let root = resolve_root(&state, cwd)?;
     let repo = open_repo(&root)?;
 
     // Current branch + HEAD SHA
@@ -226,9 +237,10 @@ pub fn git_status(state: tauri::State<'_, SidecarState>) -> Result<GitStatus, St
 #[tauri::command]
 pub fn git_stage_file(
     state: tauri::State<'_, SidecarState>,
+    cwd: Option<String>,
     path: String,
 ) -> Result<(), String> {
-    let root = root_from_state(&state)?;
+    let root = resolve_root(&state, cwd)?;
     let repo = open_repo(&root)?;
     let mut index = repo.index().map_err(|e| e.to_string())?;
     index
@@ -241,9 +253,10 @@ pub fn git_stage_file(
 #[tauri::command]
 pub fn git_unstage_file(
     state: tauri::State<'_, SidecarState>,
+    cwd: Option<String>,
     path: String,
 ) -> Result<(), String> {
-    let root = root_from_state(&state)?;
+    let root = resolve_root(&state, cwd)?;
     let repo = open_repo(&root)?;
     // `reset` against the current HEAD for a single path: this un-indexes
     // the change so it becomes unstaged. Falls back to removing the path
@@ -264,8 +277,8 @@ pub fn git_unstage_file(
 }
 
 #[tauri::command]
-pub fn git_stage_all(state: tauri::State<'_, SidecarState>) -> Result<(), String> {
-    let root = root_from_state(&state)?;
+pub fn git_stage_all(state: tauri::State<'_, SidecarState>, cwd: Option<String>) -> Result<(), String> {
+    let root = resolve_root(&state, cwd)?;
     let repo = open_repo(&root)?;
     let mut index = repo.index().map_err(|e| e.to_string())?;
     index
@@ -276,8 +289,8 @@ pub fn git_stage_all(state: tauri::State<'_, SidecarState>) -> Result<(), String
 }
 
 #[tauri::command]
-pub fn git_unstage_all(state: tauri::State<'_, SidecarState>) -> Result<(), String> {
-    let root = root_from_state(&state)?;
+pub fn git_unstage_all(state: tauri::State<'_, SidecarState>, cwd: Option<String>) -> Result<(), String> {
+    let root = resolve_root(&state, cwd)?;
     let repo = open_repo(&root)?;
     if let Ok(head_ref) = repo.head() {
         let obj = head_ref.peel(git2::ObjectType::Any).map_err(|e| e.to_string())?;
@@ -300,9 +313,10 @@ pub struct CommitResult {
 #[tauri::command]
 pub fn git_commit(
     state: tauri::State<'_, SidecarState>,
+    cwd: Option<String>,
     message: String,
 ) -> Result<CommitResult, String> {
-    let root = root_from_state(&state)?;
+    let root = resolve_root(&state, cwd)?;
     let repo = open_repo(&root)?;
 
     let trimmed = message.trim();
@@ -347,8 +361,8 @@ fn current_branch_name(repo: &Repository) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn git_push(state: tauri::State<'_, SidecarState>) -> Result<(), String> {
-    let root = root_from_state(&state)?;
+pub fn git_push(state: tauri::State<'_, SidecarState>, cwd: Option<String>) -> Result<(), String> {
+    let root = resolve_root(&state, cwd)?;
     let repo = open_repo(&root)?;
     let branch = current_branch_name(&repo)?;
     let mut remote = repo
@@ -366,8 +380,8 @@ pub fn git_push(state: tauri::State<'_, SidecarState>) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn git_pull(state: tauri::State<'_, SidecarState>) -> Result<(), String> {
-    let root = root_from_state(&state)?;
+pub fn git_pull(state: tauri::State<'_, SidecarState>, cwd: Option<String>) -> Result<(), String> {
+    let root = resolve_root(&state, cwd)?;
     let repo = open_repo(&root)?;
     let branch = current_branch_name(&repo)?;
     let mut remote = repo
@@ -428,10 +442,11 @@ pub struct DiffResult {
 #[tauri::command]
 pub fn git_diff_file(
     state: tauri::State<'_, SidecarState>,
+    cwd: Option<String>,
     path: String,
     staged: bool,
 ) -> Result<DiffResult, String> {
-    let root = root_from_state(&state)?;
+    let root = resolve_root(&state, cwd)?;
     let repo = open_repo(&root)?;
 
     let mut opts = git2::DiffOptions::new();
@@ -494,9 +509,10 @@ fn time_seconds(t: Time) -> i64 {
 #[tauri::command]
 pub fn git_log_recent(
     state: tauri::State<'_, SidecarState>,
+    cwd: Option<String>,
     limit: Option<usize>,
 ) -> Result<Vec<CommitLog>, String> {
-    let root = root_from_state(&state)?;
+    let root = resolve_root(&state, cwd)?;
     let repo = open_repo(&root)?;
     let limit = limit.unwrap_or(10).min(100);
 
@@ -542,8 +558,9 @@ pub struct BranchInfo {
 #[tauri::command]
 pub fn git_branch_list(
     state: tauri::State<'_, SidecarState>,
+    cwd: Option<String>,
 ) -> Result<Vec<BranchInfo>, String> {
-    let root = root_from_state(&state)?;
+    let root = resolve_root(&state, cwd)?;
     let repo = open_repo(&root)?;
     let mut out = Vec::new();
     let branches = repo
@@ -568,9 +585,10 @@ pub fn git_branch_list(
 #[tauri::command]
 pub fn git_branch_switch(
     state: tauri::State<'_, SidecarState>,
+    cwd: Option<String>,
     name: String,
 ) -> Result<(), String> {
-    let root = root_from_state(&state)?;
+    let root = resolve_root(&state, cwd)?;
     let repo = open_repo(&root)?;
     let refname = format!("refs/heads/{}", name);
     let obj = repo
@@ -588,6 +606,7 @@ pub fn git_branch_switch(
 #[tauri::command]
 pub fn git_branch_create(
     state: tauri::State<'_, SidecarState>,
+    cwd: Option<String>,
     name: String,
     checkout: bool,
 ) -> Result<(), String> {
@@ -595,7 +614,7 @@ pub fn git_branch_create(
     if trimmed.is_empty() {
         return Err("branch name is empty".into());
     }
-    let root = root_from_state(&state)?;
+    let root = resolve_root(&state, cwd)?;
     let repo = open_repo(&root)?;
     let head_commit = repo
         .head()
@@ -620,9 +639,10 @@ pub fn git_branch_create(
 #[tauri::command]
 pub fn git_branch_delete(
     state: tauri::State<'_, SidecarState>,
+    cwd: Option<String>,
     name: String,
 ) -> Result<(), String> {
-    let root = root_from_state(&state)?;
+    let root = resolve_root(&state, cwd)?;
     let repo = open_repo(&root)?;
     let mut branch = repo
         .find_branch(&name, BranchType::Local)
@@ -652,8 +672,9 @@ fn top_segment(path: &str) -> &str {
 #[tauri::command]
 pub fn git_suggest_commit_message(
     state: tauri::State<'_, SidecarState>,
+    cwd: Option<String>,
 ) -> Result<String, String> {
-    let root = root_from_state(&state)?;
+    let root = resolve_root(&state, cwd)?;
     let repo = open_repo(&root)?;
 
     // Staged files only — that's what's actually about to be committed.
@@ -773,8 +794,8 @@ fn normalise_remote_url(raw: &str) -> String {
 }
 
 #[tauri::command]
-pub fn git_remote_url(state: tauri::State<'_, SidecarState>) -> Result<Option<String>, String> {
-    let root = root_from_state(&state)?;
+pub fn git_remote_url(state: tauri::State<'_, SidecarState>, cwd: Option<String>) -> Result<Option<String>, String> {
+    let root = resolve_root(&state, cwd)?;
     let repo = open_repo(&root)?;
     let remote = match repo.find_remote("origin") {
         Ok(r) => r,
@@ -791,9 +812,10 @@ pub fn git_remote_url(state: tauri::State<'_, SidecarState>) -> Result<Option<St
 #[tauri::command]
 pub fn git_discard_file(
     state: tauri::State<'_, SidecarState>,
+    cwd: Option<String>,
     path: String,
 ) -> Result<(), String> {
-    let root = root_from_state(&state)?;
+    let root = resolve_root(&state, cwd)?;
     let repo = open_repo(&root)?;
 
     let mut opts = StatusOptions::new();
@@ -835,9 +857,10 @@ pub struct FileVersion {
 #[tauri::command]
 pub fn git_file_at_head(
     state: tauri::State<'_, SidecarState>,
+    cwd: Option<String>,
     path: String,
 ) -> Result<FileVersion, String> {
-    let root = root_from_state(&state)?;
+    let root = resolve_root(&state, cwd)?;
     let repo = open_repo(&root)?;
 
     let head_tree = match repo.head() {
@@ -913,8 +936,9 @@ pub struct WorktreeInfo {
 #[tauri::command]
 pub fn git_worktree_list(
     state: tauri::State<'_, SidecarState>,
+    cwd: Option<String>,
 ) -> Result<Vec<WorktreeInfo>, String> {
-    let root = root_from_state(&state)?;
+    let root = resolve_root(&state, cwd)?;
     let repo = open_repo(&root)?;
     let names = repo
         .worktrees()
@@ -940,11 +964,12 @@ pub fn git_worktree_list(
 #[tauri::command]
 pub fn git_worktree_add(
     state: tauri::State<'_, SidecarState>,
+    cwd: Option<String>,
     name: String,
     path: String,
     branch: Option<String>,
 ) -> Result<String, String> {
-    let root = root_from_state(&state)?;
+    let root = resolve_root(&state, cwd)?;
     let repo = open_repo(&root)?;
     let dest = PathBuf::from(&path);
     if dest.exists() {
@@ -968,9 +993,10 @@ pub fn git_worktree_add(
 #[tauri::command]
 pub fn git_worktree_remove(
     state: tauri::State<'_, SidecarState>,
+    cwd: Option<String>,
     name: String,
 ) -> Result<(), String> {
-    let root = root_from_state(&state)?;
+    let root = resolve_root(&state, cwd)?;
     let repo = open_repo(&root)?;
     let wt = repo
         .find_worktree(&name)
@@ -1002,8 +1028,9 @@ pub struct ConflictFile {
 #[tauri::command]
 pub fn git_conflict_list(
     state: tauri::State<'_, SidecarState>,
+    cwd: Option<String>,
 ) -> Result<Vec<ConflictFile>, String> {
-    let root = root_from_state(&state)?;
+    let root = resolve_root(&state, cwd)?;
     let repo = open_repo(&root)?;
     let index = repo.index().map_err(|e| e.to_string())?;
     if !index.has_conflicts() {
@@ -1080,9 +1107,10 @@ fn resolve_conflict(repo: &Repository, path: &str, theirs: bool) -> Result<(), S
 #[tauri::command]
 pub fn git_resolve_file_ours(
     state: tauri::State<'_, SidecarState>,
+    cwd: Option<String>,
     path: String,
 ) -> Result<(), String> {
-    let root = root_from_state(&state)?;
+    let root = resolve_root(&state, cwd)?;
     let repo = open_repo(&root)?;
     resolve_conflict(&repo, &path, false)
 }
@@ -1090,9 +1118,10 @@ pub fn git_resolve_file_ours(
 #[tauri::command]
 pub fn git_resolve_file_theirs(
     state: tauri::State<'_, SidecarState>,
+    cwd: Option<String>,
     path: String,
 ) -> Result<(), String> {
-    let root = root_from_state(&state)?;
+    let root = resolve_root(&state, cwd)?;
     let repo = open_repo(&root)?;
     resolve_conflict(&repo, &path, true)
 }
@@ -1102,9 +1131,10 @@ pub fn git_resolve_file_theirs(
 #[tauri::command]
 pub fn git_revert_commit(
     state: tauri::State<'_, SidecarState>,
+    cwd: Option<String>,
     sha: String,
 ) -> Result<String, String> {
-    let root = root_from_state(&state)?;
+    let root = resolve_root(&state, cwd)?;
     let repo = open_repo(&root)?;
     let oid = git2::Oid::from_str(&sha).map_err(|e| format!("bad sha: {}", e))?;
     let commit = repo.find_commit(oid).map_err(|e| e.to_string())?;
@@ -1116,9 +1146,10 @@ pub fn git_revert_commit(
 #[tauri::command]
 pub fn git_reset_hard(
     state: tauri::State<'_, SidecarState>,
+    cwd: Option<String>,
     sha: String,
 ) -> Result<(), String> {
-    let root = root_from_state(&state)?;
+    let root = resolve_root(&state, cwd)?;
     let repo = open_repo(&root)?;
     let oid = git2::Oid::from_str(&sha).map_err(|e| format!("bad sha: {}", e))?;
     let obj = repo
@@ -1130,8 +1161,8 @@ pub fn git_reset_hard(
 }
 
 #[tauri::command]
-pub fn git_push_force(state: tauri::State<'_, SidecarState>) -> Result<(), String> {
-    let root = root_from_state(&state)?;
+pub fn git_push_force(state: tauri::State<'_, SidecarState>, cwd: Option<String>) -> Result<(), String> {
+    let root = resolve_root(&state, cwd)?;
     let repo = open_repo(&root)?;
     let branch = current_branch_name(&repo)?;
     let mut remote = repo

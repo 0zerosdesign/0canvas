@@ -212,15 +212,17 @@ Everything design-specific is **purely client-side rendering**, so we keep the "
 
 ## Verification
 
-- [ ] `registry.ts` fetches the CDN JSON and surfaces all 27 agents
-- [ ] Agents Panel matches Zed/Fabriqa screenshot UX (filter, install/remove, set default, advanced options, auto-detect installed)
-- [ ] Claude Agent installs via npx, user authenticates via `/login` in in-app terminal, session round-trips a tool call end-to-end without 0canvas touching the OAuth token
-- [ ] Claude Agent also works with API-key path; key lives in OS keychain, never in `.0c` or logs
-- [ ] Codex, Gemini, and one more agent work identically
-- [ ] Chat panel renders `AgentMessageChunk`, `AgentThoughtChunk`, `ToolCall`, `ToolCallUpdate`, `Plan`, `CurrentModeUpdate` correctly
-- [ ] Permission modal gates every tool call that requires it
-- [ ] Existing 5 design tools (read state, get styles, list tokens, get feedback, apply CSS) round-trip through ACP as client-side handlers
-- [ ] Upgrade path: bumping `@agentclientprotocol/sdk` picks up protocol updates; refetching registry picks up agent updates; neither requires 0canvas code changes
+- [x] `registry.ts` fetches the CDN JSON and surfaces all 27 agents — Phase 1a
+- [x] Agents Panel matches Zed/Fabriqa screenshot UX (filter, tabs, install-state pills, auto-detect installed, resource links) — Phase 1a + Phase 3
+- [ ] ~~Install / Remove / Set default / Advanced options~~ — install is implicit via npx/uvx on first use, so the UI doesn't need an explicit install/remove action today. Revisit if/when we add binary-distribution agents that need explicit disk management.
+- [x] Claude Agent spawned via npx, user authenticates via API key (keychain) or subscription (CLI /login), session round-trips a tool call end-to-end without 0canvas touching the OAuth token — Phase 1c + Phase 2a
+- [x] Claude Agent works with API-key path; key lives in OS keychain, never in `.0c` or logs — Phase 1c
+- [x] Codex, Gemini work via the same auth surface — Phase 4 (dynamic authMethods)
+- [x] Chat panel renders `AgentMessageChunk`, `AgentThoughtChunk`, `ToolCall`, `ToolCallUpdate` — Phase 1c
+- [ ] `Plan`, `CurrentModeUpdate` rendering — still minimal (noop). Low priority; agents rarely emit them today.
+- [x] Permission modal gates every tool call that requires it — Phase 2d (risk-tinted, designer language)
+- [x] Existing 5 design tools round-trip through ACP as MCP-over-HTTP, auto-attached on every session — Phase 2a
+- [x] Upgrade path: bumping `@agentclientprotocol/sdk` picks up protocol updates; refetching registry picks up agent updates; neither requires 0canvas code changes — all registry + auth-method rendering is data-driven as of Phase 4
 
 ---
 
@@ -442,6 +444,78 @@ The ACP surface now rides the same design tokens as the legacy `oc-chat-*` surfa
 - **Agent never initializes:** look at engine stdout for `[acp claude-acp]` stderr lines. Common causes: `npx` not on PATH, network blocking npm, corporate proxy not configured.
 - **`auth_required` error on session start:** the agent needs auth you haven't provided. For Claude Agent: `export ANTHROPIC_API_KEY=...` or run `claude /login` in a terminal first.
 - **Prompt hangs forever:** cancel with Stop. Check stderr log. Most likely the agent is waiting on a permission prompt that didn't render — file an issue with the permission request payload.
+
+---
+
+## Phase 3 — Registry picker grows up (install state, tabs, resource links)
+
+The side panel now speaks the Zed/Fabriqa dialect: install-state badges, a PATH probe that marks locally-installed CLIs as "Installed" at registry-load time, All / Installed / Not installed tabs, and a per-row resource strip (repo / site / license). Installed agents float to the top in every tab view so users who already have Claude/Codex/Gemini see "Start" immediately rather than waiting 15–30s for an npx download.
+
+### What shipped
+
+- [src/engine/acp/registry.ts](src/engine/acp/registry.ts) — `detectInstalled(agent)` probes the user's PATH for the vendor's CLI (`claude`, `codex`, `gemini`, `copilot`) via `which`/`where`. A new `listEnriched()` runs probes in parallel and returns `EnrichedRegistryAgent[]` with `installed: boolean` and `launchKind: "npx" | "uvx" | "binary" | "unavailable"`.
+- [src/engine/acp/session-manager.ts](src/engine/acp/session-manager.ts) — `listAgents()` / `refreshRegistry()` now return the enriched shape so the wire stays spec-honest without a parallel RPC.
+- [src/engine/types.ts](src/engine/types.ts), [src/0canvas/bridge/messages.ts](src/0canvas/bridge/messages.ts) — `BridgeRegistryAgent` gained `installed?: boolean` + `launchKind?`. No new message types; just two fields on the existing `ACP_AGENTS_LIST` payload.
+- [src/0canvas/acp/agents-panel.tsx](src/0canvas/acp/agents-panel.tsx) — tabs strip with live counts, risk-tinted pill on each row (Installed / Available / Unavailable), per-row meta (repo / site / license). Installed-first sort means the first row is always the fastest path to a live session.
+- [src/0canvas/engine/0canvas-styles.ts](src/0canvas/engine/0canvas-styles.ts) — `oc-acp-reg-tabs`, `oc-acp-reg-tab{,-active,-count}`, `oc-acp-reg-pill{,-installed,-available,-unavailable}`, `oc-acp-reg-meta` all token-backed.
+
+### How to verify
+
+1. **Auto-detect.** Have `claude` on PATH. Open the picker — Claude Agent shows the emerald "Installed" pill and floats to the top. Remove `claude` from PATH, refresh — pill swaps to "Available".
+2. **Tabs.** Switch to **Installed** — list collapses to just the CLIs you have locally. Switch to **Not installed** — everything else, ready to spawn via npx/uvx on first use.
+3. **Resource links.** Under Claude Agent, a small strip shows `repo · site · Apache-2.0`. Clicking `repo` opens GitHub; clicks don't bubble into the row's Start action.
+4. **Search + tabs compose.** Type `gemini` in search with All active — you get the Gemini CLI row. Flip to Installed — depending on what's on PATH, either the row stays or the view goes empty with a helpful hint ("No installed agents detected on PATH…").
+
+---
+
+## Phase 4 — Spec-honest auth surfacing (dynamic methods + Gateway)
+
+Auth is no longer a hardcoded per-vendor UI. The modal reads `initialize.authMethods` advertised by the agent and renders each method faithfully: env-var methods get a per-var input (password when `secret: true`, persisted to the OS keychain under `acp::<agentId>::<var>`), terminal methods get the "uses your installed CLI" disclaimer, agent-kind methods get "agent handles its own auth". Known vendors still get the enriched copy + console URL + primary-key keychain slot — because vendor enrichment is cosmetic, not structural.
+
+For Claude specifically, a Gateway (advanced) card now exposes `ANTHROPIC_BASE_URL` + `ANTHROPIC_CUSTOM_HEADERS` so the same subprocess can point at LiteLLM or a corporate proxy without shelling out to edit env.
+
+### What shipped
+
+- [src/engine/acp/session-manager.ts](src/engine/acp/session-manager.ts) — new `initializeAgent(agentId)` spawns the subprocess with empty env and returns the initialize response. If the user later supplies an env through `ACP_NEW_SESSION`, the existing `sameEnv` guard dispose-and-respawns so the agent sees the right env at fork time.
+- [src/engine/types.ts](src/engine/types.ts), [src/0canvas/bridge/messages.ts](src/0canvas/bridge/messages.ts) — new `ACP_INIT_AGENT` request + `ACP_AGENT_INITIALIZED` response wire messages carrying the raw `InitializeResponse`.
+- [src/engine/index.ts](src/engine/index.ts) — `handleAcpMessage` dispatches `ACP_INIT_AGENT`. No other changes; the existing `ACP_NEW_SESSION` path stays the single source of truth for session creation.
+- [src/0canvas/acp/use-acp-session.tsx](src/0canvas/acp/use-acp-session.tsx) — new `initAgent(agentId)` control method.
+- [src/0canvas/acp/acp-mode.tsx](src/0canvas/acp/acp-mode.tsx) — new `loading` screen between picker and auth while we fetch initialize. If the agent advertises zero interactive methods (agent-kind only), AuthModal auto-confirms and we jump straight to chat.
+- [src/0canvas/acp/auth-modal.tsx](src/0canvas/acp/auth-modal.tsx) — full rewrite: `buildOptions()` translates advertised `AuthMethod`s into an `Option` union (env_var / terminal / agent), with per-vendor enrichment and a synthetic Gateway option for `claude-acp`. Env vars persist to the OS keychain; the modal pre-fills from there on next open.
+- `AGENT_AUTH_CONFIG` grew a `supportsGateway` + `gatewayVars` hook so the Gateway card is config-driven, not hardcoded inside JSX.
+
+### How to verify
+
+1. **Picker → loading → auth.** Pick Claude Agent. You see "Starting Claude Agent…" briefly while the subprocess spawns and initializes. Auth modal appears with the real advertised methods (if any) plus a **Gateway (advanced)** card for `claude-acp`.
+2. **Env-var auto-pick.** Paste `sk-ant-...`, click Continue. Session starts. Back out, pick Claude Agent again — the key is pre-filled from the keychain.
+3. **Gateway path.** Pick Gateway. Enter `https://litellm.example.com/anthropic`, optional headers. Continue. The subprocess respawns with `ANTHROPIC_BASE_URL` + `ANTHROPIC_CUSTOM_HEADERS` set; Claude Agent now talks to your gateway, not the public API.
+4. **Unknown agent.** Pick any agent with no `AGENT_AUTH_CONFIG` entry (e.g. `auggie`). The modal renders whatever methods the agent advertised — no "Anthropic API key" copy that would be wrong here.
+5. **Agent-only auth.** Pick an agent that advertises nothing but `agent`-kind methods. You never see the modal; it auto-confirms and the chat loads.
+
+---
+
+## Phase 5 — Subagent delegation (cards + quick-launch chips)
+
+Two client-only additions that make subagent spawning legible without a protocol extension. The chat recognises `SpawnAgentTool` flows (claude-agent-sdk's `Task`, plus any tool whose `rawInput` declares `subagent_type`) and renders them with a distinct purple-tinted card — tree icon, "Delegated to <type>" title, a one-line description from the handoff. A "Design audits" chip strip sits above the composer with three starter prompts that reliably trigger that subagent path on capable agents.
+
+### What shipped
+
+- [src/0canvas/acp/acp-chat.tsx](src/0canvas/acp/acp-chat.tsx) — `matchSubagent(tool)` returns a `SubagentInfo` for any tool call whose title matches `task|spawn_agent|delegate|subagent` OR whose `rawInput` declares `subagent_type`. `ToolCallCard` branches: design-tool cards stay green, subagent cards get the new purple treatment with a `GitBranch` icon and a "Subagent" vendor pill.
+- New `DESIGN_AUDITS` table (`a11y audit`, `token audit`, `polish pass`) renders as clickable chips above the composer. Each chip inserts a starter prompt into the textarea so the designer can tweak scope / selector before sending — nothing is sent automatically.
+- [src/0canvas/engine/0canvas-styles.ts](src/0canvas/engine/0canvas-styles.ts) — `oc-acp-tool-subagent` (purple-tinted variant of the tool card), `oc-acp-quicks` (composer quick-launch strip), `oc-acp-quick-chip`. All purely additive; no existing class changed meaning.
+
+### How to verify
+
+1. **Chip → composer.** Click the `a11y audit` chip. The textarea populates with the full starter prompt containing `@selection`. Edit to target a specific element, hit Send.
+2. **Subagent card.** Claude Agent will spawn a Task subagent. In the stream, the tool call shows up as a purple-bordered card titled "Delegated to a11y-auditor" (or similar, based on whatever subagent_type the parent chose) with the one-line description snippet. Status dot transitions Clock → Loader2 → CheckCircle2 like any other tool.
+3. **Unmatched tool.** Tools that aren't design-tools and aren't subagents (e.g. the agent's built-in `Bash` or `Read`) still render with the neutral `oc-acp-tool` treatment — no false positives.
+4. **Token / polish chips.** Each one produces a subagent-kind card for the agent that actually spawns one. For agents that don't support subagents, the prompt reads naturally as a plain instruction and falls through to ordinary tool cards.
+
+### What's still staged after 5
+
+- **Embedded terminal for `/login`.** Phase 4 leans on env-var + subscription paths; full `AuthMethodTerminal` fidelity (the agent wants a TUI, and we embed xterm.js in the modal) is still deferred. Not a blocker for the default API-key path.
+- **Session persistence.** Still in-memory. Refreshing or restarting the engine kills sessions.
+- **Subscription env scrubbing.** Subscription paths still inherit the launch shell's env. Intentional for now; Phase 6 can tighten if users ask.
 
 ## Decisions locked
 

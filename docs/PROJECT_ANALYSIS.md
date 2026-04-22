@@ -17,7 +17,7 @@
 > **Package:** `@zerosdesign/0canvas`
 > **Version:** 0.0.5 (npm — legacy channel; see V3)
 > **License:** MIT
-> **Repository:** `0zerosdesign/0canvas`
+> **Repository:** `Withso/0canvas`
 > **Original Design:** [Figma Design File](https://www.figma.com/design/pHn0A8C25STCmSniuSFuQp/Design-Collaboration-Tool)
 
 ---
@@ -587,7 +587,7 @@ All core features listed in Section 6 are implemented and functional:
 ---
 
 *Analysis completed on 2026-04-02*
-*Source: `0zerosdesign/0canvas` repository — full codebase review*
+*Source: `Withso/0canvas` repository — full codebase review*
 
 ---
 

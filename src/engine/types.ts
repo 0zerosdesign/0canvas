@@ -21,7 +21,7 @@ import type {
   SessionNotification,
   StopReason,
 } from "@agentclientprotocol/sdk";
-import type { RegistryAgent } from "./acp/registry.js";
+import type { EnrichedRegistryAgent } from "./acp/registry.js";
 
 export type MessageSource = "browser" | "engine";
 
@@ -180,6 +180,16 @@ export interface AcpNewSessionMessage extends BaseMessage {
   env?: Record<string, string>;
 }
 
+/**
+ * Spawn (or reuse) the agent subprocess and return the initialize response.
+ * Used by the auth screen so the UI can show the agent's advertised auth
+ * methods before we commit to creating a session.
+ */
+export interface AcpInitAgentMessage extends BaseMessage {
+  type: "ACP_INIT_AGENT";
+  agentId: string;
+}
+
 export interface AcpAuthenticateMessage extends BaseMessage {
   type: "ACP_AUTHENTICATE";
   agentId: string;
@@ -206,12 +216,19 @@ export interface AcpPermissionResponseMessage extends BaseMessage {
   response: RequestPermissionResponse;
 }
 
+export interface AcpSetModeMessage extends BaseMessage {
+  type: "ACP_SET_MODE";
+  agentId: string;
+  sessionId: string;
+  modeId: string;
+}
+
 // ── Engine → Browser
 
 export interface AcpAgentsListMessage extends BaseMessage {
   type: "ACP_AGENTS_LIST";
   requestId: string;
-  agents: RegistryAgent[];
+  agents: EnrichedRegistryAgent[];
 }
 
 export interface AcpSessionCreatedMessage extends BaseMessage {
@@ -229,6 +246,14 @@ export interface AcpAuthCompletedMessage extends BaseMessage {
   requestId: string;
   agentId: string;
   methodId: string;
+}
+
+/** Response to an ACP_INIT_AGENT — lets the browser read authMethods. */
+export interface AcpAgentInitializedMessage extends BaseMessage {
+  type: "ACP_AGENT_INITIALIZED";
+  requestId: string;
+  agentId: string;
+  initialize: InitializeResponse;
 }
 
 export interface AcpSessionUpdateMessage extends BaseMessage {
@@ -283,6 +308,14 @@ export interface AcpErrorMessage extends BaseMessage {
   message: string;
 }
 
+export interface AcpModeChangedMessage extends BaseMessage {
+  type: "ACP_MODE_CHANGED";
+  requestId: string;
+  agentId: string;
+  sessionId: string;
+  modeId: string;
+}
+
 // ── Union ────────────────────────────────────────────────
 
 export type EngineMessage =
@@ -305,13 +338,16 @@ export type EngineMessage =
   // ACP (browser → engine)
   | AcpListAgentsMessage
   | AcpNewSessionMessage
+  | AcpInitAgentMessage
   | AcpAuthenticateMessage
   | AcpPromptMessage
   | AcpCancelMessage
   | AcpPermissionResponseMessage
+  | AcpSetModeMessage
   // ACP (engine → browser)
   | AcpAgentsListMessage
   | AcpSessionCreatedMessage
+  | AcpAgentInitializedMessage
   | AcpAuthCompletedMessage
   | AcpSessionUpdateMessage
   | AcpPermissionRequestMessage
@@ -319,6 +355,7 @@ export type EngineMessage =
   | AcpPromptFailedMessage
   | AcpAgentStderrMessage
   | AcpAgentExitedMessage
+  | AcpModeChangedMessage
   | AcpErrorMessage;
 
 // ── Helpers ──────────────────────────────────────────────

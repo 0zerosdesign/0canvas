@@ -30,7 +30,11 @@ import type {
   WriteTextFileResponse,
 } from "@agentclientprotocol/sdk";
 
-import { RegistryClient, type RegistryAgent } from "./registry.js";
+import {
+  RegistryClient,
+  type EnrichedRegistryAgent,
+  type RegistryAgent,
+} from "./registry.js";
 import { startAcpClient, type AcpClient } from "./client.js";
 
 const ACP_PROTOCOL_VERSION = 1;
@@ -117,15 +121,25 @@ export class AcpSessionManager {
     this.mcpServers = this.mcpServers.filter((s) => s.name !== name);
   }
 
-  /** List all agents runnable on this host. Used for the registry UI. */
-  async listAgents(): Promise<RegistryAgent[]> {
-    return this.registry.listRunnable();
+  /** List all agents runnable on this host (enriched with install state). */
+  async listAgents(): Promise<EnrichedRegistryAgent[]> {
+    return this.registry.listEnriched();
   }
 
   /** Force-refresh the on-disk registry cache from the CDN. */
-  async refreshRegistry(): Promise<RegistryAgent[]> {
+  async refreshRegistry(): Promise<EnrichedRegistryAgent[]> {
     await this.registry.fetch({ force: true });
-    return this.registry.listRunnable();
+    return this.registry.listEnriched();
+  }
+
+  /**
+   * Spawn (if needed) the agent subprocess and return its initialize response.
+   * Used by the auth screen so the UI can render the agent's advertised auth
+   * methods *before* we commit to a full session. If the caller later provides
+   * an env that differs from the empty-env spawn, `ensureAgent` will respawn.
+   */
+  async initializeAgent(agentId: string) {
+    return this.ensureAgent(agentId);
   }
 
   /**
@@ -253,6 +267,18 @@ export class AcpSessionManager {
     const live = this.agents.get(agentId);
     if (!live) return;
     await live.client.connection.cancel({ sessionId });
+  }
+
+  /** Change an active session's mode (ACP `session/set_mode`). No-op
+   *  when the agent doesn't advertise the target mode — the ACP SDK
+   *  itself surfaces a protocol error in that case. */
+  async setMode(
+    agentId: string,
+    sessionId: string,
+    modeId: string,
+  ): Promise<void> {
+    const live = this.requireAgent(agentId);
+    await live.client.connection.setSessionMode({ sessionId, modeId });
   }
 
   /**

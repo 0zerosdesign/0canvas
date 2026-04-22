@@ -3151,6 +3151,14 @@ ${S} .oc-acp-tool-design {
   border-color: rgba(34,197,94,0.22);
   background: rgba(34,197,94,0.04);
 }
+${S} .oc-acp-tool-subagent {
+  border-color: rgba(168,85,247,0.3);
+  background: rgba(168,85,247,0.05);
+}
+${S} .oc-acp-tool-subagent .oc-acp-tool-icon { color: rgba(216,180,254,0.9); }
+${S} .oc-acp-tool-subagent .oc-acp-tool-vendor {
+  color: rgba(216,180,254,0.9);
+}
 ${S} .oc-acp-tool-head {
   display: flex; align-items: center; gap: 8px;
   padding: 8px 10px;
@@ -3299,59 +3307,228 @@ ${S} .oc-acp-perm-btn-cancel {
 }
 ${S} .oc-acp-perm-btn-cancel:hover { background: rgba(255,255,255,0.07); }
 
-/* ── Composer (ACP variant of oc-ai-input-row) ─────────── */
+/* ── Composer (3-row card: input + toolbar + footer) ───── */
 ${S} .oc-acp-composer {
   border-top: 1px solid var(--border-subtle);
   padding: 10px 12px 12px;
+  flex-shrink: 0;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
-${S} .oc-acp-composer-row {
+/* The card wraps textarea + toolbar together with one border that
+   lights up on focus-within — the whole affordance highlights when
+   the user is typing. */
+${S} .oc-acp-composer-card {
   position: relative;
-  display: flex; align-items: flex-end; gap: 8px;
-}
-${S} .oc-acp-input {
-  flex: 1; min-width: 0;
-  resize: none;
+  display: flex; flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   background: var(--surface-1);
-  border: 1px solid transparent; border-radius: 8px;
-  padding: 8px 12px;
-  color: var(--text-on-surface);
-  font-size: 12.5px; font-family: inherit;
-  outline: none;
-  transition: border-color 120ms ease, background 120ms ease;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  transition: border-color 120ms ease, background 120ms ease,
+              box-shadow 120ms ease;
+  padding: 4px 6px 4px 10px;
 }
-${S} .oc-acp-input:focus {
+${S} .oc-acp-composer-card:focus-within {
   border-color: var(--ring);
   background: var(--surface-0);
+  box-shadow: 0 0 0 2px var(--tint-primary-soft);
 }
-${S} .oc-acp-input::placeholder { color: var(--text-muted); }
-${S} .oc-acp-input:disabled { opacity: 0.5; }
-${S} .oc-acp-send-btn {
+${S} .oc-acp-composer-input {
+  width: 100%;
+  min-height: 26px;
+  max-height: 280px;
+  resize: none;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 6px 0 !important;
+  box-shadow: none !important;
+  color: var(--text-on-surface);
+  font-size: 13px; font-family: inherit;
+  outline: none;
+  line-height: 1.5;
+}
+${S} .oc-acp-composer-input:focus,
+${S} .oc-acp-composer-input:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+  background: transparent !important;
+}
+${S} .oc-acp-composer-input::placeholder { color: var(--text-muted); }
+${S} .oc-acp-composer-input:disabled { opacity: 0.5; }
+
+${S} .oc-acp-composer-toolbar {
+  display: flex; align-items: center;
+  gap: 4px;
+  padding: 4px 0 2px;
+  min-width: 0;
+}
+
+${S} .oc-acp-attachments {
+  display: flex; flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+${S} .oc-acp-attachment {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 7px 12px; border: none; border-radius: 8px;
-  background: var(--primary);
-  color: white; font-size: 11.5px; font-weight: 500;
-  font-family: inherit; cursor: pointer;
-  flex-shrink: 0;
-  transition: background 120ms ease;
+  padding: 3px 8px 3px 6px;
+  background: var(--tint-primary-soft);
+  color: var(--text-primary-light);
+  border: 1px solid var(--tint-primary-border);
+  border-radius: 999px;
+  font-size: 11px;
+  max-width: 220px;
 }
-${S} .oc-acp-send-btn:hover:not(:disabled) { background: var(--primary-hover); }
-${S} .oc-acp-send-btn:disabled {
-  background: rgba(255,255,255,0.06); color: var(--text-disabled);
+${S} .oc-acp-attachment-name {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  min-width: 0;
+}
+${S} .oc-acp-attachment-x {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.6;
+  padding: 0;
+  border-radius: 50%;
+  transition: opacity 120ms, background 120ms;
+}
+${S} .oc-acp-attachment-x:hover {
+  opacity: 1;
+  background: var(--tint-border-hover);
+}
+${S} .oc-acp-toolbar-spacer { flex: 1; }
+${S} .oc-acp-toolbar-sep {
+  width: 1px;
+  height: 14px;
+  background: var(--border-subtle);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+/* Footer row — branch / permissions / context — lives OUTSIDE
+   the card so the pills read as "chat metadata", not composer
+   inputs. Same type scale as the toolbar pills for visual parity. */
+${S} .oc-acp-composer-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 2px 0;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+/* Right-anchored variant of .oc-chat-dropdown-root.is-footer — for
+   pills at the right edge (context %) so the menu doesn't clip. */
+${S} .oc-chat-dropdown-root.is-footer.is-right .oc-chat-dropdown-menu {
+  left: auto;
+  right: 0;
+}
+
+/* Branch pill — ahead/behind counters inline with the branch name.
+   Mirrors Cursor's pattern of showing sync state at a glance. */
+${S} .oc-chat-branch-pill-counters {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 2px;
+  padding: 0 5px;
+  background: var(--tint-hover-strong);
+  border-radius: 999px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-on-surface-variant);
+}
+
+/* Usage popover — breakdown of input/output/cache tokens. */
+${S} .oc-chat-usage-popover {
+  min-width: 240px;
+  padding: 6px;
+}
+${S} .oc-chat-usage-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 4px 6px;
+  font-size: 11.5px;
+  color: var(--text-on-surface-variant);
+  font-family: var(--font-mono);
+}
+${S} .oc-chat-usage-row.is-primary {
+  color: var(--text-on-surface);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 2px;
+  padding-bottom: 6px;
+}
+
+/* Padded variant of dropdown hint for standalone hint rows (no item). */
+${S} .oc-chat-dropdown-item-hint--padded {
+  padding: 6px 10px;
+  display: block;
+}
+
+/* Meta row in a dropdown (e.g. "Refresh catalog") — dimmer, separator
+   above, sits at the footer of the menu. */
+${S} .oc-chat-dropdown-separator {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 4px 0;
+}
+${S} .oc-chat-dropdown-item--meta {
+  color: var(--text-on-surface-variant);
+}
+${S} .oc-chat-dropdown-item--meta:disabled {
+  opacity: 0.6;
   cursor: default;
 }
-${S} .oc-acp-stop-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 7px 12px; border: none; border-radius: 8px;
-  background: rgba(255,255,255,0.06); color: var(--text-on-surface);
-  font-size: 11.5px; font-family: inherit; cursor: pointer;
-  flex-shrink: 0;
-  transition: background 120ms ease;
+${S} .oc-chat-dropdown-item--meta .oc-chat-dropdown-item-hint {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  white-space: nowrap;
 }
-${S} .oc-acp-stop-btn:hover { background: rgba(255,255,255,0.1); }
-${S} .oc-acp-composer-hint {
-  display: flex; align-items: center; gap: 4px;
-  margin-top: 6px; padding: 0 4px;
-  font-size: 10px; color: var(--text-muted);
+${S} .oc-spin { animation: oc-spin 1s linear infinite; }
+
+/* Phase 5 — Design-audits quick-launch strip + subagent tool cards */
+${S} .oc-acp-quicks {
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 4px 8px;
+  flex-wrap: wrap;
+}
+${S} .oc-acp-quicks-label {
+  font-size: 9.5px; text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-hint);
+  margin-right: 2px;
+}
+${S} .oc-acp-quick-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px;
+  font-size: 10.5px; font-family: inherit;
+  color: rgba(216,180,254,0.9);
+  background: rgba(168,85,247,0.08);
+  border: 1px solid rgba(168,85,247,0.22);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+${S} .oc-acp-quick-chip:hover {
+  background: rgba(168,85,247,0.18);
+  color: rgba(233,213,255,1);
+}
+${S} .oc-acp-quick-chip[disabled] {
+  opacity: 0.4; cursor: not-allowed;
 }
 
 /* ── Mention picker (ACP variant of oc-slash-menu) ─────── */
@@ -3502,6 +3679,70 @@ ${S} .oc-acp-reg-footer a {
   display: inline-flex; align-items: center; gap: 4px;
 }
 ${S} .oc-acp-reg-footer a:hover { color: var(--text-on-surface); }
+
+/* Phase 3 — tabs, install-state pills, per-row resource links */
+${S} .oc-acp-reg-tabs {
+  display: flex; gap: 2px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+${S} .oc-acp-reg-tab {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px;
+  font-size: 11px; font-family: inherit;
+  color: var(--text-muted);
+  background: transparent; border: none; border-radius: 6px;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+${S} .oc-acp-reg-tab:hover { color: var(--text-on-surface); background: rgba(255,255,255,0.04); }
+${S} .oc-acp-reg-tab-active {
+  color: var(--text-on-surface);
+  background: rgba(255,255,255,0.06);
+}
+${S} .oc-acp-reg-tab-count {
+  font-size: 10px; color: var(--text-hint);
+}
+${S} .oc-acp-reg-tab-active .oc-acp-reg-tab-count { color: var(--text-on-surface-variant); }
+
+${S} .oc-acp-reg-pill {
+  font-size: 9.5px;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 1px 6px; border-radius: 999px;
+  border: 1px solid transparent;
+  flex-shrink: 0;
+}
+${S} .oc-acp-reg-pill-installed {
+  color: var(--text-success);
+  background: rgba(34,197,94,0.08);
+  border-color: rgba(34,197,94,0.24);
+}
+${S} .oc-acp-reg-pill-available {
+  color: var(--text-on-surface-variant);
+  background: rgba(255,255,255,0.04);
+  border-color: var(--border-subtle);
+}
+${S} .oc-acp-reg-pill-unavailable {
+  color: var(--text-hint);
+  background: rgba(255,255,255,0.02);
+  border-color: var(--border-subtle);
+}
+
+${S} .oc-acp-reg-meta {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 4px;
+  font-size: 10px; color: var(--text-hint);
+}
+${S} .oc-acp-reg-meta a {
+  display: inline-flex; align-items: center; gap: 3px;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+${S} .oc-acp-reg-meta a:hover { color: var(--text-on-surface); }
+${S} .oc-acp-reg-meta-license {
+  display: inline-flex; align-items: center; gap: 3px;
+  color: var(--text-hint);
+}
 
 /* ── Auth modal (method picker + key input) ────────────── */
 ${S} .oc-acp-auth-body { padding: 12px; }

@@ -22,13 +22,15 @@ import { WorkspaceProvider, useWorkspace, type ChatThread } from "./0canvas/stor
 import { hydrateAiApiKey } from "./0canvas/lib/openai";
 import { BridgeProvider } from "./0canvas/bridge/use-bridge";
 import { SelectionSync } from "./0canvas/acp/selection-sync";
-import { AutoConnect, EngineWorkspace } from "./0canvas/engine/0canvas-engine";
+import { AutoConnect } from "./0canvas/engine/0canvas-engine";
+import { AcpSessionsProvider } from "./0canvas/acp/sessions-provider";
+import { loadCatalog } from "./0canvas/acp/model-catalog";
 import { injectStyles } from "./0canvas/engine/0canvas-styles";
 import { Column1Nav } from "./shell/column1-nav";
 import { Column2Workspace } from "./shell/column2-workspace";
+import { Column3 } from "./shell/column3";
 import { TitleBar } from "./shell/title-bar";
 import { ActivityBar, type ActivityView } from "./shell/activity-bar";
-import { StatusBar } from "./shell/status-bar";
 import { SettingsPage } from "./0canvas/panels/settings-page";
 import { onProjectChanged } from "./native/tauri-events";
 import { getSetting, setSetting } from "./native/settings";
@@ -54,6 +56,16 @@ function ForceDesignPageOnBoot() {
   useEffect(() => {
     dispatch({ type: "SET_ACTIVE_PAGE", page: "design" });
   }, [dispatch]);
+  return null;
+}
+
+/** Warm the model catalog on boot so the composer pill shows
+ *  hot-updated models on first open. Failures are silent — the
+ *  bundled fallback kicks in. */
+function LoadModelCatalogOnBoot() {
+  useEffect(() => {
+    void loadCatalog();
+  }, []);
   return null;
 }
 
@@ -96,13 +108,31 @@ function ChatsPersistence() {
     if (hydrated.current) return;
     hydrated.current = true;
     const raw = getSetting<ChatThread[]>(CHATS_STORAGE_KEY, []);
-    // Schema migration (Stream 3): ensure every chat has a `folder`
-    // field. Chats persisted before the project-grouping work don't
-    // carry one; default them to "" so they fall under the ambient
-    // "No project" header rather than crashing the group function.
+    // Schema migrations — old chat records predate:
+    //   - `folder`   (Stream 3, per-project grouping)
+    //   - `agentId`  (Phase C, per-chat ACP binding)
+    //   - `agentName`
+    // Default missing fields rather than dropping old chats on the floor.
     const chats: ChatThread[] = raw.map((c) => ({
       ...c,
       folder: typeof c.folder === "string" ? c.folder : "",
+      agentId: typeof (c as any).agentId === "string" ? (c as any).agentId : null,
+      agentName: typeof (c as any).agentName === "string" ? (c as any).agentName : null,
+      model: typeof (c as any).model === "string" ? (c as any).model : null,
+      effort:
+        (c as any).effort === "low" ||
+        (c as any).effort === "medium" ||
+        (c as any).effort === "high" ||
+        (c as any).effort === "xhigh"
+          ? (c as any).effort
+          : "medium",
+      permissionMode:
+        (c as any).permissionMode === "full" ||
+        (c as any).permissionMode === "auto-edit" ||
+        (c as any).permissionMode === "ask" ||
+        (c as any).permissionMode === "plan-only"
+          ? (c as any).permissionMode
+          : "ask",
     }));
     const activeChatId = getSetting<string | null>(ACTIVE_CHAT_KEY, null);
     const stillActive =
@@ -176,6 +206,22 @@ function ShellRouter() {
   // Col 1 still renders its full tree inside the sidebar slot. Future
   // migration will swap this to filter what appears in the sidebar.
   const [activityView, setActivityView] = React.useState<ActivityView>("chats");
+
+  // Settings takes the entire body (Cursor-style full-screen). The 3-col
+  // shell hides while the user's in settings; a Back button returns them.
+  if (state.activePage === "settings") {
+    return (
+      <div className="oc-app-root">
+        <TitleBar />
+        <div className="oc-app-body">
+          <div data-0canvas-root="" className="oc-settings-root">
+            <SettingsPage />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="oc-app-root">
       <TitleBar />
@@ -184,12 +230,9 @@ function ShellRouter() {
         <div className="oc-app">
           <Column1Nav />
           <Column2Workspace />
-          <div className="oc-column-3" data-0canvas-root="">
-            {state.activePage === "settings" ? <SettingsPage /> : <EngineWorkspace />}
-          </div>
+          <Column3 />
         </div>
       </div>
-      <StatusBar />
     </div>
   );
 }
@@ -199,12 +242,15 @@ export function AppShell() {
     <WorkspaceProvider>
       <BridgeProvider>
         <AutoConnect>
-          <ForceDesignPageOnBoot />
-          <HydrateAiApiKey />
-          <ReloadOnProjectChange />
-          <ChatsPersistence />
-          <SelectionSync />
-          <ShellRouter />
+          <AcpSessionsProvider>
+            <ForceDesignPageOnBoot />
+            <HydrateAiApiKey />
+            <LoadModelCatalogOnBoot />
+            <ReloadOnProjectChange />
+            <ChatsPersistence />
+            <SelectionSync />
+            <ShellRouter />
+          </AcpSessionsProvider>
         </AutoConnect>
       </BridgeProvider>
     </WorkspaceProvider>

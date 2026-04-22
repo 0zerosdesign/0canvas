@@ -8,12 +8,26 @@
 // spawn, binary distributions download on first use, and uvx handles
 // Python packages similarly. From the UI's perspective every agent in the
 // registry is "one click from running".
+//
+// Phase 3 additions: install-state badge (Installed / Available / Unavailable)
+// from the engine's PATH probe, All / Installed / Not installed tabs,
+// and a per-row resource strip (repository / website / license).
 // ──────────────────────────────────────────────────────────
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Loader2, RefreshCw, Search, ExternalLink } from "lucide-react";
+import {
+  Loader2,
+  RefreshCw,
+  Search,
+  ExternalLink,
+  Github,
+  Globe,
+  Scale,
+} from "lucide-react";
 import type { BridgeRegistryAgent } from "../bridge/messages";
 import { Button, Input } from "../ui";
+
+type InstallFilter = "all" | "installed" | "available";
 
 interface AgentsPanelProps {
   listAgents: (force?: boolean) => Promise<BridgeRegistryAgent[]>;
@@ -26,6 +40,7 @@ export function AgentsPanel({ listAgents, onSelect, activeAgentId }: AgentsPanel
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
+  const [tab, setTab] = useState<InstallFilter>("all");
 
   const load = async (force = false) => {
     setLoading(true);
@@ -45,17 +60,40 @@ export function AgentsPanel({ listAgents, onSelect, activeAgentId }: AgentsPanel
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const filtered = useMemo(() => {
+  // Sorted + search-filtered. Tab filter is applied afterwards so each tab's
+  // count reflects the current search.
+  const searched = useMemo(() => {
     if (!agents) return [];
     const q = query.trim().toLowerCase();
-    if (!q) return agents;
-    return agents.filter(
-      (a) =>
-        a.name.toLowerCase().includes(q) ||
-        a.id.toLowerCase().includes(q) ||
-        a.description.toLowerCase().includes(q),
-    );
+    const base = q
+      ? agents.filter(
+          (a) =>
+            a.name.toLowerCase().includes(q) ||
+            a.id.toLowerCase().includes(q) ||
+            a.description.toLowerCase().includes(q),
+        )
+      : agents;
+    // Installed agents float to the top within whatever list we return.
+    return [...base].sort((a, b) => {
+      if (!!a.installed !== !!b.installed) return a.installed ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
   }, [agents, query]);
+
+  const counts = useMemo(() => {
+    const installed = searched.filter((a) => a.installed).length;
+    return {
+      all: searched.length,
+      installed,
+      available: searched.length - installed,
+    };
+  }, [searched]);
+
+  const filtered = useMemo(() => {
+    if (tab === "installed") return searched.filter((a) => a.installed);
+    if (tab === "available") return searched.filter((a) => !a.installed);
+    return searched;
+  }, [searched, tab]);
 
   return (
     <div className="oc-acp-surface">
@@ -85,6 +123,27 @@ export function AgentsPanel({ listAgents, onSelect, activeAgentId }: AgentsPanel
         </Button>
       </div>
 
+      <div className="oc-acp-reg-tabs">
+        <TabButton
+          active={tab === "all"}
+          onClick={() => setTab("all")}
+          label="All"
+          count={counts.all}
+        />
+        <TabButton
+          active={tab === "installed"}
+          onClick={() => setTab("installed")}
+          label="Installed"
+          count={counts.installed}
+        />
+        <TabButton
+          active={tab === "available"}
+          onClick={() => setTab("available")}
+          label="Not installed"
+          count={counts.available}
+        />
+      </div>
+
       <div className="oc-acp-reg-list">
         {error && (
           <div className="oc-acp-error" style={{ margin: "var(--space-6)" }}>
@@ -101,7 +160,13 @@ export function AgentsPanel({ listAgents, onSelect, activeAgentId }: AgentsPanel
           </div>
         )}
         {agents && filtered.length === 0 && (
-          <div className="oc-acp-empty-muted">No agents match "{query}".</div>
+          <div className="oc-acp-empty-muted">
+            {tab === "installed"
+              ? "No installed agents detected on PATH. Install Claude Code, Codex, or Gemini and refresh."
+              : tab === "available"
+              ? `No agents match "${query}".`
+              : `No agents match "${query}".`}
+          </div>
         )}
         {filtered.map((agent) => (
           <AgentRow
@@ -131,6 +196,29 @@ export function AgentsPanel({ listAgents, onSelect, activeAgentId }: AgentsPanel
   );
 }
 
+function TabButton({
+  active,
+  onClick,
+  label,
+  count,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  count: number;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`oc-acp-reg-tab ${active ? "oc-acp-reg-tab-active" : ""}`}
+    >
+      {label}
+      <span className="oc-acp-reg-tab-count">{count}</span>
+    </button>
+  );
+}
+
 function AgentRow({
   agent,
   onSelect,
@@ -140,13 +228,18 @@ function AgentRow({
   onSelect: (a: BridgeRegistryAgent) => void;
   active: boolean;
 }) {
-  const distKind = agent.distribution.npx
-    ? "npx"
-    : agent.distribution.uvx
-    ? "uvx"
-    : agent.distribution.binary
-    ? "binary"
-    : "unknown";
+  const distKind =
+    agent.launchKind && agent.launchKind !== "unavailable"
+      ? agent.launchKind
+      : agent.distribution.npx
+      ? "npx"
+      : agent.distribution.uvx
+      ? "uvx"
+      : agent.distribution.binary
+      ? "binary"
+      : "unknown";
+
+  const { pillLabel, pillClass } = statePill(agent);
 
   return (
     <div
@@ -172,9 +265,44 @@ function AgentRow({
           <span className="oc-acp-reg-name">{agent.name}</span>
           <span className="oc-acp-reg-version">v{agent.version}</span>
           <span className="oc-acp-reg-dist">{distKind}</span>
+          <span className={`oc-acp-reg-pill ${pillClass}`}>{pillLabel}</span>
         </div>
         <div className="oc-acp-reg-desc">{agent.description}</div>
         <div className="oc-acp-reg-id">{agent.id}</div>
+        {(agent.repository || agent.website || agent.license) && (
+          <div className="oc-acp-reg-meta">
+            {agent.repository && (
+              <a
+                href={agent.repository}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                title="Source repository"
+              >
+                <Github className="w-3 h-3" />
+                repo
+              </a>
+            )}
+            {agent.website && (
+              <a
+                href={agent.website}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                title="Website"
+              >
+                <Globe className="w-3 h-3" />
+                site
+              </a>
+            )}
+            {agent.license && (
+              <span className="oc-acp-reg-meta-license" title="License">
+                <Scale className="w-3 h-3" />
+                {agent.license}
+              </span>
+            )}
+          </div>
+        )}
       </div>
       <Button
         variant={active ? "outline" : "primary"}
@@ -186,8 +314,21 @@ function AgentRow({
           onSelect(agent);
         }}
       >
-        {active ? "Active" : "Start"}
+        {active ? "Active" : agent.installed ? "Start" : "Run"}
       </Button>
     </div>
   );
+}
+
+function statePill(agent: BridgeRegistryAgent): {
+  pillLabel: string;
+  pillClass: string;
+} {
+  if (agent.launchKind === "unavailable") {
+    return { pillLabel: "Unavailable", pillClass: "oc-acp-reg-pill-unavailable" };
+  }
+  if (agent.installed) {
+    return { pillLabel: "Installed", pillClass: "oc-acp-reg-pill-installed" };
+  }
+  return { pillLabel: "Available", pillClass: "oc-acp-reg-pill-available" };
 }

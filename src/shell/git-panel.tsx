@@ -19,7 +19,7 @@
 // credential helper (osxkeychain, ssh-agent, PAT).
 // ──────────────────────────────────────────────────────────
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   RefreshCw,
   GitBranch,
@@ -38,7 +38,7 @@ import {
   MoreHorizontal,
 } from "lucide-react";
 import {
-  git,
+  gitForCwd,
   notify,
   shellOpenUrl,
   type GitStatus,
@@ -50,6 +50,7 @@ import {
 } from "../native/tauri-events";
 import { getSetting, setSetting } from "../native/settings";
 import { Button, Textarea } from "../0canvas/ui";
+import { useChatCwd } from "./use-chat-cwd";
 
 const FORCE_PUSH_KEY = "git-allow-force-push";
 
@@ -126,10 +127,12 @@ function PreviewFrame({ css, label }: { css: string; label: string }) {
   );
 }
 
-function VisualDiff({ path, fallbackDiff }: {
+function VisualDiff({ path, fallbackDiff, cwd }: {
+  cwd?: string;
   path: string;
   fallbackDiff: GitDiff | null;
 }) {
+  const git = useMemo(() => gitForCwd(cwd), [cwd]);
   const [mode, setMode] = useState<VisualMode>("visual");
   const [head, setHead] = useState<string | null>(null);
   const [work, setWork] = useState<string | null>(null);
@@ -196,6 +199,7 @@ function VisualDiff({ path, fallbackDiff }: {
 function FileRow({
   file,
   expanded,
+  cwd,
   onToggle,
   onStageToggle,
   onDiscard,
@@ -204,6 +208,7 @@ function FileRow({
 }: {
   file: GitFileStatus;
   expanded: boolean;
+  cwd?: string;
   onToggle: () => void;
   onStageToggle: () => void;
   onDiscard?: () => void;
@@ -247,7 +252,7 @@ function FileRow({
         </Button>
       </div>
       {expanded && (
-        <VisualDiff path={file.path} fallbackDiff={diff} />
+        <VisualDiff path={file.path} fallbackDiff={diff} cwd={cwd} />
       )}
     </div>
   );
@@ -485,6 +490,8 @@ function CommitRow({
 // ── Main panel ──────────────────────────────────────────────
 
 export function GitPanel() {
+  const cwd = useChatCwd();
+  const git = useMemo(() => gitForCwd(cwd), [cwd]);
   const [status, setStatus] = useState<GitStatus | null>(null);
   const [commits, setCommits] = useState<GitCommit[]>([]);
   const [logLimit, setLogLimit] = useState<number>(10);
@@ -942,6 +949,7 @@ export function GitPanel() {
                   key={key}
                   file={f}
                   expanded={expanded.has(key)}
+                  cwd={cwd}
                   onToggle={() => toggleRow(f)}
                   onStageToggle={() => handleStage(f)}
                   onDiscard={() => handleDiscardFile(f)}
@@ -982,6 +990,7 @@ export function GitPanel() {
                   key={key}
                   file={f}
                   expanded={expanded.has(key)}
+                  cwd={cwd}
                   onToggle={() => toggleRow(f)}
                   onStageToggle={() => handleStage(f)}
                   diff={diffs[key] ?? null}

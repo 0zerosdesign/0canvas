@@ -191,9 +191,16 @@
   gap: 1px;
 }
 
+/* Explicit overrides of .oc-ui-btn (justify-content: center and
+   fixed height) — nav buttons are wide rows, not shrink-to-fit
+   controls, so they span the column and pin their label + icon to
+   the left. Padding defines the height. */
 .oc-column-1__action {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  height: auto;
   gap: 10px;
   padding: 8px 10px;
   background: transparent;
@@ -230,6 +237,7 @@
 
 .oc-column-1__workspace-btn {
   width: 100%;
+  height: auto;
   justify-content: flex-start;
 }
 
@@ -314,7 +322,9 @@
     "icon name"
     "icon path";
   align-items: center;
+  justify-content: flex-start;
   gap: 1px 10px;
+  height: auto;
   padding: 8px 10px;
   background: transparent;
   border: none;
@@ -389,6 +399,9 @@
 .oc-column-1__workspace-open {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  height: auto;
   gap: 8px;
   padding: 10px 12px;
   margin-top: 4px;
@@ -432,6 +445,53 @@
   height: 18px;
 }
 
+/* Collapsible section header (LOCALHOST). Same type treatment as
+   .oc-column-1__section-title but interactive — chevron + label. */
+.oc-column-1__section-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  height: auto;
+  gap: 4px;
+  padding: 4px 6px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.oc-column-1__section-header:hover {
+  background: var(--tint-hover);
+  color: var(--text-on-surface);
+}
+
+.oc-column-1__section-header > .oc-column-1__section-badge {
+  margin-left: auto;
+}
+
+.oc-column-1__section-title-text {
+  letter-spacing: 0.08em;
+}
+
+/* LOCALHOST is pinned to the bottom of the column (above the footer)
+   via the flex: 1 spacer. Give it its own max-height so the list
+   doesn't push the footer off-screen. */
+.oc-column-1__localhost {
+  flex-shrink: 0;
+  margin-top: 4px;
+  padding-bottom: 4px;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 6px;
+}
+
 .oc-column-1__section-badge {
   display: inline-flex;
   align-items: center;
@@ -466,6 +526,7 @@
 .oc-column-1__service {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 10px;
   padding: 6px 8px;
   background: transparent;
@@ -477,6 +538,7 @@
   cursor: pointer;
   font-family: inherit;
   width: 100%;
+  height: auto;
   overflow: hidden;
   transition: background 120ms ease;
 }
@@ -548,6 +610,7 @@
 .oc-column-1__folder-header {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 6px;
   padding: 6px 8px;
   background: transparent;
@@ -560,6 +623,7 @@
   cursor: pointer;
   font-family: inherit;
   width: 100%;
+  height: auto;
   transition: background 120ms ease;
 }
 
@@ -675,9 +739,11 @@
 .oc-column-1__profile {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 10px;
   flex: 1 1 auto;
   min-width: 0;
+  height: auto;
   padding: 6px 8px;
   background: transparent;
   border: none;
@@ -685,6 +751,7 @@
   color: var(--text-on-surface);
   font-size: 13px;
   font-weight: 500;
+  text-align: left;
   cursor: pointer;
   font-family: inherit;
   transition: background 120ms ease;
@@ -784,7 +851,10 @@
 .oc-column-1__menu-item {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 10px;
+  width: 100%;
+  height: auto;
   padding: 8px 10px;
   background: transparent;
   border: none;
@@ -2467,15 +2537,85 @@
 }
 
 /* ============================================================
- * Column 3 — Design Canvas (hosts EngineWorkspace)
+ * Column 3 — Design canvas + IDE tabs (Git/Terminal/Env/Todo)
  * ============================================================ */
 
 .oc-column-3 {
   flex: 1;
-  position: relative;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+  min-height: 0;
   overflow: hidden;
   background: var(--surface-0);
+}
+
+/* Tab bar at the top of column 3. Mirrors the column-2 tab bar so
+   the two feel part of the same system. */
+.oc-column-3__tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 10px 4px;
+  flex-shrink: 0;
+  overflow-x: auto;
+  background: var(--surface-floor);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.oc-column-3__tab {
+  height: auto !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px !important;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.oc-column-3__tab:hover {
+  color: var(--text-on-surface);
+  background: var(--tint-hover);
+}
+
+.oc-column-3__tab.is-active {
+  color: var(--text-on-surface);
+  background: var(--tint-active);
+}
+
+.oc-column-3__body {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.oc-column-3__body.is-design {
+  /* EngineWorkspace positions absolutely so give it a containing block. */
+  position: relative;
+}
+
+.oc-column-3__body.is-terminal,
+.oc-column-3__body.is-git,
+.oc-column-3__body.is-env,
+.oc-column-3__body.is-todo {
+  background: var(--surface-floor);
+}
+
+.oc-column-3__body > * {
+  flex: 1;
+  min-height: 0;
 }
 
 .oc-column-3 .oc-app-shell {

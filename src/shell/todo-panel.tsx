@@ -26,6 +26,7 @@ import {
   type TodoItem,
 } from "../native/tauri-events";
 import { Button, Input } from "../0canvas/ui";
+import { useChatCwd } from "./use-chat-cwd";
 
 function isTauriWebview(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -71,6 +72,7 @@ function buildRaw(lines: LineModel[]): string {
 }
 
 export function TodoPanel() {
+  const cwd = useChatCwd();
   const [lines, setLines] = useState<LineModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,7 +83,7 @@ export function TodoPanel() {
     setLoading(true);
     setError(null);
     try {
-      const file = await loadTodoFile();
+      const file = await loadTodoFile(cwd);
       if (!file) {
         setLines([]);
         return;
@@ -92,19 +94,20 @@ export function TodoPanel() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [cwd]);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
 
   // Debounced write — 400ms after the last keystroke / toggle / add / remove.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const scheduleSave = useCallback((next: LineModel[]) => {
     if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
     saveTimer.current = window.setTimeout(async () => {
       setSaving(true);
       try {
-        await saveTodoFile(buildRaw(next));
+        await saveTodoFile(buildRaw(next), cwd);
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
       } finally {

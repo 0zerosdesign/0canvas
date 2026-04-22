@@ -36,6 +36,13 @@ fn todo_path(root: &PathBuf) -> PathBuf {
     root.join(".0canvas").join("todo.md")
 }
 
+fn resolve_root(state: &SidecarState, cwd: Option<String>) -> Option<PathBuf> {
+    match cwd {
+        Some(s) if !s.is_empty() => Some(PathBuf::from(s)),
+        _ => state.current_root(),
+    }
+}
+
 /// Very simple checkbox-line parser. Accepts:
 ///   "- [ ] task"   → { done:false, text:"task" }
 ///   "- [x] task"   → { done:true,  text:"task" }
@@ -79,10 +86,11 @@ fn parse_todo_line(line: &str, idx: usize) -> Option<TodoItem> {
 }
 
 #[tauri::command]
-pub fn load_todo_file(state: tauri::State<'_, SidecarState>) -> Result<TodoFile, String> {
-    let root = state
-        .current_root()
-        .ok_or_else(|| "no project root".to_string())?;
+pub fn load_todo_file(
+    state: tauri::State<'_, SidecarState>,
+    cwd: Option<String>,
+) -> Result<TodoFile, String> {
+    let root = resolve_root(&state, cwd).ok_or_else(|| "no project root".to_string())?;
     let path = todo_path(&root);
 
     let raw = match fs::read_to_string(&path) {
@@ -105,10 +113,12 @@ pub fn load_todo_file(state: tauri::State<'_, SidecarState>) -> Result<TodoFile,
 /// Write the full markdown back. The frontend sends the complete raw
 /// content so we don't have to guess about whitespace / comments.
 #[tauri::command]
-pub fn save_todo_file(state: tauri::State<'_, SidecarState>, raw: String) -> Result<(), String> {
-    let root = state
-        .current_root()
-        .ok_or_else(|| "no project root".to_string())?;
+pub fn save_todo_file(
+    state: tauri::State<'_, SidecarState>,
+    cwd: Option<String>,
+    raw: String,
+) -> Result<(), String> {
+    let root = resolve_root(&state, cwd).ok_or_else(|| "no project root".to_string())?;
     let path = todo_path(&root);
 
     if let Some(parent) = path.parent() {

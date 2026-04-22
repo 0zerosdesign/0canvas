@@ -2,9 +2,12 @@
 // Column 2 — Agent Workspace
 // ──────────────────────────────────────────────────────────
 //
-// Phase 1B-d: Chat tab now mounts the real AIChatPanel — the
-// same component Column 3's right-panel-slot used in Phase 0.
-// Git / Terminal / Env / Todo remain placeholders until 1C.
+// Col 2 hosts the conversation layer:
+//   Chat     — AIChatPanel / ACP session for the active chat
+//   Mission  — Mission-control panel for orchestrating multi-chat runs
+//
+// IDE tools (Git / Terminal / Env / Todo) live in Column 3
+// where they have room to breathe.
 //
 // Tab state persists within a session but resets on reload,
 // which is fine: the underlying data (chat thread, git index,
@@ -15,23 +18,15 @@
 import React, { useEffect, useState } from "react";
 import {
   MessageSquare,
-  GitBranch,
-  TerminalSquare,
-  KeyRound,
-  ListChecks,
   Sparkles,
   type LucideIcon,
 } from "lucide-react";
-import { AIChatPanel } from "../0canvas/panels/ai-chat-panel";
-import { TerminalPanel } from "./terminal-panel";
-import { EnvPanel } from "./env-panel";
-import { TodoPanel } from "./todo-panel";
-import { GitPanel } from "./git-panel";
+import { Column2ChatView } from "./column2-chat-view";
 import { MissionPanel } from "./mission-panel";
 import { useWorkspace } from "../0canvas/store/store";
 import { Button } from "../0canvas/ui";
 
-type TabId = "chat" | "git" | "terminal" | "env" | "todo" | "mission";
+type TabId = "chat" | "mission";
 
 const TABS: Array<{
   id: TabId;
@@ -39,10 +34,6 @@ const TABS: Array<{
   icon: LucideIcon;
 }> = [
   { id: "chat", label: "Chat", icon: MessageSquare },
-  { id: "git", label: "Git", icon: GitBranch },
-  { id: "terminal", label: "Terminal", icon: TerminalSquare },
-  { id: "env", label: "Env", icon: KeyRound },
-  { id: "todo", label: "Todo", icon: ListChecks },
   { id: "mission", label: "Mission", icon: Sparkles },
 ];
 
@@ -64,14 +55,12 @@ export function Column2Workspace() {
     }
   }, [state.pendingChatSubmission, activeTab]);
 
-  // ⌘1..⌘5 → jump to the nth tab. Not fired if any modifier beyond the
-  // primary meta/ctrl is held so this doesn't clobber xterm's Cmd+Shift+
-  // shortcuts inside the Terminal tab.
+  // ⌘1 / ⌘2 → Chat / Mission. Column 3 owns ⌘6-0 for its own tabs.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return;
       if (e.shiftKey || e.altKey) return;
-      const idx = ["1", "2", "3", "4", "5"].indexOf(e.key);
+      const idx = ["1", "2"].indexOf(e.key);
       if (idx === -1) return;
       const tab = TABS[idx];
       if (!tab) return;
@@ -108,25 +97,17 @@ export function Column2Workspace() {
       <div
         className={`oc-column-2__body ${
           activeTab === "chat" ? "is-chat" : ""
-        } ${activeTab === "terminal" ? "is-terminal" : ""} ${
-          activeTab === "env" ? "is-env" : ""
-        } ${activeTab === "todo" ? "is-todo" : ""} ${
-          activeTab === "git" ? "is-git" : ""
         } ${activeTab === "mission" ? "is-mission" : ""}`}
         role="tabpanel"
       >
-        {/* AIChatPanel's CSS is scoped under [data-0canvas-root]
-            (same injected stylesheet as Column 3). Wrap it in a root
-            marker so its styles apply here too. */}
+        {/* ACP session UI is scoped under [data-0canvas-root] for
+            engine-injected tokens. Remount per-chat via the chatKey
+            so state flips cleanly when the user switches chats. */}
         {activeTab === "chat" && (
           <div data-0canvas-root="" className="oc-column-2__chat-root">
-            <AIChatPanel key={chatKey} />
+            <Column2ChatView key={chatKey} />
           </div>
         )}
-        {activeTab === "terminal" && <TerminalPanel />}
-        {activeTab === "env" && <EnvPanel />}
-        {activeTab === "todo" && <TodoPanel />}
-        {activeTab === "git" && <GitPanel />}
         {activeTab === "mission" && <MissionPanel />}
         {(() => {
           const p = TAB_PLACEHOLDERS[activeTab];

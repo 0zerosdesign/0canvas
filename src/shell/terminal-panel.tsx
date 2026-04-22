@@ -21,13 +21,14 @@
 //     root.
 // ──────────────────────────────────────────────────────────
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus, X as XIcon } from "lucide-react";
 import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { spawn, type IPty } from "tauri-pty";
 import { invoke } from "@tauri-apps/api/core";
 import "@xterm/xterm/css/xterm.css";
+import { useWorkspace } from "../0canvas/store/store";
 
 function isTauriWebview(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -41,6 +42,16 @@ async function resolveProjectRoot(): Promise<string | undefined> {
   } catch {
     return undefined;
   }
+}
+
+/** Preferred cwd for a new pty: the active chat's folder if set, else
+ *  the engine root. Lets `cd` land exactly where the user's agent is
+ *  already reading files. */
+async function resolveSessionCwd(
+  chatFolder: string | null,
+): Promise<string | undefined> {
+  if (chatFolder) return chatFolder;
+  return resolveProjectRoot();
 }
 
 // Desaturated palette — ANSI hues stay distinguishable (so `ls`, git
@@ -73,7 +84,13 @@ const TERMINAL_THEME = {
 
 // ── Single session (xterm + pty) ──────────────────────────
 
-function TerminalSession({ active }: { active: boolean }) {
+function TerminalSession({
+  active,
+  cwdOverride,
+}: {
+  active: boolean;
+  cwdOverride?: string;
+}) {
   const hostRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<XTerm | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
@@ -120,7 +137,7 @@ function TerminalSession({ active }: { active: boolean }) {
 
     (async () => {
       try {
-        const cwd = (await resolveProjectRoot()) ?? undefined;
+        const cwd = await resolveSessionCwd(cwdOverride ?? null);
         if (cancelled) return;
 
         term.writeln(
@@ -237,6 +254,16 @@ function newSessionId(): string {
 }
 
 export function TerminalPanel() {
+  const { state } = useWorkspace();
+  // Resolve the cwd we'll hand to freshly-spawned pties. When a chat is
+  // active we land in its folder; otherwise fall back to the engine
+  // root (handled inside the session). Existing sessions keep their
+  // original cwd — switching chats doesn't teleport an open zsh.
+  const activeCwd = useMemo<string | undefined>(() => {
+    const chat = state.chats.find((c) => c.id === state.activeChatId);
+    return chat?.folder || undefined;
+  }, [state.chats, state.activeChatId]);
+
   const [sessions, setSessions] = useState<SessionMeta[]>(() => [
     { id: newSessionId() },
   ]);
@@ -328,7 +355,7 @@ export function TerminalPanel() {
             className="oc-terminal-panel__session"
             style={{ display: s.id === activeId ? "flex" : "none" }}
           >
-            <TerminalSession active={s.id === activeId} />
+            <TerminalSession active={s.id === activeId} cwdOverride={activeCwd} />
           </div>
         ))}
       </div>

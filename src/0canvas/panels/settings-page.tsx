@@ -21,6 +21,7 @@ import {
   Key,
   CheckCircle,
   LogOut as LogOutIcon,
+  Bot,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -46,9 +47,22 @@ import {
   deleteSecret,
   SECRET_ACCOUNTS,
 } from "../../native/secrets";
+import { getSetting, setSetting } from "../../native/settings";
+import { useBridge } from "../bridge/use-bridge";
+import { AgentsPanel } from "../acp/agents-panel";
+import {
+  refreshCatalog,
+  catalogUpdatedAt,
+  catalogSource,
+} from "../acp/model-catalog";
+import type {
+  AcpAgentsListMessage,
+  BridgeRegistryAgent,
+} from "../bridge/messages";
 
 type SectionId =
   | "general"
+  | "agents"
   | "ai-models"
   | "api-keys"
   | "appearance"
@@ -64,12 +78,23 @@ type SectionDef = {
 
 const SECTIONS: SectionDef[] = [
   { id: "general", label: "General", icon: User, Panel: GeneralPanel },
+  { id: "agents", label: "Agents", icon: Bot, Panel: AgentsSettingsPanel },
   { id: "ai-models", label: "AI Models", icon: Sparkles, Panel: AiSettingsPanel },
   { id: "api-keys", label: "API Keys", icon: KeyRound, Panel: ApiKeysPanel },
   { id: "appearance", label: "Appearance", icon: Palette, Panel: AppearancePanel },
   { id: "mcp", label: "MCP Servers", icon: Plug, Panel: McpPanel },
   { id: "debug", label: "Debug", icon: Wrench, Panel: DebugPanel },
 ];
+
+/** Storage key for the user's preferred default agent (used by New Chat). */
+export const DEFAULT_AGENT_KEY = "default-agent-id";
+
+/** Read the default agent id from persistent settings. Returns null if
+ * never set — the New Chat flow then falls back to the first installed
+ * agent, or prompts the user if nothing is installed. */
+export function getDefaultAgentId(): string | null {
+  return getSetting<string | null>(DEFAULT_AGENT_KEY, null);
+}
 
 export function SettingsPage() {
   const { dispatch } = useWorkspace();
@@ -83,42 +108,192 @@ export function SettingsPage() {
 
   return (
     <div className="oc-settings-page">
-      <nav className="oc-settings-tabs" role="tablist" data-tauri-drag-region>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="oc-settings-tab oc-settings-tab--back"
-          onClick={handleBack}
-          title="Back to app"
-        >
-          <ArrowLeft size={14} />
-          <span>Back</span>
-        </Button>
-        {SECTIONS.map(({ id, label, icon: Icon }) => {
-          const isActive = active === id;
-          return (
-            <Button
-              key={id}
-              variant="ghost"
-              size="sm"
-              role="tab"
-              aria-selected={isActive}
-              className={`oc-settings-tab ${isActive ? "is-active" : ""}`}
-              onClick={() => setActive(id)}
-              title={label}
-            >
-              <Icon size={14} />
-              <span>{label}</span>
-            </Button>
-          );
-        })}
-      </nav>
+      <aside className="oc-settings-sidebar" aria-label="Settings navigation">
+        <div className="oc-settings-sidebar__header" data-tauri-drag-region>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="oc-settings-sidebar__back"
+            onClick={handleBack}
+            title="Back to app"
+          >
+            <ArrowLeft size={14} />
+            <span>Back</span>
+          </Button>
+        </div>
+        <nav className="oc-settings-sidebar__nav" role="tablist">
+          {SECTIONS.map(({ id, label, icon: Icon }) => {
+            const isActive = active === id;
+            return (
+              <Button
+                key={id}
+                variant="ghost"
+                role="tab"
+                aria-selected={isActive}
+                className={`oc-settings-sidebar__item ${isActive ? "is-active" : ""}`}
+                onClick={() => setActive(id)}
+                title={label}
+              >
+                <Icon size={14} />
+                <span>{label}</span>
+              </Button>
+            );
+          })}
+        </nav>
+      </aside>
 
       <div className="oc-settings-content">
         <ScrollArea className="oc-settings-scroll">
-          <Panel />
+          <div className="oc-settings-scroll__inner">
+            <h1 className="oc-settings-heading">{activeDef.label}</h1>
+            <Panel />
+          </div>
         </ScrollArea>
       </div>
+    </div>
+  );
+}
+
+// ── Agents (ACP registry + default agent picker) ────────
+//
+// Browses the live ACP agent registry and lets the user designate
+// one as the default for new chats. Clicking a row toggles default
+// — no separate "install" action needed because the registry auto-
+// detects install state from PATH probes.
+
+const CATALOG_URL_KEY = "model-catalog-remote-url";
+const DEFAULT_CATALOG_URL =
+  "https://cdn.jsdelivr.net/gh/Withso/0canvas@main/catalogs/models-v1.json";
+
+function AgentsSettingsPanel() {
+  const bridge = useBridge();
+  const [defaultId, setDefaultId] = useState<string | null>(() =>
+    getDefaultAgentId(),
+  );
+
+  // Catalog controls — URL override + Refresh.
+  const [catalogUrl, setCatalogUrl] = useState<string>(() => {
+    try {
+      return window.localStorage.getItem(CATALOG_URL_KEY) ?? DEFAULT_CATALOG_URL;
+    } catch {
+      return DEFAULT_CATALOG_URL;
+    }
+  });
+  const [updatedAt, setUpdatedAt] = useState<string>(() => catalogUpdatedAt());
+  const [refreshing, setRefreshing] = useState(false);
+  const [catalogStatus, setCatalogStatus] = useState<string | null>(null);
+
+  const listAgents = useCallback(
+    async (force: boolean = false): Promise<BridgeRegistryAgent[]> => {
+      if (!bridge) return [];
+      const resp = await bridge.request<AcpAgentsListMessage>(
+        { type: "ACP_LIST_AGENTS", force },
+        30_000,
+      );
+      return resp.agents;
+    },
+    [bridge],
+  );
+
+  const handleSetDefault = (agent: BridgeRegistryAgent) => {
+    if (defaultId === agent.id) {
+      setSetting(DEFAULT_AGENT_KEY, null);
+      setDefaultId(null);
+    } else {
+      setSetting(DEFAULT_AGENT_KEY, agent.id);
+      setDefaultId(agent.id);
+    }
+  };
+
+  const handleSaveCatalogUrl = () => {
+    const trimmed = catalogUrl.trim();
+    try {
+      if (trimmed && trimmed !== DEFAULT_CATALOG_URL) {
+        window.localStorage.setItem(CATALOG_URL_KEY, trimmed);
+      } else {
+        window.localStorage.removeItem(CATALOG_URL_KEY);
+      }
+    } catch {
+      /* ignore — private browsing */
+    }
+    setCatalogStatus("Saved. Click Refresh to fetch.");
+    window.setTimeout(() => setCatalogStatus(null), 2_000);
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    setCatalogStatus(null);
+    try {
+      const next = await refreshCatalog();
+      const src = catalogSource();
+      setUpdatedAt(next.updatedAt);
+      setCatalogStatus(
+        src === "remote"
+          ? `Loaded ${next.updatedAt} from remote`
+          : src === "cache"
+          ? `Loaded from cache (remote unreachable)`
+          : `Remote unreachable — using bundled ${next.updatedAt}`,
+      );
+      window.setTimeout(() => setCatalogStatus(null), 4_000);
+    } catch (err) {
+      setCatalogStatus(err instanceof Error ? err.message : "Refresh failed");
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  return (
+    <div className="oc-settings-panel">
+      <p className="oc-ai-hint">
+        Click an agent to set it as the default for new chats. Install state
+        is auto-detected from your <code>PATH</code>. If your chosen agent
+        isn't installed yet, 0canvas will fall back to <code>npx</code> or
+        <code> uvx</code> on first use.
+      </p>
+      <div className="oc-settings-agents">
+        <AgentsPanel
+          listAgents={listAgents}
+          onSelect={handleSetDefault}
+          activeAgentId={defaultId}
+        />
+      </div>
+
+      <div className="oc-settings-section-title oc-settings-section-title--spaced">
+        Model catalog
+      </div>
+      <p className="oc-ai-hint">
+        The model picker pulls its list from the agent's ACP initialize
+        response first (when available), then from this remote catalog
+        (cached 24 hours), then from the bundled fallback. Point this at
+        your own fork to ship model updates without an app release.
+      </p>
+      <label className="oc-ai-field">
+        <span className="oc-ai-field-label">Remote catalog URL</span>
+        <div className="oc-ai-auth-row">
+          <Input
+            type="text"
+            value={catalogUrl}
+            onChange={(e) => setCatalogUrl(e.target.value)}
+            placeholder={DEFAULT_CATALOG_URL}
+            spellCheck={false}
+          />
+          <Button variant="ghost" size="sm" onClick={handleSaveCatalogUrl}>
+            Save
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => void handleRefresh()}
+            disabled={refreshing}
+          >
+            {refreshing ? "Refreshing…" : "Refresh"}
+          </Button>
+        </div>
+        <span className="oc-ai-field-hint">
+          Catalog last updated: <code>{updatedAt}</code>
+          {catalogStatus ? ` · ${catalogStatus}` : ""}
+        </span>
+      </label>
     </div>
   );
 }

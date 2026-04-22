@@ -123,9 +123,19 @@ fn read_env_file(path: PathBuf, root: &Path) -> Option<EnvFile> {
     })
 }
 
+fn resolve_root(state: &SidecarState, cwd: Option<String>) -> Option<PathBuf> {
+    match cwd {
+        Some(s) if !s.is_empty() => Some(PathBuf::from(s)),
+        _ => state.current_root(),
+    }
+}
+
 #[tauri::command]
-pub fn list_env_files(state: tauri::State<'_, SidecarState>) -> Result<Vec<EnvFile>, String> {
-    let root = match state.current_root() {
+pub fn list_env_files(
+    state: tauri::State<'_, SidecarState>,
+    cwd: Option<String>,
+) -> Result<Vec<EnvFile>, String> {
+    let root = match resolve_root(&state, cwd) {
         Some(r) => r,
         None => return Ok(Vec::new()),
     };
@@ -157,12 +167,11 @@ pub fn list_env_files(state: tauri::State<'_, SidecarState>) -> Result<Vec<EnvFi
 #[tauri::command]
 pub fn save_env_file(
     state: tauri::State<'_, SidecarState>,
+    cwd: Option<String>,
     path: String,
     variables: Vec<EnvVar>,
 ) -> Result<(), String> {
-    let root = state
-        .current_root()
-        .ok_or_else(|| "no project root".to_string())?;
+    let root = resolve_root(&state, cwd).ok_or_else(|| "no project root".to_string())?;
     let target = PathBuf::from(&path);
     // Safety: only allow writes within the open project root.
     let canon_root = root.canonicalize().map_err(|e| e.to_string())?;

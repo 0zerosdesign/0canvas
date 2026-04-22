@@ -33,6 +33,7 @@ import {
   type EnvVar,
 } from "../native/tauri-events";
 import { Button, Input } from "../0canvas/ui";
+import { useChatCwd } from "./use-chat-cwd";
 
 function isTauriWebview(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -41,6 +42,7 @@ function isTauriWebview(): boolean {
 type DraftRow = EnvVar & { revealed: boolean };
 
 export function EnvPanel() {
+  const cwd = useChatCwd();
   const [files, setFiles] = useState<EnvFile[]>([]);
   const [activePath, setActivePath] = useState<string | null>(null);
   const [draft, setDraft] = useState<DraftRow[]>([]);
@@ -53,7 +55,7 @@ export function EnvPanel() {
     setLoading(true);
     setError(null);
     try {
-      const list = await listEnvFiles();
+      const list = await listEnvFiles(cwd);
       setFiles(list);
       // Preserve the active tab across refresh if the file is still there;
       // otherwise pick the first.
@@ -66,7 +68,7 @@ export function EnvPanel() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [cwd]);
 
   useEffect(() => {
     refresh();
@@ -118,7 +120,7 @@ export function EnvPanel() {
     setSaving(true);
     setError(null);
     try {
-      await saveEnvFile(activeFile.path, variables);
+      await saveEnvFile(activeFile.path, variables, cwd);
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));

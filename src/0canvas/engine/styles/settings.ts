@@ -3,59 +3,199 @@
 // ──────────────────────────────────────────────────────────
 
 export const settingsCSS = (S: string) => `
-/* ── Settings Page ────────────────────────────────────────── */
-/* Settings renders inside Column 3 alongside Design / Themes.
- * Layout: horizontal section tabs on top (matching .oc-page-tabs)
- * + scrollable content below. No vertical sidebar, no fullscreen
- * takeover — Col 1 and Col 2 stay reachable. */
+/* ── Settings Page (Cursor v3-style full-screen) ──────────── */
+/* Takes over the whole app body. Left column = vertical section
+ * nav + back button. Right column = the active panel, constrained
+ * to a readable max-width. The 3-col shell is hidden while here;
+ * Back returns to Design. */
+
+/* Root wrapper (has data-0canvas-root so scoped tokens apply). */
+${S}.oc-settings-root,
+${S} .oc-settings-root {
+  flex: 1; display: flex; min-width: 0; min-height: 0;
+  background: var(--surface-0);
+}
+
 ${S} .oc-settings-page {
-  flex: 1; display: flex; flex-direction: column; height: 100%;
+  flex: 1; display: flex; flex-direction: row; height: 100%;
+  min-width: 0; min-height: 0;
+  overflow: hidden;
+  background: var(--surface-0);
+}
+
+/* Left sidebar */
+${S} .oc-settings-sidebar {
+  flex: 0 0 220px;
+  display: flex; flex-direction: column;
+  background: var(--surface-floor);
+  border-right: 1px solid var(--border-subtle);
   overflow: hidden;
 }
-${S} .oc-settings-tabs {
-  display: flex; align-items: center; gap: 2px;
-  padding: 10px 10px 4px;
+${S} .oc-settings-sidebar__header {
+  display: flex; align-items: center;
+  padding: 10px 10px 6px;
   flex-shrink: 0;
-  background: var(--surface-floor);
-  border-bottom: 1px solid var(--border-subtle);
-  overflow-x: auto;
 }
-${S} .oc-settings-tab {
+${S} .oc-settings-sidebar__back {
+  height: auto !important;
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 10px;
+  padding: 6px 10px !important;
   background: transparent; border: none; border-radius: 6px;
   color: var(--text-muted);
-  font-size: 12px; font-weight: 500;
-  cursor: pointer; white-space: nowrap;
-  font-family: inherit;
+  font-size: 12px; font-weight: 500; font-family: inherit;
+  cursor: pointer;
   transition: background 120ms ease, color 120ms ease;
 }
-${S} .oc-settings-tab:hover {
-  color: var(--text-on-surface);
+${S} .oc-settings-sidebar__back:hover {
   background: var(--tint-hover);
-}
-${S} .oc-settings-tab.is-active {
   color: var(--text-on-surface);
+}
+${S} .oc-settings-sidebar__nav {
+  flex: 1; display: flex; flex-direction: column; gap: 1px;
+  padding: 4px 8px 12px;
+  overflow-y: auto;
+}
+${S} .oc-settings-sidebar__item {
+  display: flex; align-items: center; justify-content: flex-start;
+  width: 100%; height: auto;
+  gap: 10px;
+  padding: 8px 10px;
+  background: transparent; border: none; border-radius: 6px;
+  color: var(--text-on-surface-variant);
+  font-size: 13px; font-weight: 500; font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+${S} .oc-settings-sidebar__item > svg { flex-shrink: 0; color: var(--text-muted); }
+${S} .oc-settings-sidebar__item:hover {
+  background: var(--tint-hover);
+  color: var(--text-on-surface);
+}
+${S} .oc-settings-sidebar__item.is-active {
   background: var(--tint-active);
+  color: var(--text-on-surface);
 }
-${S} .oc-settings-tab--back {
-  margin-right: 6px;
-  padding-right: 12px;
-  border-right: 1px solid var(--border-subtle);
-  border-radius: 6px 0 0 6px;
+${S} .oc-settings-sidebar__item.is-active > svg {
+  color: var(--text-on-surface);
 }
+
+/* Content area */
 ${S} .oc-settings-content {
-  flex: 1; min-height: 0;
+  flex: 1; min-width: 0; min-height: 0;
   background: var(--surface-0);
   overflow: hidden;
 }
-/* Left-aligned reading column with a comfortable max width.
- * When Col 3 is wider than ~720px the content stops at that
- * width so lines stay readable; the left edge anchors to the
- * tab bar's left padding so headings sit under the tab row. */
 ${S} .oc-settings-scroll {
-  height: 100%; max-width: 720px;
-  margin: 0; padding: 24px 20px 32px;
+  height: 100%;
+}
+${S} .oc-settings-scroll__inner {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 32px 48px;
+  display: flex; flex-direction: column; gap: 18px;
+}
+${S} .oc-settings-heading {
+  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-on-surface);
+}
+${S} .oc-settings-section-title--spaced {
+  margin-top: var(--space-7);
+}
+
+/* Agents section embeds the live ACP registry. Give it a bounded
+   height so the internal list scrolls instead of pushing the page. */
+${S} .oc-settings-agents {
+  height: min(70vh, 620px);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface-0);
+}
+
+/* New-chat picker (+) in the chat header — opens a dropdown of
+   installed agents and creates a fresh chat bound to the pick. */
+${S} .oc-new-chat-picker {
+  position: relative;
+  flex-shrink: 0;
+}
+${S} .oc-new-chat-picker__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 220px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-dropdown);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+${S} .oc-new-chat-picker__label {
+  padding: 6px 10px 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+${S} .oc-new-chat-picker__hint {
+  padding: 8px 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+${S} .oc-new-chat-picker__item {
+  display: flex !important;
+  align-items: center;
+  justify-content: flex-start !important;
+  width: 100%;
+  height: auto !important;
+  gap: 8px;
+  padding: 6px 10px !important;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-on-surface);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+${S} .oc-new-chat-picker__item:hover {
+  background: var(--tint-hover);
+}
+${S} .oc-new-chat-picker__icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+/* Chat tab empty state — shown when no chat is active. */
+${S} .oc-chat-empty-state {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px 20px;
+  color: var(--text-muted);
+  text-align: center;
+}
+${S} .oc-chat-empty-state p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  max-width: 300px;
 }
 
 /* ── AI Models panel (Phase 4) ─────────────────────────── */

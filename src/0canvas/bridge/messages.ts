@@ -46,6 +46,10 @@ export interface BridgeRegistryAgent {
       env?: Record<string, string>;
     }>;
   };
+  /** True when the vendor's CLI is on PATH on this machine (user brought their own). */
+  installed?: boolean;
+  /** Platform-resolved launch strategy; `"unavailable"` means no runnable dist here. */
+  launchKind?: "npx" | "uvx" | "binary" | "unavailable";
 }
 
 // ── Base envelope ────────────────────────────────────────
@@ -190,6 +194,11 @@ export interface AcpNewSessionMessage extends BaseMessage {
   env?: Record<string, string>;
 }
 
+export interface AcpInitAgentMessage extends BaseMessage {
+  type: "ACP_INIT_AGENT";
+  agentId: string;
+}
+
 export interface AcpAuthenticateMessage extends BaseMessage {
   type: "ACP_AUTHENTICATE";
   agentId: string;
@@ -215,6 +224,24 @@ export interface AcpPermissionResponseMessage extends BaseMessage {
   response: RequestPermissionResponse;
 }
 
+/** Change the agent's session mode (ACP `session/set_mode`).
+ *  Used by the composer permissions pill. Fire-and-forget —
+ *  engine replies with ACP_MODE_CHANGED (ack) or ACP_ERROR. */
+export interface AcpSetModeMessage extends BaseMessage {
+  type: "ACP_SET_MODE";
+  agentId: string;
+  sessionId: string;
+  modeId: string;
+}
+
+export interface AcpModeChangedMessage extends BaseMessage {
+  type: "ACP_MODE_CHANGED";
+  requestId: string;
+  agentId: string;
+  sessionId: string;
+  modeId: string;
+}
+
 export interface AcpAgentsListMessage extends BaseMessage {
   type: "ACP_AGENTS_LIST";
   requestId: string;
@@ -234,6 +261,13 @@ export interface AcpAuthCompletedMessage extends BaseMessage {
   requestId: string;
   agentId: string;
   methodId: string;
+}
+
+export interface AcpAgentInitializedMessage extends BaseMessage {
+  type: "ACP_AGENT_INITIALIZED";
+  requestId: string;
+  agentId: string;
+  initialize: InitializeResponse;
 }
 
 export interface AcpSessionUpdateMessage extends BaseMessage {
@@ -309,16 +343,20 @@ export type BridgeMessage =
   // ACP (browser → engine)
   | AcpListAgentsMessage
   | AcpNewSessionMessage
+  | AcpInitAgentMessage
   | AcpAuthenticateMessage
   | AcpPromptMessage
   | AcpCancelMessage
   | AcpPermissionResponseMessage
+  | AcpSetModeMessage
   // ACP (engine → browser)
   | AcpAgentsListMessage
   | AcpSessionCreatedMessage
+  | AcpAgentInitializedMessage
   | AcpAuthCompletedMessage
   | AcpSessionUpdateMessage
   | AcpPermissionRequestMessage
+  | AcpModeChangedMessage
   | AcpPromptCompleteMessage
   | AcpPromptFailedMessage
   | AcpAgentStderrMessage
