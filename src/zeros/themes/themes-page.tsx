@@ -535,10 +535,10 @@ export function ThemesPage() {
   useEffect(() => {
     if (!activeFile) return;
 
-    // In the Mac app we already have @parcel/watcher running in the
-    // engine; CSS_FILE_CHANGED messages arrive via the bridge when any
-    // CSS file in the project root changes. Listen for the one we're
-    // editing and re-read on demand — no polling, instant sync.
+    // The engine watches CSS files (via chokidar) and broadcasts
+    // CSS_FILE_CHANGED over the bridge whenever any CSS file in the
+    // project root changes. Listen for the one we're editing and
+    // re-read on demand — instant sync, no polling.
     if (activeFile.path && bridge) {
       const unsub = bridge.on("CSS_FILE_CHANGED", (msg) => {
         const changed = (msg as unknown as { filePath?: string; file?: string }).filePath

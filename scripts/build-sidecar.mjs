@@ -13,10 +13,6 @@
 //   an Apple-Silicon Mac we need
 //   `zeros-engine-aarch64-apple-darwin` next to the app.
 //
-// Known caveats (documented in the Tauri plan):
-//   @parcel/watcher's native `.node` binary does not bundle
-//   into Bun --compile; the engine falls back to polling. This
-//   costs a little CPU but every other engine feature works.
 // ──────────────────────────────────────────────────────────
 
 import { execSync } from "node:child_process";

@@ -21,7 +21,7 @@ export default defineConfig([
     external: [
       /^node:/,
       "postcss",
-      "@parcel/watcher",
+      "chokidar",
       "ws",
       "tinyglobby",
       "@modelcontextprotocol/sdk",
