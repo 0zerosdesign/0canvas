@@ -1,18 +1,20 @@
 #!/usr/bin/env node
 // ──────────────────────────────────────────────────────────
-// Build the Zeros engine as a Bun single-file executable
-// and place it at the path Tauri expects for sidecar binaries.
+// Build the Zeros engine as a Bun single-file executable.
 // ──────────────────────────────────────────────────────────
 //
-// Output: src-tauri/binaries/zeros-engine-<rustc-host-triple>
+// Output: <repo>/binaries/zeros-engine-<triple>
 //
-// Why this layout:
-//   Tauri's `externalBin` feature appends the active Rust host
-//   target triple when looking for the sidecar binary at both
-//   build time (for bundling) and runtime (for spawn). So on
-//   an Apple-Silicon Mac we need
-//   `zeros-engine-aarch64-apple-darwin` next to the app.
+// The <triple> suffix is historical: Tauri's externalBin wanted
+// it appended so it could locate the right arch binary at bundle
+// time. Electron doesn't need the suffix (we just name the file
+// `zeros-engine` in Contents/Resources/ via electron-builder's
+// extraResources `to:` rewrite), but keeping the suffix in the
+// source location means cross-compiling to x64 from an arm Mac
+// can drop both binaries side by side without overwriting.
 //
+// electron/sidecar.ts resolves the correct file at runtime by
+// reading process.arch.
 // ──────────────────────────────────────────────────────────
 
 import { execSync } from "node:child_process";
@@ -50,7 +52,7 @@ if (!existsSync(entry)) {
   process.exit(1);
 }
 
-const binariesDir = resolve(repoRoot, "src-tauri/binaries");
+const binariesDir = resolve(repoRoot, "binaries");
 mkdirSync(binariesDir, { recursive: true });
 
 const outfile = resolve(binariesDir, `zeros-engine-${mapping.rustTriple}`);

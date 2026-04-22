@@ -51,7 +51,7 @@ files:
 # it as an extra resource. Renderer code at runtime reaches it via
 # process.resourcesPath/zeros-engine (handled in electron/sidecar.ts).
 extraResources:
-  - from: src-tauri/binaries/zeros-engine-aarch64-apple-darwin
+  - from: binaries/zeros-engine-aarch64-apple-darwin
     to: zeros-engine
     filter:
       - "**/*"

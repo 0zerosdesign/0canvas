@@ -53,21 +53,27 @@ function archTriple(): string {
   throw new Error(`unsupported arch: ${process.arch}`);
 }
 
-/** Find the bun-compiled engine binary. In dev we share Tauri's
- *  pre-built output (same `pnpm build:sidecar` produces both). In a
- *  packaged .app, electron-builder drops it under Resources/ via
- *  extraResources (Phase 9 wires that up). */
+/** Find the bun-compiled engine binary. Two layouts:
+ *    Dev:     <repo>/binaries/zeros-engine-<triple>   (pnpm build:sidecar)
+ *    Release: <App>.app/Contents/Resources/zeros-engine
+ *             (electron-builder extraResources rewrites the filename).
+ *  We also fall through to the legacy src-tauri/binaries/ path for a
+ *  transition period so `git checkout electron-migration~N` still
+ *  runs until old working copies are cleared. */
 function locateEngineBinary(): string {
   const triple = archTriple();
   const candidates: string[] = [];
 
   if (app.isPackaged) {
-    // electron-builder extraResources → Contents/Resources/
     candidates.push(path.join(process.resourcesPath, "zeros-engine"));
     candidates.push(path.join(process.resourcesPath, `zeros-engine-${triple}`));
   } else {
-    // Dev mode: __dirname is <repo>/dist-electron/, so repo root is ..
+    // __dirname is <repo>/dist-electron/, so repo root is one up.
     const repoRoot = path.resolve(__dirname, "..");
+    candidates.push(
+      path.join(repoRoot, "binaries", `zeros-engine-${triple}`),
+    );
+    // Legacy fallback — drop after `src-tauri/` is removed from main.
     candidates.push(
       path.join(repoRoot, "src-tauri", "binaries", `zeros-engine-${triple}`),
     );
