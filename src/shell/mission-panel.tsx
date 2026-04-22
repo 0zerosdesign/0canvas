@@ -33,11 +33,7 @@ type StreamEvent = {
   data?: unknown;
 };
 
-import { isNativeRuntime } from "../native/runtime";
-
-// Local alias for readability — mission panel just needs "native shell
-// is present" semantics (Tauri or Electron), not Tauri-specific.
-const isTauri = isNativeRuntime;
+import { isNativeRuntime, nativeListen } from "../native/runtime";
 
 // Very rough token estimate — real tokenizer is provider-specific and
 // runtime-expensive. A 4 chars/token average is close enough for a
@@ -69,13 +65,12 @@ export function MissionPanel() {
   }, []);
 
   useEffect(() => {
-    if (!isTauri()) return;
+    if (!isNativeRuntime()) return;
     let unlisten: (() => void) | null = null;
     let cancelled = false;
     (async () => {
-      const { listen } = await import("@tauri-apps/api/event");
-      const off = await listen<StreamEvent>("ai-stream-event", (e) => {
-        const { sessionId, kind, content } = e.payload;
+      const off = await nativeListen<StreamEvent>("ai-stream-event", (payload) => {
+        const { sessionId, kind, content } = payload;
         setSessions((prev) => {
           const next = new Map(prev);
           const existing =

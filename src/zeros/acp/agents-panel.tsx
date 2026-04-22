@@ -27,7 +27,7 @@ import {
   Check,
   AlertCircle,
 } from "lucide-react";
-import { invoke } from "@tauri-apps/api/core";
+import { nativeInvoke } from "../../native/runtime";
 import type { BridgeRegistryAgent } from "../bridge/messages";
 import { Button, Input } from "../ui";
 
@@ -302,7 +302,7 @@ function AgentRow({
     setInstallState("launching");
     setInstallError(null);
     try {
-      await invoke("open_install_terminal", { command: installCmd });
+      await nativeInvoke("open_install_terminal", { command: installCmd });
       // Terminal opened with the install running. Flip to "running" so the
       // CTA reads "Installing…" — the focus-refresh hook at panel level
       // polls the registry when the user returns to Zeros and the button

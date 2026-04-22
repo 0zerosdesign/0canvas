@@ -33,9 +33,9 @@ import { TitleBar } from "./shell/title-bar";
 import { ActivityBar, type ActivityView } from "./shell/activity-bar";
 import { SettingsPage } from "./zeros/panels/settings-page";
 import { onProjectChanged } from "./native/tauri-events";
+import { nativeInvoke } from "./native/runtime";
 import { getSetting, setSetting } from "./native/settings";
 import { rememberProject } from "./native/recent-projects";
-import { invoke } from "@tauri-apps/api/core";
 import "./shell/app-shell.css";
 
 const CHATS_STORAGE_KEY = "chats-v1";
@@ -218,10 +218,10 @@ function ReloadOnProjectChange() {
     // has at least one entry on first run.
     (async () => {
       try {
-        const root = await invoke<string | null>("get_engine_root");
+        const root = await nativeInvoke<string | null>("get_engine_root");
         if (root) rememberProject(root);
       } catch {
-        /* not running under Tauri, or engine not ready yet */
+        /* native runtime absent, or engine not ready yet */
       }
     })();
 
