@@ -384,12 +384,8 @@ let tauriNotificationPermission: "granted" | "denied" | "default" | null = null;
 
 export async function notify(title: string, body?: string): Promise<void> {
   if (isElectron()) {
-    try {
-      await nativeInvoke<void>("notify_send", { title, body });
-    } catch {
-      // Phase 1: `notify_send` isn't in the router yet — swallow so
-      // callers aren't forced to guard. Real implementation lands Phase 8.
-    }
+    // notify_send → main-process Notification (electron built-in).
+    await nativeInvoke<void>("notify_send", { title, body });
     return;
   }
 

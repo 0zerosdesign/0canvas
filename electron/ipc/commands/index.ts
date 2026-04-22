@@ -42,6 +42,12 @@ import {
   claudeSpawn,
   codexSpawn,
 } from "./ai-cli";
+import { notifySend } from "./notifications";
+import {
+  processRelaunch,
+  updaterCheck,
+  updaterInstall,
+} from "../../updater";
 import {
   gitBranchCreate,
   gitBranchDelete,
@@ -147,4 +153,10 @@ export function registerAllCommands(): void {
   setCommand("ai_cli_run_login", aiCliRunLogin);
   setCommand("claude_spawn", claudeSpawn);
   setCommand("codex_spawn", codexSpawn);
+
+  // Phase 8 — notifications, updater, process
+  setCommand("notify_send", notifySend);
+  setCommand("updater_check", updaterCheck);
+  setCommand("updater_install", updaterInstall);
+  setCommand("process_relaunch", processRelaunch);
 }

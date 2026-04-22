@@ -32,6 +32,7 @@ import {
 } from "./sidecar";
 import { installAppMenu } from "./menu";
 import { setupDeepLink } from "./deep-link";
+import { setupUpdater } from "./updater";
 
 const DEV_URL = process.env.ELECTRON_RENDERER_URL ?? "http://localhost:5173";
 const isDev = !app.isPackaged;
@@ -74,6 +75,11 @@ app.whenReady().then(async () => {
   // Safe to call before the window exists — macOS associates the
   // menu with the app, not a specific window.
   installAppMenu();
+
+  // Wire electron-updater event forwarding. No-op on unpackaged
+  // dev builds; on release builds this starts listening for
+  // downloaded / available / progress / error events.
+  setupUpdater();
 
   // IPC plumbing BEFORE the window loads so any command fired during
   // boot (ws-client's `get_engine_port` probe, store rehydrate, etc.)
