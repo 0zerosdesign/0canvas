@@ -10,6 +10,12 @@
 // account string — for example, set("anthropic-api-key", "sk-…")
 // lands at (service=Zeros, account=anthropic-api-key).
 //
+// Dev builds (`tauri dev`) use service "Zeros Dev" instead, so
+// the dev app can't clobber real API keys in the prod app's
+// keychain. The split is driven by `debug_assertions`, which
+// Rust sets to `true` in debug profiles and `false` in release —
+// matching tauri dev vs tauri build exactly.
+//
 // The frontend never sees raw keychain APIs; it goes through the
 // three Tauri commands below. Non-macOS platforms get a stub that
 // returns an error — we're Mac-only at v0.1 anyway.
@@ -17,6 +23,9 @@
 
 use serde::Serialize;
 
+#[cfg(debug_assertions)]
+const SERVICE: &str = "Zeros Dev";
+#[cfg(not(debug_assertions))]
 const SERVICE: &str = "Zeros";
 
 #[derive(Debug, Serialize)]
