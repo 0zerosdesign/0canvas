@@ -78,7 +78,16 @@ jobs:
         # afterPack hook runs `codesign --force --deep --sign -` to
         # produce a valid ad-hoc signature for arm64 — the user strips
         # quarantine after install with `xattr -cr /Applications/Zeros.app`.
-        run: pnpm exec electron-builder --config electron-builder.yml
+        #
+        # `--publish never` disables electron-builder's own auto-
+        # upload. Without this flag, the `publish: github` block in
+        # electron-builder.yml (which we keep so latest-mac.yml gets
+        # the correct update URLs) would make electron-builder try
+        # to instantiate a GitHubPublisher during pack, which errors
+        # with "GH_TOKEN not set" even though we never asked it to
+        # publish. The explicit `gh release create` step below does
+        # the actual upload.
+        run: pnpm exec electron-builder --config electron-builder.yml --publish never
 
       - name: Publish GitHub release
         env:
