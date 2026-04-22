@@ -17,7 +17,7 @@ const ROOT = path.resolve(process.cwd(), "src");
 const CSS_FILES = [
   "shell/app-shell.css",
   "zeros/ui/primitives.css",
-  "styles/design-tokens.css",
+  "styles/tokens.css",
 ].map((p) => path.join(ROOT, p));
 
 function walk(dir, out = []) {

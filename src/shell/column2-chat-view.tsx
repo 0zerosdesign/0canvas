@@ -27,6 +27,7 @@ import { AcpChat } from "../zeros/acp/acp-chat";
 import { AgentsPanel } from "../zeros/acp/agents-panel";
 import { envForChat } from "../zeros/acp/composer-pills";
 import { uiEntryForAgent } from "../zeros/acp/agent-ui-registry";
+import { useEnabledAgents } from "../zeros/acp/enabled-agents";
 import type { SessionInfo } from "@agentclientprotocol/sdk";
 import type { BridgeRegistryAgent } from "../zeros/bridge/messages";
 import { isNativeRuntime, nativeInvoke } from "../native/runtime";
@@ -211,6 +212,7 @@ interface RecentThread {
 function NewChatPicker() {
   const { dispatch } = useWorkspace();
   const sessions = useAcpSessions();
+  const { isEnabled } = useEnabledAgents();
   const [open, setOpen] = useState(false);
   const [agents, setAgents] = useState<BridgeRegistryAgent[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -337,10 +339,11 @@ function NewChatPicker() {
     dispatch({ type: "ADD_CHAT", chat });
   };
 
-  // Only show installed agents in the picker — running an uninstalled
-  // agent via npx/uvx on every "+" would surprise the user. If nothing
-  // installed, the menu shows a link to the full registry in settings.
-  const installed = (agents ?? []).filter((a) => a.installed);
+  // Show agents the user has toggled on in Settings → Agents. npx/uvx
+  // agents fetch on first use, so "enabled" is sufficient — we no longer
+  // gate by PATH-installed status. Empty list falls through to a hint
+  // pointing the user at the settings panel.
+  const visible = (agents ?? []).filter((a) => isEnabled(a.id));
 
   return (
     <div className="oc-new-chat-picker" ref={rootRef}>
@@ -381,13 +384,13 @@ function NewChatPicker() {
           {loading && !agents && (
             <div className="oc-new-chat-picker__hint">Loading agents…</div>
           )}
-          {agents && installed.length === 0 && (
+          {agents && visible.length === 0 && (
             <div className="oc-new-chat-picker__hint">
-              No agents installed. Install one via <code>npm install -g</code>
-              {" "}or set a default in <strong>Settings → Agents</strong>.
+              No agents enabled. Turn one on in{" "}
+              <strong>Settings → Agents</strong>.
             </div>
           )}
-          {installed.map((a) => (
+          {visible.map((a) => (
             <Button
               key={a.id}
               variant="ghost"

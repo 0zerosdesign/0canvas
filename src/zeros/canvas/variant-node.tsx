@@ -189,9 +189,9 @@ ${ruleLines.join("\n")}</style>
   }, [id, dims.h, updateNode]);
 
   const statusColor =
-    variant.status === "pushed" ? "var(--primary)" :
+    variant.status === "pushed" ? "var(--accent)" :
     variant.status === "finalized" ? "var(--status-success)" :
-    variant.status === "sent" ? "var(--text-primary-light)" : "var(--surface-2)";
+    variant.status === "sent" ? "var(--accent-hover)" : "var(--surface-2)";
 
   const statusLabel =
     variant.status === "pushed" ? "Pushed" :
@@ -202,7 +202,7 @@ ${ruleLines.join("\n")}</style>
   const hasActiveSelection = !!state.selectedElementId && state.selectionSource === "inspect" && state.activeVariantId === variant.id;
   const iframeInteractive = inspecting || hasActiveSelection;
 
-  const borderColor = selected ? "var(--primary)" : variant.status === "finalized" ? "var(--status-success)" : undefined;
+  const borderColor = selected ? "var(--accent)" : variant.status === "finalized" ? "var(--status-success)" : undefined;
 
   return (
     <div
@@ -302,7 +302,7 @@ ${ruleLines.join("\n")}</style>
               fontFamily: "var(--font-mono)",
               fontVariantNumeric: "tabular-nums",
               padding: "1px 4px",
-              background: isResizing ? "color-mix(in srgb, var(--primary) 10%, transparent)" : "transparent",
+              background: isResizing ? "color-mix(in srgb, var(--accent) 10%, transparent)" : "transparent",
               borderRadius: 3,
               transition: "all 0.15s",
             }}
@@ -353,9 +353,9 @@ ${ruleLines.join("\n")}</style>
           overflow: "hidden",
           background: "var(--surface-inverted)",
           borderRadius: 0,
-          border: `${selected ? 2.5 : 1}px solid ${selected ? "var(--primary)" : "var(--border-subtle)"}`,
+          border: `${selected ? 2.5 : 1}px solid ${selected ? "var(--accent)" : "var(--border-subtle)"}`,
           boxShadow: selected
-            ? "0 0 0 1px var(--primary), var(--shadow-md)"
+            ? "0 0 0 1px var(--accent), var(--shadow-md)"
             : "var(--shadow-md)",
         }}
       >
@@ -377,7 +377,7 @@ ${ruleLines.join("\n")}</style>
           <div style={{ position: "absolute", top: 6, left: "50%", transform: "translateX(-50%)", zIndex: "var(--z-panel)", pointerEvents: "none" }}>
             <div style={{
               display: "flex", alignItems: "center", gap: "var(--space-2)", padding: "var(--space-1) var(--space-4)",
-              borderRadius: "var(--radius-sm)", background: "var(--primary)", color: "var(--primary-foreground)", fontSize: "var(--text-10)",
+              borderRadius: "var(--radius-sm)", background: "var(--accent)", color: "var(--text-on-accent)", fontSize: "var(--text-10)",
               boxShadow: "var(--shadow-md)",
             }}>
               <Crosshair style={{ width: 10, height: 10 }} />
@@ -430,7 +430,7 @@ function VBtn({ children, onClick, active, accent, danger, title }: {
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       title={title}
       style={{
-        ...(active ? { background: "var(--primary)", color: "var(--text-on-primary)", border: "1px solid var(--primary)" } : {}),
+        ...(active ? { background: "var(--accent)", color: "var(--text-on-accent)", border: "1px solid var(--accent)" } : {}),
         ...(danger && !active ? { color: "var(--status-critical)" } : {}),
         ...(accent && !active ? { color: "var(--status-success)" } : {}),
       }}

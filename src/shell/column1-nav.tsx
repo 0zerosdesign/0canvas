@@ -854,7 +854,7 @@ export function Column1Nav() {
                 style={{
                   maxHeight:
                     services.length > LOCALHOST_VISIBLE_ROWS
-                      ? `calc(${LOCALHOST_VISIBLE_ROWS} * 30px)`
+                      ? `calc(${LOCALHOST_VISIBLE_ROWS} * var(--h-control-lg))`
                       : undefined,
                   overflowY: services.length > LOCALHOST_VISIBLE_ROWS ? "auto" : undefined,
                 }}

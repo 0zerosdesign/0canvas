@@ -67,44 +67,70 @@ export const aiCliCheck: CommandHandler = (args) => {
 };
 
 // ── Auth probe (filesystem evidence, never reads tokens) ──
+//
+// Per-binary marker paths under $HOME. "Authenticated" means the user
+// has run the CLI at least once and it wrote an auth artefact — we
+// don't read tokens, only existence. Any marker hit = true.
+//
+// For binaries not in this table we fall back to a generic heuristic:
+// `~/.<binary>/` OR `~/.config/<binary>/` exists. Most ACP agents
+// scaffold a dotdir on first login, so this catches them without us
+// having to hand-curate every entry.
+
+const AUTH_MARKERS: Record<string, string[]> = {
+  claude: [
+    ".claude/.credentials.json",
+    ".claude/settings.json",
+    ".claude/sessions",
+    ".claude/projects",
+    ".claude/history.jsonl",
+  ],
+  codex: [".codex/auth.json"],
+  gemini: [
+    ".gemini/auth.json",
+    ".gemini/credentials.json",
+    ".config/gemini/auth.json",
+  ],
+  amp: [".amp/config.json", ".amp/credentials.json", ".config/amp/config.json"],
+  copilot: [".config/gh-copilot/hosts.yml"],
+  "gh-copilot": [".config/gh-copilot/hosts.yml"],
+  droid: [".factory/auth.json", ".factory/credentials.json"],
+  cursor: [".cursor/auth.json", ".cursor/credentials.json"],
+  "cursor-agent": [".cursor/auth.json", ".cursor/credentials.json"],
+};
+
+function probeAuth(binary: string, home: string): boolean {
+  const explicit = AUTH_MARKERS[binary];
+  if (explicit) {
+    return explicit.some((m) => existsSync(path.join(home, m)));
+  }
+  return (
+    existsSync(path.join(home, `.${binary}`)) ||
+    existsSync(path.join(home, ".config", binary))
+  );
+}
 
 export const aiCliIsAuthenticated: CommandHandler = (args) => {
   const binary = String(args.binary ?? "");
+  if (!binary) return false;
   const home = process.env.HOME;
   if (!home) return false;
-
-  if (binary === "claude") {
-    const dir = path.join(home, ".claude");
-    // Older builds wrote .credentials.json; newer ones keep the token
-    // in the macOS keychain and leave settings/sessions/projects/history
-    // on disk after first successful login. Any one of these is
-    // sufficient evidence of a completed `claude login`.
-    const markers = [
-      ".credentials.json",
-      "settings.json",
-      "sessions",
-      "projects",
-      "history.jsonl",
-    ];
-    for (const m of markers) {
-      if (existsSync(path.join(dir, m))) return true;
-    }
-    return false;
-  }
-
-  if (binary === "codex") {
-    return existsSync(path.join(home, ".codex", "auth.json"));
-  }
-
-  return false;
+  return probeAuth(binary, home);
 };
 
 // ── Login trigger — opens Terminal running `<bin> login` ──
+//
+// `<binary> login` is the convention Claude, Codex, Gemini, and most
+// other agent CLIs follow. For agents that diverge (e.g. `gh auth
+// login`), the user still lands in a terminal with the right binary
+// name ready to hand — they can edit the command before pressing enter.
 
 export const aiCliRunLogin: CommandHandler = async (args) => {
-  const binary = String(args.binary ?? "");
-  if (binary !== "claude" && binary !== "codex") {
-    throw new Error("only claude or codex are supported");
+  const binary = String(args.binary ?? "").trim();
+  if (!binary) throw new Error("ai_cli_run_login: missing binary");
+  // Allow-list regex — no spaces or shell metachars escape into osascript.
+  if (!/^[a-zA-Z0-9_.-]+$/.test(binary)) {
+    throw new Error(`ai_cli_run_login: invalid binary name '${binary}'`);
   }
   const script = `tell application "Terminal" to do script "${binary} login"`;
   await new Promise<void>((resolve, reject) => {

@@ -52,6 +52,8 @@ export interface BridgeRegistryAgent {
   installed?: boolean;
   /** Platform-resolved launch strategy; `"unavailable"` means no runnable dist here. */
   launchKind?: "npx" | "uvx" | "binary" | "unavailable";
+  /** CLI binary used by the Login-in-Terminal flow and the auth-state probe. */
+  authBinary?: string;
 }
 
 // ── Base envelope ────────────────────────────────────────

@@ -33,51 +33,51 @@ ${S} .oc-settings-sidebar {
 }
 ${S} .oc-settings-sidebar__header {
   display: flex; align-items: center;
-  padding: 10px 10px 6px;
+  padding: var(--space-5x) var(--space-5x) var(--space-3x);
   flex-shrink: 0;
 }
 ${S} .oc-settings-sidebar__back {
   height: auto !important;
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 10px !important;
-  background: transparent; border: none; border-radius: 6px;
+  display: inline-flex; align-items: center; gap: var(--space-3x);
+  padding: var(--space-3x) var(--space-5x) !important;
+  background: transparent; border: none; border-radius: var(--radius-sm);
   color: var(--text-muted);
-  font-size: 12px; font-weight: 500; font-family: inherit;
+  font-size: var(--text-12); font-weight: var(--weight-control); font-family: inherit;
   cursor: pointer;
-  transition: background 120ms ease, color 120ms ease;
+  transition: background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
 }
 ${S} .oc-settings-sidebar__back:hover {
   background: var(--tint-hover);
-  color: var(--text-on-surface);
+  color: var(--text-primary);
 }
 ${S} .oc-settings-sidebar__nav {
   flex: 1; display: flex; flex-direction: column; gap: 1px;
-  padding: 4px 8px 12px;
+  padding: var(--space-1) var(--space-2) var(--space-3);
   overflow-y: auto;
 }
 ${S} .oc-settings-sidebar__item {
   display: flex; align-items: center; justify-content: flex-start;
   width: 100%; height: auto;
-  gap: 10px;
-  padding: 8px 10px;
-  background: transparent; border: none; border-radius: 6px;
-  color: var(--text-on-surface-variant);
-  font-size: 13px; font-weight: 500; font-family: inherit;
+  gap: var(--space-5x);
+  padding: var(--space-2) var(--space-5x);
+  background: transparent; border: none; border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: var(--text-13); font-weight: var(--weight-control); font-family: inherit;
   text-align: left;
   cursor: pointer;
-  transition: background 120ms ease, color 120ms ease;
+  transition: background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
 }
 ${S} .oc-settings-sidebar__item > svg { flex-shrink: 0; color: var(--text-muted); }
 ${S} .oc-settings-sidebar__item:hover {
   background: var(--tint-hover);
-  color: var(--text-on-surface);
+  color: var(--text-primary);
 }
 ${S} .oc-settings-sidebar__item.is-active {
   background: var(--tint-active);
-  color: var(--text-on-surface);
+  color: var(--text-primary);
 }
 ${S} .oc-settings-sidebar__item.is-active > svg {
-  color: var(--text-on-surface);
+  color: var(--text-primary);
 }
 
 /* Content area */
@@ -92,15 +92,15 @@ ${S} .oc-settings-scroll {
 ${S} .oc-settings-scroll__inner {
   max-width: 720px;
   margin: 0 auto;
-  padding: 32px 32px 48px;
+  padding: var(--space-7) var(--space-7) var(--space-8);
   display: flex; flex-direction: column; gap: 18px;
 }
 ${S} .oc-settings-heading {
-  margin: 0 0 6px;
-  font-size: 18px;
-  font-weight: 600;
+  margin: 0 0 var(--space-3x);
+  font-size: var(--text-18);
+  font-weight: var(--weight-heading);
   letter-spacing: -0.01em;
-  color: var(--text-on-surface);
+  color: var(--text-primary);
 }
 ${S} .oc-settings-section-title--spaced {
   margin-top: var(--space-7);
@@ -111,7 +111,7 @@ ${S} .oc-settings-section-title--spaced {
 ${S} .oc-settings-agents {
   height: min(70vh, 620px);
   border: 1px solid var(--border-subtle);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   overflow: hidden;
   background: var(--surface-0);
 }
@@ -124,15 +124,15 @@ ${S} .oc-new-chat-picker {
 }
 ${S} .oc-new-chat-picker__menu {
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + var(--space-3x));
   right: 0;
   min-width: 220px;
   max-height: 320px;
   overflow-y: auto;
-  padding: 4px;
+  padding: var(--space-1);
   background: var(--surface-1);
   border: 1px solid var(--border-default);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
   z-index: var(--z-dropdown);
   display: flex;
@@ -140,18 +140,18 @@ ${S} .oc-new-chat-picker__menu {
   gap: 1px;
 }
 ${S} .oc-new-chat-picker__label {
-  padding: 6px 10px 4px;
-  font-size: 10px;
-  font-weight: 600;
+  padding: var(--space-3x) var(--space-5x) var(--space-1);
+  font-size: var(--text-10);
+  font-weight: var(--weight-heading);
   letter-spacing: 0.08em;
   color: var(--text-muted);
   text-transform: uppercase;
 }
 ${S} .oc-new-chat-picker__hint {
-  padding: 8px 10px;
-  font-size: 11px;
+  padding: var(--space-2) var(--space-5x);
+  font-size: var(--text-11);
   color: var(--text-muted);
-  line-height: 1.5;
+  line-height: var(--leading-normal);
 }
 ${S} .oc-new-chat-picker__item {
   display: flex !important;
@@ -159,14 +159,14 @@ ${S} .oc-new-chat-picker__item {
   justify-content: flex-start !important;
   width: 100%;
   height: auto !important;
-  gap: 8px;
-  padding: 6px 10px !important;
+  gap: var(--space-2);
+  padding: var(--space-3x) var(--space-5x) !important;
   background: transparent;
   border: none;
-  border-radius: 6px;
-  color: var(--text-on-surface);
-  font-size: 12px;
-  font-weight: 500;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--text-12);
+  font-weight: var(--weight-control);
   text-align: left;
   cursor: pointer;
   font-family: inherit;
@@ -183,7 +183,7 @@ ${S} .oc-new-chat-picker__icon {
 ${S} .oc-new-chat-picker__sep {
   height: 1px;
   background: var(--border-subtle);
-  margin: 4px 6px;
+  margin: var(--space-1) var(--space-3x);
 }
 
 /* Chat tab empty state — shown when no chat is active. */
@@ -191,14 +191,14 @@ ${S} .oc-chat-empty-state {
   flex: 1;
   display: flex; flex-direction: column; align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 32px 20px;
+  gap: var(--space-3);
+  padding: var(--space-7) var(--space-5);
   color: var(--text-muted);
   text-align: center;
 }
 ${S} .oc-chat-empty-state p {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-13);
   line-height: 1.55;
   max-width: 300px;
 }
@@ -210,18 +210,18 @@ ${S} .oc-ai-settings {
 }
 
 ${S} .oc-ai-tiles {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5x);
 }
 ${S} .oc-ai-tile {
-  display: flex; align-items: center; gap: 10px;
-  padding: 14px 16px;
+  display: flex; align-items: center; gap: var(--space-5x);
+  padding: var(--space-7x) var(--space-4);
   background: var(--surface-1);
   border: 1px solid var(--border-default);
-  border-radius: 8px;
-  color: var(--text-on-surface);
-  font-size: 13px; font-weight: 500;
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--text-13); font-weight: var(--weight-control);
   cursor: pointer;
-  transition: border-color 120ms ease, background 120ms ease;
+  transition: border-color var(--dur-fast) var(--ease-standard), background var(--dur-fast) var(--ease-standard);
 }
 ${S} .oc-ai-tile:hover {
   border-color: var(--tint-border-hover);
@@ -235,40 +235,40 @@ ${S} .oc-ai-tile-label { flex: 1; }
    intentionally sourced from primitive scales because they represent
    the brand's literal color, not a semantic UI role. */
 /* check:ui ignore-next */
-${S} .oc-ai-tile-glyph.is-claude { color: var(--orange-500); }
+${S} .oc-ai-tile-glyph.is-claude { color: var(--amber-11); }
 /* check:ui ignore-next */
-${S} .oc-ai-tile-glyph.is-codex { color: var(--grey-400); }
+${S} .oc-ai-tile-glyph.is-codex { color: var(--grey-10); }
 
 ${S} .oc-ai-auth {
-  display: flex; flex-direction: column; gap: 10px;
+  display: flex; flex-direction: column; gap: var(--space-5x);
 }
 ${S} .oc-ai-auth-head {
   display: flex; align-items: center; justify-content: space-between;
 }
 ${S} .oc-ai-auth-tabs {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
-  padding: 4px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2);
+  padding: var(--space-1);
   background: var(--surface-1);
   border: 1px solid var(--border-default);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 ${S} .oc-ai-auth-tab {
   display: inline-flex; align-items: center; justify-content: center;
-  gap: 6px; padding: 8px 10px;
+  gap: var(--space-3x); padding: var(--space-2) var(--space-5x);
   background: transparent; border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   color: var(--text-muted);
-  font-size: 13px; font-weight: 500; font-family: inherit;
+  font-size: var(--text-13); font-weight: var(--weight-control); font-family: inherit;
   cursor: pointer;
-  transition: color 120ms ease, background 120ms ease, border-color 120ms ease;
+  transition: color var(--dur-fast) var(--ease-standard), background var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
 }
 ${S} .oc-ai-auth-tab:hover {
-  color: var(--text-on-surface);
+  color: var(--text-primary);
 }
 ${S} .oc-ai-auth-tab.is-active.is-info {
-  color: var(--text-primary-light);
-  background: var(--tint-primary-soft);
-  border-color: var(--tint-primary-border);
+  color: var(--accent-hover);
+  background: var(--accent-soft-bg);
+  border-color: var(--tint-accent-border);
 }
 ${S} .oc-ai-auth-tab.is-active.is-success {
   color: var(--text-success);
@@ -277,31 +277,31 @@ ${S} .oc-ai-auth-tab.is-active.is-success {
 }
 
 ${S} .oc-ai-auth-panel {
-  display: flex; flex-direction: column; gap: 10px;
-  padding: 14px 16px;
+  display: flex; flex-direction: column; gap: var(--space-5x);
+  padding: var(--space-7x) var(--space-4);
   border: 1px solid var(--border-default);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--surface-1);
 }
 ${S} .oc-ai-auth-panel.is-info {
-  border-color: var(--tint-primary-border);
-  background: var(--tint-primary-weak);
+  border-color: var(--tint-accent-border);
+  background: var(--tint-accent-weak);
 }
 ${S} .oc-ai-auth-panel.is-success {
   border-color: var(--tint-success-border);
   background: var(--tint-success-weak);
 }
 ${S} .oc-ai-auth-panel-head {
-  display: flex; align-items: center; gap: 8px;
-  color: var(--text-on-surface);
-  font-size: 13px;
+  display: flex; align-items: center; gap: var(--space-2);
+  color: var(--text-primary);
+  font-size: var(--text-13);
 }
-${S} .oc-ai-auth-panel.is-info .oc-ai-auth-panel-head { color: var(--text-primary-light); }
+${S} .oc-ai-auth-panel.is-info .oc-ai-auth-panel-head { color: var(--accent-hover); }
 ${S} .oc-ai-auth-panel.is-success .oc-ai-auth-panel-head { color: var(--text-success); }
 ${S} .oc-ai-auth-row {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  color: var(--text-on-surface);
-  font-size: 12px;
+  display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap;
+  color: var(--text-primary);
+  font-size: var(--text-12);
 }
 ${S} .oc-ai-auth-row input {
   flex: 1; min-width: 180px;
@@ -311,24 +311,24 @@ ${S} .oc-ai-auth-icon {
   display: inline-flex; align-items: center; justify-content: center;
   width: 26px; height: 26px;
   background: transparent; border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   color: var(--text-muted);
   cursor: pointer;
 }
 ${S} .oc-ai-auth-icon:hover {
   background: var(--tint-hover-strong);
-  color: var(--text-on-surface);
+  color: var(--text-primary);
 }
 
 ${S} .oc-ai-chip {
   display: inline-flex; align-items: center;
-  padding: 2px 8px; border-radius: 9999px;
-  font-size: 10px; font-weight: 600; letter-spacing: 0.05em;
+  padding: var(--space-hair) var(--space-2); border-radius: var(--radius-pill);
+  font-size: var(--text-10); font-weight: var(--weight-heading); letter-spacing: var(--tracking-overline);
   text-transform: uppercase;
 }
 ${S} .oc-ai-chip.is-info {
-  background: var(--tint-primary-soft);
-  color: var(--text-primary-light);
+  background: var(--accent-soft-bg);
+  color: var(--accent-hover);
 }
 ${S} .oc-ai-chip.is-success {
   background: var(--tint-success-soft);
@@ -340,62 +340,62 @@ ${S} .oc-ai-chip.is-warn {
 }
 
 ${S} .oc-ai-card {
-  padding: 14px 16px;
+  padding: var(--space-7x) var(--space-4);
   background: var(--surface-1);
   border: 1px solid var(--border-default);
-  border-radius: 8px;
-  display: flex; flex-direction: column; gap: 12px;
+  border-radius: var(--radius-md);
+  display: flex; flex-direction: column; gap: var(--space-3);
 }
 ${S} .oc-ai-card-head {
-  display: flex; flex-direction: column; gap: 4px;
+  display: flex; flex-direction: column; gap: var(--space-1);
 }
 ${S} .oc-ai-card-head--row {
-  flex-direction: row; align-items: center; justify-content: space-between; gap: 16px;
+  flex-direction: row; align-items: center; justify-content: space-between; gap: var(--space-4);
 }
 ${S} .oc-ai-card-title {
-  font-size: 13px; font-weight: 600;
-  color: var(--text-on-surface);
-  display: flex; align-items: center; gap: 8px;
+  font-size: var(--text-13); font-weight: var(--weight-heading);
+  color: var(--text-primary);
+  display: flex; align-items: center; gap: var(--space-2);
 }
 ${S} .oc-ai-card-hint {
   margin: 0;
-  font-size: 11px; color: var(--text-muted); line-height: 1.5;
+  font-size: var(--text-11); color: var(--text-muted); line-height: var(--leading-normal);
 }
 ${S} .oc-ai-card-hint code {
   padding: 1px 5px;
   background: var(--surface-0);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--text-10);
 }
 
 ${S} .oc-ai-effort-row {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-2);
 }
 ${S} .oc-ai-effort {
-  padding: 10px 8px;
+  padding: var(--space-5x) var(--space-2);
   background: transparent;
   border: 1px solid var(--border-default);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   color: var(--text-muted);
   cursor: pointer;
-  display: flex; flex-direction: column; gap: 2px; align-items: center;
+  display: flex; flex-direction: column; gap: var(--space-hair); align-items: center;
   font-family: inherit;
-  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+  transition: border-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard), background var(--dur-fast) var(--ease-standard);
 }
 ${S} .oc-ai-effort:hover {
-  color: var(--text-on-surface);
+  color: var(--text-primary);
 }
 ${S} .oc-ai-effort.is-active {
   border-color: var(--surface-inverted);
-  color: var(--text-on-surface);
+  color: var(--text-primary);
   background: var(--tint-hover);
 }
 ${S} .oc-ai-effort-label {
-  font-size: 13px; font-weight: 600;
+  font-size: var(--text-13); font-weight: var(--weight-heading);
 }
 ${S} .oc-ai-effort-hint {
-  font-size: 11px; color: var(--text-muted);
+  font-size: var(--text-11); color: var(--text-muted);
 }
 
 ${S} .oc-ai-toggle {
@@ -405,20 +405,20 @@ ${S} .oc-ai-toggle input { opacity: 0; width: 0; height: 0; }
 ${S} .oc-ai-toggle-track {
   position: absolute; inset: 0;
   background: var(--surface-2);
-  border-radius: 9999px;
-  transition: background 120ms ease;
+  border-radius: var(--radius-pill);
+  transition: background var(--dur-fast) var(--ease-standard);
   cursor: pointer;
 }
 ${S} .oc-ai-toggle-track::before {
   content: "";
   position: absolute; left: 3px; top: 3px;
   width: 16px; height: 16px;
-  background: var(--text-on-surface);
-  border-radius: 50%;
-  transition: transform 140ms ease;
+  background: var(--text-primary);
+  border-radius: var(--radius-circle);
+  transition: transform var(--dur-fast) var(--ease-emphasized);
 }
 ${S} .oc-ai-toggle input:checked + .oc-ai-toggle-track {
-  background: var(--status-warning);
+  background: var(--text-warning);
 }
 ${S} .oc-ai-toggle input:checked + .oc-ai-toggle-track::before {
   transform: translateX(16px);
@@ -426,17 +426,17 @@ ${S} .oc-ai-toggle input:checked + .oc-ai-toggle-track::before {
 }
 
 ${S} .oc-ai-auth-install {
-  display: flex; flex-direction: column; gap: 8px;
+  display: flex; flex-direction: column; gap: var(--space-2);
 }
 ${S} .oc-ai-auth-cmd {
   display: block;
-  padding: 8px 10px;
+  padding: var(--space-2) var(--space-5x);
   background: var(--surface-0);
   border: 1px solid var(--border-subtle);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-on-surface);
+  font-size: var(--text-11);
+  color: var(--text-primary);
   white-space: nowrap; overflow-x: auto;
 }
 

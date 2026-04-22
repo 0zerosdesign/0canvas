@@ -5,14 +5,14 @@
 // Lint guardrail for RULES.md Rule 4, 11, 12, 14, 15.
 //
 // Scans src/**/*.{ts,tsx,css,mjs,js,jsx} and reports:
-//   • Hex colors outside design-tokens.css
-//   • rgba() literals outside design-tokens.css / primitives.css
+//   • Hex colors outside tokens.css
+//   • rgba() literals outside tokens.css / primitives.css
 //   • Off-scale font-size: Npx (N not in {10,11,12,13,15,18})
 //   • Off-scale border-radius: Npx (N not in {4,6,8,12})
 //   • Odd space values (3,5,7,9,11,13,15) in CSS padding/gap/margin
 //   • Numeric z-index in component files (not in tokens/primitives)
 //   • Tailwind color classes: bg|text|border-(red|blue|...)-\d+
-//   • Primitive tokens referenced outside design-tokens.css
+//   • Primitive tokens referenced outside tokens.css
 //   • Inline style with static visual properties
 //   • `Inter` or other web font names
 //
@@ -27,7 +27,7 @@ const SRC = join(ROOT, "src");
 
 // Files that ARE allowed to contain raw values (token definitions, etc.)
 const ALLOWLIST = new Set([
-  "src/styles/design-tokens.css",
+  "src/styles/tokens.css",
   "src/styles/variables.css", // legacy re-export
   "src/zeros/ui/primitives.css",
   // Parsers / lookup tables that describe CSS/Tailwind values — these
@@ -81,7 +81,7 @@ const SKIP_DIRS = new Set([
 
 const ALLOWED_FONT_SIZES_PX = new Set([10, 11, 12, 13, 15, 18]);
 const ALLOWED_RADII_PX = new Set([0, 4, 6, 8, 12]);
-// Spacing scale — matches --space-1..--space-12 in design-tokens.css.
+// Spacing scale — matches --space-1..--space-12 in tokens.css.
 // 1px is also allowed for column seams / dividers (Rule 13: "1px
 // seams, not tone steps"). Everything else must snap to scale.
 const ALLOWED_SPACE_PX = new Set([0, 1, 2, 4, 6, 8, 10, 12, 14, 16, 20, 24, 32, 40, 48]);
@@ -92,7 +92,7 @@ const TAILWIND_COLOR_RE =
 // Match hex colors like #fff, #ffffff, #ffff80 — but avoid URL fragments
 const HEX_RE = /#[0-9a-fA-F]{3,8}\b/g;
 
-// Primitive tokens (from the palette sections of design-tokens.css)
+// Primitive tokens (from the palette sections of tokens.css)
 const PRIMITIVE_TOKEN_RE =
   /var\(--(grey|blue|green|red|yellow|orange|purple|pink|teal|cyan|indigo|fuchsia|lime|sky)-\d{2,3}\b/;
 
@@ -240,7 +240,7 @@ function scanFile(absPath) {
           // Skip URL-looking contexts (anchor links, href="#…")
           const before = line.slice(Math.max(0, m.index - 5), m.index);
           if (before.includes("#")) continue;
-          push(rel, ln, `Hex color "${m[0]}" — use a token from design-tokens.css (see skills/tokens-decision.md).`);
+          push(rel, ln, `Hex color "${m[0]}" — use a token from tokens.css (see skills/tokens-decision.md).`);
         }
       }
     }
@@ -253,13 +253,13 @@ function scanFile(absPath) {
         trimmed.startsWith("*") ||
         trimmed.startsWith("/*");
       if (!isComment) {
-        push(rel, ln, "rgba() literal — use --tint-hover / --tint-active / --tint-primary-soft or add to design-tokens.css.");
+        push(rel, ln, "rgba() literal — use --tint-hover / --tint-active / --tint-primary-soft or add to tokens.css.");
       }
     }
 
     // --- Primitive token leaks ---
     if (!isAllowlisted && PRIMITIVE_TOKEN_RE.test(line)) {
-      push(rel, ln, "Primitive token referenced outside design-tokens.css — use a SEMANTIC token (e.g. --surface-0, --text-muted, --primary).");
+      push(rel, ln, "Primitive token referenced outside tokens.css — use a SEMANTIC token (e.g. --surface-0, --text-muted, --primary).");
     }
 
     // --- Tailwind color utility ---

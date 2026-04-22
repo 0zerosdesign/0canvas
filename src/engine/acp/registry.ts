@@ -89,6 +89,13 @@ export interface EnrichedRegistryAgent extends RegistryAgent {
   installed: boolean;
   /** Platform-resolved launch method. `"unavailable"` = no runnable dist on host. */
   launchKind: "npx" | "uvx" | "binary" | "unavailable";
+  /**
+   * Preferred CLI binary for auth-state probes and the "Login" Terminal
+   * invocation. Pulled from the same hand-curated table as the PATH probe.
+   * Undefined when we have no known binary (agent will still run via npx,
+   * but the auth/login affordances don't apply).
+   */
+  authBinary?: string;
 }
 
 /**
@@ -227,6 +234,7 @@ export class RegistryClient {
         ...a,
         installed: await detectInstalled(a),
         launchKind: resolveLaunchKind(a, plat),
+        authBinary: AGENT_PATH_PROBES[a.id]?.[0],
       })),
     );
   }

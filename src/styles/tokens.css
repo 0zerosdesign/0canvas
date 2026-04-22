@@ -1,0 +1,546 @@
+/* ============================================================
+   ZEROS DARK — DESIGN TOKENS (SINGLE SOURCE OF TRUTH)
+   ============================================================
+
+   This is the ONLY file in src/ that defines color, typography,
+   spacing, radius, shadow, motion, z-index, or chrome values.
+   Everything outside this file references tokens via var(--name),
+   never literal hexes or px values.
+
+   To TWEAK the theme:
+     - Swap a hex value here, save. Vite HMR re-renders the whole
+       app instantly.
+     - Mild refinement (nudge a surface tone, swap accent hue) is
+       a one-line edit. No component code changes.
+     - Deeper rework (add a surface tier, rename a token) is a
+       ~20-line edit plus a codemod across src/.
+
+   Theme: one dark theme (Zeros Dark). Light mode is stubbed at
+   the bottom (commented out) — uncomment + toggle
+   `<html data-nc-theme="Light">` to activate later.
+
+   Design references:
+     - Radix slateDark ramp (radix-ui.com/colors) — the source of
+       the greys. Every step is WCAG-pre-tuned.
+     - Cursor + Linear + Zed One Dark — surface layering pattern.
+     - Figma — accent restraint, placeholder contrast floors.
+
+   Authoring rules for AI + humans:
+     1. NEVER hardcode a color, size, radius, space, font-size,
+        shadow, or z-index in components. Always var() a token.
+     2. NEVER reference a primitive directly (--grey-500, --blue-600)
+        from a component. Primitives are internal to this file.
+     3. NEVER invent a new token without updating this file's
+        rules section. If you think you need a new token, first
+        look for an existing semantic match.
+     4. NEVER duplicate a value that already has a token.
+        e.g. if you need 8px radius, use --radius-md, not 8px.
+   ============================================================ */
+
+
+:root {
+
+  /* ═══════════════════════════════════════════════════════════
+     INTERNAL PRIMITIVES — not for component use
+     ───────────────────────────────────────────────────────────
+     Ramps drawn from Radix Colors dark scales. Components must
+     go through the semantic tokens below, never these directly.
+     ═══════════════════════════════════════════════════════════ */
+
+  /* Slate — cool neutral (Zeros' core ramp) */
+  --grey-0:  #0E0F10;   /* pre-slate1, pure floor */
+  --grey-1:  #111113;   /* slate1 */
+  --grey-2:  #18191B;   /* slate2 */
+  --grey-3:  #212225;   /* slate3 */
+  --grey-4:  #272A2D;   /* slate4 */
+  --grey-5:  #2E3135;   /* slate5 */
+  --grey-6:  #363A3F;   /* slate6 */
+  --grey-7:  #43484E;   /* slate7 */
+  --grey-8:  #5A6169;   /* slate8 */
+  --grey-9:  #696E77;   /* slate9 */
+  --grey-10: #777B84;   /* slate10 */
+  --grey-11: #B0B4BA;   /* slate11 */
+  --grey-12: #EDEEF0;   /* slate12 */
+
+  /* Blue — accent ramp (Radix blueDark) */
+  --blue-3:  #0D2847;
+  --blue-4:  #003362;
+  --blue-7:  #205D9E;
+  --blue-8:  #2870BD;
+  --blue-9:  #0090FF;
+  --blue-10: #3B9EFF;
+  --blue-11: #70B8FF;
+
+  /* Status ramps (Radix redDark / greenDark / amberDark / skyDark) */
+  --red-2:   #201314;
+  --red-11:  #FF9592;
+  --green-2: #121B17;
+  --green-11:#3DD68C;
+  --amber-2: #1D180F;
+  --amber-11:#FFCA16;
+  --sky-11:  #8EC8F6;   /* connecting-state hue */
+
+
+  /* ═══════════════════════════════════════════════════════════
+     SURFACES — 5-tone ladder, real tonal steps
+     ───────────────────────────────────────────────────────────
+     Intent map (enforce strictly):
+       floor  → title bar, activity bar (icon strip), status bar
+       0      → canvas: main workspace body, sidebar body, page body
+       1      → raised: cards, inputs, menu items, dropdown container
+       2      → hover: row hover, menu item hover, hovered icon btn
+       3      → selected: active tab, selected row, pressed button
+     ═══════════════════════════════════════════════════════════ */
+
+  --surface-floor: var(--grey-0);
+  --surface-0:     var(--grey-1);
+  --surface-1:     var(--grey-2);
+  --surface-2:     var(--grey-3);
+  --surface-3:     var(--grey-4);
+
+  /* Extreme surfaces for inverted contexts (color-picker math, etc.) */
+  --surface-absolute:          #000000;
+  --surface-absolute-inverted: #FFFFFF;
+  --surface-inverted:          var(--grey-11);   /* light-on-dark control handles */
+
+
+  /* ═══════════════════════════════════════════════════════════
+     BORDERS — solid tonal (never rgba overlays)
+     ───────────────────────────────────────────────────────────
+     Rule of thumb: border tier = one step brighter than the
+     surface it sits on. Do not use --border-subtle on surface-2
+     or surface-3 (it disappears — they're the same tone).
+     ═══════════════════════════════════════════════════════════ */
+
+  --border-subtle:  var(--grey-3);   /* column seams, card edges on surface-0 */
+  --border-default: var(--grey-5);   /* input outlines, button borders */
+  --border-strong:  var(--grey-7);   /* focused input, dialog edge, tab underline */
+
+
+  /* ═══════════════════════════════════════════════════════════
+     TEXT — 3 tiers + disabled
+     ───────────────────────────────────────────────────────────
+     Contrast ratios on --surface-0 (#111113):
+       primary     14.8:1  AAA
+       muted        8.6:1  AAA
+       placeholder  4.3:1  AA
+       disabled     3.2:1  (intentionally off)
+
+     Hard rule: placeholder is NOT safe on surface-2 or surface-3
+     (drops below 4.5:1). Use muted there.
+     ═══════════════════════════════════════════════════════════ */
+
+  --text-primary:     var(--grey-12);
+  --text-muted:       var(--grey-11);
+  --text-placeholder: var(--grey-10);
+  --text-disabled:    var(--grey-8);
+
+  --text-on-accent:   var(--blue-3);    /* text on --accent fill (8.4:1) */
+  --text-on-inverted: var(--grey-3);    /* text on --surface-inverted */
+
+
+  /* ═══════════════════════════════════════════════════════════
+     ACCENT — one color, 5 canonical spots only
+     ───────────────────────────────────────────────────────────
+     Permitted uses (every other blue in the codebase is wrong):
+       1. Primary button fill           (--accent)
+       2. Active tab underline          (--accent)
+       3. Focus ring outline            (--ring-focus)
+       4. Link text                     (--text-link)
+       5. Selection highlight bg        (--accent-soft-bg)
+     ═══════════════════════════════════════════════════════════ */
+
+  --accent:          var(--blue-10);
+  --accent-hover:    var(--blue-11);
+  --accent-pressed:  var(--blue-8);
+  --accent-soft-bg:  var(--blue-3);
+  --ring-focus:      var(--blue-7);
+
+
+  /* ═══════════════════════════════════════════════════════════
+     STATUS — semantic, not decorative
+     ───────────────────────────────────────────────────────────
+     Each status is a pair: text color + soft bg for pills/alerts.
+     NEVER use status colors for decoration, theme accents, or
+     inline emphasis. Green = success only. Red = critical only.
+     ═══════════════════════════════════════════════════════════ */
+
+  --text-info:     var(--blue-11);
+  --text-success:  var(--green-11);
+  --text-warning:  var(--amber-11);
+  --text-critical: var(--red-11);
+  --text-link:     var(--accent);
+
+  --tint-info-soft:     var(--blue-3);
+  --tint-success-soft:  var(--green-2);
+  --tint-warning-soft:  var(--amber-2);
+  --tint-critical-soft: var(--red-2);
+
+  /* Status connecting (WebSocket handshake, etc.) — Zeros-specific. */
+  --text-connecting: var(--sky-11);
+
+
+  /* ═══════════════════════════════════════════════════════════
+     TINTS — state overlays
+     ───────────────────────────────────────────────────────────
+     For states where a surface swap would be too heavy (e.g.
+     button press flash), use a tint overlay. Prefer a surface
+     swap (surface-2 for hover, surface-3 for selected) when
+     possible — tints are for subtle secondary feedback.
+     ═══════════════════════════════════════════════════════════ */
+
+  --tint-hover:          rgba(255, 255, 255, 0.04);
+  --tint-hover-strong:   rgba(255, 255, 255, 0.07);
+  --tint-active:         rgba(255, 255, 255, 0.10);
+  --tint-border-hover:   rgba(255, 255, 255, 0.15);
+
+  /* Accent tints (for badges on surface-0/1 and soft emphasis) */
+  --tint-accent-weak:    rgba(59, 158, 255, 0.06);
+  --tint-accent-soft:    rgba(59, 158, 255, 0.12);
+  --tint-accent-border:  rgba(59, 158, 255, 0.32);
+
+  /* Modal / command-palette backdrops */
+  --backdrop-weak:   rgba(0, 0, 0, 0.50);
+  --backdrop-strong: rgba(0, 0, 0, 0.70);
+
+  /* Inset shading on light controls (count pills on surface-0, etc.) */
+  --tint-black-soft: rgba(0, 0, 0, 0.25);
+
+
+  /* ═══════════════════════════════════════════════════════════
+     TYPOGRAPHY — app constant (not theme-scoped)
+     ───────────────────────────────────────────────────────────
+     Scale:
+       10  overline, tiny badges (uppercase, 0.05em tracking)
+       11  metadata, timestamps, hints, subtitles
+       12  controls: buttons, tabs, menu items, chips
+       13  BODY: list rows, default readable text
+       15  panel titles, card headings
+       18  settings-section headings
+       20  page headings (onboarding, empty-state heros)
+
+     Weights:
+       body     400  body text
+       control  500  labels, buttons, tabs, chips
+       heading  600  panel/card/page titles, overline
+
+     Line heights:
+       tight   1.2  20px headings
+       snug    1.4  controls + body default
+       normal  1.5  long-form paragraphs, chat messages
+     ═══════════════════════════════════════════════════════════ */
+
+  --font-ui:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "JetBrains Mono", "Liberation Mono", monospace;
+
+  --text-10: 10px;
+  --text-11: 11px;
+  --text-12: 12px;
+  --text-13: 13px;
+  --text-15: 15px;
+  --text-18: 18px;
+  --text-20: 20px;
+
+  --weight-body:    400;
+  --weight-control: 500;
+  --weight-heading: 600;
+
+  --leading-tight:  1.2;
+  --leading-snug:   1.4;
+  --leading-normal: 1.5;
+
+  --tracking-overline: 0.05em;
+
+
+  /* ═══════════════════════════════════════════════════════════
+     SPACING — strict 4px grid (Linear-style)
+     ───────────────────────────────────────────────────────────
+       1  = 4px    icon↔label gap in pills
+       2  = 8px    chip inner Y pad, tight gap
+       3  = 12px   default item gap
+       4  = 16px   section gap, card inner pad
+       5  = 20px   panel pad, list item pad
+       6  = 24px   card pad, form row
+       7  = 32px   dialog inner pad
+       8  = 48px   large dialog pad
+
+     Allowed odd values for dense IDE chrome: 2, 6, 10, 14.
+     Everything else snaps to the scale.
+     ═══════════════════════════════════════════════════════════ */
+
+  --space-0:  0;
+  --space-px: 1px;
+  --space-hair: 2px;
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-7:  32px;
+  --space-8:  48px;
+
+  /* IDE-chrome odd steps (use sparingly) */
+  --space-3x: 6px;    /* dense pill inner pad */
+  --space-5x: 10px;   /* row Y pad */
+  --space-7x: 14px;   /* card header pad */
+
+
+  /* ═══════════════════════════════════════════════════════════
+     RADIUS — 5 values by component type
+     ───────────────────────────────────────────────────────────
+       xs    4px    chips, badges, swatches, scrollbar thumb
+       sm    6px    buttons, inputs, tabs, menu items (DEFAULT)
+       md    8px    cards, menus, popovers, dropdowns
+       lg    12px   dialogs, command palette, hero cards
+       pill  9999px pills (branch chip, tag, segmented control)
+       circle 50%   status dots, avatars
+     ═══════════════════════════════════════════════════════════ */
+
+  --radius-xs:     4px;
+  --radius-sm:     6px;
+  --radius-md:     8px;
+  --radius-lg:     12px;
+  --radius-pill:   9999px;
+  --radius-circle: 50%;
+
+
+  /* ═══════════════════════════════════════════════════════════
+     MOTION — timings + easings
+     ───────────────────────────────────────────────────────────
+       fast  120ms  color, background, border, opacity
+       base  160ms  layout: collapse, slide, expand
+       slow  240ms  page transitions, heavy modal enter
+     ═══════════════════════════════════════════════════════════ */
+
+  --dur-fast: 120ms;
+  --dur-base: 160ms;
+  --dur-slow: 240ms;
+
+  --ease-standard:   cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.4, 0, 0.2, 1);
+
+
+  /* ═══════════════════════════════════════════════════════════
+     SHADOW — elevation
+     ───────────────────────────────────────────────────────────
+       sm   cards on surface-0, input focus glow
+       md   elevated cards, hover lift
+       lg   dropdowns, menus, popovers
+       xl   dialogs, command palette
+     ═══════════════════════════════════════════════════════════ */
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.28);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.32),
+               0 2px 4px -1px rgba(0, 0, 0, 0.24);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.40),
+               0 4px  6px -2px rgba(0, 0, 0, 0.24);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.50),
+               0 10px 10px -5px rgba(0, 0, 0, 0.28);
+
+
+  /* ═══════════════════════════════════════════════════════════
+     Z-INDEX — stacking
+     ───────────────────────────────────────────────────────────
+     Use these tokens; never raw numeric literals in components.
+     ═══════════════════════════════════════════════════════════ */
+
+  --z-chrome:   5;      /* title bar, activity bar, status bar */
+  --z-panel:    10;     /* floating inspector/overlay panels */
+  --z-dropdown: 25;     /* composer menus, popovers */
+  --z-modal:    100;    /* dialogs, command palette, sheets */
+  --z-toast:    200;    /* notifications, always on top */
+
+
+  /* ═══════════════════════════════════════════════════════════
+     CONTROL HEIGHTS
+     ───────────────────────────────────────────────────────────
+       sm  24px   toolbar pills, dense chips, status bar items
+       md  28px   DEFAULT: buttons, inputs, tab triggers
+       lg  32px   primary CTAs, large inputs, dialog buttons
+
+     NEVER exceed 32px except hero buttons in onboarding.
+     ═══════════════════════════════════════════════════════════ */
+
+  --h-control-sm: 24px;
+  --h-control-md: 28px;
+  --h-control-lg: 32px;
+
+
+  /* ═══════════════════════════════════════════════════════════
+     ICON SIZES
+     ───────────────────────────────────────────────────────────
+       xs  10px   caret/chevron in tight pills
+       sm  12px   inline icon next to 11-12px text
+       md  14px   inline icon next to 13px text (DEFAULT)
+       lg  16px   nav icons (activity bar, sidebar)
+       xl  20px   page-title icons, hero icons
+     ═══════════════════════════════════════════════════════════ */
+
+  --icon-xs: 10px;
+  --icon-sm: 12px;
+  --icon-md: 14px;
+  --icon-lg: 16px;
+  --icon-xl: 20px;
+
+
+  /* ═══════════════════════════════════════════════════════════
+     CHROME LAYOUT — Electron shell dimensions
+     ───────────────────────────────────────────────────────────
+     Fixed IDE shell sizes. Used by Column 1/2/3 layouts.
+     ═══════════════════════════════════════════════════════════ */
+
+  --titlebar-h:    36px;
+  --activitybar-w: 48px;
+  --sidebar-w:     248px;
+  --sidebar-w-min: 56px;
+  --workspace-w:   440px;
+  --statusbar-h:   22px;
+
+
+  /* ═══════════════════════════════════════════════════════════
+     SYNTAX — code-block highlighting
+     ───────────────────────────────────────────────────────────
+     Only used in code preview / inspector CSS panes. Not for UI.
+     ═══════════════════════════════════════════════════════════ */
+
+  --syntax-comment:  var(--grey-8);
+  --syntax-selector: var(--green-11);
+  --syntax-property: var(--blue-11);
+  --syntax-value:    var(--amber-11);
+
+
+  /* ═══════════════════════════════════════════════════════════
+     LEGACY ALIASES — TRANSITIONAL, DELETE AFTER PHASE 3
+     ───────────────────────────────────────────────────────────
+     Kept only so the existing ~4k lines of CSS keep rendering
+     during the token-name codemod. Every alias below points at
+     the correct new semantic. Phase 3's polish sweep renames
+     component callers and deletes this block.
+
+     NEW CODE MUST NOT REFERENCE ANY OF THESE.
+     ═══════════════════════════════════════════════════════════ */
+
+  /* Old Zeros text names — split into primary/muted/placeholder */
+  --text-on-surface:         var(--text-primary);
+  --text-on-surface-variant: var(--text-muted);
+  --text-hint:               var(--text-placeholder);
+  --text-primary-light:      var(--accent-hover);
+  --text-critical-light:     var(--red-11);
+  --text-on-primary:         var(--text-on-accent);
+  --text-accent:             var(--accent);
+
+  /* Old Zeros primary / ring / destructive family */
+  --primary:            var(--accent);
+  --primary-hover:      var(--accent-hover);
+  --primary-light:      var(--accent-hover);
+  --primary-foreground: var(--text-on-accent);
+  --ring:               var(--ring-focus);
+  --focus-ring:         var(--ring-focus);
+  --destructive:            var(--red-11);
+  --destructive-foreground: var(--tint-critical-soft);
+
+  /* shadcn-style generics */
+  --background:       var(--surface-0);
+  --foreground:       var(--text-primary);
+  --muted-foreground: var(--text-muted);
+  --border:           var(--border-subtle);
+  --input:            var(--border-default);
+
+  /* Old 0colors-flavored aliases (referenced in a few places) */
+  --base-primary:         var(--accent);
+  --base-primary-hover:   var(--accent-hover);
+  --base-primary-pressed: var(--accent-pressed);
+  --on-primary:           var(--text-on-accent);
+  --on-critical:          var(--text-critical);
+  --on-surface-6:         var(--text-disabled);
+  --shadow-color-surface: rgba(0, 0, 0, 0.28);
+
+  /* Old Zeros tint name still in use on a few panels */
+  --tint-primary-weak:   var(--tint-accent-weak);
+  --tint-primary-soft:   var(--tint-accent-soft);
+  --tint-primary-hover:  rgba(59, 158, 255, 0.18);
+  --tint-primary-border: var(--tint-accent-border);
+
+  --tint-success-weak:   rgba(61, 214, 140, 0.08);
+  --tint-success-border: rgba(61, 214, 140, 0.32);
+  --tint-warning-border: rgba(255, 202, 22, 0.32);
+  --tint-critical-border:rgba(255, 149, 146, 0.32);
+
+  /* Status aliases to status text colors (Zeros used --status-* as text) */
+  --status-info:       var(--text-info);
+  --status-success:    var(--text-success);
+  --status-warning:    var(--text-warning);
+  --status-critical:   var(--text-critical);
+  --status-connecting: var(--text-connecting);
+
+  /* --border-emphasis (pre-existing undefined reference in app-shell.css) */
+  --border-emphasis: var(--border-strong);
+
+  /* Old space numeric aliases where Zeros used 2/6/10/14 names */
+  /* (Phase 3 snaps these callers to the base scale.) */
+}
+
+
+/* ============================================================
+   LIGHT MODE PLACEHOLDER — uncomment + test when needed
+   ------------------------------------------------------------
+   To activate: <html data-nc-theme="Light">. Primitives above
+   stay the same; only semantic tokens flip.
+   ============================================================ */
+/*
+[data-nc-theme~="Light"] {
+  --surface-floor: #F5F5F6;
+  --surface-0:     #FFFFFF;
+  --surface-1:     #FAFAFA;
+  --surface-2:     #F0F0F2;
+  --surface-3:     #E6E6E9;
+  --border-subtle:  #EBEBEE;
+  --border-default: #DCDCE0;
+  --border-strong:  #BFBFC4;
+  --text-primary:     #111113;
+  --text-muted:       #4F545C;
+  --text-placeholder: #848992;
+  --text-disabled:    #B2B6BC;
+  --accent:         #0068E0;
+  --accent-hover:   #0057BC;
+  --accent-pressed: #004894;
+  --accent-soft-bg: #DCEBFF;
+  --text-on-accent: #FFFFFF;
+  --ring-focus:     #2F6BD0;
+  ...
+}
+*/
+
+
+/* ============================================================
+   BASE STYLES — apply token defaults to the document
+   ------------------------------------------------------------
+   Anything that doesn't explicitly set typography/bg inherits
+   these. The engine-scope.ts file adds element-level resets
+   inside [data-Zeros-root] subtrees; this file owns html/body.
+   ============================================================ */
+
+html,
+body {
+  background: var(--surface-0);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--text-13);
+  line-height: var(--leading-snug);
+  font-weight: var(--weight-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code,
+kbd,
+pre,
+samp {
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+}

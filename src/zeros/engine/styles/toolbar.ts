@@ -7,123 +7,123 @@ export const toolbarCSS = (S: string) => `
 ${S} .oc-toolbar {
   height: 48px; display: flex; align-items: center;
   justify-content: space-between;
-  padding: 0 16px; gap: 6px; flex-shrink: 0;
+  padding: 0 var(--space-4); gap: var(--space-3x); flex-shrink: 0;
   background: var(--surface-floor); border-bottom: 1px solid var(--border-subtle);
-  font-family: var(--font-ui); font-size: 13px;
-  color: var(--text-on-surface); user-select: none;
+  font-family: var(--font-ui); font-size: var(--text-13);
+  color: var(--text-primary); user-select: none;
 }
-${S} .oc-toolbar-section { display: flex; align-items: center; gap: 12px; }
-${S} .oc-toolbar-section-actions { display: flex; align-items: center; gap: 8px; }
-${S} .oc-toolbar-group { display: flex; align-items: center; gap: 2px; }
+${S} .oc-toolbar-section { display: flex; align-items: center; gap: var(--space-3); }
+${S} .oc-toolbar-section-actions { display: flex; align-items: center; gap: var(--space-2); }
+${S} .oc-toolbar-group { display: flex; align-items: center; gap: var(--space-hair); }
 ${S} .oc-toolbar-group.is-pill {
-  background: var(--surface-0); border-radius: 8px;
-  padding: 3px; border: 1px solid var(--border-subtle);
+  background: var(--surface-0); border-radius: var(--radius-md);
+  padding: var(--space-1); border: 1px solid var(--border-subtle);
 }
 ${S} .oc-toolbar-group.is-pill-sm {
-  background: var(--surface-0); border-radius: 6px;
-  padding: 3px; border: 1px solid var(--border-subtle);
+  background: var(--surface-0); border-radius: var(--radius-sm);
+  padding: var(--space-1); border: 1px solid var(--border-subtle);
 }
 ${S} .oc-toolbar-divider { width: 1px; height: 20px; background: var(--border-subtle); }
 ${S} .oc-toolbar-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 10px; border-radius: 6px;
-  font-size: 12px; font-weight: 450; color: var(--text-muted);
+  display: inline-flex; align-items: center; gap: var(--space-3x);
+  padding: var(--space-3x) var(--space-5x); border-radius: var(--radius-sm);
+  font-size: var(--text-12); font-weight: var(--weight-control); color: var(--text-muted);
   background: transparent; border: none; cursor: pointer;
-  transition: all 0.15s ease; white-space: nowrap;
+  transition: all var(--dur-fast) var(--ease-standard); white-space: nowrap;
 }
-${S} .oc-toolbar-btn:hover { background: var(--tint-hover); color: var(--text-on-surface); }
-${S} .oc-toolbar-btn.is-active { background: var(--surface-1); color: var(--text-on-surface); }
+${S} .oc-toolbar-btn:hover { background: var(--tint-hover); color: var(--text-primary); }
+${S} .oc-toolbar-btn.is-active { background: var(--surface-1); color: var(--text-primary); }
 ${S} .oc-toolbar-badge {
-  font-size: 10px; font-weight: 600;
-  background: var(--tint-active); color: var(--text-on-surface);
-  padding: 1px 5px; border-radius: 4px; line-height: 14px;
+  font-size: var(--text-10); font-weight: var(--weight-heading);
+  background: var(--tint-active); color: var(--text-primary);
+  padding: 1px var(--space-1); border-radius: var(--radius-xs); line-height: 14px;
 }
 ${S} .oc-toolbar-logo {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: var(--space-2);
 }
 ${S} .oc-toolbar-logo-icon {
-  width: 26px; height: 26px; border-radius: 6px;
+  width: 26px; height: 26px; border-radius: var(--radius-sm);
   background: var(--surface-inverted); display: flex;
   align-items: center; justify-content: center;
 }
 ${S} .oc-toolbar-logo-text {
-  font-size: 13px; font-weight: 500; letter-spacing: -0.01em;
+  font-size: var(--text-13); font-weight: var(--weight-control); letter-spacing: -0.01em;
 }
 ${S} .oc-toolbar-conn-dot {
-  width: 5px; height: 5px; border-radius: 50%;
-  background: var(--status-success);
+  width: 5px; height: 5px; border-radius: var(--radius-circle);
+  background: var(--text-success);
 }
 ${S} .oc-toolbar-dropdown {
-  position: absolute; top: 100%; left: 0; margin-top: 6px;
+  position: absolute; top: 100%; left: 0; margin-top: var(--space-3x);
   background: var(--surface-floor); border: 1px solid var(--border-subtle);
-  border-radius: 8px; box-shadow: 0 12px 32px rgba(0,0,0,0.5);
-  z-index: 100; overflow: hidden;
+  border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
+  z-index: var(--z-modal); overflow: hidden;
 }
 ${S} .oc-toolbar-dropdown-inputrow {
-  padding: 8px 10px; border-bottom: 1px solid var(--border-subtle);
-  display: flex; gap: 6px;
+  padding: var(--space-2) var(--space-5x); border-bottom: 1px solid var(--border-subtle);
+  display: flex; gap: var(--space-3x);
 }
 ${S} .oc-toolbar-dropdown-list { max-height: 180px; overflow-y: auto; }
 ${S} .oc-toolbar-dropdown-list.is-tall { max-height: 200px; }
 ${S} .oc-toolbar-dropdown-empty {
-  padding: 16px; text-align: center; color: var(--text-disabled); font-size: 11px;
+  padding: var(--space-4); text-align: center; color: var(--text-disabled); font-size: var(--text-11);
 }
 ${S} .oc-toolbar-project-trigger {
-  display: flex; align-items: center; gap: 6px;
-  padding: 4px 10px; border-radius: 6px;
+  display: flex; align-items: center; gap: var(--space-3x);
+  padding: var(--space-1) var(--space-5x); border-radius: var(--radius-sm);
   background: var(--surface-0);
   border: 1px solid var(--border-subtle); cursor: pointer;
 }
 ${S} .oc-toolbar-project-trigger:hover { border-color: var(--border-default); }
 ${S} .oc-toolbar-project-dot {
-  width: 6px; height: 6px; border-radius: 50%;
+  width: 6px; height: 6px; border-radius: var(--radius-circle);
 }
-${S} .oc-toolbar-project-dot.is-saved { background: var(--status-success); }
-${S} .oc-toolbar-project-dot.is-unsaved { background: var(--status-warning); }
+${S} .oc-toolbar-project-dot.is-saved { background: var(--text-success); }
+${S} .oc-toolbar-project-dot.is-unsaved { background: var(--text-warning); }
 ${S} .oc-toolbar-project-input {
-  width: 100px; padding: 1px 4px;
+  width: 100px; padding: 1px var(--space-1);
   background: var(--surface-1); border: 1px solid var(--border-default);
-  border-radius: 4px; color: var(--text-on-surface);
-  font-size: 12px; outline: none;
+  border-radius: var(--radius-xs); color: var(--text-primary);
+  font-size: var(--text-12); outline: none;
 }
 ${S} .oc-toolbar-project-name {
-  font-size: 12px; max-width: 120px; overflow: hidden;
-  text-overflow: ellipsis; white-space: nowrap; color: var(--text-on-surface);
+  font-size: var(--text-12); max-width: 120px; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary);
 }
 ${S} .oc-toolbar-project-unsaved {
-  font-size: 10px; color: var(--status-warning); font-style: italic;
+  font-size: var(--text-10); color: var(--text-warning); font-style: italic;
 }
 ${S} .oc-toolbar-project-save-btn {
   flex: 1; display: flex; align-items: center; justify-content: center;
-  gap: 5px; padding: 6px 0; background: var(--primary);
-  border: none; border-radius: 6px; color: var(--text-on-primary);
-  font-size: 11px; font-weight: 500; cursor: pointer;
+  gap: 5px; padding: var(--space-3x) 0; background: var(--accent);
+  border: none; border-radius: var(--radius-sm); color: var(--text-on-accent);
+  font-size: var(--text-11); font-weight: var(--weight-control); cursor: pointer;
 }
-${S} .oc-toolbar-project-save-btn:hover { background: var(--primary-hover); }
+${S} .oc-toolbar-project-save-btn:hover { background: var(--accent-hover); }
 ${S} .oc-toolbar-project-item {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 8px 14px; background: transparent;
+  padding: var(--space-2) var(--space-7x); background: transparent;
   border-left: 2px solid transparent;
-  cursor: pointer; transition: all 0.1s ease;
+  cursor: pointer; transition: all var(--dur-fast) var(--ease-standard);
 }
 ${S} .oc-toolbar-project-item:hover { background: var(--tint-hover); }
 ${S} .oc-toolbar-project-item.is-active {
-  background: rgba(37,99,235,0.07);
-  border-left-color: var(--primary);
+  background: var(--accent-soft-bg);
+  border-left-color: var(--accent);
 }
 ${S} .oc-toolbar-project-item-name {
-  font-size: 12px; color: var(--text-on-surface);
+  font-size: var(--text-12); color: var(--text-primary);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 ${S} .oc-toolbar-project-item.is-active .oc-toolbar-project-item-name {
   color: var(--text-primary);
 }
 ${S} .oc-toolbar-project-item-meta {
-  font-size: 10px; color: var(--text-disabled); margin-top: 2px;
+  font-size: var(--text-10); color: var(--text-disabled); margin-top: var(--space-hair);
 }
 ${S} .oc-toolbar-project-delete {
   background: none; border: none; cursor: pointer;
-  padding: 2px; color: var(--status-critical);
+  padding: var(--space-hair); color: var(--text-critical);
   display: none;
 }
 ${S} .oc-toolbar-project-item:hover .oc-toolbar-project-delete {

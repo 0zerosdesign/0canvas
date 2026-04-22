@@ -319,7 +319,7 @@ export function AuthModal({ agent, initialize, onConfirm, onBack }: AuthModalPro
                   <div className="oc-acp-auth-label">
                     {v.label}
                     {v.optional && (
-                      <span style={{ color: "var(--text-hint)", marginLeft: 4 }}>
+                      <span style={{ color: "var(--text-placeholder)", marginLeft: 4 }}>
                         (optional)
                       </span>
                     )}

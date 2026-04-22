@@ -317,10 +317,9 @@ function providerKey(p: string): ProviderKey {
 
 function ProviderIcon({ provider, size = 12 }: { provider: ProviderKey; size?: number }) {
   return provider === "claude" ? (
-    // Brand glyph tint — primitive scale is intentional. check:ui ignore-next
-    <Sparkles size={size} style={{ color: "var(--orange-400)" }} />
+    <Sparkles size={size} style={{ color: "var(--text-warning)" }} />
   ) : (
-    <Bot size={size} style={{ color: "var(--text-on-surface-variant)" }} />
+    <Bot size={size} style={{ color: "var(--text-muted)" }} />
   );
 }
 
@@ -1403,10 +1402,10 @@ Styles:\n${Object.entries(selectedElement.styles)
 
   const activeChatTitle =
     state.chats.find((c) => c.id === state.activeChatId)?.title ?? "Chat";
-  // Brand accent colors for the provider icon (Claude=orange, OpenAI=green).
-  // Primitive tokens are used here because these are brand glyph tints,
-  // not semantic UI color. check:ui ignore-next
-  const providerIconTint = aiSettings.provider === "openai" ? "var(--green-500)" : aiSettings.provider === "chatgpt" ? "var(--green-500)" : "var(--orange-400)";
+  const providerIconTint =
+    aiSettings.provider === "openai" || aiSettings.provider === "chatgpt"
+      ? "var(--text-success)"
+      : "var(--text-warning)";
 
   // ACP beta surface — swaps the panel body only; header stays so the user
   // can toggle back to the legacy chat in one click. Legacy state above is

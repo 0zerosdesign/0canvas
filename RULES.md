@@ -25,7 +25,7 @@ Every file MUST be placed in the correct folder:
 | **UI primitives (atoms + molecules + organisms)** | `/src/zeros/ui/` |
 | ACP bridge | `/src/zeros/acp/` |
 | MCP server | `/src/mcp/` |
-| **Design tokens (ONE file)** | `/src/styles/design-tokens.css` |
+| **Design tokens (ONE file)** | `/src/styles/tokens.css` |
 | App shell (Tauri window chrome) | `/src/shell/` |
 | Tauri native bridge | `/src/native/` |
 | Demo pages | `/src/demo/` |
@@ -81,7 +81,7 @@ NEVER put a new primitive outside `/src/zeros/ui/`.
 
 ### 4.1 — One file
 
-There is exactly ONE design-token file: **`/src/styles/design-tokens.css`**. No other CSS file defines tokens. Never create `tokens/foo.css` or split the tokens across files.
+There is exactly ONE design-token file: **`/src/styles/tokens.css`**. No other CSS file defines tokens. Never create `tokens/foo.css` or split the tokens across files.
 
 ### 4.2 — Semantic tokens only in components
 
@@ -91,7 +91,7 @@ Components MUST reference **semantic** tokens (`--surface-0`, `--text-on-surface
 
 | Banned | Use instead |
 |---|---|
-| Hex colors (`#171717`, `#10B981`, …) outside `design-tokens.css` | Semantic token |
+| Hex colors (`#171717`, `#10B981`, …) outside `tokens.css` | Semantic token |
 | Raw rgba literals, EXCEPT the documented `--tint-*` tokens | Documented tint token |
 | `font-size: 9|14|16px` (and any value not in the type scale) | `var(--text-10|11|12|13|15|18)` |
 | `border-radius: 2|3|5|7|10|14|16|20px` | `var(--radius-xs|sm|md|lg|pill)` |
@@ -104,7 +104,7 @@ Components MUST reference **semantic** tokens (`--surface-0`, `--text-on-surface
 
 If no semantic token fits, STOP. Do not invent. Either:
 1. Find the nearest existing semantic token, or
-2. Open a PR that adds a new semantic token to `design-tokens.css` **and** updates the matching section of this file and `skills/ui-consistency.md`.
+2. Open a PR that adds a new semantic token to `tokens.css` **and** updates the matching section of this file and `skills/ui-consistency.md`.
 
 ---
 
@@ -192,7 +192,7 @@ If you're tempted to inline a static value, add a class instead.
 
 Overlays use the primitives — `<DropdownMenu>`, `<Dialog>`, `<Tooltip>`, `<Popover>` — which already own the right z-layer via `--z-dropdown|modal|toast`. Writing `z-index: 999` or `z-index: 50` anywhere in a component is a bug.
 
-If you need a new layer, add a token (`--z-foo`) to `design-tokens.css`, document it, and use it.
+If you need a new layer, add a token (`--z-foo`) to `tokens.css`, document it, and use it.
 
 ---
 
@@ -308,7 +308,7 @@ The Zeros engine ships as an npm package; its CSS is injected at runtime from `s
 
 Before every UI-touching commit, verify:
 
-- [ ] No new hex colors (`rg '#[0-9a-fA-F]{3,8}' src/`, should only light up `design-tokens.css`)
+- [ ] No new hex colors (`rg '#[0-9a-fA-F]{3,8}' src/`, should only light up `tokens.css`)
 - [ ] No Tailwind color classes outside layout (`rg 'bg-(red|blue|green|gray|zinc|neutral)-\d+' src/`)
 - [ ] No off-scale `font-size: Npx` (N ∉ {10,11,12,13,15,18})
 - [ ] No off-scale `border-radius: Npx` (N ∉ {4,6,8,12})
@@ -320,7 +320,7 @@ Before every UI-touching commit, verify:
 
 ---
 
-## Reference: Sections of `design-tokens.css`
+## Reference: Sections of `tokens.css`
 
 1. Primitives (internal only — never reference in components)
 2. Surfaces (backgrounds)

@@ -1,20 +1,21 @@
 // ──────────────────────────────────────────────────────────
-// AgentsPanel — Zed/Fabriqa-style ACP registry picker
+// AgentsPanel — ACP agent settings (universal, per-user)
 // ──────────────────────────────────────────────────────────
 //
-// Renders the live agent list from cdn.agentclientprotocol.com. The user
-// selects an agent, which starts a new session via the useAcpSession hook.
-// We don't "install" agents explicitly — npx fetches the package on first
-// spawn, binary distributions download on first use, and uvx handles
-// Python packages similarly. From the UI's perspective every agent in the
-// registry is "one click from running".
+// The single place where the user decides:
+//   (1) Which agents show up in the chat-composer "new chat" picker
+//       (toggle — enabled set persisted in localStorage, shared across
+//       all projects).
+//   (2) Whether an agent is logged in ("Active" / "Not active"),
+//       with a Login button that opens Terminal running `<binary> login`.
 //
-// Phase 3 additions: install-state badge (Installed / Available / Unavailable)
-// from the engine's PATH probe, All / Installed / Not installed tabs,
-// and a per-row resource strip (repository / website / license).
+// The panel no longer tracks "installed" vs "available" — npx/uvx
+// fetch on first use, and binary-distributed agents download themselves
+// from their launch adapter. From the user's perspective every agent
+// in the registry is one toggle + one login away from running.
 // ──────────────────────────────────────────────────────────
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Loader2,
   RefreshCw,
@@ -23,15 +24,14 @@ import {
   Github,
   Globe,
   Scale,
-  Download,
-  Check,
-  AlertCircle,
+  LogIn,
 } from "lucide-react";
 import { nativeInvoke } from "../../native/runtime";
 import type { BridgeRegistryAgent } from "../bridge/messages";
 import { Button, Input } from "../ui";
+import { useEnabledAgents } from "./enabled-agents";
 
-type InstallFilter = "all" | "installed" | "available";
+type EnabledFilter = "all" | "enabled" | "disabled";
 
 interface AgentsPanelProps {
   listAgents: (force?: boolean) => Promise<BridgeRegistryAgent[]>;
@@ -48,9 +48,12 @@ export function AgentsPanel({ listAgents, onSelect, activeAgentId, onPreWarm }: 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
-  const [tab, setTab] = useState<InstallFilter>("all");
+  const [tab, setTab] = useState<EnabledFilter>("all");
+  // agentId → true (authenticated) / false (not) / undefined (no binary / not probed yet).
+  const [authState, setAuthState] = useState<Map<string, boolean>>(new Map());
+  const { isEnabled, toggle } = useEnabledAgents();
 
-  const load = async (force = false) => {
+  const load = useCallback(async (force = false) => {
     setLoading(true);
     setError(null);
     try {
@@ -61,28 +64,51 @@ export function AgentsPanel({ listAgents, onSelect, activeAgentId, onPreWarm }: 
     } finally {
       setLoading(false);
     }
-  };
+  }, [listAgents]);
 
   useEffect(() => {
-    load(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    void load(false);
+  }, [load]);
+
+  // Probe auth state for every agent that has a known CLI binary.
+  // Running in parallel keeps the round-trip short; failures fall
+  // through to "not active" silently.
+  const probeAuth = useCallback(async (list: BridgeRegistryAgent[]) => {
+    const next = new Map<string, boolean>();
+    await Promise.all(
+      list.map(async (a) => {
+        if (!a.authBinary) return;
+        try {
+          const ok = await nativeInvoke<boolean>("ai_cli_is_authenticated", {
+            binary: a.authBinary,
+          });
+          next.set(a.id, !!ok);
+        } catch {
+          next.set(a.id, false);
+        }
+      }),
+    );
+    setAuthState(next);
   }, []);
 
-  // Re-probe when the window regains focus — if the user ran `npm install -g`
-  // in their terminal while Zeros was backgrounded, we want the install-state
-  // to reflect that without them hunting for a Refresh button.
+  useEffect(() => {
+    if (!agents) return;
+    void probeAuth(agents);
+  }, [agents, probeAuth]);
+
+  // Re-probe when the window regains focus so that running `claude
+  // login` in an external terminal flips the row to "Active" the
+  // moment the user switches back to Zeros — no manual refresh click.
   useEffect(() => {
     const onFocus = () => {
-      // Silent refresh; we already have data, just update install flags.
       void load(true);
     };
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [load]);
 
-  // Sorted + search-filtered. Tab filter is applied afterwards so each tab's
-  // count reflects the current search.
+  // Sorted + search-filtered. Tab filter is applied afterwards so each
+  // tab's count reflects the current search.
   const searched = useMemo(() => {
     if (!agents) return [];
     const q = query.trim().toLowerCase();
@@ -94,27 +120,30 @@ export function AgentsPanel({ listAgents, onSelect, activeAgentId, onPreWarm }: 
             a.description.toLowerCase().includes(q),
         )
       : agents;
-    // Installed agents float to the top within whatever list we return.
     return [...base].sort((a, b) => {
-      if (!!a.installed !== !!b.installed) return a.installed ? -1 : 1;
+      const aOn = isEnabled(a.id);
+      const bOn = isEnabled(b.id);
+      if (aOn !== bOn) return aOn ? -1 : 1;
       return a.name.localeCompare(b.name);
     });
-  }, [agents, query]);
+  }, [agents, query, isEnabled]);
 
   const counts = useMemo(() => {
-    const installed = searched.filter((a) => a.installed).length;
+    const enabledCount = searched.filter((a) => isEnabled(a.id)).length;
     return {
       all: searched.length,
-      installed,
-      available: searched.length - installed,
+      enabled: enabledCount,
+      disabled: searched.length - enabledCount,
     };
-  }, [searched]);
+  }, [searched, isEnabled]);
 
   const filtered = useMemo(() => {
-    if (tab === "installed") return searched.filter((a) => a.installed);
-    if (tab === "available") return searched.filter((a) => !a.installed);
+    if (tab === "enabled") return searched.filter((a) => isEnabled(a.id));
+    if (tab === "disabled") return searched.filter((a) => !isEnabled(a.id));
     return searched;
-  }, [searched, tab]);
+  }, [searched, tab, isEnabled]);
+
+  const allIds = useMemo(() => (agents ?? []).map((a) => a.id), [agents]);
 
   return (
     <div className="oc-acp-surface">
@@ -132,7 +161,7 @@ export function AgentsPanel({ listAgents, onSelect, activeAgentId, onPreWarm }: 
           variant="ghost"
           size="icon-sm"
           type="button"
-          onClick={() => load(true)}
+          onClick={() => void load(true)}
           disabled={loading}
           title="Refresh from CDN"
         >
@@ -145,24 +174,9 @@ export function AgentsPanel({ listAgents, onSelect, activeAgentId, onPreWarm }: 
       </div>
 
       <div className="oc-acp-reg-tabs">
-        <TabButton
-          active={tab === "all"}
-          onClick={() => setTab("all")}
-          label="All"
-          count={counts.all}
-        />
-        <TabButton
-          active={tab === "installed"}
-          onClick={() => setTab("installed")}
-          label="Installed"
-          count={counts.installed}
-        />
-        <TabButton
-          active={tab === "available"}
-          onClick={() => setTab("available")}
-          label="Not installed"
-          count={counts.available}
-        />
+        <TabButton active={tab === "all"} onClick={() => setTab("all")} label="All" count={counts.all} />
+        <TabButton active={tab === "enabled"} onClick={() => setTab("enabled")} label="Enabled" count={counts.enabled} />
+        <TabButton active={tab === "disabled"} onClick={() => setTab("disabled")} label="Disabled" count={counts.disabled} />
       </div>
 
       <div className="oc-acp-reg-list">
@@ -182,10 +196,10 @@ export function AgentsPanel({ listAgents, onSelect, activeAgentId, onPreWarm }: 
         )}
         {agents && filtered.length === 0 && (
           <div className="oc-acp-empty-muted">
-            {tab === "installed"
-              ? "No installed agents detected on PATH. Install Claude Code, Codex, or Gemini and refresh."
-              : tab === "available"
-              ? `No agents match "${query}".`
+            {tab === "enabled"
+              ? "No agents enabled. Toggle one on to make it available in the chat picker."
+              : tab === "disabled"
+              ? "Every agent is enabled."
               : `No agents match "${query}".`}
           </div>
         )}
@@ -193,6 +207,10 @@ export function AgentsPanel({ listAgents, onSelect, activeAgentId, onPreWarm }: 
           <AgentRow
             key={agent.id}
             agent={agent}
+            enabled={isEnabled(agent.id)}
+            onToggle={() => toggle(agent.id, allIds)}
+            authenticated={authState.get(agent.id)}
+            onAuthChanged={() => void probeAuth(agents ?? [])}
             onSelect={onSelect}
             onPreWarm={onPreWarm}
             active={activeAgentId === agent.id}
@@ -205,11 +223,7 @@ export function AgentsPanel({ listAgents, onSelect, activeAgentId, onPreWarm }: 
           <span>
             {agents.length} agent{agents.length === 1 ? "" : "s"} · shared ACP registry
           </span>
-          <a
-            href="https://agentclientprotocol.com"
-            target="_blank"
-            rel="noreferrer"
-          >
+          <a href="https://agentclientprotocol.com" target="_blank" rel="noreferrer">
             docs <ExternalLink className="w-3 h-3" />
           </a>
         </div>
@@ -241,78 +255,58 @@ function TabButton({
   );
 }
 
-/** Known install hints for binary-distributed agents where we can't
- *  just run `npm install -g`. Keyed by registry agent id. Value is a
- *  best-effort one-liner the user pastes into their terminal. */
-const BINARY_INSTALL_HINTS: Record<string, string> = {
-  "amp-acp": "curl -fsSL https://ampcode.com/install.sh | sh",
-  "factory-droid": "curl -fsSL https://app.factory.ai/cli | sh",
-  cursor: "curl https://cursor.com/install -fsS | bash",
-};
-
-/** Build the shell command a user would run to install this agent's CLI.
- *  Prefers npm → uv → known binary installer. Returns null only when we
- *  genuinely have no actionable install path (rare). */
-function installCommandFor(agent: BridgeRegistryAgent): string | null {
-  const npxPkg = agent.distribution.npx?.package;
-  if (npxPkg) {
-    // Strip a trailing "@version" pin so the user gets the latest by default.
-    const unpinned = npxPkg.replace(/@[^@/]+$/, "");
-    return `npm install -g ${unpinned}`;
-  }
-  const uvxPkg = agent.distribution.uvx?.package;
-  if (uvxPkg) {
-    const unpinned = uvxPkg.replace(/@[^@/]+$/, "");
-    return `uv tool install ${unpinned}`;
-  }
-  const binaryHint = BINARY_INSTALL_HINTS[agent.id];
-  if (binaryHint) return binaryHint;
-  return null;
-}
-
 function AgentRow({
   agent,
+  enabled,
+  onToggle,
+  authenticated,
+  onAuthChanged,
   onSelect,
   onPreWarm,
   active,
 }: {
   agent: BridgeRegistryAgent;
+  enabled: boolean;
+  onToggle: () => void;
+  /** undefined → agent has no known binary to probe; true/false → probed result. */
+  authenticated: boolean | undefined;
+  onAuthChanged: () => void;
   onSelect: (a: BridgeRegistryAgent) => void;
   onPreWarm?: (agentId: string) => void;
   active: boolean;
 }) {
   // Warm the subprocess on hover, once per session. Debounce-via-flag to
-  // avoid re-firing as the user hovers repeatedly across installed rows.
-  const warmedRef = React.useRef(false);
+  // avoid re-firing as the user hovers repeatedly across rows.
+  const warmedRef = useRef(false);
   const handleMouseEnter = () => {
     if (warmedRef.current) return;
     if (!onPreWarm) return;
-    if (!agent.installed) return;
+    if (!enabled) return;
     warmedRef.current = true;
     onPreWarm(agent.id);
   };
 
-  type InstallState = "idle" | "launching" | "running" | "error";
-  const [installState, setInstallState] = useState<InstallState>("idle");
-  const [installError, setInstallError] = useState<string | null>(null);
-  const installCmd = installCommandFor(agent);
-  const handleInstall = async (e: React.MouseEvent) => {
+  const [loginState, setLoginState] = useState<"idle" | "opening" | "error">("idle");
+  const [loginError, setLoginError] = useState<string | null>(null);
+
+  const handleLogin = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!installCmd) return;
-    setInstallState("launching");
-    setInstallError(null);
+    if (!agent.authBinary) return;
+    setLoginState("opening");
+    setLoginError(null);
     try {
-      await nativeInvoke("open_install_terminal", { command: installCmd });
-      // Terminal opened with the install running. Flip to "running" so the
-      // CTA reads "Installing…" — the focus-refresh hook at panel level
-      // polls the registry when the user returns to Zeros and the button
-      // will flip back to "Installed" once PATH detection picks it up.
-      setInstallState("running");
+      await nativeInvoke("ai_cli_run_login", { binary: agent.authBinary });
+      setLoginState("idle");
+      // Auth markers are only written once the user finishes the flow
+      // in Terminal — the focus-refresh hook catches that, but give it
+      // an extra poll a few seconds out for responsiveness.
+      window.setTimeout(() => onAuthChanged(), 5000);
     } catch (err) {
-      setInstallState("error");
-      setInstallError(err instanceof Error ? err.message : String(err));
+      setLoginState("error");
+      setLoginError(err instanceof Error ? err.message : String(err));
     }
   };
+
   const distKind =
     agent.launchKind && agent.launchKind !== "unavailable"
       ? agent.launchKind
@@ -324,12 +318,26 @@ function AgentRow({
       ? "binary"
       : "unknown";
 
-  const { pillLabel, pillClass } = statePill(agent);
+  const canProbeAuth = !!agent.authBinary;
+  const isActive = canProbeAuth && authenticated === true;
+  const pillLabel = !canProbeAuth ? "No login" : isActive ? "Active" : "Not active";
+  const pillClass = !canProbeAuth
+    ? "oc-acp-reg-pill-unavailable"
+    : isActive
+    ? "oc-acp-reg-pill-installed"
+    : "oc-acp-reg-pill-available";
+
+  const handleRowClick = () => {
+    // Clicking the body selects the agent as the default for future
+    // chats. Keeps the "click anywhere to activate" pattern users
+    // already learned, independent of the enable toggle.
+    onSelect(agent);
+  };
 
   return (
     <div
       className={`oc-acp-reg-row ${active ? "oc-acp-reg-row-active" : ""}`}
-      onClick={() => onSelect(agent)}
+      onClick={handleRowClick}
       onMouseEnter={handleMouseEnter}
     >
       {agent.icon ? (
@@ -342,9 +350,7 @@ function AgentRow({
           loading="lazy"
         />
       ) : (
-        <div className="oc-acp-reg-avatar">
-          {agent.name.slice(0, 1).toUpperCase()}
-        </div>
+        <div className="oc-acp-reg-avatar">{agent.name.slice(0, 1).toUpperCase()}</div>
       )}
       <div className="oc-acp-reg-body">
         <div className="oc-acp-reg-title">
@@ -390,95 +396,68 @@ function AgentRow({
           </div>
         )}
       </div>
-      {agent.installed ? (
-        // Installed agents are always available in the chat picker. The only
-        // per-agent affordance is "is this my default" — expressed as a star
-        // on the row itself. No separate Start/Run/Active button needed.
-        <div
-          className={`oc-acp-reg-cta-installed ${active ? "is-default" : ""}`}
-          title={active ? "Default agent for new chats" : "Set as default"}
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelect(agent);
-          }}
-          role="button"
-          tabIndex={0}
-        >
-          <Check className="w-3 h-3" />
-          <span>{active ? "Default" : "Installed"}</span>
-        </div>
-      ) : installCmd ? (
-        <Button
-          variant="outline"
-          size="sm"
-          type="button"
-          className="oc-acp-reg-cta"
-          onClick={handleInstall}
-          disabled={installState === "launching"}
-          title={
-            installState === "error"
-              ? installError ?? "Failed to open terminal"
-              : installState === "running"
-              ? "Installing — finish in the terminal window that opened"
-              : `Run in Terminal: ${installCmd}`
-          }
-        >
-          {installState === "launching" ? (
-            <>
-              <Loader2 className="w-3 h-3 animate-spin" />
-              Opening…
-            </>
-          ) : installState === "running" ? (
-            <>
-              <Loader2 className="w-3 h-3 animate-spin" />
-              Installing…
-            </>
-          ) : installState === "error" ? (
-            <>
-              <AlertCircle className="w-3 h-3" />
-              Retry
-            </>
-          ) : (
-            <>
-              <Download className="w-3 h-3" />
-              Install
-            </>
-          )}
-        </Button>
-      ) : (
-        // No known install recipe — point the user at the agent's own docs.
-        <Button
-          variant="outline"
-          size="sm"
-          type="button"
-          className="oc-acp-reg-cta"
-          onClick={(e) => {
-            e.stopPropagation();
-            if (agent.website) {
-              window.open(agent.website, "_blank", "noopener,noreferrer");
-            } else if (agent.repository) {
-              window.open(agent.repository, "_blank", "noopener,noreferrer");
+      <div className="oc-acp-reg-actions">
+        {canProbeAuth && (
+          <Button
+            variant="outline"
+            size="sm"
+            type="button"
+            className="oc-acp-reg-login"
+            onClick={handleLogin}
+            disabled={loginState === "opening"}
+            title={
+              loginState === "error"
+                ? loginError ?? "Failed to open terminal"
+                : isActive
+                ? `Re-login ${agent.authBinary}`
+                : `Login via \`${agent.authBinary} login\` in Terminal`
             }
-          }}
-          title="Open install instructions"
-        >
-          <ExternalLink className="w-3 h-3" />
-          Install docs
-        </Button>
-      )}
+          >
+            {loginState === "opening" ? (
+              <>
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Opening…
+              </>
+            ) : (
+              <>
+                <LogIn className="w-3 h-3" />
+                {isActive ? "Re-login" : "Login"}
+              </>
+            )}
+          </Button>
+        )}
+        <Toggle
+          on={enabled}
+          onChange={onToggle}
+          title={enabled ? "Enabled — shown in chat picker" : "Disabled — hidden from chat picker"}
+        />
+      </div>
     </div>
   );
 }
 
-function statePill(agent: BridgeRegistryAgent): {
-  pillLabel: string;
-  pillClass: string;
-} {
-  if (agent.launchKind === "unavailable") {
-    return { pillLabel: "Unavailable", pillClass: "oc-acp-reg-pill-unavailable" };
-  }
-  if (agent.installed) {
-    return { pillLabel: "Installed", pillClass: "oc-acp-reg-pill-installed" };
-  }
-  return { pillLabel: "Available", pillClass: "oc-acp-reg-pill-available" };
+function Toggle({
+  on,
+  onChange,
+  title,
+}: {
+  on: boolean;
+  onChange: () => void;
+  title: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      title={title}
+      className={`oc-acp-reg-toggle ${on ? "is-on" : "is-off"}`}
+      onClick={(e) => {
+        e.stopPropagation();
+        onChange();
+      }}
+    >
+      <span className="oc-acp-reg-toggle-knob" />
+    </button>
+  );
 }

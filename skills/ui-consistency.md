@@ -12,8 +12,8 @@ You are the UI-consistency skill for Zeros. Zeros is an IDE modelled visually on
 
 ## 0. The non-negotiables
 
-1. **One token file.** `src/styles/design-tokens.css` is the single source of truth for every color, size, space, radius, shadow, duration, and z-index. You never create a second token file. You never put a raw value in a component that could have come from a token.
-2. **Semantic tokens only.** In components you reference `--surface-0`, `--text-on-surface`, `--primary`, `--radius-sm`, `--space-4`, `--text-12`, `--dur-fast`, `--z-dropdown`. You never reference a primitive token (`--grey-900`, `--blue-500`) outside `design-tokens.css`.
+1. **One token file.** `src/styles/tokens.css` is the single source of truth for every color, size, space, radius, shadow, duration, and z-index. You never create a second token file. You never put a raw value in a component that could have come from a token.
+2. **Semantic tokens only.** In components you reference `--surface-0`, `--text-on-surface`, `--primary`, `--radius-sm`, `--space-4`, `--text-12`, `--dur-fast`, `--z-dropdown`. You never reference a primitive token (`--grey-900`, `--blue-500`) outside `tokens.css`.
 3. **Primitives first.** For any visual element you import from `@/Zeros/ui` (`Button`, `Input`, `DropdownMenu`, `Card`, `Tabs`, `Dialog`, `Tooltip`, `Badge`, `Pill`, `StatusDot`, `Kbd`, `Divider`, `Icon`). If the variant you need doesn't exist, extend the primitive in `src/zeros/ui/` — never write per-feature CSS.
 4. **`className` for layout only.** Tailwind utility classes allowed only for layout (`flex`, `gap-*`, `items-*`, `max-w-*`, `truncate`, `size-*`). Never color, typography, or spacing that bypasses tokens.
 5. **No inline visual `style={{}}`.** Allowed only for truly dynamic values (a swatch colour from user data, a runtime rect position, a drag-resize width).
@@ -160,7 +160,7 @@ You should NEVER write a bespoke `useState(open)` + positioned `<div>` dropdown 
 
 ## 10. Hard don'ts
 
-1. **Never** add a new hex color anywhere except `design-tokens.css`.
+1. **Never** add a new hex color anywhere except `tokens.css`.
 2. **Never** use a Tailwind color class (`bg-blue-500`, `text-red-600`, …).
 3. **Never** import `Inter` or any other web font. The system stack is deliberate.
 4. **Never** write a per-feature button / input / card class. Use primitives.
@@ -172,4 +172,4 @@ You should NEVER write a bespoke `useState(open)` + positioned `<div>` dropdown 
 
 ## 11. If you're about to add a token
 
-STOP. Ask a human. 99% of the time the token you want already exists under a semantic name in `design-tokens.css`. The 1% of the time you genuinely need a new token, it goes in `design-tokens.css` with an inline comment explaining when to use it, and the `RULES.md` Quick Decision Table is updated in the same commit.
+STOP. Ask a human. 99% of the time the token you want already exists under a semantic name in `tokens.css`. The 1% of the time you genuinely need a new token, it goes in `tokens.css` with an inline comment explaining when to use it, and the `RULES.md` Quick Decision Table is updated in the same commit.

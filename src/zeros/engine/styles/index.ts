@@ -3,7 +3,7 @@
 // Combines all CSS partials with scoping selector.
 // ──────────────────────────────────────────────────────────
 
-import { tokensCSS } from "./tokens";
+import { engineScopeCSS } from "./engine-scope";
 import { layoutCSS } from "./layout";
 import { panelsCSS } from "./panels";
 import { toolbarCSS } from "./toolbar";
@@ -20,7 +20,7 @@ export const ZEROS_CSS = `
    Zeros — Complete Self-Contained Styles
    ============================================================ */
 ${[
-  tokensCSS(S),
+  engineScopeCSS(S),
   layoutCSS(S),
   panelsCSS(S),
   toolbarCSS(S),

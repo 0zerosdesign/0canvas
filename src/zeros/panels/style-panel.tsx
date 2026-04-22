@@ -701,12 +701,12 @@ export function StylePanel() {
           <div>
             {state.elements.length === 0 ? (
               <>
-                <Globe size={24} color="var(--text-hint)" className="oc-style-empty-icon" />
+                <Globe size={24} color="var(--text-placeholder)" className="oc-style-empty-icon" />
                 <p>Connect a project to inspect styles</p>
               </>
             ) : (
               <>
-                <MousePointer2 size={24} color="var(--text-hint)" className="oc-style-empty-icon" />
+                <MousePointer2 size={24} color="var(--text-placeholder)" className="oc-style-empty-icon" />
                 <p>Select an element to inspect its styles</p>
               </>
             )}

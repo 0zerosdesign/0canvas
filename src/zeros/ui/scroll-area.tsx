@@ -50,14 +50,14 @@ function ScrollBar({
       style={{
         display: "flex",
         touchAction: "none",
-        padding: "1px",
+        padding: "var(--space-px)",
         transitionProperty: "color, background-color, border-color",
-        transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-        transitionDuration: "150ms",
+        transitionTimingFunction: "var(--ease-emphasized)",
+        transitionDuration: "var(--dur-base)",
         userSelect: "none",
         ...(isVertical
-          ? { height: "100%", width: "10px", borderLeft: "1px solid transparent" }
-          : { height: "10px", flexDirection: "column" as const, borderTop: "1px solid transparent" }),
+          ? { height: "100%", width: "var(--space-5x)", borderLeft: "var(--space-px) solid transparent" }
+          : { height: "var(--space-5x)", flexDirection: "column" as const, borderTop: "var(--space-px) solid transparent" }),
       }}
       {...props}
     >
@@ -67,7 +67,7 @@ function ScrollBar({
           background: "var(--surface-1)",
           position: "relative",
           flex: "1 1 0%",
-          borderRadius: "9999px",
+          borderRadius: "var(--radius-pill)",
         }}
       />
     </ScrollAreaPrimitive.ScrollAreaScrollbar>

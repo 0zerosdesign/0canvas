@@ -527,7 +527,7 @@ export function SourceNode({ id, data, selected }: NodeProps) {
 
   // Selection border
   const BORDER_W = selected ? 2.5 : 1;
-  const borderColor = selected ? "var(--primary)" : "var(--border-subtle)";
+  const borderColor = selected ? "var(--accent)" : "var(--border-subtle)";
 
   return (
     <div
@@ -628,7 +628,7 @@ export function SourceNode({ id, data, selected }: NodeProps) {
           border: `${BORDER_W}px solid ${borderColor}`,
           borderRadius: 0,
           boxShadow: selected
-            ? "0 0 0 1px var(--primary), 0 8px 32px var(--tint-primary-soft)"
+            ? "0 0 0 1px var(--accent), 0 8px 32px var(--accent-soft-bg)"
             : "var(--shadow-lg)",
         }}
       >
@@ -644,7 +644,7 @@ export function SourceNode({ id, data, selected }: NodeProps) {
               padding: "24px 40px", textAlign: "center",
             }}>
               <Monitor style={{ width: 28, height: 28, color: "var(--text-muted)", marginBottom: "var(--space-6)" }} />
-              <p style={{ color: "var(--text-on-surface)", fontSize: "var(--text-13)", margin: 0, fontWeight: "var(--weight-control)" }}>
+              <p style={{ color: "var(--text-primary)", fontSize: "var(--text-13)", margin: 0, fontWeight: "var(--weight-control)" }}>
                 No preview server configured
               </p>
               <p style={{ color: "var(--text-muted)", fontSize: "var(--text-11)", margin: "var(--space-3) 0 0", maxWidth: 420, lineHeight: 1.55 }}>
@@ -662,7 +662,7 @@ export function SourceNode({ id, data, selected }: NodeProps) {
               background: "var(--surface-0)", zIndex: 2,
             }}>
               <Loader2 style={{
-                width: 28, height: 28, color: "var(--primary)",
+                width: 28, height: 28, color: "var(--accent)",
                 animation: "spin 1s linear infinite", marginBottom: 12,
               }} />
               <p style={{ color: "var(--text-muted)", fontSize: "var(--text-12)", margin: 0 }}>Loading preview...</p>
@@ -704,8 +704,8 @@ export function SourceNode({ id, data, selected }: NodeProps) {
               <div style={{
                 display: "flex", alignItems: "center", gap: 5,
                 padding: "5px 12px", borderRadius: 8,
-                background: "var(--primary)",
-                color: "var(--primary-foreground)",
+                background: "var(--accent)",
+                color: "var(--text-on-accent)",
                 fontSize: "var(--text-11)", fontWeight: "var(--weight-control)",
                 boxShadow: "var(--shadow-md)",
               }}>
@@ -788,7 +788,7 @@ export function SourceNode({ id, data, selected }: NodeProps) {
           background: "var(--surface-0)",
           border: "1px solid var(--border-subtle)",
           fontSize: "var(--text-10)", fontWeight: "var(--weight-control)",
-          color: "var(--text-on-surface-variant)",
+          color: "var(--text-muted)",
           fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap",
         }}>
           {dims.h}px
@@ -814,7 +814,7 @@ export function SourceNode({ id, data, selected }: NodeProps) {
           background: "var(--surface-0)",
           border: "1px solid var(--border-subtle)",
           fontSize: "var(--text-10)", fontWeight: "var(--weight-heading)",
-          color: "var(--text-on-surface-variant)",
+          color: "var(--text-muted)",
           fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap",
           textAlign: "center",
         }}>
@@ -836,7 +836,7 @@ export function SourceNode({ id, data, selected }: NodeProps) {
                 borderRadius: "var(--radius-md)",
                 border: isActive ? "1px solid var(--border-default)" : "1px solid transparent",
                 background: isActive ? "var(--surface-1)" : "transparent",
-                color: isActive ? "var(--text-on-surface)" : "var(--text-muted)",
+                color: isActive ? "var(--text-primary)" : "var(--text-muted)",
                 fontSize: "var(--text-10)",
                 fontWeight: isActive ? "var(--weight-control)" : "var(--weight-body)",
                 fontFamily: "var(--font-ui)",

@@ -597,7 +597,7 @@ export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps
         )}
         <Bot
           className="w-3.5 h-3.5 flex-shrink-0"
-          style={{ color: "var(--text-primary-light)" }}
+          style={{ color: "var(--accent-hover)" }}
         />
         <div className="min-w-0 flex-1">
           <div className="oc-acp-subheader-title">
@@ -1304,7 +1304,7 @@ function ToolCallCard({
     ) : (
       <Clock
         className="w-3.5 h-3.5"
-        style={{ color: "var(--text-hint)" }}
+        style={{ color: "var(--text-placeholder)" }}
       />
     );
 

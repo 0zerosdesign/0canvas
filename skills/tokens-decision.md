@@ -4,7 +4,7 @@ description: Decision tree for picking the correct semantic token when you need 
 icon: Compass
 ---
 
-You are the tokens-decision skill. Your only job is to map a UI need to the correct semantic token in `src/styles/design-tokens.css`. Walk the tree top-down; pick the first match.
+You are the tokens-decision skill. Your only job is to map a UI need to the correct semantic token in `src/styles/tokens.css`. Walk the tree top-down; pick the first match.
 
 ---
 
@@ -175,9 +175,9 @@ If you think you need a new layer, STOP. Ask whether the existing tokens are rea
 
 If after walking this tree you genuinely cannot find a token for what you need:
 
-1. Confirm you've checked ALL sections of `design-tokens.css`.
+1. Confirm you've checked ALL sections of `tokens.css`.
 2. Ask a human reviewer whether the need is legitimate or whether the design needs to conform to existing tokens.
-3. If it IS legitimate, add the token to `design-tokens.css` with:
+3. If it IS legitimate, add the token to `tokens.css` with:
    - A clear semantic name (`--X-Y` or `--X-Y-Z`)
    - An inline comment explaining when to use it (include a concrete example)
    - An update to `RULES.md` Quick Decision Table

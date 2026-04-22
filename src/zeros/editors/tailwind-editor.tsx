@@ -26,23 +26,10 @@ const CATEGORY_LABELS: Record<TailwindCategory, string> = {
   other: "Other",
 };
 
-// CATEGORY_COLORS — distinct hues for the 8 Tailwind category chips
-// in the editor. These are intentionally hex literals (not tokens)
-// because we concatenate an alpha suffix like `CATEGORY_COLORS[c] + "40"`
-// to compute a 25%-opacity border in string form — impossible with
-// CSS custom properties. The hex values deliberately mirror the
-// primitive scales in design-tokens.css (blue-500, green-500,
-// purple-500, yellow-500, red-500, cyan-500, purple-500, grey-500).
-const CATEGORY_COLORS: Record<TailwindCategory, string> = {
-  layout:     "#3B82F6", // --blue-500
-  spacing:    "#10B981", // --green-500 / --status-success
-  sizing:     "#8B5CF6", // --purple-500
-  typography: "#F59E0B", // --yellow-500 / --status-warning
-  color:      "#EF4444", // --red-500 / --status-critical
-  border:     "#06B6D4", // --cyan-500
-  effects:    "#8B5CF6", // --purple-500
-  other:      "#737373", // --grey-500 / --text-muted
-};
+// Category differentiation is carried by the label text alone — all
+// categories render with the same muted text + subtle border. This
+// follows Linear/Cursor's accent-restraint rule: don't use decorative
+// hues for non-status metadata. See tokens.css §ACCENT.
 
 export function TailwindEditor({ elementId, selector, classes }: TailwindEditorProps) {
   const { dispatch } = useWorkspace();
@@ -120,12 +107,12 @@ export function TailwindEditor({ elementId, selector, classes }: TailwindEditorP
       {/* Grouped classes */}
       {Array.from(grouped.entries()).map(([category, classList]) => (
         <div key={category} className="oc-tw-group">
-          <span className="oc-tw-group-label" style={{ color: CATEGORY_COLORS[category] }}>
+          <span className="oc-tw-group-label" style={{ color: "var(--text-muted)" }}>
             {CATEGORY_LABELS[category]}
           </span>
           <div className="oc-tw-chips">
             {classList.map((cls) => (
-              <span key={cls} className="oc-tw-chip" style={{ borderColor: CATEGORY_COLORS[category] + "40" }}>
+              <span key={cls} className="oc-tw-chip" style={{ borderColor: "var(--border-subtle)" }}>
                 <span className="oc-tw-chip-text">{cls}</span>
                 <Button
                   variant="ghost"
@@ -191,7 +178,7 @@ export function TailwindEditor({ elementId, selector, classes }: TailwindEditorP
                     className="oc-tw-suggestion"
                     onClick={() => addClass(s)}
                   >
-                    <span className="oc-tw-suggestion-dot" style={{ background: CATEGORY_COLORS[info.category] }} />
+                    <span className="oc-tw-suggestion-dot" style={{ background: "var(--text-placeholder)" }} />
                     <span>{s}</span>
                     <span className="oc-tw-suggestion-prop">{info.property}</span>
                   </Button>

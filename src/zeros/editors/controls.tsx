@@ -341,7 +341,7 @@ export function SliderInput({
           value={value}
           onChange={(e) => onChange(parseFloat(e.target.value))}
           onKeyDown={handleSliderKeyDown}
-          style={{ background: `linear-gradient(to right, var(--primary) ${pct}%, var(--surface-2) ${pct}%)` }}
+          style={{ background: `linear-gradient(to right, var(--accent) ${pct}%, var(--surface-2) ${pct}%)` }}
           data-Zeros="slider-range"
         />
         <span className="oc-slider-value">
