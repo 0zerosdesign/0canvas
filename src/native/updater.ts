@@ -1,18 +1,23 @@
 // ──────────────────────────────────────────────────────────
-// Auto-updater — electron-updater bridge
+// Auto-updater — version-check only, browser-based install
 // ──────────────────────────────────────────────────────────
 //
-// Cursor-style flow: on launch (and every 30 min) the main
-// process checks the configured GitHub Releases endpoint for a
-// newer version. When one is available, `status.kind ===
-// "available"` and the Update pill in the profile row becomes
-// visible. Clicking it calls `install()`, which downloads the
-// signed update and relaunches the app via
-// electron-updater's quitAndInstall().
+// On launch (and every 30 min) the main process asks the
+// configured GitHub Releases endpoint whether a newer version
+// exists. When one is available, `status.kind === "available"`
+// and the Update pill in the profile row becomes visible.
+// Clicking it calls `install()`, which opens the new version's
+// DMG in the user's default browser. User drags the new app to
+// /Applications to replace the old one.
+//
+// We don't use electron-updater's in-app download + quitAndInstall
+// path because that requires a Developer-ID-signed app; our
+// ad-hoc signed builds fail that replacement reliably. Swapping
+// back to auto-install is a 10-line change in electron/updater.ts
+// once we have a Dev ID.
 //
 // Under `pnpm dev` (no packaged main process) both checkNow and
-// install no-op — app.isPackaged is false on the main side and
-// updater_check returns null.
+// install no-op.
 // ──────────────────────────────────────────────────────────
 
 import { useCallback, useEffect, useState } from "react";
@@ -22,6 +27,10 @@ export type UpdaterStatus =
   | { kind: "idle" }
   | { kind: "checking" }
   | { kind: "available"; version: string; notes?: string }
+  // Legacy kinds kept in the type so existing pill components that
+  // switch on them still compile. They're never emitted by the
+  // browser-install flow — the pill path is
+  //   available → click → external URL opens → user installs manually.
   | {
       kind: "downloading";
       version: string;
@@ -71,8 +80,11 @@ export function useUpdater(): {
     if (!isElectron()) return;
     try {
       await nativeInvoke<void>("updater_install");
-      // Main process emits download-progress / ready events during
-      // the install; quitAndInstall relaunches after.
+      // updater_install opens the DMG URL in the user's browser —
+      // the app stays running while the user drags to /Applications.
+      // Reset to idle so the "Update" pill disappears; next boot
+      // (after manual install) picks up the new version cleanly.
+      setStatus({ kind: "idle" });
     } catch (err) {
       setStatus({ kind: "error", message: errMsg(err) });
     }
