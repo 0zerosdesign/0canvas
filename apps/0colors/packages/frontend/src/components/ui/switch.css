@@ -21,7 +21,7 @@
 }
 
 [data-slot="switch"]:focus-visible {
-  box-shadow: 0 0 0 2px var(--accent);
+  box-shadow: var(--shadow-ring);
 }
 
 [data-slot="switch"]:disabled {

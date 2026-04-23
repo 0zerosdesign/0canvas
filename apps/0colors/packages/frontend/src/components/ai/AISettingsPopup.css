@@ -787,7 +787,7 @@
   height: min(740px, 90vh);
   background: var(--surface-1);
   border: 1px solid var(--surface-3);
-  box-shadow: 0 24px 80px color-mix(in srgb, var(--surface-0) 60%, transparent);
+  box-shadow: var(--shadow-glass-deep);
 }
 
 /* ─── Utility: faint text color ─── */

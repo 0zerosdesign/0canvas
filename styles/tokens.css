@@ -343,6 +343,8 @@
        xl   dialogs, command palette
      ═══════════════════════════════════════════════════════════ */
 
+  /* Elevation — opaque panels (IDE chrome, cards, menus).
+     rgba-based, deeper contrast for dark surfaces. */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.28);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.32),
                0 2px 4px -1px rgba(0, 0, 0, 0.24);
@@ -350,6 +352,25 @@
                0 4px  6px -2px rgba(0, 0, 0, 0.24);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.50),
                0 10px 10px -5px rgba(0, 0, 0, 0.28);
+
+  /* Glass — translucent floating panels (tooltips, popovers, dialogs)
+     that pair with backdrop-filter: blur. color-mix() darkens relative
+     to the surface behind, avoiding the heavy opaque look. */
+  --shadow-glass:      0 8px 30px color-mix(in srgb, var(--surface-0) 50%, transparent);
+  --shadow-glass-deep: 0 24px 80px color-mix(in srgb, var(--surface-0) 60%, transparent),
+                       0 0 0 1px color-mix(in srgb, var(--text-primary) 3%, transparent);
+
+  /* Inset hairline — subtle inner edge on cards/chips on surface-0/1.
+     More refined than a --border-subtle solid line. */
+  --shadow-inset-subtle: inset 0 0 0 1px
+                         color-mix(in srgb, var(--text-primary) 10%, transparent);
+
+  /* Focus + selection rings */
+  --shadow-ring:        0 0 0 2px var(--accent);
+  --shadow-ring-halo:   0 0 0 3px
+                        color-mix(in srgb, var(--accent) 35%, transparent);
+  --shadow-inset-accent: inset 0 0 0 1px
+                         color-mix(in srgb, var(--accent) 50%, transparent);
 
 
   /* ═══════════════════════════════════════════════════════════
@@ -421,6 +442,11 @@
   --sidebar-w-min: 56px;
   --workspace-w:   440px;
   --statusbar-h:   22px;
+
+  /* Floating-menu minimum widths (Radix dropdown/select/context-menu).
+     rem-based so menus stretch with the user's root font size. */
+  --menu-min-width:  8rem;
+  --menu-min-width-lg: 12rem;
 
 
   /* ═══════════════════════════════════════════════════════════

@@ -63,7 +63,7 @@
 [data-slot="select-content"] {
   position: relative;
   z-index: var(--z-dropdown);
-  min-width: 8rem; /* FLAG: rem-based min-width for menu sizing */
+  min-width: var(--menu-min-width);
   max-height: var(--radix-select-content-available-height);
   overflow-x: hidden;
   overflow-y: auto;

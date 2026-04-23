@@ -7,7 +7,7 @@
 /* ─── Content ─── */
 [data-slot="dropdown-menu-content"] {
   z-index: var(--z-dropdown);
-  min-width: 8rem; /* FLAG: rem-based min-width for menu sizing */
+  min-width: var(--menu-min-width);
   max-height: var(--radix-dropdown-menu-content-available-height);
   overflow-x: hidden;
   overflow-y: auto;
@@ -22,7 +22,7 @@
 /* ─── Sub-content ─── */
 [data-slot="dropdown-menu-sub-content"] {
   z-index: var(--z-dropdown);
-  min-width: 8rem; /* FLAG: rem-based min-width for menu sizing */
+  min-width: var(--menu-min-width);
   overflow: hidden;
   padding: var(--space-1);
   background-color: var(--surface-1);

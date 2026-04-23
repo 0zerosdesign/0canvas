@@ -173,8 +173,7 @@
   height: min(620px, 85vh);
   background: var(--surface-2);
   border: 1px solid color-mix(in srgb, var(--text-primary) 8%, transparent);
-  box-shadow: 0 24px 80px color-mix(in srgb, var(--surface-0) 60%, transparent),
-              0 0 0 1px color-mix(in srgb, var(--text-primary) 3%, transparent);
+  box-shadow: var(--shadow-glass-deep);
 }
 
 /* ── Left sidebar ── */

@@ -240,7 +240,7 @@ function scanFile(absPath) {
           // Skip URL-looking contexts (anchor links, href="#…")
           const before = line.slice(Math.max(0, m.index - 5), m.index);
           if (before.includes("#")) continue;
-          push(rel, ln, `Hex color "${m[0]}" — use a token from tokens.css (see skills/tokens-decision.md).`);
+          push(rel, ln, `Hex color "${m[0]}" — use a token from tokens.css (see RULES.md).`);
         }
       }
     }
@@ -344,5 +344,5 @@ for (const [file, vs] of [...byFile.entries()].sort()) {
   for (const v of vs) console.log(`    ${String(v.line).padStart(4)}: ${v.message}`);
   console.log("");
 }
-console.log("Fix violations above. See skills/tokens-decision.md to pick the right token.");
+console.log("Fix violations above. See RULES.md — "Quick Decision Table" maps UI needs to tokens.");
 process.exit(1);
