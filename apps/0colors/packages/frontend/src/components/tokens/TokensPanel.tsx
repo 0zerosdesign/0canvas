@@ -3269,7 +3269,7 @@ export function TokensPanel({ onNavigateToNode, onNavigateToProjects, cloudSyncS
                                                   onClick={(e) => e.stopPropagation()}
                                                   onDoubleClick={(e) => e.stopPropagation()}
                                                   className="tp-shade-edit-input tp-shade-edit-input-wrap"
-                                                  style={{ fontSize: '12px', lineHeight: 'normal', height: 'auto' }}
+                                                  style={{ fontSize: 'var(--text-12)', lineHeight: 'normal', height: 'auto' }}
                                                   maxLength={MAX_TOKEN_NAME}
                                                 />
                                               ) : (
@@ -3530,7 +3530,7 @@ export function TokensPanel({ onNavigateToNode, onNavigateToProjects, cloudSyncS
                                                   onClick={(e) => e.stopPropagation()}
                                                   onDoubleClick={(e) => e.stopPropagation()}
                                                   className="tp-shade-edit-input tp-shade-edit-input-wrap"
-                                                  style={{ fontSize: '12px', lineHeight: 'normal', height: 'auto' }}
+                                                  style={{ fontSize: 'var(--text-12)', lineHeight: 'normal', height: 'auto' }}
                                                   maxLength={MAX_TOKEN_NAME}
                                                 />
                                               ) : (

@@ -2799,7 +2799,7 @@ function ChannelColumn({
                           <span style={{ opacity: 0.6 }}>{Math.round(constraintInfo.raw * 100) / 100}{unit}</span>
                           <span style={{ opacity: 0.4 }}>{' \u2192 '}</span>
                           <span>{Math.round(constraintInfo.constrained * 100) / 100}{unit}</span>
-                          <span style={{ opacity: 0.5, marginLeft: '4px' }}>
+                          <span style={{ opacity: 0.5, marginLeft: 'var(--space-1)' }}>
                             ({constraintInfo.mode === 'wrap' ? 'wrapped' : 'clamped'})
                           </span>
                         </>
@@ -3785,7 +3785,7 @@ function NodeViewSection({ colorSpace, channelDefs, config, onUpdateConfig, read
             const range = CHANNEL_ABSOLUTE_RANGE[ch.key] || { min: 0, max: 100 };
 
             return (
-              <div key={ch.key} style={{ marginTop: '4px' }}>
+              <div key={ch.key} style={{ marginTop: 'var(--space-1)' }}>
                 <div className="advanced-nodeview-channel-row">
                   <span className="advanced-nodeview-channel-label">{ch.label}</span>
                   <div className="advanced-nodeview-channel-actions">
@@ -4335,7 +4335,7 @@ export function AdvancedPopup({
 
   // Resize edge handles
   const edgeStyle = (edge: string): React.CSSProperties => {
-    const base: React.CSSProperties = { position: 'absolute', zIndex: 10 };
+    const base: React.CSSProperties = { position: 'absolute', zIndex: 'var(--z-panel)' as unknown as number };
     const s = 6;
     switch (edge) {
       case 'top':
@@ -5017,8 +5017,8 @@ export function AdvancedPopup({
       className="advanced-popup"
       style={{
         position: 'fixed',
-        zIndex: 9999,
-        borderRadius: '12px 12px 0 0',
+        zIndex: 'var(--z-modal)' as unknown as number,
+        borderRadius: 'var(--radius-lg) var(--radius-lg) 0 0',
         overflow: 'hidden',
         border: '1px solid color-mix(in srgb, var(--border-subtle) 65%, transparent)',
         borderBottom: 'none',

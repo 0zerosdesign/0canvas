@@ -13,7 +13,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 16px;
+  padding: 0 var(--space-4);
 }
 
 /* ── Panel ── */
@@ -29,7 +29,7 @@
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--text-primary) 6%, transparent),
               0 24px 68px color-mix(in srgb, var(--surface-0) 60%, transparent),
               0 8px 24px color-mix(in srgb, var(--surface-0) 40%, transparent);
-  animation: cmdkSlideIn 0.15s ease-out;
+  animation: cmdkSlideIn var(--dur-fast) var(--ease-standard);
   height: 440px;
 }
 
@@ -37,15 +37,15 @@
 .cmd-palette-search {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 14px;
+  gap: var(--space-5x);
+  padding: 0 var(--space-7x);
   height: 42px;
   border-bottom: 1px solid var(--surface-3);
 }
 
 .cmd-palette-search-icon {
-  width: 14px;
-  height: 14px;
+  width: var(--icon-md);
+  height: var(--icon-md);
   color: var(--text-disabled);
   flex-shrink: 0;
 }
@@ -54,7 +54,7 @@
   flex: 1;
   background: transparent;
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: var(--text-13);
   outline: none;
 }
 
@@ -63,7 +63,7 @@
 }
 
 .cmd-palette-result-count {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
@@ -74,7 +74,7 @@
   flex: 1;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 4px 0;
+  padding: var(--space-1) 0;
   scrollbar-width: thin;
   scrollbar-color: var(--surface-3) transparent;
 }
@@ -84,29 +84,29 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 48px 0;
-  gap: 8px;
+  padding: var(--space-8) 0;
+  gap: var(--space-2);
 }
 
 .cmd-palette-empty-icon {
-  width: 24px;
-  height: 24px;
+  width: var(--h-control-sm);
+  height: var(--h-control-sm);
   color: var(--text-placeholder);
 }
 
 .cmd-palette-empty-text {
-  font-size: 13px;
+  font-size: var(--text-13);
   color: var(--text-placeholder);
 }
 
 .cmd-palette-empty-hint {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
 }
 
 /* ── Category group ── */
 .cmd-palette-group-header {
-  padding: 8px 14px 2px;
+  padding: var(--space-2) var(--space-7x) var(--space-hair);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -115,40 +115,40 @@
 .cmd-palette-group-label-area {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-3x);
 }
 
 .cmd-palette-group-icon {
-  width: 10px;
-  height: 10px;
+  width: var(--icon-xs);
+  height: var(--icon-xs);
   color: var(--text-placeholder);
 }
 
 .cmd-palette-group-label {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
-  font-weight: 500;
+  font-weight: var(--weight-control);
 }
 
 .cmd-palette-group-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .cmd-palette-group-count {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
   font-variant-numeric: tabular-nums;
 }
 
 .cmd-palette-clear-recent {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
   background: none;
   border: none;
   cursor: pointer;
-  transition: color 150ms;
+  transition: color var(--dur-fast) var(--ease-standard);
 }
 
 .cmd-palette-clear-recent:hover {
@@ -157,14 +157,14 @@
 
 /* ── Result row ── */
 .cmd-palette-row {
-  margin: 0 6px;
-  padding: 5px 10px;
+  margin: 0 var(--space-3x);
+  padding: var(--space-3x) var(--space-5x);
   border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-5x);
   cursor: pointer;
-  transition: background-color 150ms;
+  transition: background-color var(--dur-fast) var(--ease-standard);
 }
 
 .cmd-palette-row:hover {
@@ -187,15 +187,15 @@
 }
 
 .cmd-palette-color-swatch {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  border-radius: var(--radius-xs);
   flex-shrink: 0;
 }
 
 .cmd-palette-icon {
-  width: 14px;
-  height: 14px;
+  width: var(--icon-md);
+  height: var(--icon-md);
   color: var(--text-disabled);
   flex-shrink: 0;
 }
@@ -208,11 +208,11 @@
 .cmd-palette-row-title-area {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .cmd-palette-row-title {
-  font-size: 13px;
+  font-size: var(--text-13);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -224,16 +224,16 @@
 }
 
 .cmd-palette-row-cs-badge {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
-  padding: 1px 4px;
+  padding: var(--space-px) var(--space-1);
   border-radius: var(--radius-sm);
   background: var(--surface-2);
   flex-shrink: 0;
 }
 
 .cmd-palette-row-subtitle {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -243,12 +243,12 @@
 .cmd-palette-row-right {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-3x);
   flex-shrink: 0;
 }
 
 .cmd-palette-location-hint {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
   width: 76px;
   text-align: right;
@@ -265,13 +265,13 @@
 }
 
 .cmd-palette-pin-btn {
-  width: 20px;
-  height: 20px;
+  width: var(--icon-xl);
+  height: var(--icon-xl);
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-sm);
-  transition: all 150ms;
+  transition: all var(--dur-fast) var(--ease-standard);
   cursor: pointer;
   background: none;
   border: none;
@@ -313,7 +313,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 14px;
+  padding: var(--space-2) var(--space-7x);
   min-height: 42px;
   border-top: 1px solid var(--surface-3);
   background: var(--surface-2);
@@ -322,38 +322,38 @@
 .cmd-palette-footer-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-5x);
   flex-wrap: wrap;
 }
 
 .cmd-palette-shortcut-group {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--space-hair);
 }
 
 .cmd-palette-kbd {
   height: 18px;
   min-width: 18px;
-  padding: 0 4px;
+  padding: 0 var(--space-1);
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-sm);
   background: var(--surface-3);
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
 }
 
 .cmd-palette-shortcut-label {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
-  margin-left: 2px;
+  margin-left: var(--space-hair);
 }
 
 .cmd-palette-footer-right {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--space-hair);
   flex-shrink: 0;
 }

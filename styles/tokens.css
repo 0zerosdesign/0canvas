@@ -243,6 +243,8 @@
     ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
     "JetBrains Mono", "Liberation Mono", monospace;
 
+  --text-8:  8px;
+  --text-9:  9px;
   --text-10: 10px;
   --text-11: 11px;
   --text-12: 12px;
@@ -260,6 +262,7 @@
   --leading-normal: 1.5;
 
   --tracking-overline: 0.05em;
+  --tracking-wide:     0.1em;   /* UPPERCASE category labels, keyboard-shortcut pills */
 
 
   /* ═══════════════════════════════════════════════════════════
@@ -365,16 +368,28 @@
   /* ═══════════════════════════════════════════════════════════
      CONTROL HEIGHTS
      ───────────────────────────────────────────────────────────
-       sm  24px   toolbar pills, dense chips, status bar items
-       md  28px   DEFAULT: buttons, inputs, tab triggers
-       lg  32px   primary CTAs, large inputs, dialog buttons
+     Two families:
 
-     NEVER exceed 32px except hero buttons in onboarding.
+     IDE-scale (Zeros shell — compact chrome):
+       sm   24px   toolbar pills, dense chips, status bar items
+       md   28px   DEFAULT: buttons, inputs, tab triggers
+       lg   32px   primary CTAs, large inputs, dialog buttons
+
+     Form-scale (0colors + dialogs / marketing surfaces):
+       xl   36px   default form input, standard button
+       2xl  40px   large CTA, prominent form action
+       3xl  44px   top nav / app chrome bars
+
+     Zeros shell uses sm/md/lg. 0colors uses xl/2xl/3xl. Both
+     products share the token file; each picks its lane.
      ═══════════════════════════════════════════════════════════ */
 
-  --h-control-sm: 24px;
-  --h-control-md: 28px;
-  --h-control-lg: 32px;
+  --h-control-sm:  24px;
+  --h-control-md:  28px;
+  --h-control-lg:  32px;
+  --h-control-xl:  36px;
+  --h-control-2xl: 40px;
+  --h-control-3xl: 44px;
 
 
   /* ═══════════════════════════════════════════════════════════
@@ -418,6 +433,10 @@
   --syntax-selector: var(--green-11);
   --syntax-property: var(--blue-11);
   --syntax-value:    var(--amber-11);
+  --syntax-keyword:  #FFA0E6;   /* pink — language keywords (0colors) */
+  --syntax-fn:       var(--green-11);   /* function names — alias of selector */
+  --syntax-op:       #FF7A90;   /* rose — operators (0colors) */
+  --syntax-local:    #D4A0FF;   /* violet — locals / identifiers (0colors) */
 
 
   /* ═══════════════════════════════════════════════════════════

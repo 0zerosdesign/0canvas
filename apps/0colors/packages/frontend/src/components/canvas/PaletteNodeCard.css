@@ -12,21 +12,21 @@
 .palette-card-shade-strip {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-3x);
 }
 
 .palette-card-shade-row {
   display: flex;
   border-radius: var(--radius-lg);
   overflow: hidden;
-  height: 32px;
+  height: var(--h-control-lg);
 }
 
 .palette-card-shade-cell {
   flex: 1;
   position: relative;
   cursor: pointer;
-  transition: transform 0.15s;
+  transition: transform var(--dur-fast) var(--ease-standard);
 }
 
 .palette-card-shade-cell:hover {
@@ -35,14 +35,14 @@
 
 .palette-card-shade-mod-dot {
   position: absolute;
-  top: 2px;
+  top: var(--space-hair);
   left: 50%;
   transform: translateX(-50%);
   width: 4px;
   height: 4px;
   border-radius: var(--radius-pill);
   background-color: var(--text-warning);
-  z-index: 10;
+  z-index: var(--z-panel);
   box-shadow: 0 0 2px color-mix(in srgb, var(--surface-0) 50%, transparent);
 }
 
@@ -55,15 +55,15 @@
 }
 
 .palette-card-shade-check {
-  width: 10px;
-  height: 10px;
+  width: var(--icon-xs);
+  height: var(--icon-xs);
 }
 
 /* ─── Island ─── */
 .palette-card-island {
   border-radius: var(--radius-lg);
   overflow: hidden;
-  transition: all 0.15s;
+  transition: all var(--dur-fast) var(--ease-standard);
   background-color: var(--surface-2);
   border: 1px solid var(--surface-2);
   box-shadow: 0 2px 8px color-mix(in srgb, var(--surface-0) 30%, transparent);
@@ -77,10 +77,10 @@
 }
 
 .palette-card-island-inner {
-  padding-left: 16px;
-  padding-right: 16px;
-  padding-top: 12px;
-  padding-bottom: 12px;
+  padding-left: var(--space-4);
+  padding-right: var(--space-4);
+  padding-top: var(--space-3);
+  padding-bottom: var(--space-3);
 }
 
 /* ─── Root wrapper ─── */
@@ -92,10 +92,10 @@
 /* ─── Visibility toggle ─── */
 .palette-card-visibility {
   position: absolute;
-  top: 10px;
+  top: var(--space-5x);
   left: -22px;
-  z-index: 10;
-  transition: all 0.15s;
+  z-index: var(--z-panel);
+  transition: all var(--dur-fast) var(--ease-standard);
   cursor: pointer;
 }
 
@@ -124,21 +124,21 @@
 
 /* ─── Inheritance Toggle Bar ─── */
 .palette-card-inherit-bar {
-  z-index: 20;
+  z-index: var(--z-dropdown);
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding-left: 10px;
-  padding-right: 10px;
-  padding-top: 6px;
-  padding-bottom: 6px;
-  border-radius: 20px;
-  transition: opacity 0.2s;
-  margin-bottom: 4px;
+  gap: var(--space-2);
+  padding-left: var(--space-5x);
+  padding-right: var(--space-5x);
+  padding-top: var(--space-3x);
+  padding-bottom: var(--space-3x);
+  border-radius: var(--radius-lg);
+  transition: opacity var(--dur-base) var(--ease-standard);
+  margin-bottom: var(--space-1);
 }
 
 .palette-card-inherit-switch {
-  height: 16px;
+  height: var(--icon-lg);
   width: 30px;
   flex-shrink: 0;
 }
@@ -152,10 +152,10 @@
 }
 
 .palette-card-inherit-crown {
-  height: 12px;
-  width: 12px;
+  height: var(--icon-sm);
+  width: var(--icon-sm);
   flex-shrink: 0;
-  transition: all 0.15s;
+  transition: all var(--dur-fast) var(--ease-standard);
 }
 
 .palette-card-inherit-crown--linked {
@@ -171,9 +171,9 @@
 }
 
 .palette-card-inherit-label {
-  font-size: 11px;
+  font-size: var(--text-11);
   user-select: none;
-  transition: color 0.15s;
+  transition: color var(--dur-fast) var(--ease-standard);
 }
 
 .palette-card-inherit-label--linked {
@@ -203,7 +203,7 @@
   z-index: 1;
   pointer-events: none;
   background-color: color-mix(in srgb, var(--surface-0) 55%, transparent);
-  border-radius: 11px 11px 0 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 .palette-card-swatch-inner {
@@ -215,10 +215,10 @@
 .palette-card-copy-btn {
   position: absolute;
   right: 100%;
-  margin-right: 4px;
-  padding: 4px;
+  margin-right: var(--space-1);
+  padding: var(--space-1);
   border-radius: var(--radius-md);
-  transition: all 0.15s;
+  transition: all var(--dur-fast) var(--ease-standard);
   background: transparent;
   border: none;
   cursor: pointer;
@@ -242,8 +242,8 @@
 }
 
 .palette-card-copy-icon {
-  width: 16px;
-  height: 16px;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
 }
 
 .palette-card-copy-icon--light {
@@ -274,7 +274,7 @@
 
 .palette-card-section--color {
   border-top: 1px solid var(--surface-3);
-  transition: opacity 0.15s;
+  transition: opacity var(--dur-fast) var(--ease-standard);
 }
 
 .palette-card-section-header {
@@ -282,12 +282,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-left: 16px;
-  padding-right: 16px;
-  padding-top: 10px;
-  padding-bottom: 10px;
+  padding-left: var(--space-4);
+  padding-right: var(--space-4);
+  padding-top: var(--space-5x);
+  padding-bottom: var(--space-5x);
   cursor: pointer;
-  transition: color 0.15s, background-color 0.15s;
+  transition: color var(--dur-fast) var(--ease-standard), background-color var(--dur-fast) var(--ease-standard);
   background: transparent;
   border: none;
   color: inherit;
@@ -298,24 +298,24 @@
 }
 
 .palette-card-section-label {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-disabled);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: var(--tracking-wide);
   font-family: var(--font-ui);
 }
 
 .palette-card-section-body {
-  padding-left: 16px;
-  padding-right: 16px;
-  padding-bottom: 12px;
+  padding-left: var(--space-4);
+  padding-right: var(--space-4);
+  padding-bottom: var(--space-3);
 }
 
 .palette-card-chevron {
-  width: 14px;
-  height: 14px;
+  width: var(--icon-md);
+  height: var(--icon-md);
   color: var(--text-disabled);
-  transition: transform 0.15s;
+  transition: transform var(--dur-fast) var(--ease-standard);
 }
 
 .palette-card-chevron--open {
@@ -326,17 +326,17 @@
 .palette-card-name-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-3x);
 }
 
 .palette-card-lock-btn {
-  width: 20px;
-  height: 20px;
+  width: var(--icon-xl);
+  height: var(--icon-xl);
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.15s, background-color 0.15s;
+  transition: color var(--dur-fast) var(--ease-standard), background-color var(--dur-fast) var(--ease-standard);
   background: transparent;
   border: none;
   cursor: pointer;
@@ -348,8 +348,8 @@
 }
 
 .palette-card-lock-icon {
-  width: 12px;
-  height: 12px;
+  width: var(--icon-sm);
+  height: var(--icon-sm);
 }
 
 .palette-card-lock-icon--locked {
@@ -364,7 +364,7 @@
 .palette-card-color-header-left {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-3x);
 }
 
 .palette-card-color-modified-dot {
@@ -377,12 +377,12 @@
 .palette-card-color-header-right {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-3x);
 }
 
 .palette-card-color-preview {
-  width: 16px;
-  height: 16px;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
   border-radius: var(--radius-md);
   border: 1px solid var(--surface-3);
 }
@@ -390,8 +390,8 @@
 .palette-card-color-sliders {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 4px;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
 }
 
 .palette-card-color-slider {
@@ -405,8 +405,8 @@
 
 .palette-card-color-format-row {
   display: flex;
-  gap: 8px;
-  margin-top: 8px;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
 }
 
 .palette-card-color-value-display {
@@ -414,40 +414,40 @@
   background-color: var(--surface-0);
   border: 1px solid var(--surface-3);
   border-radius: var(--radius-lg);
-  padding-left: 10px;
-  padding-right: 10px;
+  padding-left: var(--space-5x);
+  padding-right: var(--space-5x);
   display: flex;
   align-items: center;
   color: var(--text-primary);
-  font-size: 11px;
+  font-size: var(--text-11);
   overflow: hidden;
   font-family: var(--font-mono);
-  height: 28px;
+  height: var(--h-control-md);
 }
 
 /* ─── Distribution section ─── */
 .palette-card-curve-box {
   background-color: var(--surface-0);
   border-radius: var(--radius-lg);
-  padding: 6px;
+  padding: var(--space-3x);
   border: 1px solid var(--surface-3);
 }
 
 /* ─── Lightness Scale section ─── */
 .palette-card-slider-wrapper {
   position: relative;
-  padding-top: 4px;
-  padding-bottom: 4px;
+  padding-top: var(--space-1);
+  padding-bottom: var(--space-1);
 }
 
 .palette-card-slider-labels {
   display: flex;
   justify-content: space-between;
-  margin-top: 4px;
+  margin-top: var(--space-1);
 }
 
 .palette-card-slider-label {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-disabled);
   font-family: var(--font-mono);
 }
@@ -456,11 +456,11 @@
 .palette-card-hue-header-right {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-3x);
 }
 
 .palette-card-hue-value {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-primary);
   font-family: var(--font-mono);
 }
@@ -479,17 +479,17 @@
 .palette-card-pattern-header-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .palette-card-pattern-header-right {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-3x);
 }
 
 .palette-card-pattern-value {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-primary);
   font-family: var(--font-mono);
 }
@@ -497,32 +497,32 @@
 .palette-card-pattern-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 /* ─── Connection buttons ─── */
 .palette-card-connect-left {
   position: absolute;
   left: -12px;
-  top: 28px;
-  z-index: 20;
+  top: var(--space-7);
+  z-index: var(--z-dropdown);
 }
 
 .palette-card-connect-right {
   position: absolute;
   right: -12px;
-  top: 28px;
-  z-index: 20;
+  top: var(--space-7);
+  z-index: var(--z-dropdown);
 }
 
 .palette-card-connect-btn {
-  width: 24px;
-  height: 24px;
+  width: var(--h-control-sm);
+  height: var(--h-control-sm);
   border-radius: var(--radius-pill);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.15s, background-color 0.15s;
+  transition: color var(--dur-fast) var(--ease-standard), background-color var(--dur-fast) var(--ease-standard);
   box-shadow: var(--shadow-md);
   border: none;
   cursor: pointer;
@@ -547,8 +547,8 @@
 }
 
 .palette-card-connect-icon {
-  width: 12px;
-  height: 12px;
+  width: var(--icon-sm);
+  height: var(--icon-sm);
 }
 
 .palette-card-connect-icon--locked {
@@ -568,9 +568,9 @@
   position: absolute;
   top: -8px;
   right: -8px;
-  z-index: 30;
+  z-index: var(--z-dropdown);
   opacity: 0;
-  transition: opacity 0.15s;
+  transition: opacity var(--dur-fast) var(--ease-standard);
 }
 
 .palette-card-delete-wrapper:hover {
@@ -578,14 +578,14 @@
 }
 
 .palette-card-delete-btn {
-  width: 20px;
-  height: 20px;
+  width: var(--icon-xl);
+  height: var(--icon-xl);
   border-radius: var(--radius-pill);
   background-color: var(--text-critical);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.15s, background-color 0.15s;
+  transition: color var(--dur-fast) var(--ease-standard), background-color var(--dur-fast) var(--ease-standard);
   border: none;
   cursor: pointer;
   padding: 0;
@@ -596,8 +596,8 @@
 }
 
 .palette-card-delete-icon {
-  width: 10px;
-  height: 10px;
+  width: var(--icon-xs);
+  height: var(--icon-xs);
   color: var(--text-primary);
 }
 
@@ -606,9 +606,9 @@
   background-color: var(--surface-0);
   border-color: var(--surface-3);
   color: var(--text-primary);
-  height: 28px;
+  height: var(--h-control-md);
   font-size: var(--text-11);
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 .palette-card-select-trigger--no-mb {
@@ -620,8 +620,8 @@
   background-color: var(--surface-0);
   border-color: var(--surface-3);
   color: var(--text-primary);
-  font-size: 11px;
-  height: 28px;
+  font-size: var(--text-11);
+  height: var(--h-control-md);
 }
 
 .palette-card-select-content {
@@ -635,7 +635,7 @@
 }
 
 .palette-card-name-input {
-  height: 28px;
+  height: var(--h-control-md);
   background-color: var(--surface-0);
   border-color: var(--surface-3);
   color: var(--text-primary);

@@ -4,7 +4,7 @@
 .dev-mode-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 80;
+  z-index: var(--z-modal);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -28,8 +28,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
-  height: 48px;
+  padding: 0 var(--space-5);
+  height: var(--space-8);
   border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
   background-color: var(--surface-1);
@@ -38,34 +38,34 @@
 .dev-mode-header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .dev-mode-header-title-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .dev-mode-header-icon {
-  height: 16px;
-  width: 16px;
+  height: var(--icon-lg);
+  width: var(--icon-lg);
   color: var(--text-placeholder);
 }
 
 .dev-mode-header-title {
-  font-size: 13px;
+  font-size: var(--text-13);
   font-weight: var(--weight-body);
   color: var(--text-primary);
 }
 
 .dev-mode-header-separator {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
 }
 
 .dev-mode-header-project-name {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -76,25 +76,25 @@
 .dev-mode-header-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .dev-mode-last-run {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 11px;
+  gap: var(--space-3x);
+  font-size: var(--text-11);
 }
 
 .dev-mode-last-run-icon--success {
-  height: 12px;
-  width: 12px;
+  height: var(--icon-sm);
+  width: var(--icon-sm);
   color: var(--text-success);
 }
 
 .dev-mode-last-run-icon--error {
-  height: 12px;
-  width: 12px;
+  height: var(--icon-sm);
+  width: var(--icon-sm);
   color: var(--text-critical);
 }
 
@@ -103,15 +103,15 @@
 }
 
 .dev-mode-close-btn {
-  height: 28px;
-  width: 28px;
+  height: var(--h-control-md);
+  width: var(--h-control-md);
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-md);
   color: var(--text-muted);
   cursor: pointer;
-  transition: color 0.15s, background-color 0.15s;
+  transition: color var(--dur-fast) var(--ease-standard), background-color var(--dur-fast) var(--ease-standard);
   background: none;
   border: none;
 }
@@ -122,14 +122,14 @@
 }
 
 .dev-mode-close-icon {
-  height: 16px;
-  width: 16px;
+  height: var(--icon-lg);
+  width: var(--icon-lg);
 }
 
 /* ─── Tab Switcher ─── */
 .dev-mode-tabs {
   display: flex;
-  padding: 0 20px;
+  padding: 0 var(--space-5);
   border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
   background-color: var(--surface-1);
@@ -137,11 +137,11 @@
 
 .dev-mode-tab {
   position: relative;
-  padding: 10px 16px;
-  font-size: 12px;
+  padding: var(--space-5x) var(--space-4);
+  font-size: var(--text-12);
   font-weight: var(--weight-body);
   cursor: pointer;
-  transition: color 0.15s;
+  transition: color var(--dur-fast) var(--ease-standard);
   background: none;
   border: none;
 }
@@ -163,7 +163,7 @@
   bottom: 0;
   left: 0;
   right: 0;
-  height: 2px;
+  height: var(--space-hair);
   background-color: var(--accent);
   border-radius: 1px 1px 0 0;
 }
@@ -172,7 +172,7 @@
 .dev-mode-content {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 20px;
+  padding: var(--space-4) var(--space-5);
   background-color: var(--surface-2);
 }
 
@@ -180,11 +180,11 @@
 .dev-mode-sections {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--space-5);
 }
 
 .dev-mode-section {
-  padding: 16px;
+  padding: var(--space-4);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-subtle);
   background-color: var(--surface-0);
@@ -195,32 +195,32 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 .dev-mode-section-header-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .dev-mode-section-header-icon {
-  height: 14px;
-  width: 14px;
+  height: var(--icon-md);
+  width: var(--icon-md);
   color: var(--text-placeholder);
 }
 
 .dev-mode-section-header-title {
-  font-size: 12px;
+  font-size: var(--text-12);
   font-weight: var(--weight-body);
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: var(--tracking-overline);
 }
 
 .dev-mode-section-header-badge {
-  font-size: 11px;
-  padding: 2px 6px;
+  font-size: var(--text-11);
+  padding: var(--space-hair) var(--space-3x);
   border-radius: var(--radius-sm);
   background-color: var(--surface-3);
   border: 1px solid var(--surface-3);
@@ -229,7 +229,7 @@
 
 /* ─── Field Row ─── */
 .dev-mode-field {
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 .dev-mode-field:last-child {
@@ -238,28 +238,28 @@
 
 .dev-mode-field-label {
   display: block;
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
-  margin-bottom: 6px;
+  margin-bottom: var(--space-3x);
 }
 
 .dev-mode-field-hint {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
-  margin-top: 4px;
+  margin-top: var(--space-1);
 }
 
 /* ─── Geist Input ─── */
 .dev-mode-input {
   width: 100%;
-  height: 32px;
-  padding: 0 12px;
+  height: var(--h-control-lg);
+  padding: 0 var(--space-3);
   background-color: var(--surface-2);
   border: 1px solid var(--surface-3);
   border-radius: var(--radius-md);
-  font-size: 12px;
+  font-size: var(--text-12);
   color: var(--text-primary);
-  transition: border-color 0.15s;
+  transition: border-color var(--dur-fast) var(--ease-standard);
 }
 
 .dev-mode-input:focus {
@@ -287,16 +287,16 @@
 
 .dev-mode-select {
   width: 100%;
-  height: 32px;
-  padding: 0 32px 0 12px;
+  height: var(--h-control-lg);
+  padding: 0 var(--h-control-lg) 0 var(--space-3);
   background-color: var(--surface-2);
   border: 1px solid var(--surface-3);
   border-radius: var(--radius-md);
-  font-size: 12px;
+  font-size: var(--text-12);
   color: var(--text-primary);
   appearance: none;
   cursor: pointer;
-  transition: border-color 0.15s;
+  transition: border-color var(--dur-fast) var(--ease-standard);
 }
 
 .dev-mode-select:focus {
@@ -310,11 +310,11 @@
 
 .dev-mode-select-chevron {
   position: absolute;
-  right: 8px;
+  right: var(--space-2);
   top: 50%;
   transform: translateY(-50%);
-  height: 12px;
-  width: 12px;
+  height: var(--icon-sm);
+  width: var(--icon-sm);
   color: var(--text-muted);
   pointer-events: none;
 }
@@ -322,11 +322,11 @@
 /* ─── Geist Toggle ─── */
 .dev-mode-toggle {
   position: relative;
-  width: 36px;
-  height: 20px;
+  width: 36px; /* FLAG: 36px toggle track, no token */
+  height: var(--space-5);
   border-radius: var(--radius-pill);
   cursor: pointer;
-  transition: background-color 0.15s;
+  transition: background-color var(--dur-fast) var(--ease-standard);
   border: none;
 }
 
@@ -345,16 +345,16 @@
 
 .dev-mode-toggle-knob {
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
+  top: var(--space-hair);
+  left: var(--space-hair);
+  width: var(--icon-lg);
+  height: var(--icon-lg);
   border-radius: var(--radius-pill);
-  transition: transform 0.15s;
+  transition: transform var(--dur-fast) var(--ease-standard);
 }
 
 .dev-mode-toggle-knob--on {
-  transform: translateX(16px);
+  transform: translateX(var(--icon-lg));
   background-color: var(--surface-2);
 }
 
@@ -365,8 +365,8 @@
 
 /* ─── Copy Button ─── */
 .dev-mode-copy-btn {
-  height: 32px;
-  padding: 0 10px;
+  height: var(--h-control-lg);
+  padding: 0 var(--space-5x);
   background-color: var(--surface-2);
   border: 1px solid var(--surface-3);
   border-radius: var(--radius-md);
@@ -374,8 +374,8 @@
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
-  transition: color 0.15s, border-color 0.15s;
+  gap: var(--space-3x);
+  transition: color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
 }
 
 .dev-mode-copy-btn:hover {
@@ -384,31 +384,31 @@
 }
 
 .dev-mode-copy-icon {
-  height: 12px;
-  width: 12px;
+  height: var(--icon-sm);
+  width: var(--icon-sm);
 }
 
 .dev-mode-copy-icon--success {
-  height: 12px;
-  width: 12px;
+  height: var(--icon-sm);
+  width: var(--icon-sm);
   color: var(--text-success);
 }
 
 .dev-mode-copy-text {
-  font-size: 11px;
+  font-size: var(--text-11);
 }
 
 /* ─── Grid layouts ─── */
 .dev-mode-grid-2col {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 /* ─── PAT row ─── */
 .dev-mode-pat-row {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .dev-mode-pat-input-wrapper {
@@ -417,20 +417,20 @@
 }
 
 .dev-mode-pat-set-btn {
-  height: 32px;
-  padding: 0 10px;
-  background-color: color-mix(in srgb, var(--text-success) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--text-success) 30%, transparent);
+  height: var(--h-control-lg);
+  padding: 0 var(--space-5x);
+  background-color: var(--tint-success-weak);
+  border: 1px solid var(--tint-success-border);
   border-radius: var(--radius-md);
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-success);
   cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s;
+  transition: background-color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
 }
 
 .dev-mode-pat-set-btn:hover {
-  background-color: color-mix(in srgb, var(--text-success) 20%, transparent);
-  border-color: color-mix(in srgb, var(--text-success) 40%, transparent);
+  background-color: var(--tint-success-soft);
+  border-color: var(--tint-success-border);
 }
 
 .dev-mode-pat-set-btn:disabled {
@@ -439,14 +439,14 @@
 }
 
 .dev-mode-pat-toggle-btn {
-  height: 32px;
-  padding: 0 8px;
+  height: var(--h-control-lg);
+  padding: 0 var(--space-2);
   background-color: var(--surface-2);
   border: 1px solid var(--surface-3);
   border-radius: var(--radius-md);
   color: var(--text-muted);
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  transition: color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
 }
 
 .dev-mode-pat-toggle-btn:hover {
@@ -455,37 +455,37 @@
 }
 
 .dev-mode-pat-toggle-icon {
-  height: 12px;
-  width: 12px;
+  height: var(--icon-sm);
+  width: var(--icon-sm);
 }
 
 .dev-mode-pat-saved {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: color-mix(in srgb, var(--text-success) 60%, transparent);
-  margin-top: 4px;
+  margin-top: var(--space-1);
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .dev-mode-pat-saved-icon {
-  height: 12px;
-  width: 12px;
+  height: var(--icon-sm);
+  width: var(--icon-sm);
 }
 
 /* ─── Recommended note ─── */
 .dev-mode-recommended-note {
-  margin-top: 8px;
-  padding: 10px;
+  margin-top: var(--space-2);
+  padding: var(--space-5x);
   border-radius: var(--radius-md);
   background-color: var(--surface-2);
   border: 1px solid var(--surface-2);
 }
 
 .dev-mode-recommended-note-text {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-muted);
-  line-height: 1.625;
+  line-height: var(--leading-normal);
 }
 
 .dev-mode-recommended-note-label {
@@ -496,7 +496,7 @@
 /* ─── Webhook Secret Row ─── */
 .dev-mode-secret-row {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .dev-mode-secret-input-wrapper {
@@ -504,14 +504,14 @@
 }
 
 .dev-mode-secret-toggle-btn {
-  height: 32px;
-  padding: 0 8px;
+  height: var(--h-control-lg);
+  padding: 0 var(--space-2);
   background-color: var(--surface-2);
   border: 1px solid var(--surface-3);
   border-radius: var(--radius-md);
   color: var(--text-muted);
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  transition: color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
 }
 
 .dev-mode-secret-toggle-btn:hover {
@@ -520,26 +520,26 @@
 }
 
 .dev-mode-secret-toggle-icon {
-  height: 12px;
-  width: 12px;
+  height: var(--icon-sm);
+  width: var(--icon-sm);
 }
 
 /* ─── Accepted Formats ─── */
 .dev-mode-formats-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--space-3x);
 }
 
 .dev-mode-format-chip {
-  height: 24px;
-  padding: 0 8px;
+  height: var(--h-control-sm);
+  padding: 0 var(--space-2);
   border-radius: var(--radius-sm);
-  font-size: 11px;
+  font-size: var(--text-11);
   font-family: var(--font-mono);
   font-weight: var(--weight-body);
   cursor: pointer;
-  transition: color 0.15s, background-color 0.15s;
+  transition: color var(--dur-fast) var(--ease-standard), background-color var(--dur-fast) var(--ease-standard);
 }
 
 .dev-mode-format-chip--active {
@@ -561,62 +561,62 @@
 
 /* ─── Example cURL ─── */
 .dev-mode-example {
-  margin-top: 12px;
-  padding: 12px;
+  margin-top: var(--space-3);
+  padding: var(--space-3);
   border-radius: var(--radius-md);
   background-color: var(--surface-2);
   border: 1px solid var(--surface-2);
 }
 
 .dev-mode-example-title {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-muted);
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
   font-weight: var(--weight-body);
 }
 
 .dev-mode-example-code {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
   font-family: var(--font-mono);
-  line-height: 1.625;
+  line-height: var(--leading-normal);
   white-space: pre-wrap;
   word-break: break-all;
 }
 
 /* ─── Per-Node Webhook URLs ─── */
 .dev-mode-per-node-section {
-  margin-top: 12px;
-  padding: 12px;
+  margin-top: var(--space-3);
+  padding: var(--space-3);
   border-radius: var(--radius-md);
   background-color: var(--surface-0);
-  border: 1px solid color-mix(in srgb, var(--text-warning) 20%, transparent);
+  border: 1px solid var(--tint-warning-border);
 }
 
 .dev-mode-per-node-title {
-  font-size: 11px;
-  color: color-mix(in srgb, var(--text-warning) 80%, transparent);
-  margin-bottom: 8px;
+  font-size: var(--text-11);
+  color: var(--text-warning);
+  margin-bottom: var(--space-2);
   font-weight: var(--weight-body);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-3x);
 }
 
 .dev-mode-per-node-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .dev-mode-per-node-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .dev-mode-per-node-name {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -630,31 +630,31 @@
 }
 
 .dev-mode-per-node-input {
-  font-size: 11px !important;
-  height: 24px !important;
+  font-size: var(--text-11) !important;
+  height: var(--h-control-sm) !important;
 }
 
 .dev-mode-per-node-hint {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 
 /* ─── Schedule Source Buttons ─── */
 .dev-mode-source-row {
   display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
 }
 
 .dev-mode-source-btn {
   flex: 1;
-  height: 32px;
+  height: var(--h-control-lg);
   border-radius: var(--radius-md);
-  font-size: 11px;
+  font-size: var(--text-11);
   font-weight: var(--weight-body);
   cursor: pointer;
-  transition: color 0.15s, background-color 0.15s;
+  transition: color var(--dur-fast) var(--ease-standard), background-color var(--dur-fast) var(--ease-standard);
 }
 
 .dev-mode-source-btn--active {
@@ -677,11 +677,11 @@
 .dev-mode-interval-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .dev-mode-interval-label {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-muted);
 }
 
@@ -694,8 +694,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
-  height: 56px;
+  padding: 0 var(--space-5);
+  height: 56px; /* FLAG: 56px custom footer height, no token */
   border-top: 1px solid var(--border-subtle);
   flex-shrink: 0;
   background-color: var(--surface-1);
@@ -704,14 +704,14 @@
 .dev-mode-footer-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .dev-mode-footer-error {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 11px;
+  gap: var(--space-3x);
+  font-size: var(--text-11);
   color: var(--text-critical);
   max-width: 250px;
   overflow: hidden;
@@ -720,8 +720,8 @@
 }
 
 .dev-mode-footer-error-icon {
-  height: 12px;
-  width: 12px;
+  height: var(--icon-sm);
+  width: var(--icon-sm);
   flex-shrink: 0;
 }
 
@@ -734,22 +734,22 @@
 .dev-mode-footer-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .dev-mode-test-btn {
-  height: 32px;
-  padding: 0 12px;
+  height: var(--h-control-lg);
+  padding: 0 var(--space-3);
   background-color: var(--surface-2);
   border: 1px solid var(--surface-3);
   border-radius: var(--radius-md);
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
-  transition: color 0.15s, border-color 0.15s;
+  gap: var(--space-3x);
+  transition: color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
 }
 
 .dev-mode-test-btn:hover {
@@ -758,23 +758,23 @@
 }
 
 .dev-mode-test-icon {
-  height: 12px;
-  width: 12px;
+  height: var(--icon-sm);
+  width: var(--icon-sm);
 }
 
 .dev-mode-run-btn {
-  height: 32px;
-  padding: 0 16px;
+  height: var(--h-control-lg);
+  padding: 0 var(--space-4);
   background-color: var(--text-primary);
   border-radius: var(--radius-md);
-  font-size: 11px;
+  font-size: var(--text-11);
   font-weight: var(--weight-body);
   color: var(--surface-2);
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
-  transition: background-color 0.15s;
+  gap: var(--space-3x);
+  transition: background-color var(--dur-fast) var(--ease-standard);
   border: none;
 }
 
@@ -783,6 +783,6 @@
 }
 
 .dev-mode-run-icon {
-  height: 12px;
-  width: 12px;
+  height: var(--icon-sm);
+  width: var(--icon-sm);
 }

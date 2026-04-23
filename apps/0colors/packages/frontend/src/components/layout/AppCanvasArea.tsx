@@ -167,7 +167,7 @@ export function AppCanvasArea({
       )}
 
       {isSampleMode && (
-        <div className="app-sample-bar-wrap" style={{ bottom: viewMode === 'canvas' && isViewingPrimaryTheme ? '5rem' : '24px' }} data-testid="canvas-sample-bar-wrap">
+        <div className="app-sample-bar-wrap" style={{ bottom: viewMode === 'canvas' && isViewingPrimaryTheme ? '5rem' : 'var(--space-6)' }} data-testid="canvas-sample-bar-wrap">
           <div className="app-sample-bar" data-testid="canvas-sample-bar">
             <div className="app-sample-bar-info">
               <div className="app-sample-bar-icon">
@@ -238,8 +238,8 @@ export function AppCanvasArea({
             style={{
               bottom: bottomClass === 'bottom-[12rem]' ? '12rem' : bottomClass === 'bottom-[8.75rem]' ? '8.75rem' : '5.5rem',
               animation: goBackFading
-                ? `goBackFadeOut ${GO_BACK_FADE_MS}ms ease-in forwards`
-                : 'fadeSlideUp 0.25s ease-out',
+                ? `goBackFadeOut ${GO_BACK_FADE_MS}ms var(--ease-emphasized) forwards`
+                : 'fadeSlideUp var(--dur-slow) var(--ease-standard)',
             }}
           >
             <button
@@ -265,7 +265,7 @@ export function AppCanvasArea({
         const multiBarVisible = isViewingPrimaryTheme && selectedNodeIds.length > 1 && !multiSelectBarDelay;
         return (
           <div className="app-prompt-wrap app-prompt-wrap-transition"
-            style={{ bottom: multiBarVisible ? '8.75rem' : '5.5rem', animation: 'fadeSlideUp 0.25s ease-out' }}
+            style={{ bottom: multiBarVisible ? '8.75rem' : '5.5rem', animation: 'fadeSlideUp var(--dur-slow) var(--ease-standard)' }}
           >
             <button
               className="app-prompt-btn"
@@ -295,7 +295,7 @@ export function AppCanvasArea({
         return (
           <div
             className="app-prompt-wrap"
-            style={{ bottom: '5.5rem', animation: 'fadeSlideUp 0.2s ease-out' }}
+            style={{ bottom: '5.5rem', animation: 'fadeSlideUp var(--dur-base) var(--ease-standard)' }}
           >
             <div className="app-multiselect-bar" data-testid="canvas-multiselect-bar-primary">
               {/* Selection count label */}
@@ -391,7 +391,7 @@ export function AppCanvasArea({
         return (
           <div
             className="app-prompt-wrap"
-            style={{ bottom: '24px', animation: 'fadeSlideUp 0.2s ease-out' }}
+            style={{ bottom: 'var(--space-6)', animation: 'fadeSlideUp var(--dur-base) var(--ease-standard)' }}
           >
             <div className="app-multiselect-bar" data-testid="canvas-multiselect-bar-theme">
               {/* Selection count label */}
@@ -764,7 +764,7 @@ export function AppCanvasArea({
             </Tip>
             {canUndo && (
               <span className="app-undo-redo-badge"
-                style={{ fontSize: '10px', lineHeight: '14px', minWidth: '18px', textAlign: 'center' }}
+                style={{ fontSize: 'var(--text-10)', lineHeight: 'var(--icon-md)', minWidth: '18px', textAlign: 'center' }}
               >
                 {undoCount}
               </span>
@@ -786,7 +786,7 @@ export function AppCanvasArea({
             </Tip>
             {canRedo && (
               <span className="app-undo-redo-badge"
-                style={{ fontSize: '10px', lineHeight: '14px', minWidth: '18px', textAlign: 'center' }}
+                style={{ fontSize: 'var(--text-10)', lineHeight: 'var(--icon-md)', minWidth: '18px', textAlign: 'center' }}
               >
                 {redoCount}
               </span>

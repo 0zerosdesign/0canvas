@@ -15,8 +15,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
-  height: 44px;
+  padding: 0 var(--space-5);
+  height: var(--h-control-3xl); /* FLAG: 44px chrome height, no h-control token fits */
   flex-shrink: 0;
   border-bottom: 1px solid var(--surface-3);
   background-color: var(--surface-1);
@@ -26,33 +26,33 @@
 .export-top-bar-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   min-width: 0;
 }
 
 .export-top-bar-label {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: var(--tracking-wide); /* FLAG: 0.1em wider than tracking-overline */
   flex-shrink: 0;
 }
 
 .export-top-bar-divider {
   width: 1px;
-  height: 14px;
+  height: var(--icon-md);
   background-color: var(--surface-3);
   flex-shrink: 0;
 }
 
 .export-top-bar-stat {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
 
 .export-top-bar-preview-label {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-muted);
   flex-shrink: 0;
 }
@@ -60,18 +60,18 @@
 .export-figma-preview-btn {
   display: flex;
   align-items: center;
-  gap: 4px;
-  height: 24px;
-  padding: 0 8px;
+  gap: var(--space-1);
+  height: var(--h-control-sm);
+  padding: 0 var(--space-2);
   border-radius: var(--radius-sm);
   background-color: var(--surface-2);
   border: 1px solid var(--border-subtle);
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
   outline: none;
   cursor: pointer;
   max-width: 140px;
-  transition: color 0.15s, background-color 0.15s;
+  transition: color var(--dur-fast) var(--ease-standard), background-color var(--dur-fast) var(--ease-standard);
 }
 
 .export-figma-preview-btn:hover {
@@ -86,8 +86,8 @@
 }
 
 .export-figma-preview-chevron {
-  height: 10px;
-  width: 10px;
+  height: var(--icon-xs);
+  width: var(--icon-xs);
   opacity: 0.4;
   flex-shrink: 0;
 }
@@ -96,22 +96,22 @@
 .export-top-bar-right {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-3x);
 }
 
 .export-action-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 10px;
+  gap: var(--space-3x);
+  height: var(--h-control-md);
+  padding: 0 var(--space-5x);
   border-radius: var(--radius-md);
   background-color: var(--surface-2);
   border: 1px solid var(--border-subtle);
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-muted);
   cursor: pointer;
-  transition: color 0.15s, background-color 0.15s;
+  transition: color var(--dur-fast) var(--ease-standard), background-color var(--dur-fast) var(--ease-standard);
   outline: none;
 }
 
@@ -126,13 +126,13 @@
 }
 
 .export-action-icon {
-  height: 12px;
-  width: 12px;
+  height: var(--icon-sm);
+  width: var(--icon-sm);
 }
 
 .export-action-icon--success {
-  height: 12px;
-  width: 12px;
+  height: var(--icon-sm);
+  width: var(--icon-sm);
   color: var(--text-success);
 }
 
@@ -142,9 +142,9 @@
 
 .export-divider-v {
   width: 1px;
-  height: 16px;
+  height: var(--icon-lg);
   background-color: var(--surface-3);
-  margin: 0 2px;
+  margin: 0 var(--space-hair);
 }
 
 /* ─── Main Layout ─── */
@@ -167,36 +167,36 @@
 
 /* ─── Sidebar Section Headers ─── */
 .export-sidebar-section-header {
-  padding: 16px 16px 8px;
+  padding: var(--space-4) var(--space-4) var(--space-2);
 }
 
 .export-sidebar-section-header--themes {
-  padding: 12px 16px 8px;
+  padding: var(--space-3) var(--space-4) var(--space-2);
 }
 
 .export-sidebar-section-header--hex {
-  padding: 12px 16px 8px;
+  padding: var(--space-3) var(--space-4) var(--space-2);
 }
 
 .export-sidebar-section-title-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 6px;
+  margin-bottom: var(--space-3x);
 }
 
 .export-sidebar-section-title {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: var(--tracking-wide); /* FLAG: 0.1em wider than tracking-overline */
 }
 
 .export-sidebar-toggle-all-btn {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-muted);
   cursor: pointer;
-  transition: color 0.15s;
+  transition: color var(--dur-fast) var(--ease-standard);
   background: none;
   border: none;
   padding: 0;
@@ -207,7 +207,7 @@
 }
 
 .export-sidebar-section-count {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
   font-variant-numeric: tabular-nums;
 }
@@ -215,52 +215,52 @@
 .export-sidebar-hex-title-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
+  gap: var(--space-3x);
+  margin-bottom: var(--space-3x);
 }
 
 .export-sidebar-hex-icon {
-  height: 12px;
-  width: 12px;
+  height: var(--icon-sm);
+  width: var(--icon-sm);
   color: var(--text-muted);
 }
 
 .export-sidebar-hex-hint {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
 }
 
 /* ─── Sidebar List Items ─── */
 .export-sidebar-list {
-  padding: 0 8px 8px;
+  padding: 0 var(--space-2) var(--space-2);
 }
 
 .export-sidebar-list--themes {
-  padding: 0 8px 16px;
+  padding: 0 var(--space-2) var(--space-4);
 }
 
 .export-sidebar-list--hex {
-  padding: 0 8px 16px;
+  padding: 0 var(--space-2) var(--space-4);
 }
 
 .export-sidebar-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 8px;
+  gap: var(--space-5x);
+  padding: var(--space-3x) var(--space-2);
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background-color 0.15s;
+  transition: background-color var(--dur-fast) var(--ease-standard);
 }
 
 .export-sidebar-item:hover {
-  background-color: color-mix(in srgb, var(--text-primary) 3%, transparent);
+  background-color: var(--tint-hover);
 }
 
 .export-sidebar-item-label {
-  font-size: 12px;
+  font-size: var(--text-12);
   flex: 1;
-  transition: color 0.15s;
+  transition: color var(--dur-fast) var(--ease-standard);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -275,13 +275,13 @@
 }
 
 .export-sidebar-item-badge {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
 }
 
 /* ─── Sidebar Divider ─── */
 .export-sidebar-divider {
-  margin: 0 16px;
+  margin: 0 var(--space-4);
   border-top: 1px solid var(--surface-3);
 }
 
@@ -315,32 +315,32 @@
 }
 
 .export-empty-icon-wrapper {
-  width: 40px;
-  height: 40px;
+  width: 40px; /* FLAG: 40px empty-state icon, no spacing token */
+  height: var(--h-control-2xl);
   border-radius: var(--radius-lg);
   background-color: var(--surface-3);
   border: 1px solid var(--surface-2);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 12px;
+  margin: 0 auto var(--space-3);
 }
 
 .export-empty-icon {
-  height: 20px;
-  width: 20px;
+  height: var(--icon-xl);
+  width: var(--icon-xl);
   color: var(--text-placeholder);
 }
 
 .export-empty-title {
   color: var(--text-muted);
-  font-size: 13px;
-  margin-bottom: 4px;
+  font-size: var(--text-13);
+  margin-bottom: var(--space-1);
 }
 
 .export-empty-subtitle {
   color: var(--text-placeholder);
-  font-size: 11px;
+  font-size: var(--text-11);
 }
 
 /* ─── Footer ─── */
@@ -348,8 +348,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
-  height: 30px;
+  padding: 0 var(--space-5);
+  height: 30px; /* FLAG: 30px footer strip, no h-control token */
   flex-shrink: 0;
   user-select: none;
   border-top: 1px solid var(--surface-3);
@@ -357,16 +357,16 @@
 }
 
 .export-footer-left {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
   font-variant-numeric: tabular-nums;
 }
 
 .export-footer-right {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: var(--tracking-overline);
 }
 
 /* ─── Dropdown styles (shared with CodePreview) ─── */
@@ -384,13 +384,13 @@
 }
 
 .export-format-dropdown-item-desc {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
 }
 
 .export-format-dropdown-check {
-  height: 12px;
-  width: 12px;
+  height: var(--icon-sm);
+  width: var(--icon-sm);
   color: var(--text-muted);
 }
 
@@ -407,7 +407,7 @@
   width: 220px;
   background-color: var(--surface-3);
   border-color: var(--surface-3);
-  padding: 4px;
+  padding: var(--space-1);
   box-shadow: var(--shadow-lg);
 }
 
@@ -415,7 +415,7 @@
   width: 180px;
   background-color: var(--surface-3);
   border-color: var(--surface-3);
-  padding: 4px;
+  padding: var(--space-1);
   box-shadow: var(--shadow-lg);
 }
 

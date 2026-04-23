@@ -21,9 +21,9 @@
 [data-slot="command-input-wrapper"] {
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 36px;
-  padding: 0 10px;
+  gap: var(--space-2);
+  height: var(--h-control-xl); /* FLAG: non-token height */
+  padding: 0 var(--space-5x);
   border-bottom: 1px solid var(--border-subtle);
 }
 
@@ -31,7 +31,7 @@
 [data-slot="command-input"] {
   display: flex;
   width: 100%;
-  height: 40px;
+  height: var(--h-control-2xl); /* FLAG: non-token height; exceeds --h-control-lg (32px) */
   padding: 0;
   background-color: transparent;
   border: none;
@@ -51,14 +51,14 @@
 
 /* ─── List ─── */
 [data-slot="command-list"] {
-  max-height: 300px;
+  max-height: 300px; /* FLAG: non-token list max-height */
   overflow-x: hidden;
   overflow-y: auto;
 }
 
 /* ─── Empty ─── */
 [data-slot="command-empty"] {
-  padding: 24px 0;
+  padding: var(--space-6) 0;
   text-align: center;
   font-size: var(--text-12);
   color: var(--text-muted);
@@ -67,13 +67,13 @@
 /* ─── Group ─── */
 [data-slot="command-group"] {
   overflow: hidden;
-  padding: 4px;
+  padding: var(--space-1);
   color: var(--text-primary);
 }
 
 /* Group heading (cmdk uses [cmdk-group-heading]) */
 [data-slot="command-group"] [cmdk-group-heading] {
-  padding: 4px 10px;
+  padding: var(--space-1) var(--space-5x);
   font-size: var(--text-10);
   font-weight: var(--weight-body);
   color: var(--text-muted);
@@ -82,7 +82,7 @@
 /* ─── Separator ─── */
 [data-slot="command-separator"] {
   height: 1px;
-  margin: 0 -4px;
+  margin: 0 calc(-1 * var(--space-1));
   background-color: var(--border-subtle);
 }
 
@@ -91,8 +91,8 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
+  gap: var(--space-2);
+  padding: var(--space-3x) var(--space-5x);
   border-radius: var(--radius-md);
   font-size: var(--text-12);
   cursor: pointer;
@@ -115,14 +115,14 @@
 [data-slot="command-item"] svg {
   pointer-events: none;
   flex-shrink: 0;
-  width: 16px;
-  height: 16px;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
 }
 
 /* ─── Shortcut ─── */
 [data-slot="command-shortcut"] {
   margin-left: auto;
   font-size: var(--text-11);
-  letter-spacing: 0.1em;
+  letter-spacing: var(--tracking-wide); /* FLAG: non-token tracking (denser than --tracking-overline 0.05em) */
   color: var(--text-muted);
 }

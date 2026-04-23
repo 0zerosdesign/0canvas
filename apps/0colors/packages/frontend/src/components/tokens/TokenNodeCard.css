@@ -9,18 +9,18 @@
 .token-card-left-connect-area {
   position: absolute;
   left: -12px;
-  top: 24px;
-  z-index: 20;
+  top: var(--space-6);
+  z-index: var(--z-dropdown);
 }
 
 .token-card-connect-btn {
-  width: 24px;
-  height: 24px;
+  width: var(--h-control-sm);
+  height: var(--h-control-sm);
   border-radius: var(--radius-pill);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.15s, background-color 0.15s;
+  transition: color var(--dur-fast) var(--ease-standard), background-color var(--dur-fast) var(--ease-standard);
   box-shadow: var(--shadow-md);
 }
 
@@ -42,8 +42,8 @@
 }
 
 .token-card-connect-icon {
-  width: 12px;
-  height: 12px;
+  width: var(--icon-sm);
+  height: var(--icon-sm);
 }
 
 .token-card-connect-icon-default {
@@ -61,33 +61,33 @@
 /* ── Parent selector popup ── */
 .token-card-parent-popup {
   position: absolute;
-  left: 32px;
+  left: var(--space-7);
   top: 0;
   background-color: var(--surface-3);
   border: 1px solid var(--surface-3);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
-  padding: 8px;
+  padding: var(--space-2);
   min-width: 120px;
-  z-index: 30;
+  z-index: var(--z-dropdown);
 }
 
 .token-card-parent-popup-label {
   font-size: var(--text-11);
-  margin-bottom: 4px;
-  padding: 4px 8px;
+  margin-bottom: var(--space-1);
+  padding: var(--space-1) var(--space-2);
   color: var(--text-placeholder);
 }
 
 .token-card-parent-popup-item {
   width: 100%;
   text-align: left;
-  padding: 4px 8px;
+  padding: var(--space-1) var(--space-2);
   font-size: var(--text-12);
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   color: var(--text-primary);
   cursor: pointer;
   background: transparent;
@@ -99,8 +99,8 @@
 }
 
 .token-card-parent-popup-item-icon {
-  width: 12px;
-  height: 12px;
+  width: var(--icon-sm);
+  height: var(--icon-sm);
   color: var(--accent);
 }
 
@@ -108,21 +108,21 @@
 .token-card-right-connect-area {
   position: absolute;
   right: -12px;
-  top: 24px;
-  z-index: 20;
+  top: var(--space-6);
+  z-index: var(--z-dropdown);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 /* ── Right port indicator ── */
 .token-card-right-port {
   position: absolute;
   right: -5px;
-  top: 24px;
-  z-index: 10;
-  width: 10px;
-  height: 10px;
+  top: var(--space-6);
+  z-index: var(--z-panel);
+  width: var(--icon-xs);
+  height: var(--icon-xs);
   border-radius: var(--radius-pill);
   background-color: var(--accent);
 }
@@ -132,7 +132,7 @@
   overflow: visible;
   cursor: default;
   position: relative;
-  border-radius: 20px;
+  border-radius: var(--space-5);
   gap: 0;
   /* Darker than previous surface-2 override for contrast on canvas; align with app Card default */
   background-color: var(--surface-1);
@@ -164,19 +164,19 @@
 
 .token-card-name-area-child {
   border-radius: 19px 19px 0 0;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 .token-card-name-area-inherited {
-  transition: opacity 0.2s;
+  transition: opacity var(--dur-base) var(--ease-standard);
 }
 
 /* ── Visibility toggle ── */
 .token-card-visibility-toggle {
   position: absolute;
-  top: 8px;
+  top: var(--space-2);
   left: -22px;
-  transition: all 0.15s;
+  transition: all var(--dur-fast) var(--ease-standard);
   cursor: pointer;
 }
 
@@ -199,8 +199,8 @@
 }
 
 .token-card-visibility-icon {
-  height: 18px;
-  width: 18px;
+  height: var(--text-18);
+  width: var(--text-18);
 }
 
 /* ── Name content ── */
@@ -209,15 +209,15 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding-left: 24px;
-  padding-right: 24px;
+  padding-left: var(--space-6);
+  padding-right: var(--space-6);
   width: 100%;
-  gap: 2px;
+  gap: var(--space-hair);
 }
 
 .token-card-prefix-badge {
-  font-size: 11px;
-  letter-spacing: 0.1em;
+  font-size: var(--text-11);
+  letter-spacing: var(--tracking-wide);
   text-transform: uppercase;
   color: var(--text-disabled);
 }
@@ -228,12 +228,12 @@
   color: var(--text-primary);
   font-size: var(--text-12);
   border-radius: var(--radius-lg);
-  padding: 6px 12px;
+  padding: var(--space-3x) var(--space-3);
   outline: none;
   width: 100%;
   max-width: 180px;
   border: none;
-  transition: background-color 0.15s;
+  transition: background-color var(--dur-fast) var(--ease-standard);
 }
 
 .token-card-name-input:focus {
@@ -246,7 +246,7 @@
 
 .token-card-name-button {
   font-size: var(--text-12);
-  transition: color 0.15s;
+  transition: color var(--dur-fast) var(--ease-standard);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -264,28 +264,28 @@
 /* ── Token assignment section ── */
 .token-card-token-section {
   position: relative;
-  padding: 0 18px 14px 18px;
-  margin-top: 4px;
+  padding: 0 18px var(--space-7x) 18px;
+  margin-top: var(--space-1);
 }
 
 .token-card-token-section-dimmed {
-  transition: opacity 0.2s;
+  transition: opacity var(--dur-base) var(--ease-standard);
 }
 
 /* ── Theme inheritance toggle ── */
 .token-card-theme-toggle {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding-bottom: 6px;
-  padding-top: 2px;
+  gap: var(--space-3x);
+  padding-bottom: var(--space-3x);
+  padding-top: var(--space-hair);
 }
 
 .token-card-crown-icon {
-  height: 12px;
-  width: 12px;
+  height: var(--icon-sm);
+  width: var(--icon-sm);
   flex-shrink: 0;
-  transition: all 0.15s;
+  transition: all var(--dur-fast) var(--ease-standard);
 }
 
 .token-card-crown-modified {
@@ -299,9 +299,9 @@
 }
 
 .token-card-theme-label {
-  font-size: 11px;
+  font-size: var(--text-11);
   user-select: none;
-  transition: color 0.15s;
+  transition: color var(--dur-fast) var(--ease-standard);
 }
 
 .token-card-theme-label-modified {
@@ -321,21 +321,21 @@
 .token-card-advanced-overlay {
   position: absolute;
   inset: 0;
-  z-index: 10;
+  z-index: var(--z-panel);
   display: flex;
   align-items: center;
-  border-radius: 10px;
+  border-radius: var(--space-5x);
   pointer-events: none;
-  padding: 0 10px;
+  padding: 0 var(--space-5x);
   background: color-mix(in srgb, var(--surface-0) 70%, transparent);
 }
 
 .token-card-advanced-error {
-  font-size: 11px;
-  letter-spacing: 0.05em;
+  font-size: var(--text-11);
+  letter-spacing: var(--tracking-overline);
   color: color-mix(in srgb, var(--text-critical) 90%, transparent);
   user-select: none;
-  padding: 2px 6px;
+  padding: var(--space-hair) var(--space-3x);
   border-radius: var(--radius-sm);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -348,15 +348,15 @@
 .token-card-advanced-output {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-3x);
   min-width: 0;
   width: 100%;
 }
 
 .token-card-advanced-swatch {
-  width: 14px;
-  height: 14px;
-  border-radius: 4px;
+  width: var(--icon-md);
+  height: var(--icon-md);
+  border-radius: var(--radius-xs);
   flex-shrink: 0;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-primary) 10%, transparent);
 }
@@ -366,14 +366,14 @@
 }
 
 .token-card-advanced-tag-icon {
-  width: 14px;
-  height: 14px;
+  width: var(--icon-md);
+  height: var(--icon-md);
   flex-shrink: 0;
   color: color-mix(in srgb, var(--text-warning) 60%, transparent);
 }
 
 .token-card-advanced-output-label {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-muted);
   user-select: none;
   overflow: hidden;
@@ -385,12 +385,12 @@
 }
 
 .token-card-advanced-no-output {
-  font-size: 11px;
-  letter-spacing: 0.05em;
+  font-size: var(--text-11);
+  letter-spacing: var(--tracking-overline);
   text-transform: uppercase;
   color: color-mix(in srgb, var(--accent) 50%, transparent);
   user-select: none;
-  padding: 2px 6px;
+  padding: var(--space-hair) var(--space-3x);
   border-radius: var(--radius-sm);
   margin: 0 auto;
   background: color-mix(in srgb, var(--accent) 5%, transparent);
@@ -402,11 +402,11 @@
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 10px;
-  height: 36px;
-  padding: 0 12px;
-  border-radius: 10px;
-  transition: all 0.15s;
+  gap: var(--space-5x);
+  height: var(--h-control-xl);
+  padding: 0 var(--space-3);
+  border-radius: var(--space-5x);
+  transition: all var(--dur-fast) var(--ease-standard);
   font-size: var(--text-11);
   outline: none;
   border: none;
@@ -442,9 +442,9 @@
 
 /* ── Token swatch & icon ── */
 .token-card-swatch-sm {
-  width: 14px;
-  height: 14px;
-  border-radius: 4px;
+  width: var(--icon-md);
+  height: var(--icon-md);
+  border-radius: var(--radius-xs);
   flex-shrink: 0;
 }
 
@@ -458,16 +458,16 @@
 }
 
 .token-card-tag-icon-sm {
-  width: 14px;
-  height: 14px;
+  width: var(--icon-md);
+  height: var(--icon-md);
   flex-shrink: 0;
   color: var(--text-disabled);
 }
 
 .token-card-empty-swatch {
-  width: 14px;
-  height: 14px;
-  border-radius: 4px;
+  width: var(--icon-md);
+  height: var(--icon-md);
+  border-radius: var(--radius-xs);
   flex-shrink: 0;
   border: 1px dashed var(--surface-3);
   display: flex;
@@ -476,8 +476,8 @@
 }
 
 .token-card-empty-swatch-icon {
-  height: 8px;
-  width: 8px;
+  height: var(--space-2);
+  width: var(--space-2);
   color: var(--text-placeholder);
 }
 
@@ -498,12 +498,12 @@
 }
 
 .token-card-trigger-chevron {
-  height: 12px;
-  width: 12px;
+  height: var(--icon-sm);
+  width: var(--icon-sm);
   flex-shrink: 0;
   color: var(--text-placeholder);
   opacity: 0;
-  transition: opacity 0.15s;
+  transition: opacity var(--dur-fast) var(--ease-standard);
 }
 
 .token-card-token-field:hover .token-card-trigger-chevron {
@@ -520,12 +520,12 @@
 
 /* ── Page switcher ── */
 .token-card-page-switcher {
-  padding: 6px 6px 0 6px;
+  padding: var(--space-3x) var(--space-3x) 0 var(--space-3x);
 }
 
 .token-card-page-tabs {
   display: flex;
-  gap: 2px;
+  gap: var(--space-hair);
   overflow-x: auto;
   border-radius: var(--radius-lg);
   background-color: var(--surface-2);
@@ -535,10 +535,10 @@
 
 .token-card-page-tab {
   flex-shrink: 0;
-  padding: 3px 8px;
+  padding: 3px var(--space-2);
   border-radius: var(--radius-md);
-  font-size: 11px;
-  transition: all 0.15s;
+  font-size: var(--text-11);
+  transition: all var(--dur-fast) var(--ease-standard);
   cursor: pointer;
   white-space: nowrap;
   background: transparent;
@@ -561,12 +561,12 @@
 
 /* ── Mode tabs ── */
 .token-card-mode-tabs-wrapper {
-  padding: 4px 6px 0 6px;
+  padding: var(--space-1) var(--space-3x) 0 var(--space-3x);
 }
 
 .token-card-mode-tabs {
   display: flex;
-  gap: 2px;
+  gap: var(--space-hair);
   border-radius: var(--radius-lg);
   background-color: var(--surface-2);
   padding: 3px;
@@ -580,8 +580,8 @@
   gap: 5px;
   padding: 3px 0;
   border-radius: var(--radius-md);
-  font-size: 11px;
-  transition: all 0.15s;
+  font-size: var(--text-11);
+  transition: all var(--dur-fast) var(--ease-standard);
   cursor: pointer;
   background: transparent;
   border: none;
@@ -602,8 +602,8 @@
 }
 
 .token-card-mode-icon {
-  width: 10px;
-  height: 10px;
+  width: var(--icon-xs);
+  height: var(--icon-xs);
 }
 
 /* ── Command search ── */
@@ -612,11 +612,11 @@
 }
 
 .token-card-search-input {
-  height: 36px;
+  height: var(--h-control-xl);
   font-size: var(--text-11);
   background-color: var(--surface-2);
-  padding-left: 10px;
-  margin: 4px 6px 4px 6px;
+  padding-left: var(--space-5x);
+  margin: var(--space-1) var(--space-3x) var(--space-1) var(--space-3x);
   border-radius: var(--radius-md);
   color: var(--text-primary);
 }
@@ -636,7 +636,7 @@
 }
 
 .token-card-command-empty {
-  padding: 24px 0;
+  padding: var(--space-6) 0;
   font-size: var(--text-11);
   text-align: center;
   color: var(--text-placeholder);
@@ -657,12 +657,12 @@
   align-items: center;
   font-size: var(--text-11);
   color: var(--text-placeholder);
-  font-weight: 600;
+  font-weight: var(--weight-heading);
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: var(--z-panel);
   background-color: var(--surface-3);
-  padding: 6px 8px 6px 10px;
+  padding: var(--space-3x) var(--space-2) var(--space-3x) var(--space-5x);
 }
 
 .token-card-group-name {
@@ -671,7 +671,7 @@
   gap: 5px;
   background: color-mix(in srgb, var(--text-primary) 3.5%, transparent);
   border-radius: 5px;
-  padding: 1px 6px;
+  padding: 1px var(--space-3x);
 }
 
 .token-card-group-tag-icon {
@@ -689,8 +689,8 @@
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 12px;
+  gap: var(--space-2);
+  padding: 7px var(--space-3);
 }
 
 .token-card-item[aria-selected="true"] {
@@ -698,16 +698,16 @@
 }
 
 .token-card-item-swatch {
-  width: 12px;
-  height: 12px;
-  border-radius: 2px;
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  border-radius: var(--space-hair);
   flex-shrink: 0;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-primary) 6%, transparent);
 }
 
 .token-card-item-tag {
-  width: 10px;
-  height: 10px;
+  width: var(--icon-xs);
+  height: var(--icon-xs);
   flex-shrink: 0;
   color: var(--text-disabled);
 }
@@ -720,20 +720,20 @@
 }
 
 .token-card-item-check {
-  height: 12px;
-  width: 12px;
+  height: var(--icon-sm);
+  width: var(--icon-sm);
   color: var(--accent);
   flex-shrink: 0;
 }
 
 .token-card-item-usage-spacer {
-  width: 20px;
+  width: var(--space-5);
   flex-shrink: 0;
 }
 
 /* ── Tooltip for token color info ── */
 .token-card-color-tooltip {
-  z-index: 300;
+  z-index: var(--z-toast);
   background-color: color-mix(in srgb, var(--surface-3) 95%, transparent);
   backdrop-filter: blur(12px);
   border: 1px solid color-mix(in srgb, var(--text-primary) 6%, transparent);
@@ -742,7 +742,7 @@
 }
 
 .token-card-color-tooltip-bottom {
-  z-index: 200;
+  z-index: var(--z-toast);
 }
 
 /* ── TokenColorTooltipBody ── */
@@ -754,20 +754,20 @@
 .token-card-tooltip-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px 8px 12px;
+  gap: var(--space-2);
+  padding: var(--space-5x) var(--space-3) var(--space-2) var(--space-3);
 }
 
 .token-card-tooltip-swatch {
-  width: 14px;
-  height: 14px;
-  border-radius: 4px;
+  width: var(--icon-md);
+  height: var(--icon-md);
+  border-radius: var(--radius-xs);
   flex-shrink: 0;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-primary) 10%, transparent);
 }
 
 .token-card-tooltip-name {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -777,33 +777,33 @@
 .token-card-tooltip-divider {
   height: 1px;
   background-color: color-mix(in srgb, var(--text-primary) 6%, transparent);
-  margin: 0 8px;
+  margin: 0 var(--space-2);
 }
 
 .token-card-tooltip-values {
-  padding: 6px 12px 10px 12px;
+  padding: var(--space-3x) var(--space-3) var(--space-5x) var(--space-3);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .token-card-tooltip-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .token-card-tooltip-label {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-disabled);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: var(--tracking-overline);
   flex-shrink: 0;
 }
 
 .token-card-tooltip-value {
-  font-size: 11px;
+  font-size: var(--text-11);
   font-family: var(--font-mono);
   color: var(--text-placeholder);
 }
@@ -811,19 +811,19 @@
 /* ── Usage count badge ── */
 .token-card-usage-badge {
   position: absolute;
-  right: 12px;
+  right: var(--space-3);
   top: 50%;
   transform: translateY(-50%);
-  z-index: 10;
-  min-width: 20px;
-  height: 20px;
+  z-index: var(--z-panel);
+  min-width: var(--space-5);
+  height: var(--space-5);
   border-radius: var(--radius-pill);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: var(--text-11);
   font-variant-numeric: tabular-nums;
-  transition: color 0.15s, background-color 0.15s;
+  transition: color var(--dur-fast) var(--ease-standard), background-color var(--dur-fast) var(--ease-standard);
   cursor: pointer;
   background: transparent;
   border: none;
@@ -855,15 +855,15 @@
 }
 
 .token-card-usage-heading {
-  padding: 10px 12px 6px 12px;
-  font-size: 11px;
-  letter-spacing: 0.05em;
+  padding: var(--space-5x) var(--space-3) var(--space-3x) var(--space-3);
+  font-size: var(--text-11);
+  letter-spacing: var(--tracking-overline);
   text-transform: uppercase;
   color: var(--text-disabled);
 }
 
 .token-card-usage-list {
-  padding: 0 6px 6px 6px;
+  padding: 0 var(--space-3x) var(--space-3x) var(--space-3x);
   display: flex;
   flex-direction: column;
 }
@@ -871,12 +871,12 @@
 .token-card-usage-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
+  gap: var(--space-2);
+  padding: var(--space-3x) var(--space-2);
   border-radius: var(--radius-md);
   font-size: var(--text-11);
   color: var(--text-primary);
-  transition: background-color 0.15s, color 0.15s;
+  transition: background-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
   width: 100%;
   text-align: left;
   cursor: pointer;
@@ -890,15 +890,15 @@
 }
 
 .token-card-usage-item-swatch {
-  width: 12px;
-  height: 12px;
-  border-radius: 2px;
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  border-radius: var(--space-hair);
   flex-shrink: 0;
 }
 
 .token-card-usage-item-tag {
-  width: 12px;
-  height: 12px;
+  width: var(--icon-sm);
+  height: var(--icon-sm);
   flex-shrink: 0;
   color: var(--text-disabled);
 }
@@ -912,8 +912,8 @@
 }
 
 .token-card-usage-item-locate {
-  width: 12px;
-  height: 12px;
+  width: var(--icon-sm);
+  height: var(--icon-sm);
   flex-shrink: 0;
   color: var(--text-disabled);
 }
@@ -921,14 +921,14 @@
 /* ── Unassign button ── */
 .token-card-unassign-btn {
   position: absolute;
-  right: 6px;
+  right: var(--space-3x);
   top: 50%;
   transform: translateY(-50%);
-  padding: 4px;
+  padding: var(--space-1);
   border-radius: var(--radius-md);
   opacity: 0;
-  transition: all 0.15s;
-  z-index: 10;
+  transition: all var(--dur-fast) var(--ease-standard);
+  z-index: var(--z-panel);
   background: transparent;
   border: none;
   cursor: pointer;
@@ -943,10 +943,10 @@
 }
 
 .token-card-unassign-icon {
-  height: 12px;
-  width: 12px;
+  height: var(--icon-sm);
+  width: var(--icon-sm);
   color: var(--text-disabled);
-  transition: color 0.15s;
+  transition: color var(--dur-fast) var(--ease-standard);
 }
 
 .token-card-unassign-icon:hover {
@@ -958,21 +958,21 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 16px;
-  border-radius: 16px;
-  margin-top: 2px;
-  transition: opacity 0.15s;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--space-4);
+  margin-top: var(--space-hair);
+  transition: opacity var(--dur-fast) var(--ease-standard);
   border: none;
 }
 
 .token-card-advanced-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .token-card-advanced-label {
-  font-size: 14px;
+  font-size: var(--text-13);
   user-select: none;
 }
 
@@ -985,11 +985,11 @@
 }
 
 .token-card-advanced-pill {
-  font-size: 11px;
-  letter-spacing: 0.05em;
+  font-size: var(--text-11);
+  letter-spacing: var(--tracking-overline);
   text-transform: uppercase;
-  padding: 0 6px;
-  height: 16px;
+  padding: 0 var(--space-3x);
+  height: var(--space-4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1007,10 +1007,10 @@
 }
 
 .token-card-advanced-channel {
-  font-size: 11px;
+  font-size: var(--text-11);
   font-family: var(--font-mono);
-  width: 16px;
-  height: 16px;
+  width: var(--space-4);
+  height: var(--space-4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1023,8 +1023,8 @@
 
 .token-card-advanced-btn {
   cursor: pointer;
-  transition: color 0.15s, background-color 0.15s;
-  padding: 2px;
+  transition: color var(--dur-fast) var(--ease-standard), background-color var(--dur-fast) var(--ease-standard);
+  padding: var(--space-hair);
   border-radius: var(--radius-sm);
   background: transparent;
   border: none;
@@ -1053,7 +1053,7 @@
 /* ── Switch overrides for theme toggle ── */
 .token-card-switch {
   flex-shrink: 0;
-  height: 16px;
+  height: var(--space-4);
   width: 30px;
 }
 

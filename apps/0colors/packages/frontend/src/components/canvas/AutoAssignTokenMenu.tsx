@@ -699,7 +699,7 @@ export function AutoAssignTokenMenu({
             style={{
               left: '100%',
               top: 0,
-              marginLeft: 6,
+              marginLeft: 'var(--space-3x)',
               width: 280,
             }}
             onMouseDown={(e) => e.stopPropagation()}

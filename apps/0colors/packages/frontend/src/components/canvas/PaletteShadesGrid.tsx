@@ -423,7 +423,7 @@ export function PaletteShadesGrid({
           backgroundColor: 'var(--surface-3)',
           backdropFilter: 'blur(4px)',
           width: '360px',
-          zIndex: 5,
+          zIndex: 'var(--z-chrome)' as unknown as number,
         }}
       >
         {/* Connection point indicator (invisible but tracked) */}
@@ -824,7 +824,7 @@ export function PaletteShadesGrid({
                   className={`psg-wire-btn ${
                     wireHoverNodeId === node.id && wireStartButtonType === 'left' ? 'psg-wire-btn--success' : 'psg-wire-btn--default'
                   }`}
-                  style={{ zIndex: 10, right: '-14px' }}
+                  style={{ zIndex: 'var(--z-panel)' as unknown as number, right: 'calc(-1 * var(--space-7x))' }}
                   onMouseDown={(e) => {
                     e.stopPropagation();
                     // Start wire drag

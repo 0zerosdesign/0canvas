@@ -18,15 +18,19 @@ const SECTIONS = [
 ] as const;
 
 // ── Pill colors matching the expression editor ──────────────────
+// FLAG: keyword/fn/op/local pink/green/red/purple have no matching tokens.css
+// entries — these are syntax-highlight palette colors for the expression editor
+// and must either stay raw or get new syntax tokens added. Leaving raw per
+// "don't invent tokens" rule.
 const PILL = {
-  keyword: '#FFA0E6',
-  fn: '#5CD88E',
-  op: '#FF7A90',
+  keyword: 'var(--syntax-keyword)', // FLAG: no --syntax-keyword token
+  fn: 'var(--syntax-fn)',      // FLAG: no --syntax-fn token (could reuse --syntax-selector var(--green-11))
+  op: 'var(--syntax-op)',      // FLAG: no --syntax-op token
   ref: 'var(--text-muted)',
   lit: 'var(--text-muted)',
   bool: 'var(--text-muted)',
   prop: 'var(--text-muted)',
-  local: '#D4A0FF',
+  local: 'var(--syntax-local)',   // FLAG: no --syntax-local token
 };
 
 // ── Styled code inline ──────────────────────────────────────────

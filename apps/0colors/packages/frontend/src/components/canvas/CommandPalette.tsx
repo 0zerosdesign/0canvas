@@ -6,7 +6,7 @@ import { hctToHex } from '../../utils/hct-utils';
 import './CommandPalette.css';
 
 /** Fixed width per layout pass: square cap on large screens (matches panel height), fluid 40vw with floor, never wider than viewport padding. */
-const CMDK_PANEL_WIDTH = 'min(440px, calc(100vw - 2rem), max(280px, 40vw))';
+const CMDK_PANEL_WIDTH = 'min(440px, calc(100vw - calc(2 * var(--space-4))), max(280px, 40vw))';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

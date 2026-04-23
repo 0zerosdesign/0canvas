@@ -2,13 +2,13 @@
 
 /* ─── Icon button ─── */
 .sync-button {
-  height: 28px;
-  width: 28px;
+  height: var(--h-control-md);
+  width: var(--h-control-md);
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-sm);
-  transition: background-color 0.15s, opacity 0.15s;
+  transition: background-color var(--dur-fast) var(--ease-standard), opacity var(--dur-fast) var(--ease-standard);
   border: none;
   background: none;
   padding: 0;
@@ -27,7 +27,7 @@
 }
 
 .sync-button--pulsing {
-  animation: sync-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  animation: sync-pulse 2s var(--ease-emphasized) infinite;
 }
 
 @keyframes sync-pulse {
@@ -37,8 +37,8 @@
 
 /* ─── Local-only icon wrapper ─── */
 .sync-local {
-  height: 28px;
-  width: 28px;
+  height: var(--h-control-md);
+  width: var(--h-control-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -69,18 +69,18 @@
 }
 
 .sync-dirty-dot {
-  height: 8px;
-  width: 8px;
+  height: var(--space-2);
+  width: var(--space-2);
   border-radius: var(--radius-pill);
   background-color: var(--text-warning);
 }
 
 /* ─── Tooltip ─── */
 .sync-tooltip {
-  z-index: 200;
-  padding: 10px 12px;
+  z-index: var(--z-toast);
+  padding: var(--space-5x) var(--space-3);
   border-radius: var(--radius-lg);
-  font-size: 12px;
+  font-size: var(--text-12);
   letter-spacing: -0.01em;
   color: var(--text-primary);
   background-color: color-mix(in srgb, var(--surface-3) 95%, transparent);
@@ -92,10 +92,10 @@
 }
 
 .sync-tooltip-local {
-  z-index: 200;
-  padding: 8px 12px;
+  z-index: var(--z-toast);
+  padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-lg);
-  font-size: 12px;
+  font-size: var(--text-12);
   letter-spacing: -0.01em;
   color: var(--text-primary);
   background-color: color-mix(in srgb, var(--surface-3) 95%, transparent);
@@ -109,40 +109,40 @@
 .sync-tooltip-body {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-3x);
 }
 
 .sync-tooltip-local-body {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .sync-tooltip-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .sync-tooltip-label {
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--text-11);
 }
 
 .sync-tooltip-value {
-  font-size: 11px;
+  font-size: var(--text-11);
   text-align: right;
 }
 
 .sync-tooltip-divider {
   border-top: 1px solid var(--surface-3);
-  padding-top: 6px;
-  margin-top: 2px;
+  padding-top: var(--space-3x);
+  margin-top: var(--space-hair);
 }
 
 .sync-tooltip-hint {
-  font-size: 11px;
+  font-size: var(--text-11);
 }
 
 .sync-local-title {
@@ -151,5 +151,5 @@
 
 .sync-local-subtitle {
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--text-11);
 }

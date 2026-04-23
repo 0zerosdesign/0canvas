@@ -175,12 +175,13 @@ export function PublishPopup({
       className="publish-overlay"
       data-testid="publish-popup-overlay"
       style={{
+        // FLAG: 200000 higher than --z-toast (200); legacy app-above-everything
         zIndex: 200000,
         background: mounted
           ? 'var(--backdrop-weak)'
           : 'transparent',
         backdropFilter: mounted ? 'blur(8px)' : 'none',
-        transition: 'background 0.3s ease, backdrop-filter 0.3s ease',
+        transition: 'background var(--dur-slow) var(--ease-standard), backdrop-filter var(--dur-slow) var(--ease-standard)',
       }}
     >
       <div
@@ -189,8 +190,8 @@ export function PublishPopup({
         data-testid="publish-popup-card"
         style={{
           opacity: mounted ? 1 : 0,
-          transform: mounted ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.97)',
-          transition: 'opacity 0.3s ease, transform 0.3s ease',
+          transform: mounted ? 'translateY(0) scale(1)' : 'translateY(var(--space-5)) scale(0.97)',
+          transition: 'opacity var(--dur-slow) var(--ease-standard), transform var(--dur-slow) var(--ease-standard)',
         }}
       >
         {/* Header */}

@@ -67,7 +67,7 @@
 [data-state="open"][data-slot="select-content"],
 [data-state="open"][data-slot="context-menu-content"],
 [data-state="open"][data-slot="tooltip-content"] {
-  animation: enter 0.15s ease;
+  animation: enter var(--dur-fast) var(--ease-standard);
 }
 
 /* Close state — exit animation */
@@ -77,7 +77,7 @@
 [data-state="closed"][data-slot="alert-dialog-content"],
 [data-state="closed"][data-slot="dropdown-menu-content"],
 [data-state="closed"][data-slot="select-content"] {
-  animation: exit 0.15s ease;
+  animation: exit var(--dur-fast) var(--ease-standard);
 }
 
 /* ═══════════════════════════════════════════
@@ -155,9 +155,9 @@
 }
 
 .animate-pulse {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  animation: pulse 2s var(--ease-emphasized) infinite;
 }
 
 .animate-fade-slide-up {
-  animation: fadeSlideUp 0.25s ease-out;
+  animation: fadeSlideUp var(--dur-slow) var(--ease-standard);
 }

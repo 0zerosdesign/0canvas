@@ -18,8 +18,8 @@
 [data-slot="card-header"] {
   display: flex;
   flex-direction: column;
-  padding: 16px;
-  gap: 6px;
+  padding: var(--space-4);
+  gap: var(--space-3x);
 }
 
 /* ─── Title ─── */
@@ -44,7 +44,7 @@
 
 /* ─── Content ─── */
 [data-slot="card-content"] {
-  padding: 0 16px 16px;
+  padding: 0 var(--space-4) var(--space-4);
 }
 
 /* ─── Footer ─── */
@@ -52,6 +52,6 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding: 16px;
-  gap: 8px;
+  padding: var(--space-4);
+  gap: var(--space-2);
 }

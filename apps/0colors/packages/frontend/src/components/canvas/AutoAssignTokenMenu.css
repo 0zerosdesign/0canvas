@@ -4,7 +4,7 @@
 .auto-assign-wrapper {
   flex-shrink: 0;
   position: relative;
-  transition: opacity 150ms;
+  transition: opacity var(--dur-fast) var(--ease-standard);
 }
 
 .auto-assign-wrapper-hidden {
@@ -16,10 +16,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: var(--h-control-sm);
+  height: var(--h-control-sm);
   border-radius: var(--radius-sm);
-  transition: background-color 150ms, color 150ms;
+  transition: background-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
   border: none;
   cursor: pointer;
 }
@@ -53,13 +53,13 @@
   position: absolute;
   left: 100%;
   top: 0;
-  margin-left: 6px;
+  margin-left: var(--space-3x);
   background: var(--surface-3);
   border: 1px solid var(--surface-3);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);
-  z-index: 50;
-  padding: 4px 0;
+  z-index: var(--z-dropdown);
+  padding: var(--space-1) 0;
   min-width: 200px;
 }
 
@@ -67,10 +67,10 @@
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  font-size: 13px;
-  transition: background-color 150ms;
+  gap: var(--space-2);
+  padding: var(--space-3x) var(--space-3);
+  font-size: var(--text-13);
+  transition: background-color var(--dur-fast) var(--ease-standard);
   border: none;
   background: none;
   cursor: pointer;
@@ -96,12 +96,12 @@
 
 /* ── Toggle switch ── */
 .auto-assign-toggle {
-  width: 32px;
+  width: var(--h-control-lg);
   height: 18px;
   border-radius: var(--radius-pill);
   display: flex;
   align-items: center;
-  transition: background-color 200ms;
+  transition: background-color var(--dur-base) var(--ease-standard);
 }
 
 .auto-assign-toggle-on {
@@ -115,12 +115,12 @@
 }
 
 .auto-assign-toggle-knob {
-  width: 14px;
-  height: 14px;
+  width: var(--icon-md);
+  height: var(--icon-md);
   border-radius: var(--radius-pill);
   background: var(--text-primary);
-  margin: 0 2px;
-  transition: all 200ms;
+  margin: 0 var(--space-hair);
+  transition: all var(--dur-base) var(--ease-standard);
 }
 
 /* ── Re-apply badge ── */
@@ -128,19 +128,19 @@
   margin-left: auto;
   background: color-mix(in srgb, var(--accent) 20%, transparent);
   color: var(--accent);
-  font-size: 11px;
-  padding: 2px 6px;
+  font-size: var(--text-11);
+  padding: var(--space-hair) var(--space-3x);
   border-radius: var(--radius-pill);
 }
 
 .auto-assign-dropdown-indent {
-  margin-left: 22px;
+  margin-left: var(--space-5);
 }
 
 /* ── Popup ── */
 .auto-assign-popup {
   position: absolute;
-  z-index: 50;
+  z-index: var(--z-dropdown);
   background: var(--surface-3);
   border: 1px solid var(--surface-3);
   border-radius: var(--radius-lg);
@@ -151,18 +151,18 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--surface-3);
 }
 
 .auto-assign-popup-header-left {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-3x);
 }
 
 .auto-assign-popup-title {
-  font-size: 12px;
+  font-size: var(--text-12);
   color: var(--text-primary);
 }
 
@@ -171,7 +171,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  transition: color 150ms;
+  transition: color var(--dur-fast) var(--ease-standard);
 }
 
 .auto-assign-popup-close:hover {
@@ -179,24 +179,24 @@
 }
 
 .auto-assign-popup-body {
-  padding: 12px;
+  padding: var(--space-3);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 /* ── Form fields ── */
 .auto-assign-label {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: var(--tracking-overline);
 }
 
 .auto-assign-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .auto-assign-text-input {
@@ -204,11 +204,11 @@
   background: var(--surface-3);
   border: 1px solid var(--surface-3);
   border-radius: var(--radius-md);
-  padding: 6px 10px;
-  font-size: 13px;
+  padding: var(--space-3x) var(--space-5x);
+  font-size: var(--text-13);
   color: var(--text-primary);
   outline: none;
-  transition: border-color 150ms;
+  transition: border-color var(--dur-fast) var(--ease-standard);
 }
 
 .auto-assign-text-input:focus {
@@ -235,13 +235,13 @@
   background: var(--surface-3);
   border: 1px solid var(--surface-3);
   border-radius: var(--radius-md);
-  padding: 6px 10px;
-  font-size: 13px;
+  padding: var(--space-3x) var(--space-5x);
+  font-size: var(--text-13);
   color: var(--text-primary);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  transition: border-color 150ms;
+  transition: border-color var(--dur-fast) var(--ease-standard);
   cursor: pointer;
 }
 
@@ -255,13 +255,13 @@
   left: 0;
   right: 0;
   top: 100%;
-  margin-top: 4px;
+  margin-top: var(--space-1);
   background: var(--surface-3);
   border: 1px solid var(--surface-3);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-xl);
-  z-index: 50;
-  padding: 4px 0;
+  z-index: var(--z-dropdown);
+  padding: var(--space-1) 0;
 }
 
 .auto-assign-options-scroll {
@@ -272,12 +272,12 @@
 .auto-assign-option {
   width: 100%;
   text-align: left;
-  padding: 4px 10px;
-  font-size: 13px;
+  padding: var(--space-1) var(--space-5x);
+  font-size: var(--text-13);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  transition: background-color 150ms;
+  transition: background-color var(--dur-fast) var(--ease-standard);
   border: none;
   background: none;
   cursor: pointer;
@@ -301,26 +301,26 @@
 /* ── Divider in suffix dropdown ── */
 .auto-assign-options-divider {
   border-top: 1px solid var(--surface-3);
-  margin: 4px 0;
+  margin: var(--space-1) 0;
 }
 
 /* ── Custom increment row ── */
 .auto-assign-increment-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 6px;
+  gap: var(--space-2);
+  margin-top: var(--space-3x);
 }
 
 .auto-assign-increment-label {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-disabled);
   flex-shrink: 0;
 }
 
 /* ── Start from hint ── */
 .auto-assign-hint {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-disabled);
 }
 
@@ -328,20 +328,20 @@
 .auto-assign-checkbox-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 6px;
+  gap: var(--space-2);
+  margin-top: var(--space-3x);
   cursor: pointer;
 }
 
 .auto-assign-checkbox {
-  width: 16px;
-  height: 16px;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
   border-radius: var(--radius-sm);
   border: 1px solid var(--text-disabled);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 150ms, border-color 150ms;
+  transition: background-color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
   cursor: pointer;
 }
 
@@ -355,10 +355,10 @@
 }
 
 .auto-assign-checkbox-label {
-  font-size: 12px;
+  font-size: var(--text-12);
   color: var(--text-placeholder);
   user-select: none;
-  transition: color 150ms;
+  transition: color var(--dur-fast) var(--ease-standard);
 }
 
 .auto-assign-checkbox-row:hover .auto-assign-checkbox-label {
@@ -369,20 +369,20 @@
 .auto-assign-preview {
   background: var(--surface-3);
   border-radius: var(--radius-md);
-  padding: 8px 10px;
+  padding: var(--space-2) var(--space-5x);
   border: 1px solid var(--surface-3);
 }
 
 .auto-assign-preview-label {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 4px;
+  letter-spacing: var(--tracking-overline);
+  margin-bottom: var(--space-1);
 }
 
 .auto-assign-preview-text {
-  font-size: 12px;
+  font-size: var(--text-12);
   font-family: var(--font-mono);
   color: var(--text-muted);
 }
@@ -393,22 +393,22 @@
 
 /* ── Read-only display ── */
 .auto-assign-ro-value {
-  font-size: 13px;
+  font-size: var(--text-13);
   color: var(--text-primary);
   font-family: var(--font-mono);
   background: var(--surface-3);
   border: 1px solid var(--surface-3);
   border-radius: var(--radius-md);
-  padding: 6px 10px;
+  padding: var(--space-3x) var(--space-5x);
 }
 
 .auto-assign-ro-plain {
-  font-size: 13px;
+  font-size: var(--text-13);
   color: var(--text-primary);
   background: var(--surface-3);
   border: 1px solid var(--surface-3);
   border-radius: var(--radius-md);
-  padding: 6px 10px;
+  padding: var(--space-3x) var(--space-5x);
 }
 
 .auto-assign-ro-plain-truncate {
@@ -419,7 +419,7 @@
 
 /* ── Children info ── */
 .auto-assign-children-info {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-disabled);
   display: flex;
   align-items: center;
@@ -431,10 +431,10 @@
 }
 
 .auto-assign-ro-notice {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-disabled);
   text-align: center;
-  padding-top: 4px;
+  padding-top: var(--space-1);
   border-top: 1px solid var(--surface-3);
 }
 
@@ -442,39 +442,39 @@
 .auto-assign-excluded-box {
   background: color-mix(in srgb, var(--utility-build) 14%, var(--surface-0));
   border-radius: var(--radius-md);
-  padding: 8px 10px;
+  padding: var(--space-2) var(--space-5x);
   border: 1px solid color-mix(in srgb, var(--utility-build) 28%, transparent);
 }
 
 .auto-assign-excluded-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
+  gap: var(--space-3x);
+  margin-bottom: var(--space-3x);
 }
 
 .auto-assign-excluded-title {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: color-mix(in srgb, var(--text-warning) 80%, transparent);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: var(--tracking-overline);
 }
 
 .auto-assign-excluded-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .auto-assign-excluded-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .auto-assign-excluded-name {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--utility-build);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -482,15 +482,15 @@
 }
 
 .auto-assign-excluded-reinclude {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
   flex-shrink: 0;
-  padding: 2px 6px;
+  padding: var(--space-hair) var(--space-3x);
   border-radius: var(--radius-sm);
   background: none;
   border: none;
   cursor: pointer;
-  transition: color 150ms, background-color 150ms;
+  transition: color var(--dur-fast) var(--ease-standard), background-color var(--dur-fast) var(--ease-standard);
 }
 
 .auto-assign-excluded-reinclude:hover {
@@ -502,35 +502,35 @@
 .auto-assign-changes {
   background: color-mix(in srgb, var(--accent) 8%, transparent);
   border-radius: var(--radius-md);
-  padding: 8px 10px;
+  padding: var(--space-2) var(--space-5x);
   border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 .auto-assign-changes-title {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: color-mix(in srgb, var(--accent) 70%, transparent);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 4px;
+  letter-spacing: var(--tracking-overline);
+  margin-bottom: var(--space-1);
 }
 
 .auto-assign-change-item {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: color-mix(in srgb, var(--accent) 90%, transparent);
   display: flex;
   align-items: flex-start;
-  gap: 6px;
+  gap: var(--space-3x);
 }
 
 .auto-assign-change-bullet {
-  margin-top: 2px;
+  margin-top: var(--space-hair);
   flex-shrink: 0;
 }
 
 .auto-assign-changes-note {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
-  margin-top: 4px;
+  margin-top: var(--space-1);
 }
 
 /* ── Apply button ── */
@@ -538,14 +538,14 @@
   width: 100%;
   background: var(--accent);
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: var(--text-13);
   border-radius: var(--radius-md);
-  padding: 6px 0;
-  transition: background-color 150ms;
+  padding: var(--space-3x) 0;
+  transition: background-color var(--dur-fast) var(--ease-standard);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: var(--space-3x);
   border: none;
   cursor: pointer;
 }

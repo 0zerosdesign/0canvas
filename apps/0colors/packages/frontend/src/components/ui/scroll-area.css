@@ -29,17 +29,17 @@
   touch-action: none;
   padding: 1px;
   user-select: none;
-  transition: background-color 0.15s ease;
+  transition: background-color var(--dur-fast) var(--ease-standard);
 }
 
 [data-slot="scroll-area-scrollbar"][data-orientation="vertical"] {
-  width: 6px;
+  width: var(--space-3x);
   height: 100%;
   border-left: 1px solid transparent;
 }
 
 [data-slot="scroll-area-scrollbar"][data-orientation="horizontal"] {
-  height: 6px;
+  height: var(--space-3x);
   flex-direction: column;
   border-top: 1px solid transparent;
 }

@@ -2,10 +2,10 @@
 
 /* ── Filter chip ── */
 .search-bar-chip {
-  padding: 3px 8px;
+  padding: 3px var(--space-2);
   border-radius: var(--radius-sm);
-  font-size: 11px;
-  transition: all 100ms;
+  font-size: var(--text-11);
+  transition: all var(--dur-fast) var(--ease-standard);
   border: 1px solid color-mix(in srgb, var(--text-primary) 6%, transparent);
   background: transparent;
   color: var(--text-disabled);
@@ -31,19 +31,19 @@
 
 .search-bar-icon {
   position: absolute;
-  left: 10px;
+  left: var(--space-5x);
   top: 50%;
   transform: translateY(-50%);
-  height: 12px;
-  width: 12px;
+  height: var(--icon-sm);
+  width: var(--icon-sm);
   color: var(--text-disabled);
   pointer-events: none;
 }
 
 .search-bar-input {
   width: 100%;
-  height: 28px;
-  padding-left: 28px;
+  height: var(--h-control-md);
+  padding-left: var(--h-control-md);
   font-size: var(--text-11);
   /* Inset well on grey-925 token column (darker than chrome) */
   background: var(--surface-0);
@@ -51,7 +51,7 @@
   border-radius: var(--radius-md);
   border: 1px solid transparent;
   outline: none;
-  transition: all 150ms;
+  transition: all var(--dur-fast) var(--ease-standard);
 }
 
 .search-bar-input::placeholder {
@@ -63,7 +63,7 @@
 }
 
 .search-bar-input-no-filters {
-  padding-right: 28px;
+  padding-right: var(--h-control-md);
 }
 
 .search-bar-input-has-filters {
@@ -73,25 +73,25 @@
 /* ── Right indicators ── */
 .search-bar-indicators {
   position: absolute;
-  right: 6px;
+  right: var(--space-3x);
   top: 50%;
   transform: translateY(-50%);
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .search-bar-badge {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--accent);
   background: var(--surface-2);
   border-radius: var(--radius-sm);
-  padding: 1px 4px;
+  padding: 1px var(--space-1);
 }
 
 .search-bar-clear-btn {
   color: var(--text-disabled);
-  padding: 2px;
+  padding: var(--space-hair);
   background: none;
   border: none;
   cursor: pointer;
@@ -103,7 +103,7 @@
 
 .search-bar-filter-btn {
   color: var(--text-placeholder);
-  padding: 2px;
+  padding: var(--space-hair);
   background: none;
   border: none;
   cursor: pointer;
@@ -114,13 +114,13 @@
 }
 
 .search-bar-icon-sm {
-  height: 12px;
-  width: 12px;
+  height: var(--icon-sm);
+  width: var(--icon-sm);
 }
 
 /* ── Filter panel ── */
 .search-bar-panel {
-  margin-top: 6px;
+  margin-top: var(--space-3x);
   background: var(--surface-2);
   border: 1px solid var(--surface-3);
   border-radius: var(--radius-lg);
@@ -128,24 +128,24 @@
 }
 
 .search-bar-panel-body {
-  padding: 8px;
+  padding: var(--space-2);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .search-bar-section-label {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-disabled);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 4px;
+  letter-spacing: var(--tracking-overline);
+  margin-bottom: var(--space-1);
 }
 
 .search-bar-chip-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .search-bar-divider {
@@ -154,7 +154,7 @@
 }
 
 .search-bar-hint {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
   line-height: 1.625;
 }
@@ -173,23 +173,23 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 8px;
+  padding: var(--space-3x) var(--space-2);
   background: var(--surface-2);
   border-top: 1px solid var(--surface-3);
 }
 
 .search-bar-footer-count {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-disabled);
 }
 
 .search-bar-footer-clear {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-disabled);
   background: none;
   border: none;
   cursor: pointer;
-  transition: color 150ms;
+  transition: color var(--dur-fast) var(--ease-standard);
 }
 
 .search-bar-footer-clear:hover {

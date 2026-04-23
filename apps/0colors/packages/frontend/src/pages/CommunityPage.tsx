@@ -52,6 +52,7 @@ function DescriptionPopup({
     <div
       className="community-desc-overlay"
       style={{
+        // Note: inline zIndex can't use CSS var; 200000 FLAG: higher than --z-toast (200)
         zIndex: 200000,
         background: 'var(--backdrop-weak)',
         backdropFilter: 'blur(6px)',

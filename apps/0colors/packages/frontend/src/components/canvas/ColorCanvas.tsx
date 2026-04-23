@@ -2917,7 +2917,7 @@ export function ColorCanvas({ onNavigateToProjects }: ColorCanvasProps) {
           height="20000"
           overflow="visible"
           style={{
-            zIndex: 5,
+            zIndex: 'var(--z-chrome)' as unknown as number,
             left: '-5000px',
             top: '-5000px',
             opacity: (advancedPopupNodeExists && !isAdvancedPopupMinimized) ? 0.12 : undefined,
@@ -3487,7 +3487,7 @@ export function ColorCanvas({ onNavigateToProjects }: ColorCanvasProps) {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
             className="color-canvas-overlay"
-            style={{ zIndex: 9000, pointerEvents: 'all' }}
+            style={{ zIndex: 'var(--z-modal)' as unknown as number, pointerEvents: 'all' }}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
             onWheel={(e) => e.stopPropagation()}

@@ -7,7 +7,7 @@
 .auth-overlay {
   position: fixed;
   inset: 0;
-  z-index: 200000;
+  z-index: var(--z-modal);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -18,28 +18,25 @@
   position: relative;
   width: 100%;
   max-width: 380px;
-  margin-left: 16px;
-  margin-right: 16px;
+  margin-left: var(--space-4);
+  margin-right: var(--space-4);
 }
 
 /* ─── Glow Ring ─── */
 .auth-glow-ring {
   position: absolute;
   inset: -1px;
-  border-radius: 22px;
+  border-radius: 22px; /* FLAG: 22px no radius token (between lg=12 and pill) */
   pointer-events: none;
 }
 
 /* ─── Card Body ─── */
 .auth-card {
   position: relative;
-  border-radius: 21px;
+  border-radius: 21px; /* FLAG: 21px no radius token (between lg=12 and pill) */
   overflow: hidden;
   background: var(--surface-3);
-  box-shadow:
-    0 24px 80px color-mix(in srgb, var(--surface-0) 60%, transparent),
-    0 8px 24px color-mix(in srgb, var(--surface-0) 40%, transparent),
-    0 0 0 1px color-mix(in srgb, var(--text-primary) 3%, transparent) inset;
+  box-shadow: var(--shadow-xl);
 }
 
 /* ─── Header ─── */
@@ -47,7 +44,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px 4px 24px;
+  padding: var(--space-5) var(--space-6) var(--space-1) var(--space-6);
 }
 
 .auth-header-info {
@@ -56,7 +53,7 @@
 }
 
 .auth-brand-title {
-  font-size: 20px;
+  font-size: var(--text-20);
   font-weight: var(--weight-heading);
   color: var(--text-primary);
   letter-spacing: -0.025em;
@@ -67,15 +64,15 @@
 }
 
 .auth-brand-subtitle {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
-  margin-top: 2px;
+  margin-top: var(--space-hair);
 }
 
 /* ─── Close Button ─── */
 .auth-close-btn {
-  width: 32px;
-  height: 32px;
+  width: var(--h-control-lg);
+  height: var(--h-control-lg);
   border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
@@ -84,7 +81,7 @@
   background: transparent;
   border: none;
   cursor: pointer;
-  transition: color 0.15s ease, background-color 0.15s ease;
+  transition: color var(--dur-fast) var(--ease-standard), background-color var(--dur-fast) var(--ease-standard);
 }
 
 .auth-close-btn:hover {
@@ -93,25 +90,25 @@
 }
 
 .auth-close-btn-icon {
-  width: 16px;
-  height: 16px;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
 }
 
 /* ─── Confirmation / Status Screens ─── */
 .auth-confirmation {
-  padding: 20px 24px 24px 24px;
+  padding: var(--space-5) var(--space-6) var(--space-6) var(--space-6);
   text-align: center;
 }
 
 .auth-confirmation-icon-wrap {
   display: flex;
   justify-content: center;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
 .auth-confirmation-icon-box {
-  width: 48px;
-  height: 48px;
+  width: var(--space-8);
+  height: var(--space-8);
   border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
@@ -119,37 +116,37 @@
 }
 
 .auth-confirmation-icon-box-success {
-  background: color-mix(in srgb, var(--text-success) 10%, transparent);
+  background: var(--tint-success-weak);
 }
 
 .auth-confirmation-icon-box-brand {
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  background: var(--tint-accent-soft);
 }
 
 .auth-confirmation-icon-success {
-  width: 24px;
-  height: 24px;
+  width: var(--space-6);
+  height: var(--space-6);
   color: var(--text-success);
 }
 
 .auth-confirmation-icon-brand {
-  width: 24px;
-  height: 24px;
+  width: var(--space-6);
+  height: var(--space-6);
   color: var(--accent);
 }
 
 .auth-confirmation-title {
-  font-size: 14px;
+  font-size: var(--text-13);
   font-weight: var(--weight-heading);
   color: var(--text-primary);
-  margin-bottom: 6px;
+  margin-bottom: var(--space-3x);
 }
 
 .auth-confirmation-desc {
   font-size: var(--text-11);
   color: var(--text-muted);
-  line-height: 1.625;
-  margin-bottom: 20px;
+  line-height: var(--leading-normal);
+  margin-bottom: var(--space-5);
   max-width: 280px;
   margin-left: auto;
   margin-right: auto;
@@ -162,16 +159,16 @@
 /* ─── Primary Action Button (confirmation screens) ─── */
 .auth-action-btn {
   width: 100%;
-  padding: 10px 0;
+  padding: var(--space-5x) 0;
   border-radius: var(--radius-lg);
-  font-size: 13px;
+  font-size: var(--text-13);
   font-weight: var(--weight-body);
   background: var(--text-primary);
   color: var(--surface-2);
   border: none;
   cursor: pointer;
-  box-shadow: 0 2px 12px color-mix(in srgb, var(--text-primary) 6%, transparent);
-  transition: opacity 0.2s ease, background-color 0.2s ease;
+  box-shadow: var(--shadow-sm);
+  transition: opacity var(--dur-base) var(--ease-standard), background-color var(--dur-base) var(--ease-standard);
 }
 
 .auth-action-btn:hover {
@@ -180,41 +177,41 @@
 
 /* ─── Error Message ─── */
 .auth-error {
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-lg);
   font-size: var(--text-11);
-  background: color-mix(in srgb, var(--text-critical) 8%, transparent);
+  background: var(--tint-critical-soft);
   color: var(--text-critical);
 }
 
 .auth-error-verify {
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 /* ─── Verify Email Screen ─── */
 .auth-verify {
-  padding: 20px 24px 24px 24px;
+  padding: var(--space-5) var(--space-6) var(--space-6) var(--space-6);
   text-align: center;
 }
 
 .auth-verify-icon-wrap {
   display: flex;
   justify-content: center;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
 .auth-verify-title {
-  font-size: 14px;
+  font-size: var(--text-13);
   font-weight: var(--weight-heading);
   color: var(--text-primary);
-  margin-bottom: 6px;
+  margin-bottom: var(--space-3x);
 }
 
 .auth-verify-desc {
   font-size: var(--text-11);
   color: var(--text-muted);
-  line-height: 1.625;
-  margin-bottom: 20px;
+  line-height: var(--leading-normal);
+  margin-bottom: var(--space-5);
   max-width: 280px;
   margin-left: auto;
   margin-right: auto;
@@ -230,15 +227,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 10px 0;
+  gap: var(--space-2);
+  padding: var(--space-5x) 0;
   border-radius: var(--radius-lg);
-  font-size: 13px;
+  font-size: var(--text-13);
   font-weight: var(--weight-body);
   border: none;
   cursor: pointer;
-  margin-bottom: 12px;
-  transition: opacity 0.2s ease, background-color 0.2s ease;
+  margin-bottom: var(--space-3);
+  transition: opacity var(--dur-base) var(--ease-standard), background-color var(--dur-base) var(--ease-standard);
 }
 
 .auth-resend-btn:disabled {
@@ -246,13 +243,13 @@
 }
 
 .auth-resend-btn-icon {
-  width: 14px;
-  height: 14px;
+  width: var(--icon-md);
+  height: var(--icon-md);
 }
 
 .auth-resend-btn-icon-spin {
-  width: 16px;
-  height: 16px;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
   animation: spin 1s linear infinite;
 }
 
@@ -264,17 +261,17 @@
 /* ─── "Already verified? Sign in" Button ─── */
 .auth-verified-signin-btn {
   width: 100%;
-  padding: 10px 0;
+  padding: var(--space-5x) 0;
   border-radius: var(--radius-lg);
-  font-size: 13px;
+  font-size: var(--text-13);
   font-weight: var(--weight-body);
   background: var(--text-primary);
   color: var(--surface-2);
   border: none;
   cursor: pointer;
-  box-shadow: 0 2px 12px color-mix(in srgb, var(--text-primary) 6%, transparent);
-  margin-bottom: 8px;
-  transition: opacity 0.2s ease, background-color 0.2s ease;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: var(--space-2);
+  transition: opacity var(--dur-base) var(--ease-standard), background-color var(--dur-base) var(--ease-standard);
 }
 
 .auth-verified-signin-btn:hover {
@@ -284,16 +281,16 @@
 /* ─── Skip / Continue Without Account ─── */
 .auth-skip-wrap {
   text-align: center;
-  margin-top: 4px;
+  margin-top: var(--space-1);
 }
 
 .auth-skip-btn {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
   background: transparent;
   border: none;
   cursor: pointer;
-  transition: color 0.15s ease;
+  transition: color var(--dur-fast) var(--ease-standard);
 }
 
 .auth-skip-btn:hover {
@@ -302,73 +299,73 @@
 
 /* ─── Form Container ─── */
 .auth-form-container {
-  padding: 16px 24px 20px 24px;
+  padding: var(--space-4) var(--space-6) var(--space-5) var(--space-6);
 }
 
 /* ─── Toggle Tabs (Sign in / Sign up) ─── */
 .auth-tabs {
   display: flex;
   border-radius: var(--radius-lg);
-  margin-bottom: 20px;
-  padding: 4px;
+  margin-bottom: var(--space-5);
+  padding: var(--space-1);
   background: var(--surface-1);
 }
 
 .auth-tab {
   flex: 1;
-  padding: 8px 0;
+  padding: var(--space-2) 0;
   border-radius: var(--radius-lg);
-  font-size: 13px;
+  font-size: var(--text-13);
   font-weight: var(--weight-body);
   border: none;
   cursor: pointer;
   background: transparent;
   color: var(--text-muted);
   box-shadow: none;
-  transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  transition: background-color var(--dur-base) var(--ease-standard), color var(--dur-base) var(--ease-standard), box-shadow var(--dur-base) var(--ease-standard);
 }
 
 .auth-tab--selected {
   background: var(--surface-3);
   color: var(--text-primary);
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--surface-0) 45%, transparent);
+  box-shadow: var(--shadow-sm);
 }
 
 /* ─── Forgot Password Sub-Header ─── */
 .auth-forgot-header {
-  margin-bottom: 20px;
+  margin-bottom: var(--space-5);
 }
 
 .auth-forgot-header-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3x);
 }
 
 .auth-forgot-header-icon {
-  width: 16px;
-  height: 16px;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
   color: var(--accent);
 }
 
 .auth-forgot-header-title {
-  font-size: 14px;
+  font-size: var(--text-13);
   font-weight: var(--weight-body);
   color: var(--text-primary);
 }
 
 .auth-forgot-header-desc {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-muted);
-  line-height: 1.625;
+  line-height: var(--leading-normal);
 }
 
 /* ─── Form ─── */
 .auth-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 /* ─── Input Fields ─── */
@@ -378,24 +375,24 @@
 
 .auth-field-icon {
   position: absolute;
-  left: 12px;
+  left: var(--space-3);
   top: 50%;
   transform: translateY(-50%);
-  width: 16px;
-  height: 16px;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
   color: var(--text-placeholder);
 }
 
 .auth-input {
   width: 100%;
-  padding: 10px 16px 10px 40px;
+  padding: var(--space-5x) var(--space-4) var(--space-5x) 40px; /* FLAG: 40px left-pad leaves room for 16px icon + 12px gutter + 12px gap; no token fit */
   border-radius: var(--radius-lg);
-  font-size: 13px;
+  font-size: var(--text-13);
   color: var(--text-primary);
   background: var(--surface-0);
   border: none;
   outline: none;
-  transition: box-shadow 0.15s ease;
+  transition: box-shadow var(--dur-fast) var(--ease-standard);
 }
 
 .auth-input::placeholder {
@@ -410,16 +407,16 @@
 .auth-forgot-link-wrap {
   display: flex;
   justify-content: flex-end;
-  margin-top: -4px;
+  margin-top: calc(-1 * var(--space-1));
 }
 
 .auth-forgot-link {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: color-mix(in srgb, var(--accent) 70%, transparent);
   background: transparent;
   border: none;
   cursor: pointer;
-  transition: color 0.15s ease;
+  transition: color var(--dur-fast) var(--ease-standard);
 }
 
 .auth-forgot-link:hover {
@@ -432,13 +429,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 10px 0;
+  gap: var(--space-2);
+  padding: var(--space-5x) 0;
   border-radius: var(--radius-lg);
-  font-size: 13px;
+  font-size: var(--text-13);
   font-weight: var(--weight-body);
   border: none;
-  transition: opacity 0.2s ease, background-color 0.2s ease;
+  transition: opacity var(--dur-base) var(--ease-standard), background-color var(--dur-base) var(--ease-standard);
 }
 
 .auth-submit-btn:disabled {
@@ -446,33 +443,33 @@
 }
 
 .auth-submit-btn:not(:disabled) {
-  box-shadow: 0 2px 12px color-mix(in srgb, var(--text-primary) 6%, transparent);
+  box-shadow: var(--shadow-sm);
 }
 
 .auth-submit-btn-icon {
-  width: 14px;
-  height: 14px;
+  width: var(--icon-md);
+  height: var(--icon-md);
 }
 
 .auth-submit-btn-spinner {
-  width: 16px;
-  height: 16px;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
   animation: spin 1s linear infinite;
 }
 
 /* ─── Back to Sign In Link ─── */
 .auth-back-link-wrap {
   text-align: center;
-  margin-top: 12px;
+  margin-top: var(--space-3);
 }
 
 .auth-back-link {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-muted);
   background: transparent;
   border: none;
   cursor: pointer;
-  transition: color 0.15s ease;
+  transition: color var(--dur-fast) var(--ease-standard);
 }
 
 .auth-back-link:hover {
@@ -482,18 +479,18 @@
 /* ─── Footer Skip Link ─── */
 .auth-footer {
   text-align: center;
-  margin-top: 16px;
-  padding-top: 12px;
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
   border-top: 1px solid var(--surface-2);
 }
 
 .auth-footer-skip-btn {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--text-placeholder);
   background: transparent;
   border: none;
   cursor: pointer;
-  transition: color 0.15s ease;
+  transition: color var(--dur-fast) var(--ease-standard);
 }
 
 .auth-footer-skip-btn:hover {

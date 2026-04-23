@@ -9,8 +9,8 @@
 
 .spacing-card-root {
   position: relative;
-  border-radius: 19px;
-  transition: all 0.15s ease;
+  border-radius: var(--radius-pill);
+  transition: all var(--dur-fast) var(--ease-standard);
   border: 1px solid var(--surface-3);
 }
 
@@ -25,13 +25,13 @@
 .spacing-card-connect-btn {
   position: absolute;
   top: 50%;
-  width: 16px;
-  height: 16px;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
   border-radius: var(--radius-pill);
   background-color: var(--text-disabled);
   border: 2px solid var(--surface-3);
-  transition: background-color 0.15s, border-color 0.15s;
-  z-index: 10;
+  transition: background-color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
+  z-index: var(--z-panel);
 }
 
 .spacing-card-connect-btn:hover {
@@ -55,7 +55,7 @@
 
 .spacing-card-body {
   background-color: var(--surface-2);
-  border-radius: 19px;
+  border-radius: var(--radius-pill);
 }
 
 /* ═══════════════════════════════════════════
@@ -63,7 +63,7 @@
    ═══════════════════════════════════════════ */
 
 .spacing-card-top {
-  padding: 16px;
+  padding: var(--space-4);
   background-color: var(--surface-2);
   border-top-left-radius: 19px;
   border-top-right-radius: 19px;
@@ -75,10 +75,10 @@
 .spacing-card-drag-handle {
   cursor: move;
   position: absolute;
-  top: 8px;
+  top: var(--space-2);
   left: -22px;
   color: var(--text-muted);
-  transition: all 0.15s ease;
+  transition: all var(--dur-fast) var(--ease-standard);
 }
 
 .spacing-card-drag-handle:hover {
@@ -94,8 +94,8 @@
 }
 
 .spacing-card-drag-handle-icon {
-  height: 20px;
-  width: 20px;
+  height: var(--icon-xl);
+  width: var(--icon-xl);
 }
 
 /* ─── Header row (icon + name input) ─── */
@@ -103,19 +103,19 @@
 .spacing-card-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
 }
 
 .spacing-card-ruler-icon {
-  height: 16px;
-  width: 16px;
+  height: var(--icon-lg);
+  width: var(--icon-lg);
   color: var(--accent);
 }
 
 .spacing-card-name-input {
   flex: 1;
-  height: 28px;
+  height: var(--h-control-md);
   background-color: var(--surface-0);
   border-color: var(--surface-3);
   color: var(--text-primary);
@@ -126,14 +126,14 @@
 
 .spacing-card-value-row {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .spacing-card-value-input {
   flex: 1;
   height: 28px !important;
-  padding-top: 4px !important;
-  padding-bottom: 4px !important;
+  padding-top: var(--space-1) !important;
+  padding-bottom: var(--space-1) !important;
   background-color: var(--surface-0);
   border-color: var(--surface-3);
   color: var(--text-primary);
@@ -142,8 +142,8 @@
 .spacing-card-unit-trigger {
   width: 80px;
   height: 28px !important;
-  padding-top: 4px !important;
-  padding-bottom: 4px !important;
+  padding-top: var(--space-1) !important;
+  padding-bottom: var(--space-1) !important;
   background-color: var(--surface-0);
   border-color: var(--surface-3);
   color: var(--text-primary);
@@ -163,7 +163,7 @@
    ═══════════════════════════════════════════ */
 
 .spacing-card-bottom {
-  padding: 16px;
+  padding: var(--space-4);
   border-top: 1px solid var(--surface-3);
 }
 
@@ -172,14 +172,14 @@
 .spacing-card-tokens-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 
 .spacing-card-token-row {
   display: flex;
   align-items: stretch;
-  gap: 12px;
+  gap: var(--space-3);
   background-color: transparent;
   border-radius: 0;
   padding: 0;
@@ -187,15 +187,15 @@
 
 .spacing-card-token-name {
   flex: 1;
-  font-size: 12px;
+  font-size: var(--text-12);
   color: var(--text-primary);
   background-color: var(--surface-0);
-  padding: 4px 8px;
-  border-radius: 8px;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 2px;
+  gap: var(--space-hair);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -203,8 +203,8 @@
 }
 
 .spacing-card-token-remove-btn {
-  height: 32px;
-  width: 32px;
+  height: var(--h-control-lg);
+  width: var(--h-control-lg);
   padding: 0;
   flex-shrink: 0;
 }
@@ -214,8 +214,8 @@
 }
 
 .spacing-card-token-remove-icon {
-  height: 16px;
-  width: 16px;
+  height: var(--icon-lg);
+  width: var(--icon-lg);
   color: var(--text-muted);
 }
 
@@ -224,12 +224,12 @@
 .spacing-card-selector-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .spacing-card-combo-btn {
   flex: 1;
-  height: 32px;
+  height: var(--h-control-lg);
   justify-content: space-between;
   font-size: var(--text-11);
   overflow: hidden;
@@ -248,8 +248,8 @@
 }
 
 .spacing-card-combo-chevron {
-  height: 16px;
-  width: 16px;
+  height: var(--icon-lg);
+  width: var(--icon-lg);
   flex-shrink: 0;
   opacity: 0.5;
 }
@@ -268,11 +268,11 @@
 }
 
 .spacing-card-command-input {
-  height: 36px;
+  height: var(--h-control-xl);
   font-size: var(--text-11);
   background-color: var(--surface-0);
-  padding-left: 10px;
-  margin: 4px;
+  padding-left: var(--space-5x);
+  margin: var(--space-1);
   color: var(--text-primary);
 }
 
@@ -286,13 +286,13 @@
 }
 
 .spacing-card-command-list {
-  padding-bottom: 5px;
+  padding-bottom: var(--space-3x);
   max-height: 280px;
 }
 
 .spacing-card-command-empty {
-  padding-top: 24px;
-  padding-bottom: 24px;
+  padding-top: var(--space-6);
+  padding-bottom: var(--space-6);
   font-size: var(--text-11);
   text-align: center;
   color: var(--text-placeholder);
@@ -304,20 +304,20 @@
 
 .spacing-card-command-group [cmdk-group-heading] {
   color: var(--text-muted);
-  font-weight: 600;
+  font-weight: var(--weight-heading);
   position: sticky;
   top: 0;
-  z-index: 10;
-  padding-left: 12px;
-  padding-right: 8px;
+  z-index: var(--z-panel);
+  padding-left: var(--space-3);
+  padding-right: var(--space-2);
 }
 
 /* ─── Command items ─── */
 
 .spacing-card-command-item {
   font-size: var(--text-11);
-  margin-left: 4px;
-  margin-right: 4px;
+  margin-left: var(--space-1);
+  margin-right: var(--space-1);
   position: relative;
 }
 
@@ -332,11 +332,11 @@
 .spacing-card-item-inner {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex: 1;
   min-width: 0;
-  padding: 2px 8px;
-  border-radius: 10px;
+  padding: var(--space-hair) var(--space-2);
+  border-radius: var(--radius-md);
 }
 
 .spacing-card-item-inner--assigned {
@@ -348,8 +348,8 @@
 }
 
 .spacing-card-item-dot {
-  width: 12px;
-  height: 12px;
+  width: var(--icon-sm);
+  height: var(--icon-sm);
   border-radius: var(--radius-pill);
   background-color: var(--accent);
   flex-shrink: 0;
@@ -367,7 +367,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--text-primary);
-  transition: color 0.15s;
+  transition: color var(--dur-fast) var(--ease-standard);
 }
 
 .spacing-card-command-item:hover .spacing-card-item-label {
@@ -376,12 +376,12 @@
 
 .spacing-card-item-label--assigned {
   color: var(--text-primary);
-  font-weight: 500;
+  font-weight: var(--weight-control);
 }
 
 .spacing-card-item-target-icon {
-  height: 16px;
-  width: 16px;
+  height: var(--icon-lg);
+  width: var(--icon-lg);
   color: var(--accent);
   flex-shrink: 0;
 }
@@ -394,10 +394,10 @@
   position: absolute;
   bottom: -1px;
   right: -1px;
-  width: 16px;
-  height: 16px;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
   cursor: nwse-resize;
-  z-index: 10;
+  z-index: var(--z-panel);
   background-color: transparent;
 }
 
@@ -406,8 +406,8 @@
   top: 50%;
   left: 50%;
   transform: translate(calc(-50% - 1px), calc(-50% - 1px));
-  width: 12px;
-  height: 12px;
-  transition: color 0.15s;
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  transition: color var(--dur-fast) var(--ease-standard);
   color: var(--text-disabled);
 }

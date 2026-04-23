@@ -9,7 +9,7 @@ const COLORS = {
   gutterBorder: 'var(--border-subtle)',
   lineNumber: 'var(--text-disabled)',
   lineNumberActive: 'var(--text-placeholder)',
-  lineHighlight: 'rgba(255,255,255,0.03)',
+  lineHighlight: 'var(--tint-hover)',
   text: '#abb2bf',
 
   // CSS
@@ -440,8 +440,8 @@ export function SyntaxHighlightedCode({ code, language: forcedLanguage, classNam
                       minWidth: `${gutterWidth + 2}ch`,
                       paddingRight: '1.25ch',
                       paddingLeft: '1ch',
-                      paddingTop: idx === 0 ? '16px' : undefined,
-                      paddingBottom: idx === lineCount - 1 ? '16px' : undefined,
+                      paddingTop: idx === 0 ? 'var(--space-4)' : undefined,
+                      paddingBottom: idx === lineCount - 1 ? 'var(--space-4)' : undefined,
                       background: COLORS.gutterBg,
                       borderRight: `1px solid ${COLORS.gutterBorder}`,
                     }}
@@ -455,8 +455,8 @@ export function SyntaxHighlightedCode({ code, language: forcedLanguage, classNam
                     style={{
                       paddingLeft: '1.5ch',
                       paddingRight: '2ch',
-                      paddingTop: idx === 0 ? '16px' : undefined,
-                      paddingBottom: idx === lineCount - 1 ? '16px' : undefined,
+                      paddingTop: idx === 0 ? 'var(--space-4)' : undefined,
+                      paddingBottom: idx === lineCount - 1 ? 'var(--space-4)' : undefined,
                     }}
                   >
                     {tokens.map((token, ti) => (

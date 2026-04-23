@@ -8,8 +8,8 @@
 [data-slot="alert-dialog-overlay"] {
   position: fixed;
   inset: 0;
-  z-index: 50;
-  background-color: color-mix(in srgb, var(--surface-0) 60%, transparent);
+  z-index: var(--z-modal);
+  background-color: var(--backdrop-weak);
 }
 
 /* ─── Content ─── */
@@ -17,24 +17,24 @@
   position: fixed;
   top: 50%;
   left: 50%;
-  z-index: 50;
+  z-index: var(--z-modal);
   transform: translate(-50%, -50%);
   display: grid;
   width: 100%;
-  max-width: 500px;
-  padding: 24px;
+  max-width: 500px; /* FLAG: non-token dialog max-width */
+  padding: var(--space-6);
   background-color: var(--surface-1);
   border: 1px solid var(--surface-3);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);
-  animation-duration: 0.2s;
+  animation-duration: var(--dur-base);
 }
 
 /* ─── Header (text-center for alert) ─── */
 [data-slot="alert-dialog-header"] {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-3x);
   text-align: center;
 }
 
@@ -42,8 +42,8 @@
 [data-slot="alert-dialog-footer"] {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  margin-top: 24px;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
 }
 
 /* ─── Title ─── */
@@ -65,16 +65,16 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--space-2);
   white-space: nowrap;
   border-radius: var(--radius-md);
   font-size: var(--text-12);
   font-weight: var(--weight-heading);
-  height: 36px;
-  padding: 8px 16px;
+  height: var(--h-control-xl); /* FLAG: non-token control height (matches button default) */
+  padding: var(--space-2) var(--space-4);
   border: none;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: background-color var(--dur-fast) var(--ease-standard);
   background-color: var(--accent-hover);
   color: var(--text-primary);
 }
@@ -98,15 +98,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--space-2);
   white-space: nowrap;
   border-radius: var(--radius-md);
   font-size: var(--text-12);
   font-weight: var(--weight-heading);
-  height: 36px;
-  padding: 8px 16px;
+  height: var(--h-control-xl); /* FLAG: non-token control height (matches button default) */
+  padding: var(--space-2) var(--space-4);
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition: background-color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
   background-color: transparent;
   color: var(--text-primary);
   border: 1px solid var(--border-subtle);

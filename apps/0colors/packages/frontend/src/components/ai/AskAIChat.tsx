@@ -1121,8 +1121,8 @@ export function AskAIChat({
                         <div className="ai-chat-streaming-dots-inner">
                           <div className="ai-chat-streaming-dots-row">
                             <div className="ai-chat-dot" style={{ animationDelay: '0ms' }} />
-                            <div className="ai-chat-dot" style={{ animationDelay: '150ms' }} />
-                            <div className="ai-chat-dot" style={{ animationDelay: '300ms' }} />
+                            <div className="ai-chat-dot" style={{ animationDelay: 'var(--dur-fast)' }} />
+                            <div className="ai-chat-dot" style={{ animationDelay: 'var(--dur-slow)' }} />
                           </div>
                         </div>
                       </div>
@@ -1367,7 +1367,7 @@ export function AskAIChat({
         transition={{ duration: 0.2 }}
         className="ai-chat-docked"
         data-testid="ai-chat-panel-docked"
-        style={{ width: DOCKED_WIDTH, zIndex: 50 }}
+        style={{ width: DOCKED_WIDTH, zIndex: 'var(--z-dropdown)' as unknown as number }}
         onWheel={e => e.stopPropagation()}
       >
         {/* ── Header Island ── */}
@@ -1400,7 +1400,7 @@ export function AskAIChat({
         height,
         left: position.x,
         top: position.y,
-        zIndex: 99999,
+        zIndex: 'var(--z-modal)' as unknown as number,
       }}
       onClick={e => e.stopPropagation()}
     >

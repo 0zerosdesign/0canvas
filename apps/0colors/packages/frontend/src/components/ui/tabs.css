@@ -8,7 +8,7 @@
 [data-slot="tabs"] {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 /* ─── List ─── */
@@ -23,8 +23,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 8px 12px;
+  gap: var(--space-3x);
+  padding: var(--space-2) var(--space-3);
   border: none;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
@@ -36,7 +36,7 @@
   cursor: pointer;
   outline: none;
   user-select: none;
-  transition: color 0.15s ease, border-color 0.15s ease;
+  transition: color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
 }
 
 [data-slot="tabs-trigger"]:hover {
@@ -61,13 +61,13 @@
 [data-slot="tabs-trigger"] svg {
   pointer-events: none;
   flex-shrink: 0;
-  width: 16px;
-  height: 16px;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
 }
 
 /* ─── Content ─── */
 [data-slot="tabs-content"] {
   flex: 1;
-  padding: 16px;
+  padding: var(--space-4);
   outline: none;
 }

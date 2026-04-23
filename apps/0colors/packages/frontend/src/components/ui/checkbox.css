@@ -6,15 +6,15 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 16px;
-  height: 16px;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
   padding: 0;
   border: 1px solid var(--border-subtle);
-  border-radius: 3px;
+  border-radius: 3px; /* FLAG: non-token radius (between hair and xs) */
   background-color: transparent;
   cursor: pointer;
   outline: none;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition: background-color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
 }
 
 [data-slot="checkbox"][data-state="checked"] {
@@ -41,6 +41,6 @@
 }
 
 [data-slot="checkbox-indicator"] svg {
-  width: 14px;
-  height: 14px;
+  width: var(--icon-md);
+  height: var(--icon-md);
 }

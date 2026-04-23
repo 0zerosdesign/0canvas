@@ -8,7 +8,7 @@
 .syntax-scroll {
   overflow: auto;
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: var(--text-13);
   line-height: 22px;
 }
 
@@ -25,7 +25,7 @@
   flex-shrink: 0;
   position: sticky;
   left: 0;
-  transition: color 0.1s;
+  transition: color var(--dur-fast) var(--ease-standard);
 }
 
 .syntax-code {

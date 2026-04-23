@@ -30,6 +30,7 @@ body {
   color: var(--text-primary);
   font-family: var(--font-ui);
   font-size: var(--text-12);
+  line-height: var(--leading-normal);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
@@ -70,8 +71,8 @@ body.selecting * {
    ═══════════════════════════════════════════ */
 
 [data-sonner-toaster] [data-sonner-toast] [data-icon] svg {
-  width: 14px !important;
-  height: 14px !important;
+  width: var(--icon-md) !important;
+  height: var(--icon-md) !important;
 }
 
 [data-sonner-toaster] [data-sonner-toast][data-type="success"] [data-icon] svg {
@@ -106,10 +107,10 @@ body.selecting * {
 .palette-range-slider::-webkit-slider-thumb {
   -webkit-appearance: none !important;
   appearance: none !important;
-  width: 14px !important;
-  height: 14px !important;
-  border: 2px solid var(--text-primary) !important;
-  border-radius: 2px !important;
+  width: var(--icon-md) !important;
+  height: var(--icon-md) !important;
+  border: var(--space-hair) solid var(--text-primary) !important;
+  border-radius: var(--space-hair) !important;
   transform: rotate(45deg) !important;
   cursor: grab !important;
   margin-top: -3px !important;
@@ -126,10 +127,10 @@ body.selecting * {
 .color-slider::-moz-range-thumb,
 .palette-range-slider::-moz-range-thumb {
   appearance: none !important;
-  width: 14px !important;
-  height: 14px !important;
-  border: 2px solid var(--text-primary) !important;
-  border-radius: 2px !important;
+  width: var(--icon-md) !important;
+  height: var(--icon-md) !important;
+  border: var(--space-hair) solid var(--text-primary) !important;
+  border-radius: var(--space-hair) !important;
   transform: rotate(45deg) !important;
   cursor: grab !important;
   position: relative !important;
@@ -186,13 +187,13 @@ body.selecting * {
 /* Slider tracks */
 .color-slider::-webkit-slider-runnable-track,
 .palette-range-slider::-webkit-slider-runnable-track {
-  height: 8px;
+  height: var(--space-2);
   border-radius: var(--radius-sm);
 }
 
 .color-slider::-moz-range-track,
 .palette-range-slider::-moz-range-track {
-  height: 8px;
+  height: var(--space-2);
   border-radius: var(--radius-sm);
   background: transparent;
 }

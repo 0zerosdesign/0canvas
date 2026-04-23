@@ -5,15 +5,15 @@
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  width: 36px;
-  height: 20px;
+  width: 36px; /* FLAG: non-token switch track width */
+  height: var(--space-5);
   padding: 0;
   border: none;
-  border-radius: 9999px;
+  border-radius: var(--radius-pill);
   background-color: var(--text-muted);
   cursor: pointer;
   outline: none;
-  transition: background-color 0.15s ease;
+  transition: background-color var(--dur-fast) var(--ease-standard);
 }
 
 [data-slot="switch"][data-state="checked"] {
@@ -33,18 +33,18 @@
 /* ─── Thumb ─── */
 [data-slot="switch-thumb"] {
   display: block;
-  width: 16px;
-  height: 16px;
-  border-radius: 9999px;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+  border-radius: var(--radius-pill);
   background-color: var(--text-primary);
   pointer-events: none;
-  transition: transform 0.15s ease;
+  transition: transform var(--dur-fast) var(--ease-standard);
 }
 
 [data-slot="switch-thumb"][data-state="checked"] {
-  transform: translateX(16px);
+  transform: translateX(var(--icon-lg));
 }
 
 [data-slot="switch-thumb"][data-state="unchecked"] {
-  transform: translateX(2px);
+  transform: translateX(var(--space-hair));
 }

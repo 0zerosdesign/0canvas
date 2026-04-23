@@ -6,9 +6,9 @@
 
 /* ─── Content ─── */
 [data-slot="popover-content"] {
-  z-index: 50;
-  width: 288px;
-  padding: 16px;
+  z-index: var(--z-dropdown);
+  width: 288px; /* FLAG: non-token popover default width */
+  padding: var(--space-4);
   background-color: var(--surface-1);
   border: 1px solid var(--surface-3);
   border-radius: var(--radius-lg);

@@ -9,7 +9,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--space-2);
   white-space: nowrap;
   border-radius: var(--radius-md);
   font-size: var(--text-12);
@@ -18,7 +18,7 @@
   line-height: 1;
   cursor: pointer;
   border: none;
-  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition: background-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
   outline: none;
   flex-shrink: 0;
   text-decoration: none;
@@ -38,8 +38,8 @@
 [data-slot="button"] svg {
   pointer-events: none;
   flex-shrink: 0;
-  width: 16px;
-  height: 16px;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
 }
 
 /* ═══════════════════════════════════════════
@@ -102,7 +102,7 @@
 [data-slot="button"][data-variant="link"] {
   background-color: transparent;
   color: var(--accent-hover);
-  text-underline-offset: 4px;
+  text-underline-offset: var(--space-1);
 }
 
 [data-slot="button"][data-variant="link"]:hover {
@@ -115,27 +115,27 @@
 
 /* ─── Default ─── */
 [data-slot="button"][data-size="default"] {
-  height: 36px;
-  padding: 8px 16px;
+  height: var(--h-control-xl); /* FLAG: non-token height; closest is --h-control-lg (32px) */
+  padding: var(--space-2) var(--space-4);
 }
 
 /* ─── Small ─── */
 [data-slot="button"][data-size="sm"] {
-  height: 32px;
-  padding-left: 12px;
-  padding-right: 12px;
+  height: var(--h-control-lg);
+  padding-left: var(--space-3);
+  padding-right: var(--space-3);
 }
 
 /* ─── Large ─── */
 [data-slot="button"][data-size="lg"] {
-  height: 40px;
-  padding-left: 24px;
-  padding-right: 24px;
+  height: var(--h-control-2xl); /* FLAG: non-token height; exceeds --h-control-lg (32px) */
+  padding-left: var(--space-6);
+  padding-right: var(--space-6);
 }
 
 /* ─── Icon ─── */
 [data-slot="button"][data-size="icon"] {
-  width: 36px;
-  height: 36px;
+  width: 36px; /* FLAG: non-token size */
+  height: var(--h-control-xl); /* FLAG: non-token size */
   padding: 0;
 }

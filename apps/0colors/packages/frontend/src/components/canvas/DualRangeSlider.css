@@ -2,7 +2,7 @@
 
 .dual-slider-track {
   position: relative;
-  height: 20px;
+  height: var(--icon-xl);
   display: flex;
   align-items: center;
   user-select: none;
@@ -40,8 +40,8 @@
 }
 
 .dual-slider-thumb {
-  width: 14px;
-  height: 14px;
-  border-radius: 2px;
+  width: var(--icon-md);
+  height: var(--icon-md);
+  border-radius: var(--radius-xs);
   border: 2px solid var(--text-primary);
 }

@@ -9,10 +9,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
   width: 100%;
-  height: 36px;
-  padding: 0 12px;
+  height: var(--h-control-xl); /* FLAG: non-token height; exceeds --h-control-lg (32px) */
+  padding: 0 var(--space-3);
   font-size: var(--text-12);
   color: var(--text-primary);
   background-color: var(--surface-3);
@@ -21,11 +21,11 @@
   outline: none;
   white-space: nowrap;
   cursor: pointer;
-  transition: color 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  transition: color var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
 }
 
 [data-slot="select-trigger"][data-size="sm"] {
-  height: 32px;
+  height: var(--h-control-lg);
 }
 
 [data-slot="select-trigger"]:focus-visible {
@@ -45,15 +45,15 @@
 [data-slot="select-trigger"] [data-slot="select-value"] {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 [data-slot="select-trigger"] svg {
-  width: 16px;
-  height: 16px;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
   flex-shrink: 0;
   pointer-events: none;
   opacity: 0.5;
@@ -62,8 +62,8 @@
 /* ─── Content ─── */
 [data-slot="select-content"] {
   position: relative;
-  z-index: 50;
-  min-width: 8rem;
+  z-index: var(--z-dropdown);
+  min-width: 8rem; /* FLAG: rem-based min-width for menu sizing */
   max-height: var(--radix-select-content-available-height);
   overflow-x: hidden;
   overflow-y: auto;
@@ -76,32 +76,32 @@
 
 /* Popper positioning offsets */
 [data-slot="select-content"][data-side="bottom"] {
-  transform: translateY(4px);
+  transform: translateY(var(--space-1));
 }
 
 [data-slot="select-content"][data-side="top"] {
-  transform: translateY(-4px);
+  transform: translateY(calc(-1 * var(--space-1)));
 }
 
 [data-slot="select-content"][data-side="left"] {
-  transform: translateX(-4px);
+  transform: translateX(calc(-1 * var(--space-1)));
 }
 
 [data-slot="select-content"][data-side="right"] {
-  transform: translateX(4px);
+  transform: translateX(var(--space-1));
 }
 
 /* ─── Viewport ─── */
 [data-slot="select-viewport"] {
-  padding: 4px;
+  padding: var(--space-1);
 }
 
 [data-slot="select-viewport-popper"] {
-  padding: 4px;
+  padding: var(--space-1);
   height: var(--radix-select-trigger-height);
   width: 100%;
   min-width: var(--radix-select-trigger-width);
-  scroll-margin: 4px;
+  scroll-margin: var(--space-1);
 }
 
 /* ─── Item ─── */
@@ -109,9 +109,9 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   width: 100%;
-  padding: 6px 32px 6px 10px;
+  padding: var(--space-3x) var(--space-7) var(--space-3x) var(--space-5x);
   font-size: var(--text-12);
   color: var(--text-primary);
   border-radius: var(--radius-md);
@@ -131,8 +131,8 @@
 }
 
 [data-slot="select-item"] svg {
-  width: 16px;
-  height: 16px;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
   flex-shrink: 0;
   pointer-events: none;
 }
@@ -140,22 +140,22 @@
 /* ─── Item Indicator Container ─── */
 [data-slot="select-item-indicator"] {
   position: absolute;
-  right: 8px;
+  right: var(--space-2);
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 14px;
-  height: 14px;
+  width: var(--icon-md);
+  height: var(--icon-md);
 }
 
 [data-slot="select-item-indicator"] svg {
-  width: 16px;
-  height: 16px;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
 }
 
 /* ─── Label ─── */
 [data-slot="select-label"] {
-  padding: 4px 10px;
+  padding: var(--space-1) var(--space-5x);
   font-size: var(--text-10);
   font-weight: var(--weight-heading);
   text-transform: uppercase;
@@ -165,7 +165,7 @@
 /* ─── Separator ─── */
 [data-slot="select-separator"] {
   height: 1px;
-  margin: 4px -4px;
+  margin: var(--space-1) calc(-1 * var(--space-1));
   background-color: var(--border-subtle);
   pointer-events: none;
 }
@@ -176,13 +176,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4px 0;
+  padding: var(--space-1) 0;
   cursor: default;
   color: var(--text-primary);
 }
 
 [data-slot="select-scroll-up-button"] svg,
 [data-slot="select-scroll-down-button"] svg {
-  width: 16px;
-  height: 16px;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
 }

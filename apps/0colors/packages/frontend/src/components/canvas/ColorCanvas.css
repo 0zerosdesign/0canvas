@@ -39,19 +39,19 @@
   box-shadow: var(--shadow-lg);
   color: var(--text-primary);
   font-size: var(--text-12);
-  z-index: 50;
-  border-radius: 20px;
+  z-index: var(--z-panel);
+  border-radius: var(--radius-lg);
 }
 
 /* ── Node reference label ── */
 .color-canvas-ref-label {
   position: absolute;
   left: 0;
-  z-index: 30;
+  z-index: var(--z-dropdown);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  transition: opacity 150ms;
+  transition: opacity var(--dur-fast) var(--ease-standard);
 }
 
 .color-canvas-ref-label-visible {
@@ -74,9 +74,9 @@
   cursor: move;
   opacity: 0;
   color: var(--text-disabled);
-  transition: all 150ms;
+  transition: all var(--dur-fast) var(--ease-standard);
   flex-shrink: 0;
-  margin-left: -8px;
+  margin-left: calc(-1 * var(--space-2));
 }
 
 .color-canvas-ref-name-area:hover .color-canvas-drag-handle {
@@ -88,8 +88,8 @@
 }
 
 .color-canvas-drag-icon {
-  height: 16px;
-  width: 16px;
+  height: var(--icon-lg);
+  width: var(--icon-lg);
 }
 
 .color-canvas-ref-name-inner {
@@ -104,36 +104,36 @@
   background: var(--surface-3);
   border-radius: var(--radius-md);
   border: 1px solid var(--surface-3);
-  padding: 0 4px;
+  padding: 0 var(--space-1);
   max-width: 100%;
 }
 
 .color-canvas-edit-input {
   background: transparent;
-  font-size: 16px;
+  font-size: 16px; /* FLAG: non-token 16px body size */
   color: var(--text-primary);
   outline: none;
-  padding: 2px 0;
-  min-width: 36px;
+  padding: var(--space-hair) 0;
+  min-width: 36px; /* FLAG: 36px odd width */
   max-width: 160px;
 }
 
 .color-canvas-edit-suffix {
-  font-size: 16px;
+  font-size: 16px; /* FLAG: non-token 16px body size */
   color: var(--text-muted);
   user-select: none;
   flex-shrink: 0;
 }
 
 .color-canvas-ref-display {
-  font-size: 16px;
+  font-size: 16px; /* FLAG: non-token 16px body size */
   color: var(--text-placeholder);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   cursor: default;
-  transition: color 150ms;
-  padding: 2px 4px;
+  transition: color var(--dur-fast) var(--ease-standard);
+  padding: var(--space-hair) var(--space-1);
   border-radius: var(--radius-sm);
   display: block;
 }
@@ -147,11 +147,11 @@
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 6px;
+  gap: var(--space-1);
+  padding: var(--space-hair) var(--space-3x);
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all 150ms;
+  transition: all var(--dur-fast) var(--ease-standard);
 }
 
 .color-canvas-prefix-btn-active {
@@ -178,13 +178,13 @@
 }
 
 .color-canvas-prefix-icon {
-  width: 14px;
-  height: 14px;
+  width: var(--icon-md);
+  height: var(--icon-md);
 }
 
 .color-canvas-prefix-label {
-  font-size: 11px;
-  letter-spacing: 0.05em;
+  font-size: var(--text-11);
+  letter-spacing: var(--tracking-overline);
   text-transform: uppercase;
   user-select: none;
 }
@@ -199,14 +199,14 @@
 .color-canvas-prompt-wrapper {
   display: flex;
   justify-content: center;
-  padding-top: 10px;
+  padding-top: var(--space-5x);
   position: relative;
-  z-index: 40;
+  z-index: var(--z-dropdown);
 }
 
 .color-canvas-prompt-caret {
   position: absolute;
-  top: 4px;
+  top: var(--space-1);
   left: 50%;
   transform: translateX(-50%);
 }
@@ -214,14 +214,14 @@
 .color-canvas-prompt-btn {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-5x);
   background: color-mix(in srgb, var(--surface-2) 95%, transparent);
   backdrop-filter: blur(4px);
   border: 1px solid var(--surface-3);
   border-radius: var(--radius-lg);
-  padding: 8px 14px;
+  padding: var(--space-2) var(--space-7x);
   box-shadow: var(--shadow-lg), 0 0 0 0 transparent;
-  transition: all 200ms;
+  transition: all var(--dur-base) var(--ease-standard);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -235,23 +235,23 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: var(--icon-xl);
+  height: var(--icon-xl);
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--accent) 15%, transparent);
   flex-shrink: 0;
 }
 
 .color-canvas-prompt-text {
-  font-size: 13px;
+  font-size: var(--text-13);
   color: var(--text-primary);
-  transition: color 150ms;
+  transition: color var(--dur-fast) var(--ease-standard);
 }
 
 .color-canvas-prompt-arrow {
   color: var(--text-muted);
-  margin-left: 2px;
-  transition: color 150ms;
+  margin-left: var(--space-hair);
+  transition: color var(--dur-fast) var(--ease-standard);
 }
 
 .color-canvas-prompt-btn:hover .color-canvas-prompt-arrow {

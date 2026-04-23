@@ -292,7 +292,7 @@ export function AuthPage({ onAuth, onSkip }: AuthPageProps) {
           : 'transparent',
         backdropFilter: mounted ? 'blur(12px)' : 'blur(0px)',
         WebkitBackdropFilter: mounted ? 'blur(12px)' : 'blur(0px)',
-        transition: 'background 300ms ease, backdrop-filter 300ms ease',
+        transition: 'background var(--dur-slow) var(--ease-standard), backdrop-filter var(--dur-slow) var(--ease-standard)',
       }}
     >
       {/* Popup card */}
@@ -302,8 +302,8 @@ export function AuthPage({ onAuth, onSkip }: AuthPageProps) {
         data-testid="auth-modal-card"
         style={{
           opacity: mounted ? 1 : 0,
-          transform: mounted ? 'translateY(0) scale(1)' : 'translateY(12px) scale(0.97)',
-          transition: 'opacity 280ms ease, transform 280ms ease',
+          transform: mounted ? 'translateY(0) scale(1)' : 'translateY(var(--space-3)) scale(0.97)',
+          transition: 'opacity var(--dur-slow) var(--ease-standard), transform var(--dur-slow) var(--ease-standard)',
         }}
       >
         {/* Glow ring */}

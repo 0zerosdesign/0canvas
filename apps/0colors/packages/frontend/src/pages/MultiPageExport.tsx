@@ -269,7 +269,7 @@ export function MultiPageExport({
                       <span className={theme.id === previewThemeId ? 'export-figma-theme-label--active' : 'export-figma-theme-label--inactive'} title={theme.name}>
                         {theme.name}
                       </span>
-                      {theme.isPrimary && <span className="export-sidebar-item-badge" style={{ marginLeft: 8 }}>(Primary)</span>}
+                      {theme.isPrimary && <span className="export-sidebar-item-badge" style={{ marginLeft: 'var(--space-2)' }}>(Primary)</span>}
                       {theme.id === previewThemeId && <Check className="export-format-dropdown-check" style={{ marginLeft: 'auto' }} />}
                     </DropdownMenuItem>
                   ))}

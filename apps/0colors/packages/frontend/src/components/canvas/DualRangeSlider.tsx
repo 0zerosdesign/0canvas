@@ -141,7 +141,7 @@ export function DualRangeSlider({
           style={{
             left: `${m.position}%`,
             backgroundColor: m.color,
-            zIndex: 5,
+            zIndex: 'var(--z-chrome)' as unknown as number,
           }}
         />
       ))}

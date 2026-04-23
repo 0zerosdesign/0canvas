@@ -802,18 +802,18 @@ export function AppShell() {
   if (lockState?.type === 'conflict') {
     return (
       <div className="app-shell-loading" data-testid="session-lock-conflict">
-        <div style={{ textAlign: 'center', maxWidth: 420, padding: '0 24px' }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8, color: 'var(--text-primary, #fff)' }}>
+        <div style={{ textAlign: 'center', maxWidth: 420, padding: '0 var(--space-6)' }}>
+          <h2 style={{ fontSize: 'var(--text-18)', fontWeight: 'var(--weight-heading)', marginBottom: 'var(--space-2)', color: 'var(--text-primary)' }}>
             Project open elsewhere
           </h2>
-          <p style={{ fontSize: 14, color: 'var(--text-muted, #999)', marginBottom: 24, lineHeight: 1.5 }}>
+          <p style={{ fontSize: 'var(--text-13)', color: 'var(--text-muted)', marginBottom: 'var(--space-6)', lineHeight: 'var(--leading-normal)' }}>
             This project is currently being edited in another tab or browser.
             Would you like to continue editing here instead?
           </p>
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'center' }}>
             <button
               onClick={() => { dismissLockState(); handleBackToProjects(); }}
-              style={{ padding: '8px 20px', borderRadius: 8, border: '1px solid var(--border-default)', background: 'transparent', color: 'var(--text-primary, #ccc)', cursor: 'pointer', fontSize: 13 }}
+              style={{ padding: 'var(--space-2) var(--space-5)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)', background: 'transparent', color: 'var(--text-primary)', cursor: 'pointer', fontSize: 'var(--text-13)' }}
             >
               Go to Projects
             </button>
@@ -823,7 +823,7 @@ export function AppShell() {
                 // Fetch latest data from cloud — the other session may have made changes
                 handleForceCloudRefresh();
               }}
-              style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: 'var(--accent)', color: 'var(--text-on-accent)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
+              style={{ padding: 'var(--space-2) var(--space-5)', borderRadius: 'var(--radius-md)', border: 'none', background: 'var(--accent)', color: 'var(--text-on-accent)', cursor: 'pointer', fontSize: 'var(--text-13)', fontWeight: 'var(--weight-heading)' }}
             >
               Open here
             </button>
@@ -836,17 +836,17 @@ export function AppShell() {
   if (lockState?.type === 'taken-over') {
     return (
       <div className="app-shell-loading" data-testid="session-lock-taken-over">
-        <div style={{ textAlign: 'center', maxWidth: 420, padding: '0 24px' }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8, color: 'var(--text-primary, #fff)' }}>
+        <div style={{ textAlign: 'center', maxWidth: 420, padding: '0 var(--space-6)' }}>
+          <h2 style={{ fontSize: 'var(--text-18)', fontWeight: 'var(--weight-heading)', marginBottom: 'var(--space-2)', color: 'var(--text-primary)' }}>
             Session moved
           </h2>
-          <p style={{ fontSize: 14, color: 'var(--text-muted, #999)', marginBottom: 24, lineHeight: 1.5 }}>
+          <p style={{ fontSize: 'var(--text-13)', color: 'var(--text-muted)', marginBottom: 'var(--space-6)', lineHeight: 'var(--leading-normal)' }}>
             This project is now being edited in another session.
           </p>
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'center' }}>
             <button
               onClick={() => { dismissLockState(); handleBackToProjects(); }}
-              style={{ padding: '8px 20px', borderRadius: 8, border: '1px solid var(--border-default)', background: 'transparent', color: 'var(--text-primary, #ccc)', cursor: 'pointer', fontSize: 13 }}
+              style={{ padding: 'var(--space-2) var(--space-5)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)', background: 'transparent', color: 'var(--text-primary)', cursor: 'pointer', fontSize: 'var(--text-13)' }}
             >
               Go to Projects
             </button>
@@ -856,7 +856,7 @@ export function AppShell() {
                 // Fetch latest data from cloud — the other session may have made changes
                 handleForceCloudRefresh();
               }}
-              style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: 'var(--accent)', color: 'var(--text-on-accent)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
+              style={{ padding: 'var(--space-2) var(--space-5)', borderRadius: 'var(--radius-md)', border: 'none', background: 'var(--accent)', color: 'var(--text-on-accent)', cursor: 'pointer', fontSize: 'var(--text-13)', fontWeight: 'var(--weight-heading)' }}
             >
               Open here
             </button>
@@ -945,9 +945,9 @@ export function AppShell() {
             backdropFilter: 'blur(12px)',
             border: 'none',
             color: 'var(--text-primary)',
-            boxShadow: '0 4px 24px color-mix(in srgb, var(--backdrop-strong) 40%, transparent)',
-            borderRadius: '8px',
-            fontSize: '13px',
+            boxShadow: 'var(--shadow-md)',
+            borderRadius: 'var(--radius-md)',
+            fontSize: 'var(--text-13)',
           },
         }}
       />

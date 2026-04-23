@@ -8,8 +8,8 @@
 [data-slot="dialog-overlay"] {
   position: fixed;
   inset: 0;
-  z-index: 50;
-  background-color: color-mix(in srgb, var(--surface-0) 60%, transparent);
+  z-index: var(--z-modal);
+  background-color: var(--backdrop-weak);
 }
 
 /* ─── Content ─── */
@@ -17,24 +17,24 @@
   position: fixed;
   top: 50%;
   left: 50%;
-  z-index: 50;
+  z-index: var(--z-modal);
   transform: translate(-50%, -50%);
   display: grid;
   width: 100%;
-  max-width: 500px;
-  padding: 24px;
+  max-width: 500px; /* FLAG: non-token dialog max-width */
+  padding: var(--space-6);
   background-color: var(--surface-1);
   border: 1px solid var(--surface-3);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);
-  animation-duration: 0.2s;
+  animation-duration: var(--dur-base);
 }
 
 /* ─── Close button (inside content) ─── */
 [data-slot="dialog-close-button"] {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: var(--space-4);
+  right: var(--space-4);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -45,7 +45,7 @@
   border-radius: var(--radius-sm);
   opacity: 0.7;
   cursor: pointer;
-  transition: opacity 0.15s ease, color 0.15s ease;
+  transition: opacity var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
 }
 
 [data-slot="dialog-close-button"]:hover {
@@ -63,8 +63,8 @@
 }
 
 [data-slot="dialog-close-button"] svg {
-  width: 16px;
-  height: 16px;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
   pointer-events: none;
   flex-shrink: 0;
 }
@@ -73,15 +73,15 @@
 [data-slot="dialog-header"] {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-3x);
 }
 
 /* ─── Footer ─── */
 [data-slot="dialog-footer"] {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  margin-top: 24px;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
 }
 
 /* ─── Title ─── */
