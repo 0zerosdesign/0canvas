@@ -410,7 +410,7 @@ Completed `apply_change` tool calls stop looking like status dots and start read
 
 ### How to verify
 
-1. **Happy path.** With `.hero-title` visible in the canvas and its current color say `rgb(15, 23, 42)`, ask: *"Change @selection color to #3B82F6."* Agent calls `apply_change`. While in progress the card shows the usual Zap summary; once completed it swaps to a receipt — `.hero-title` header, `− color: rgb(15, 23, 42);` red row, `+ color: #3B82F6;` green row, and (if the resolver returned a location) `src/styles/hero.css:42` footer.
+1. **Happy path.** With `.hero-title` visible in the canvas and its current color say `rgb(15, 23, 42)`, ask: *"Change @selection color to #3B82F6."* Agent calls `apply_change`. While in progress the card shows the usual Zap summary; once completed it swaps to a receipt — `.hero-title` header, `− color: rgb(15, 23, 42);` red row, `+ color: #3B82F6;` green row, and (if the resolver returned a location) `styles/hero.css:42` footer.
 2. **Unset before.** Ask the agent to set a property that isn't currently declared on the element. Receipt shows `(unset)` italic on the before row — designer sees it's an addition rather than a replacement.
 3. **Failed write.** Force a failure (e.g. ask to change a property on a selector that doesn't resolve to any CSS file). Card flips to failed status, receipt `+` line is grey with strikethrough so nothing reads like a successful edit.
 4. **Scrollback.** Do several edits in one session. Scroll up — every completed `apply_change` renders its receipt, together reading like a changelog. Canvas follow-along is idempotent so re-rendering doesn't re-flash old edits.

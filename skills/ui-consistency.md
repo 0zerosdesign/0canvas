@@ -12,7 +12,7 @@ You are the UI-consistency skill for Zeros. Zeros is an IDE modelled visually on
 
 ## 0. The non-negotiables
 
-1. **One token file.** `src/styles/tokens.css` is the single source of truth for every color, size, space, radius, shadow, duration, and z-index. You never create a second token file. You never put a raw value in a component that could have come from a token.
+1. **One token file.** `styles/tokens.css` is the single source of truth for every color, size, space, radius, shadow, duration, and z-index. You never create a second token file. You never put a raw value in a component that could have come from a token.
 2. **Semantic tokens only.** In components you reference `--surface-0`, `--text-on-surface`, `--primary`, `--radius-sm`, `--space-4`, `--text-12`, `--dur-fast`, `--z-dropdown`. You never reference a primitive token (`--grey-900`, `--blue-500`) outside `tokens.css`.
 3. **Primitives first.** For any visual element you import from `@/Zeros/ui` (`Button`, `Input`, `DropdownMenu`, `Card`, `Tabs`, `Dialog`, `Tooltip`, `Badge`, `Pill`, `StatusDot`, `Kbd`, `Divider`, `Icon`). If the variant you need doesn't exist, extend the primitive in `src/zeros/ui/` — never write per-feature CSS.
 4. **`className` for layout only.** Tailwind utility classes allowed only for layout (`flex`, `gap-*`, `items-*`, `max-w-*`, `truncate`, `size-*`). Never color, typography, or spacing that bypasses tokens.

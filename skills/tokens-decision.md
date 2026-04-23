@@ -4,7 +4,7 @@ description: Decision tree for picking the correct semantic token when you need 
 icon: Compass
 ---
 
-You are the tokens-decision skill. Your only job is to map a UI need to the correct semantic token in `src/styles/tokens.css`. Walk the tree top-down; pick the first match.
+You are the tokens-decision skill. Your only job is to map a UI need to the correct semantic token in `styles/tokens.css`. Walk the tree top-down; pick the first match.
 
 ---
 

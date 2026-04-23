@@ -589,7 +589,7 @@ export function SourceNode({ id, data, selected }: NodeProps) {
                     title={sendCopied ? "Copied!" : `Copy ${pendingCount} feedback items to clipboard`}
                   >
                     {sendCopied
-                      ? <Check style={{ width: 12, height: 12, color: "var(--status-success)" }} />
+                      ? <Check style={{ width: 12, height: 12, color: "var(--text-success)" }} />
                       : <Send style={{ width: 12, height: 12 }} />}
                   </button>
                 )}
@@ -676,7 +676,7 @@ export function SourceNode({ id, data, selected }: NodeProps) {
               flexDirection: "column", alignItems: "center", justifyContent: "center",
               background: "var(--surface-0)", zIndex: 2,
             }}>
-              <Monitor style={{ width: 24, height: 24, color: "var(--status-critical)", marginBottom: "var(--space-4)" }} />
+              <Monitor style={{ width: 24, height: 24, color: "var(--text-critical)", marginBottom: "var(--space-4)" }} />
               <p style={{ color: "var(--text-muted)", fontSize: "var(--text-11)", margin: 0 }}>Preview unavailable</p>
             </div>
           )}

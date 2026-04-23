@@ -190,7 +190,7 @@ ${ruleLines.join("\n")}</style>
 
   const statusColor =
     variant.status === "pushed" ? "var(--accent)" :
-    variant.status === "finalized" ? "var(--status-success)" :
+    variant.status === "finalized" ? "var(--text-success)" :
     variant.status === "sent" ? "var(--accent-hover)" : "var(--surface-2)";
 
   const statusLabel =
@@ -202,7 +202,7 @@ ${ruleLines.join("\n")}</style>
   const hasActiveSelection = !!state.selectedElementId && state.selectionSource === "inspect" && state.activeVariantId === variant.id;
   const iframeInteractive = inspecting || hasActiveSelection;
 
-  const borderColor = selected ? "var(--accent)" : variant.status === "finalized" ? "var(--status-success)" : undefined;
+  const borderColor = selected ? "var(--accent)" : variant.status === "finalized" ? "var(--text-success)" : undefined;
 
   return (
     <div
@@ -320,7 +320,7 @@ ${ruleLines.join("\n")}</style>
             <GitFork style={{ width: 10, height: 10 }} />
           </VBtn>
           <VBtn onClick={handleCopyHtml} title="Copy HTML">
-            {copied ? <Check style={{ width: 10, height: 10, color: "var(--status-success)" }} /> : <Copy style={{ width: 10, height: 10 }} />}
+            {copied ? <Check style={{ width: 10, height: 10, color: "var(--text-success)" }} /> : <Copy style={{ width: 10, height: 10 }} />}
           </VBtn>
           {variant.status === "draft" && (
             <VBtn onClick={() => onFinalize(variant.id)} accent title="Finalize">
@@ -431,8 +431,8 @@ function VBtn({ children, onClick, active, accent, danger, title }: {
       title={title}
       style={{
         ...(active ? { background: "var(--accent)", color: "var(--text-on-accent)", border: "1px solid var(--accent)" } : {}),
-        ...(danger && !active ? { color: "var(--status-critical)" } : {}),
-        ...(accent && !active ? { color: "var(--status-success)" } : {}),
+        ...(danger && !active ? { color: "var(--text-critical)" } : {}),
+        ...(accent && !active ? { color: "var(--text-success)" } : {}),
       }}
     >
       {children}

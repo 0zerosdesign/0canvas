@@ -272,7 +272,7 @@ Time budget: under 500ms for a typical project (50 CSS files, ~5000 rules).
 
 The engine doesn't need to be inside Vite, Webpack, or any bundler. When it writes a CSS change to disk:
 
-1. Engine writes to `src/styles/buttons.css`
+1. Engine writes to `styles/buttons.css`
 2. Vite's file watcher detects the change → HMR pushes to browser
 3. Webpack's file watcher detects the change → HMR pushes to browser
 4. Any dev server's file watcher detects the change → reloads
@@ -336,7 +336,7 @@ Browser: "Change .hero-section background-color to #EF4444"
 
 Engine:
   1. Look up ".hero-section" in selector index → Map.get()  [<1ms]
-  2. Found: { file: "src/styles/hero.css", line: 42 }
+  2. Found: { file: "styles/hero.css", line: 42 }
   3. Read file, find property "background-color" in that rule block
   4. Atomic write: replace value, write to tmp, rename
   5. Dev server detects change → HMR → browser updates
@@ -353,8 +353,8 @@ Three caches, all `Map`-based with file-keyed invalidation:
 
 ```
 Map<string, SourceLocation[]>
-  ".hero-section" → [{ file: "src/styles/hero.css", line: 42, column: 1 }]
-  ".btn-primary"  → [{ file: "src/styles/buttons.css", line: 15, column: 1 }]
+  ".hero-section" → [{ file: "styles/hero.css", line: 42, column: 1 }]
+  ".btn-primary"  → [{ file: "styles/buttons.css", line: 15, column: 1 }]
   ...
 ```
 
@@ -370,7 +370,7 @@ Map<string, { content: string, mtime: number }>
 
 ```
 Map<string, { value: string, file: string, line: number }>
-  "--color-primary" → { value: "#3B82F6", file: "src/styles/tokens.css", line: 8 }
+  "--color-primary" → { value: "#3B82F6", file: "styles/tokens.css", line: 8 }
 ```
 
 ### Engine Source Structure

@@ -2,7 +2,7 @@
 // Engine Scope — element-level resets + overlay host-isolation
 // ------------------------------------------------------------
 // Tokens no longer live here. They're loaded globally once from
-// `src/styles/tokens.css` (the single source of truth for every
+// `styles/tokens.css` (the single source of truth for every
 // color, typography, spacing, radius, shadow, motion, and z-index
 // value in Zeros). [data-Zeros-root] inherits them for free.
 //

@@ -30,7 +30,7 @@ export const ZEROS_CSS = `
    ------------------------------------------------------------
    Tokens, overlay isolation reset, and element-level resets
    have moved out of this file:
-     src/styles/tokens.css    — tokens (primitives +
+     styles/tokens.css    — tokens (primitives +
                                        semantic + compat)
      src/zeros/engine/styles/
        engine-scope.ts               — [data-Zeros-overlay]

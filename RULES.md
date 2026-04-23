@@ -25,7 +25,7 @@ Every file MUST be placed in the correct folder:
 | **UI primitives (atoms + molecules + organisms)** | `/src/zeros/ui/` |
 | ACP bridge | `/src/zeros/acp/` |
 | MCP server | `/src/mcp/` |
-| **Design tokens (ONE file)** | `/src/styles/tokens.css` |
+| **Design tokens (ONE file)** | `/styles/tokens.css` |
 | App shell (Tauri window chrome) | `/src/shell/` |
 | Tauri native bridge | `/src/native/` |
 | Demo pages | `/src/demo/` |
@@ -81,7 +81,7 @@ NEVER put a new primitive outside `/src/zeros/ui/`.
 
 ### 4.1 — One file
 
-There is exactly ONE design-token file: **`/src/styles/tokens.css`**. No other CSS file defines tokens. Never create `tokens/foo.css` or split the tokens across files.
+There is exactly ONE design-token file: **`/styles/tokens.css`**. No other CSS file defines tokens. Never create `tokens/foo.css` or split the tokens across files.
 
 ### 4.2 — Semantic tokens only in components
 

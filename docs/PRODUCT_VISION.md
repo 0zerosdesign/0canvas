@@ -413,7 +413,7 @@ The v2 schema adds three new top-level fields for full theme persistence:
   // automatically re-loaded on startup without the file picker
   themeFiles: [{
     id: string,                    // unique ID for this file entry
-    path: string,                  // relative path, e.g. "src/styles/tokens.css"
+    path: string,                  // relative path, e.g. "styles/tokens.css"
     name: string,                  // filename, e.g. "tokens.css"
     lastSynced: ISO8601,           // when file was last read/written
     themes: [{                     // theme columns discovered in the file

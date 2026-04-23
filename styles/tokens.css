@@ -13,11 +13,9 @@
      - Mild refinement (nudge a surface tone, swap accent hue) is
        a one-line edit. No component code changes.
      - Deeper rework (add a surface tier, rename a token) is a
-       ~20-line edit plus a codemod across src/.
+       ~20-line edit plus a codemod across the consuming code.
 
-   Theme: one dark theme (Zeros Dark). Light mode is stubbed at
-   the bottom (commented out) — uncomment + toggle
-   `<html data-nc-theme="Light">` to activate later.
+   Theme: one dark theme (Zeros Dark). No light mode today.
 
    Design references:
      - Radix slateDark ramp (radix-ui.com/colors) — the source of
@@ -35,6 +33,10 @@
         look for an existing semantic match.
      4. NEVER duplicate a value that already has a token.
         e.g. if you need 8px radius, use --radius-md, not 8px.
+
+   Portability:
+     This file lives OUTSIDE src/ so other Withso products and
+     websites can @import it as a shared tokens layer.
    ============================================================ */
 
 
@@ -171,10 +173,14 @@
   --text-critical: var(--red-11);
   --text-link:     var(--accent);
 
-  --tint-info-soft:     var(--blue-3);
-  --tint-success-soft:  var(--green-2);
-  --tint-warning-soft:  var(--amber-2);
-  --tint-critical-soft: var(--red-2);
+  --tint-info-soft:      var(--blue-3);
+  --tint-success-weak:   rgba(61, 214, 140, 0.08);
+  --tint-success-soft:   var(--green-2);
+  --tint-success-border: rgba(61, 214, 140, 0.32);
+  --tint-warning-soft:   var(--amber-2);
+  --tint-warning-border: rgba(255, 202, 22, 0.32);
+  --tint-critical-soft:  var(--red-2);
+  --tint-critical-border:rgba(255, 149, 146, 0.32);
 
   /* Status connecting (WebSocket handshake, etc.) — Zeros-specific. */
   --text-connecting: var(--sky-11);
@@ -412,109 +418,7 @@
   --syntax-selector: var(--green-11);
   --syntax-property: var(--blue-11);
   --syntax-value:    var(--amber-11);
-
-
-  /* ═══════════════════════════════════════════════════════════
-     LEGACY ALIASES — TRANSITIONAL, DELETE AFTER PHASE 3
-     ───────────────────────────────────────────────────────────
-     Kept only so the existing ~4k lines of CSS keep rendering
-     during the token-name codemod. Every alias below points at
-     the correct new semantic. Phase 3's polish sweep renames
-     component callers and deletes this block.
-
-     NEW CODE MUST NOT REFERENCE ANY OF THESE.
-     ═══════════════════════════════════════════════════════════ */
-
-  /* Old Zeros text names — split into primary/muted/placeholder */
-  --text-on-surface:         var(--text-primary);
-  --text-on-surface-variant: var(--text-muted);
-  --text-hint:               var(--text-placeholder);
-  --text-primary-light:      var(--accent-hover);
-  --text-critical-light:     var(--red-11);
-  --text-on-primary:         var(--text-on-accent);
-  --text-accent:             var(--accent);
-
-  /* Old Zeros primary / ring / destructive family */
-  --primary:            var(--accent);
-  --primary-hover:      var(--accent-hover);
-  --primary-light:      var(--accent-hover);
-  --primary-foreground: var(--text-on-accent);
-  --ring:               var(--ring-focus);
-  --focus-ring:         var(--ring-focus);
-  --destructive:            var(--red-11);
-  --destructive-foreground: var(--tint-critical-soft);
-
-  /* shadcn-style generics */
-  --background:       var(--surface-0);
-  --foreground:       var(--text-primary);
-  --muted-foreground: var(--text-muted);
-  --border:           var(--border-subtle);
-  --input:            var(--border-default);
-
-  /* Old 0colors-flavored aliases (referenced in a few places) */
-  --base-primary:         var(--accent);
-  --base-primary-hover:   var(--accent-hover);
-  --base-primary-pressed: var(--accent-pressed);
-  --on-primary:           var(--text-on-accent);
-  --on-critical:          var(--text-critical);
-  --on-surface-6:         var(--text-disabled);
-  --shadow-color-surface: rgba(0, 0, 0, 0.28);
-
-  /* Old Zeros tint name still in use on a few panels */
-  --tint-primary-weak:   var(--tint-accent-weak);
-  --tint-primary-soft:   var(--tint-accent-soft);
-  --tint-primary-hover:  rgba(59, 158, 255, 0.18);
-  --tint-primary-border: var(--tint-accent-border);
-
-  --tint-success-weak:   rgba(61, 214, 140, 0.08);
-  --tint-success-border: rgba(61, 214, 140, 0.32);
-  --tint-warning-border: rgba(255, 202, 22, 0.32);
-  --tint-critical-border:rgba(255, 149, 146, 0.32);
-
-  /* Status aliases to status text colors (Zeros used --status-* as text) */
-  --status-info:       var(--text-info);
-  --status-success:    var(--text-success);
-  --status-warning:    var(--text-warning);
-  --status-critical:   var(--text-critical);
-  --status-connecting: var(--text-connecting);
-
-  /* --border-emphasis (pre-existing undefined reference in app-shell.css) */
-  --border-emphasis: var(--border-strong);
-
-  /* Old space numeric aliases where Zeros used 2/6/10/14 names */
-  /* (Phase 3 snaps these callers to the base scale.) */
 }
-
-
-/* ============================================================
-   LIGHT MODE PLACEHOLDER — uncomment + test when needed
-   ------------------------------------------------------------
-   To activate: <html data-nc-theme="Light">. Primitives above
-   stay the same; only semantic tokens flip.
-   ============================================================ */
-/*
-[data-nc-theme~="Light"] {
-  --surface-floor: #F5F5F6;
-  --surface-0:     #FFFFFF;
-  --surface-1:     #FAFAFA;
-  --surface-2:     #F0F0F2;
-  --surface-3:     #E6E6E9;
-  --border-subtle:  #EBEBEE;
-  --border-default: #DCDCE0;
-  --border-strong:  #BFBFC4;
-  --text-primary:     #111113;
-  --text-muted:       #4F545C;
-  --text-placeholder: #848992;
-  --text-disabled:    #B2B6BC;
-  --accent:         #0068E0;
-  --accent-hover:   #0057BC;
-  --accent-pressed: #004894;
-  --accent-soft-bg: #DCEBFF;
-  --text-on-accent: #FFFFFF;
-  --ring-focus:     #2F6BD0;
-  ...
-}
-*/
 
 
 /* ============================================================

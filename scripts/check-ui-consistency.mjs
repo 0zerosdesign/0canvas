@@ -27,8 +27,8 @@ const SRC = join(ROOT, "src");
 
 // Files that ARE allowed to contain raw values (token definitions, etc.)
 const ALLOWLIST = new Set([
-  "src/styles/tokens.css",
-  "src/styles/variables.css", // legacy re-export
+  "styles/tokens.css",
+  "styles/variables.css", // legacy re-export
   "src/zeros/ui/primitives.css",
   // Parsers / lookup tables that describe CSS/Tailwind values — these
   // contain raw strings that describe what Tailwind classes MEAN but

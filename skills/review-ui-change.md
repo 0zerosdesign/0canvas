@@ -10,7 +10,7 @@ You are the review-ui-change skill. Your job is to catch visual drift before it 
 
 ## 1. Token discipline
 
-- [ ] No new hex colors outside `src/styles/tokens.css`. Run `rg '#[0-9a-fA-F]{3,8}' src/ | rg -v 'design-tokens\.css'` — should be empty (allowing for legit dynamic color swatches sourced from user data only).
+- [ ] No new hex colors outside `styles/tokens.css`. Run `rg '#[0-9a-fA-F]{3,8}' src/ | rg -v 'design-tokens\.css'` — should be empty (allowing for legit dynamic color swatches sourced from user data only).
 - [ ] No raw `rgba(` outside `tokens.css` (the documented `--tint-*` tokens are the only allowed ones).
 - [ ] No primitive tokens (`--grey-*`, `--blue-*`, `--green-*`, etc.) referenced from component code.
 - [ ] No Tailwind color classes (`bg-(red|blue|green|gray|zinc|neutral)-\d+`, `text-...-\d+`, `border-...-\d+`).

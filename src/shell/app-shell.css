@@ -862,11 +862,11 @@
 }
 
 .oc-column-1__update-pill.is-ready {
-  background: var(--status-success);
+  background: var(--text-success);
 }
 
 .oc-column-1__update-pill.is-error {
-  background: var(--status-critical);
+  background: var(--text-critical);
 }
 
 .oc-column-1__update-dot {
@@ -883,11 +883,11 @@
 }
 
 .oc-column-1__update-dot.is-ready {
-  background: var(--status-success);
+  background: var(--text-success);
 }
 
 .oc-column-1__update-dot.is-error {
-  background: var(--status-critical);
+  background: var(--text-critical);
 }
 
 .oc-column-1__update-dot.is-downloading {
@@ -1082,12 +1082,12 @@
   border-radius: var(--radius-lg);
   font-size: var(--text-11);
   font-family: var(--font-mono);
-  border: 1px solid var(--tint-primary-border);
+  border: 1px solid var(--tint-accent-border);
 }
 
 .oc-ai-chip.is-variant {
   background: var(--tint-accent-soft);
-  color: var(--text-accent);
+  color: var(--text-muted);
   border-color: var(--tint-accent-border);
 }
 
@@ -1807,7 +1807,7 @@
 }
 
 .oc-git__branch:hover {
-  background: var(--tint-primary-hover);
+  background: var(--tint-accent-soft);
 }
 
 .oc-git__remote {
@@ -2113,7 +2113,7 @@
   font-size: var(--text-10);
   flex-shrink: 0;
   padding: 1px var(--space-3x);
-  background: var(--tint-primary-weak);
+  background: var(--tint-accent-weak);
   border-radius: var(--radius-xs);
 }
 
@@ -2277,8 +2277,8 @@
   gap: var(--space-2);
   padding: var(--space-2) var(--space-2);
   margin-top: var(--space-hair);
-  background: var(--tint-primary-weak);
-  border: 1px dashed var(--tint-primary-border);
+  background: var(--tint-accent-weak);
+  border: 1px dashed var(--tint-accent-border);
   border-radius: var(--radius-sm);
   color: var(--accent-hover);
   font-family: var(--font-ui);
@@ -2764,7 +2764,7 @@
 }
 
 .oc-mission__card.is-info {
-  border-color: var(--tint-primary-border);
+  border-color: var(--tint-accent-border);
 }
 .oc-mission__card.is-success {
   border-color: var(--tint-success-border);
@@ -3001,7 +3001,7 @@
 }
 
 .oc-login-modal__steps li.is-done .oc-login-modal__dot {
-  background: var(--status-success);
+  background: var(--text-success);
 }
 
 .oc-login-modal__dot {
@@ -3366,7 +3366,7 @@
 }
 
 .oc-empty-composer__chip.is-active {
-  background: var(--tint-primary-weak);
+  background: var(--tint-accent-weak);
   border-color: var(--border-strong);
   color: var(--accent-hover);
 }
