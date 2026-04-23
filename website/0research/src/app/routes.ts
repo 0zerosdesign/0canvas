@@ -1,19 +1,18 @@
 // ============================================
 // ROUTES: All page routes for 0research app
-// PURPOSE: Defines which component renders at which URL
-// AUTH: Handled by @0zerosdesign/auth-client via accounts.zeros.design
+// PURPOSE: Defines which component renders at which URL.
+// AUTH:
+//   /          — public homepage (no auth)
+//   /internal  — RequireAuth (any signed-in user via
+//                @0zerosdesign/auth-client → accounts.zeros.design)
 // ============================================
 
 import { createElement } from "react";
 import { createBrowserRouter } from "react-router";
 import { RootLayout } from "./components/layout/RootLayout";
 import { HomePage } from "./pages/HomePage";
-import { RequireAdmin } from "./components/auth/RequireAdmin";
+import { RequireAuth } from "./components/auth/RequireAuth";
 import { AiToolPage } from "./internal/AiToolPage";
-
-// --- ROUTE DEFINITIONS ---
-// path: "/"         → HomePage (Feed Experience — public)
-// path: "/internal" → AiToolPage (Admin-only internal tool)
 
 export const router = createBrowserRouter([
   {
@@ -26,7 +25,7 @@ export const router = createBrowserRouter([
       },
       {
         path: "internal",
-        element: createElement(RequireAdmin, null, createElement(AiToolPage)),
+        element: createElement(RequireAuth, null, createElement(AiToolPage)),
       },
     ],
   },

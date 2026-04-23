@@ -1,6 +1,7 @@
 // ============================================
-// APP: 0research - Content Discovery & Learning Platform
-// PURPOSE: Entry point that sets up routing + auth
+// APP: 0research — Content Discovery & Learning Platform
+// PURPOSE: Entry point. Public homepage + auth provider so the
+//          /internal research tool can gate access via RequireAuth.
 // ============================================
 
 import { RouterProvider } from "react-router";
@@ -8,6 +9,10 @@ import { ZerosAuthProvider, useOAuthCallback } from "@0zerosdesign/auth-client/r
 import { router } from "./routes";
 
 export default function App() {
+  // `useOAuthCallback` returns `ready=false` only while processing
+  // an OAuth return URL from accounts.zeros.design. On a normal
+  // page load (including the public homepage) it flips to `true`
+  // immediately. Once ready, we mount the router.
   const ready = useOAuthCallback();
 
   if (!ready) {
@@ -18,12 +23,12 @@ export default function App() {
           alignItems: "center",
           justifyContent: "center",
           height: "100vh",
-          background: "var(--zeros-bg1, #0d0d0d)",
-          color: "var(--zeros-text2, #a0a0a0)",
-          fontFamily: "var(--zeros-font, sans-serif)",
+          background: "var(--surface-0)",
+          color: "var(--text-muted)",
+          fontFamily: "var(--font-ui, sans-serif)",
         }}
       >
-        Signing in...
+        Signing in…
       </div>
     );
   }

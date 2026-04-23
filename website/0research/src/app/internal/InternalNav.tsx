@@ -1,7 +1,8 @@
 // ============================================
 // COMPONENT: InternalNav
 // PURPOSE: Vertical left nav bar for the internal workspace.
-//          Top: agent icons. Bottom: profile avatar with menu (admin badge, theme toggle, sign out).
+//          Top: agent icons. Bottom: profile avatar with menu
+//          (name/email, admin badge, theme toggle, sign out).
 // USED IN: WorkspaceLayout
 // ============================================
 
