@@ -1,0 +1,205 @@
+/* ============================================
+   STYLES: Auth Pages
+   PURPOSE: Shared styles for login, signup, forgot password, etc.
+   ============================================ */
+
+.auth-layout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.auth-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 100%;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.auth-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: center;
+}
+
+.auth-title {
+  font-size: var(--zeros-text-2xl);
+  font-weight: var(--zeros-weight-semibold);
+  color: var(--zeros-text1);
+  letter-spacing: var(--zeros-tracking-tight);
+  line-height: var(--zeros-leading-tight);
+}
+
+.auth-subtitle {
+  font-size: var(--zeros-text-md);
+  color: var(--zeros-text3);
+  line-height: var(--zeros-leading-normal);
+}
+
+.auth-subtitle strong {
+  color: var(--zeros-text1);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-label {
+  font-size: var(--zeros-text-sm);
+  font-weight: var(--zeros-weight-medium);
+  color: var(--zeros-text2);
+}
+
+.auth-optional {
+  font-weight: var(--zeros-weight-normal);
+  color: var(--zeros-text4);
+}
+
+.auth-form input {
+  width: 100%;
+}
+
+.auth-submit-btn {
+  width: 100%;
+  padding: 10px 20px;
+  margin-top: 4px;
+  background-color: var(--zeros-button);
+  color: var(--zeros-button2);
+  font-size: var(--zeros-text-md);
+  font-weight: var(--zeros-weight-semibold);
+  border: none;
+  border-radius: var(--zeros-radius-control);
+  cursor: pointer;
+  transition: opacity var(--zeros-duration) var(--zeros-ease);
+}
+
+.auth-submit-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+/* Google sign-in button */
+.auth-google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 20px;
+  background-color: var(--zeros-bg3);
+  border: 1px solid var(--zeros-border);
+  border-radius: var(--zeros-radius-control);
+  font-size: var(--zeros-text-md);
+  font-weight: var(--zeros-weight-medium);
+  color: var(--zeros-text1);
+  cursor: pointer;
+  transition: all var(--zeros-duration) var(--zeros-ease);
+}
+
+.auth-google-btn:hover {
+  background-color: var(--zeros-bg4);
+  border-color: var(--zeros-bg5);
+}
+
+/* "or" divider between Google and email form */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.auth-divider-line {
+  flex: 1;
+  height: 1px;
+  background-color: var(--zeros-border);
+}
+
+.auth-divider-text {
+  font-size: var(--zeros-text-xs);
+  color: var(--zeros-text4);
+  text-transform: uppercase;
+  letter-spacing: var(--zeros-tracking-wide);
+}
+
+.auth-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.auth-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.auth-footer-text {
+  font-size: var(--zeros-text-sm);
+  color: var(--zeros-text3);
+}
+
+.auth-footer-divider {
+  color: var(--zeros-text4);
+  font-size: var(--zeros-text-xs);
+}
+
+.auth-link {
+  font-size: var(--zeros-text-sm);
+  color: var(--zeros-text2);
+  text-decoration: none;
+  transition: color var(--zeros-duration) var(--zeros-ease);
+}
+
+.auth-link:hover {
+  color: var(--zeros-text1);
+}
+
+/* Loading spinner for App.tsx */
+.app-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+.app-loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--zeros-border);
+  border-top-color: var(--zeros-text1);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Main layout for authenticated pages */
+.main-layout {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}

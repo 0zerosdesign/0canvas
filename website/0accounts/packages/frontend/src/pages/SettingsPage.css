@@ -1,0 +1,124 @@
+/* ============================================
+   STYLES: SettingsPage
+   PURPOSE: Settings page layout and section styles
+   ============================================ */
+
+.settings-page {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  max-width: 560px;
+}
+
+.settings-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-title {
+  font-size: var(--zeros-text-3xl);
+  font-weight: var(--zeros-weight-semibold);
+  color: var(--zeros-text1);
+  letter-spacing: var(--zeros-tracking-tight);
+}
+
+.settings-subtitle {
+  font-size: var(--zeros-text-md);
+  color: var(--zeros-text3);
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-section-title {
+  font-size: var(--zeros-text-lg);
+  font-weight: var(--zeros-weight-semibold);
+  color: var(--zeros-text1);
+  letter-spacing: var(--zeros-tracking-tight);
+}
+
+.settings-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background-color: var(--zeros-bg2);
+  border: 1px solid var(--zeros-border);
+  border-radius: var(--zeros-radius);
+  overflow: hidden;
+}
+
+form.settings-card {
+  gap: 16px;
+  padding: 20px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--zeros-border);
+}
+
+.settings-row:last-child {
+  border-bottom: none;
+}
+
+.settings-row-label {
+  font-size: var(--zeros-text-sm);
+  font-weight: var(--zeros-weight-medium);
+  color: var(--zeros-text2);
+}
+
+.settings-row-value {
+  font-size: var(--zeros-text-sm);
+  color: var(--zeros-text1);
+}
+
+.settings-mono {
+  font-family: var(--zeros-font-mono);
+  font-size: var(--zeros-text-xs);
+  color: var(--zeros-text3);
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-label {
+  font-size: var(--zeros-text-sm);
+  font-weight: var(--zeros-weight-medium);
+  color: var(--zeros-text2);
+}
+
+.settings-card input {
+  width: 100%;
+}
+
+.settings-btn {
+  align-self: flex-start;
+  padding: 8px 24px;
+  background-color: var(--zeros-button);
+  color: var(--zeros-button2);
+  font-size: var(--zeros-text-sm);
+  font-weight: var(--zeros-weight-semibold);
+  border: none;
+  border-radius: var(--zeros-radius-control);
+  cursor: pointer;
+  transition: opacity var(--zeros-duration) var(--zeros-ease);
+}
+
+.settings-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.settings-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

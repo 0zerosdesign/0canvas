@@ -1,0 +1,154 @@
+/* ============================================
+   STYLES: Header
+   PURPOSE: Top navigation bar styling
+   ============================================ */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  padding: 0 24px;
+  background-color: var(--zeros-bg2);
+  border-bottom: 1px solid var(--zeros-border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.header-logo {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--zeros-text-lg);
+  font-weight: var(--zeros-weight-semibold);
+  letter-spacing: var(--zeros-tracking-tight);
+  text-decoration: none;
+}
+
+.header-logo-zero {
+  color: var(--zeros-text1);
+}
+
+.header-logo-accent {
+  color: var(--zeros-text3);
+}
+
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.header-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--zeros-radius-control);
+  font-size: var(--zeros-text-sm);
+  font-weight: var(--zeros-weight-medium);
+  color: var(--zeros-text3);
+  text-decoration: none;
+  transition: all var(--zeros-duration) var(--zeros-ease);
+}
+
+.header-nav-link:hover {
+  color: var(--zeros-text1);
+  background-color: var(--zeros-bg3);
+}
+
+.header-nav-link.active {
+  color: var(--zeros-text1);
+  background-color: var(--zeros-bg4);
+}
+
+.header-right {
+  position: relative;
+}
+
+.header-avatar-btn {
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.header-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--zeros-radius-pill);
+  background-color: var(--zeros-bg5);
+  color: var(--zeros-text1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--zeros-text-sm);
+  font-weight: var(--zeros-weight-semibold);
+  transition: background-color var(--zeros-duration) var(--zeros-ease);
+}
+
+.header-avatar-btn:hover .header-avatar {
+  background-color: var(--zeros-bg6);
+}
+
+.header-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 220px;
+  background-color: var(--zeros-bg3);
+  border: 1px solid var(--zeros-border);
+  border-radius: var(--zeros-radius);
+  box-shadow: var(--zeros-shadow-md);
+  overflow: hidden;
+  z-index: 200;
+}
+
+.header-dropdown-user {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.header-dropdown-name {
+  font-size: var(--zeros-text-sm);
+  font-weight: var(--zeros-weight-medium);
+  color: var(--zeros-text1);
+}
+
+.header-dropdown-email {
+  font-size: var(--zeros-text-xs);
+  color: var(--zeros-text3);
+}
+
+.header-dropdown-divider {
+  height: 1px;
+  background-color: var(--zeros-border);
+}
+
+.header-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  font-size: var(--zeros-text-sm);
+  color: var(--zeros-text2);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: all var(--zeros-duration) var(--zeros-ease);
+}
+
+.header-dropdown-item:hover {
+  color: var(--zeros-text1);
+  background-color: var(--zeros-bg4);
+}

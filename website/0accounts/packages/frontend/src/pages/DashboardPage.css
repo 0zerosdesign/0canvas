@@ -1,0 +1,42 @@
+/* ============================================
+   STYLES: DashboardPage
+   PURPOSE: Dashboard layout and section styles
+   ============================================ */
+
+.dashboard-page {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.dashboard-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dashboard-greeting {
+  font-size: var(--zeros-text-3xl);
+  font-weight: var(--zeros-weight-semibold);
+  color: var(--zeros-text1);
+  letter-spacing: var(--zeros-tracking-tight);
+  line-height: var(--zeros-leading-tight);
+}
+
+.dashboard-subtitle {
+  font-size: var(--zeros-text-md);
+  color: var(--zeros-text3);
+}
+
+.dashboard-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dashboard-section-title {
+  font-size: var(--zeros-text-lg);
+  font-weight: var(--zeros-weight-semibold);
+  color: var(--zeros-text1);
+  letter-spacing: var(--zeros-tracking-tight);
+}

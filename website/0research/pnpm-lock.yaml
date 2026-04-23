@@ -12,8 +12,8 @@ importers:
   .:
     dependencies:
       '@0zerosdesign/auth-client':
-        specifier: link:/Users/arunrajkumar/Documents/0shared/packages/auth-client
-        version: link:../../../0shared/packages/auth-client
+        specifier: link:../0accounts/packages/auth-client
+        version: link:../0accounts/packages/auth-client
       '@directus/sdk':
         specifier: ^21.1.0
         version: 21.2.2

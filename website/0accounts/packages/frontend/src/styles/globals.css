@@ -1,0 +1,97 @@
+/* ============================================
+   STYLES: Global Resets & Base Styles
+   PURPOSE: CSS reset and base element styles using zeros tokens
+   ============================================ */
+
+@import "./variables.css";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--zeros-font);
+  font-size: var(--zeros-text-md);
+  font-weight: var(--zeros-weight-normal);
+  line-height: var(--zeros-leading-normal);
+  letter-spacing: var(--zeros-tracking-normal);
+  color: var(--zeros-text1);
+  background-color: var(--zeros-bg1);
+  min-height: 100vh;
+}
+
+a {
+  color: var(--zeros-text1);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--zeros-text2);
+}
+
+button {
+  font-family: var(--zeros-font);
+  cursor: pointer;
+  border: none;
+  outline: none;
+  background: none;
+}
+
+input,
+textarea,
+select {
+  font-family: var(--zeros-font);
+  font-size: var(--zeros-text-md);
+  color: var(--zeros-text1);
+  background-color: var(--zeros-bg3);
+  border: 1px solid var(--zeros-border);
+  border-radius: var(--zeros-radius-control);
+  padding: 10px 14px;
+  outline: none;
+  transition: border-color var(--zeros-duration) var(--zeros-ease);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--zeros-text3);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--zeros-text4);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--zeros-bg5);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--zeros-bg6);
+}
+
+/* Toast overrides for sonner */
+[data-sonner-toaster] {
+  font-family: var(--zeros-font) !important;
+}

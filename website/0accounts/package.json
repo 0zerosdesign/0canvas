@@ -1,0 +1,29 @@
+{
+  "name": "0accounts",
+  "version": "1.0.0",
+  "private": true,
+  "description": "0accounts — Zero account management service for zeros.design",
+  "scripts": {
+    "dev": "concurrently --names backend,frontend --prefix-colors cyan,magenta \"pnpm --filter @0accounts/backend dev\" \"pnpm --filter @0accounts/frontend dev\"",
+    "dev:backend": "pnpm --filter @0accounts/backend dev",
+    "dev:frontend": "pnpm --filter @0accounts/frontend dev",
+    "build": "pnpm -r build",
+    "build:backend": "pnpm --filter @0accounts/backend build",
+    "build:frontend": "pnpm --filter @0accounts/frontend build",
+    "typecheck": "pnpm -r typecheck",
+    "seed:products": "tsx scripts/seed-products.ts",
+    "migrate:users": "tsx scripts/migrate-users.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1",
+    "dotenv": "^16.4.7",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "tsx": "^4.19.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

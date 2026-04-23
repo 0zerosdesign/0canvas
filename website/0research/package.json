@@ -32,7 +32,7 @@
     "sync:directus": "tsx scripts/sync-directus-to-supabase.ts"
   },
   "dependencies": {
-    "@0zerosdesign/auth-client": "link:/Users/arunrajkumar/Documents/0shared/packages/auth-client",
+    "@0zerosdesign/auth-client": "link:../0accounts/packages/auth-client",
     "@directus/sdk": "^21.1.0",
     "@emotion/react": "11.14.0",
     "@emotion/styled": "11.14.1",

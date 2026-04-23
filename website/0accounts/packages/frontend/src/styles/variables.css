@@ -1,0 +1,104 @@
+/* ============================================
+   STYLES: Zeros Design Tokens
+   PURPOSE: Shared CSS variables for the zeros.design brand
+   ============================================ */
+
+:root {
+  /* Backgrounds (darkest -> lightest) */
+  --zeros-bg1: #0d0d0d;
+  --zeros-bg2: #161616;
+  --zeros-bg3: #1e1e1e;
+  --zeros-bg4: #262626;
+  --zeros-bg5: #303030;
+  --zeros-bg6: #5a5a5a;
+
+  /* Border */
+  --zeros-border: #2a2a2a;
+
+  /* Buttons */
+  --zeros-button: #ffffff;
+  --zeros-button2: #0d0d0d;
+
+  /* Text (brightest -> dimmest) */
+  --zeros-text1: #f0f0f0;
+  --zeros-text2: #a0a0a0;
+  --zeros-text3: #707070;
+  --zeros-text4: #484848;
+
+  /* Spacing */
+  --zeros-radius: 10px;
+  --zeros-radius-lg: 20px;
+  --zeros-radius-sm: 6px;
+  --zeros-radius-control: 8px;
+  --zeros-radius-pill: 9999px;
+
+  /* Typography */
+  --zeros-font:
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --zeros-font-mono:
+    "SF Mono", "Fira Code", "JetBrains Mono", "Cascadia Code", monospace;
+
+  /* Font sizes */
+  --zeros-text-xs: 11px;
+  --zeros-text-sm: 12px;
+  --zeros-text-base: 13px;
+  --zeros-text-md: 14px;
+  --zeros-text-lg: 15px;
+  --zeros-text-xl: 17px;
+  --zeros-text-2xl: 20px;
+  --zeros-text-3xl: 24px;
+
+  /* Font weights */
+  --zeros-weight-normal: 400;
+  --zeros-weight-medium: 500;
+  --zeros-weight-semibold: 600;
+
+  /* Line heights */
+  --zeros-leading-tight: 1.2;
+  --zeros-leading-snug: 1.35;
+  --zeros-leading-normal: 1.5;
+  --zeros-leading-relaxed: 1.65;
+
+  /* Letter spacing */
+  --zeros-tracking-tight: -0.02em;
+  --zeros-tracking-normal: -0.01em;
+  --zeros-tracking-wide: 0.01em;
+
+  /* Shadows */
+  --zeros-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --zeros-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --zeros-shadow-card: 0 0 0 1px var(--zeros-border);
+  --zeros-shadow-bottom-sheet: 0 -4px 20px rgba(0, 0, 0, 0.15);
+
+  /* Transitions */
+  --zeros-ease: cubic-bezier(0.25, 0.1, 0.35, 1);
+  --zeros-ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --zeros-ease-emphasized: cubic-bezier(0.32, 0.72, 0, 1);
+  --zeros-duration: 200ms;
+  --zeros-duration-slow: 300ms;
+  --zeros-duration-flip: 400ms;
+}
+
+/* Light theme overrides */
+[data-theme="light"] {
+  --zeros-bg1: #f5f3f0;
+  --zeros-bg2: #ffffff;
+  --zeros-bg3: #edeae6;
+  --zeros-bg4: #e3e0db;
+  --zeros-bg5: #d6d3ce;
+  --zeros-bg6: #9e9b96;
+
+  --zeros-border: #ddd9d4;
+
+  --zeros-button: #1a1a1a;
+  --zeros-button2: #ffffff;
+
+  --zeros-text1: #1a1a1a;
+  --zeros-text2: #6b6966;
+  --zeros-text3: #9a9895;
+  --zeros-text4: #bfbdb9;
+
+  --zeros-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --zeros-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --zeros-shadow-card: 0 0 0 1px var(--zeros-border);
+}

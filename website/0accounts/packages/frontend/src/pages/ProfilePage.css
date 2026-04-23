@@ -1,0 +1,90 @@
+/* ============================================
+   STYLES: ProfilePage
+   PURPOSE: Profile editing form styles
+   ============================================ */
+
+.profile-page {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  max-width: 560px;
+}
+
+.profile-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profile-title {
+  font-size: var(--zeros-text-3xl);
+  font-weight: var(--zeros-weight-semibold);
+  color: var(--zeros-text1);
+  letter-spacing: var(--zeros-tracking-tight);
+}
+
+.profile-subtitle {
+  font-size: var(--zeros-text-md);
+  color: var(--zeros-text3);
+}
+
+.profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.profile-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profile-label {
+  font-size: var(--zeros-text-sm);
+  font-weight: var(--zeros-weight-medium);
+  color: var(--zeros-text2);
+}
+
+.profile-optional {
+  font-weight: var(--zeros-weight-normal);
+  color: var(--zeros-text4);
+}
+
+.profile-form input,
+.profile-form textarea {
+  width: 100%;
+}
+
+.profile-input-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.profile-hint {
+  font-size: var(--zeros-text-xs);
+  color: var(--zeros-text4);
+}
+
+.profile-save-btn {
+  align-self: flex-start;
+  padding: 8px 24px;
+  margin-top: 4px;
+  background-color: var(--zeros-button);
+  color: var(--zeros-button2);
+  font-size: var(--zeros-text-sm);
+  font-weight: var(--zeros-weight-semibold);
+  border: none;
+  border-radius: var(--zeros-radius-control);
+  cursor: pointer;
+  transition: opacity var(--zeros-duration) var(--zeros-ease);
+}
+
+.profile-save-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.profile-save-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

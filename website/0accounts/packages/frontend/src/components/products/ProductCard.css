@@ -1,0 +1,112 @@
+/* ============================================
+   STYLES: ProductCard
+   PURPOSE: Product card component styling
+   ============================================ */
+
+.product-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  background-color: var(--zeros-bg2);
+  border: 1px solid var(--zeros-border);
+  border-radius: var(--zeros-radius);
+  transition: all var(--zeros-duration) var(--zeros-ease);
+}
+
+.product-card:hover {
+  border-color: var(--zeros-bg5);
+}
+
+.product-card.coming-soon {
+  opacity: 0.6;
+}
+
+.product-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.product-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--zeros-radius-control);
+  background-color: var(--zeros-bg4);
+  color: var(--zeros-text1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--zeros-text-lg);
+  font-weight: var(--zeros-weight-semibold);
+}
+
+.product-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.product-card-name {
+  font-size: var(--zeros-text-md);
+  font-weight: var(--zeros-weight-semibold);
+  color: var(--zeros-text1);
+  line-height: var(--zeros-leading-tight);
+}
+
+.product-card-id {
+  font-size: var(--zeros-text-xs);
+  color: var(--zeros-text3);
+  font-family: var(--zeros-font-mono);
+}
+
+.product-card-status {
+  display: flex;
+  align-items: center;
+}
+
+.product-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--zeros-radius-pill);
+  font-size: var(--zeros-text-xs);
+  font-weight: var(--zeros-weight-medium);
+}
+
+.product-card-badge.active {
+  background-color: rgba(74, 222, 128, 0.1);
+  color: #4ade80;
+}
+
+.product-card-badge.not-accessed {
+  background-color: var(--zeros-bg3);
+  color: var(--zeros-text4);
+}
+
+.product-card-badge.coming-soon {
+  background-color: rgba(250, 204, 21, 0.1);
+  color: #facc15;
+}
+
+.product-card-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background-color: var(--zeros-bg3);
+  border: 1px solid var(--zeros-border);
+  border-radius: var(--zeros-radius-control);
+  font-size: var(--zeros-text-sm);
+  font-weight: var(--zeros-weight-medium);
+  color: var(--zeros-text2);
+  text-decoration: none;
+  transition: all var(--zeros-duration) var(--zeros-ease);
+}
+
+.product-card-link:hover {
+  background-color: var(--zeros-bg4);
+  color: var(--zeros-text1);
+}
