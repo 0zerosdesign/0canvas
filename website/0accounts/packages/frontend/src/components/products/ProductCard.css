@@ -8,14 +8,16 @@
   flex-direction: column;
   gap: var(--space-4);
   padding: var(--space-5);
-  background-color: var(--surface-0);
+  background-color: var(--surface-1);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
-  transition: all var(--dur-base) var(--ease-standard);
+  transition: background-color var(--dur-fast) var(--ease-standard),
+              border-color var(--dur-fast) var(--ease-standard);
 }
 
 .product-card:hover {
-  border-color: var(--surface-3);
+  background-color: var(--surface-2);
+  border-color: var(--border-default);
 }
 
 .product-card.coming-soon {
@@ -29,6 +31,7 @@
 }
 
 .product-card-icon {
+  /* FLAG: 40px — unique avatar-tile size, not on control-height scale (Rule 2.5) */
   width: 40px;
   height: 40px;
   border-radius: var(--radius-md);
@@ -39,6 +42,11 @@
   justify-content: center;
   font-size: var(--text-15);
   font-weight: var(--weight-heading);
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+
+.product-card:hover .product-card-icon {
+  background-color: var(--surface-3);
 }
 
 .product-card-info {
@@ -55,8 +63,8 @@
 }
 
 .product-card-id {
-  font-size: var(--text-12);
-  color: var(--text-placeholder);
+  font-size: var(--text-11);
+  color: var(--text-muted);
   font-family: var(--font-mono);
 }
 
@@ -81,8 +89,8 @@
 }
 
 .product-card-badge.not-accessed {
-  background-color: var(--surface-1);
-  color: var(--text-disabled);
+  background-color: var(--surface-2);
+  color: var(--text-muted);
 }
 
 .product-card-badge.coming-soon {
@@ -95,18 +103,20 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-3x);
+  min-height: var(--h-control-xl);
   padding: var(--space-2) var(--space-4);
-  background-color: var(--surface-1);
-  border: 1px solid var(--border-subtle);
+  background-color: var(--surface-2);
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
   font-size: var(--text-13);
   font-weight: var(--weight-control);
-  color: var(--text-muted);
+  color: var(--text-primary);
   text-decoration: none;
-  transition: all var(--dur-base) var(--ease-standard);
+  transition: background-color var(--dur-fast) var(--ease-standard),
+              border-color var(--dur-fast) var(--ease-standard);
 }
 
 .product-card-link:hover {
-  background-color: var(--surface-2);
-  color: var(--text-primary);
+  background-color: var(--surface-3);
+  border-color: var(--border-strong);
 }

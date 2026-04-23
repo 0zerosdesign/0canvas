@@ -25,7 +25,7 @@
 
 .dashboard-subtitle {
   font-size: var(--text-15);
-  color: var(--text-placeholder);
+  color: var(--text-muted);
 }
 
 .dashboard-section {

@@ -25,7 +25,7 @@
 
 .profile-subtitle {
   font-size: var(--text-15);
-  color: var(--text-placeholder);
+  color: var(--text-muted);
 }
 
 .profile-form {
@@ -63,25 +63,27 @@
 
 .profile-hint {
   font-size: var(--text-12);
-  color: var(--text-disabled);
+  color: var(--text-placeholder);
 }
 
 .profile-save-btn {
   align-self: flex-start;
+  min-height: var(--h-control-xl);
   padding: var(--space-2) var(--space-6);
   margin-top: var(--space-1);
-  background-color: var(--surface-absolute-inverted);
-  color: var(--surface-floor);
+  background-color: var(--surface-inverted);
+  color: var(--text-on-inverted);
   font-size: var(--text-13);
-  font-weight: var(--weight-heading);
+  font-weight: var(--weight-control);
   border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: opacity var(--dur-base) var(--ease-standard);
+  transition: background-color var(--dur-fast) var(--ease-standard),
+              opacity var(--dur-fast) var(--ease-standard);
 }
 
 .profile-save-btn:hover:not(:disabled) {
-  opacity: 0.9;
+  background-color: var(--surface-absolute-inverted);
 }
 
 .profile-save-btn:disabled {

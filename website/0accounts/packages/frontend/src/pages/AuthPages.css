@@ -44,7 +44,7 @@
 
 .auth-subtitle {
   font-size: var(--text-15);
-  color: var(--text-placeholder);
+  color: var(--text-muted);
   line-height: var(--leading-normal);
 }
 
@@ -81,20 +81,22 @@
 
 .auth-submit-btn {
   width: 100%;
-  padding: var(--space-5x) var(--space-5);
+  min-height: var(--h-control-xl);
+  padding: var(--space-2) var(--space-5);
   margin-top: var(--space-1);
-  background-color: var(--surface-absolute-inverted);
-  color: var(--surface-floor);
-  font-size: var(--text-15);
-  font-weight: var(--weight-heading);
+  background-color: var(--surface-inverted);
+  color: var(--text-on-inverted);
+  font-size: var(--text-13);
+  font-weight: var(--weight-control);
   border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: opacity var(--dur-base) var(--ease-standard);
+  transition: background-color var(--dur-fast) var(--ease-standard),
+              opacity var(--dur-fast) var(--ease-standard);
 }
 
 .auth-submit-btn:hover:not(:disabled) {
-  opacity: 0.9;
+  background-color: var(--surface-absolute-inverted);
 }
 
 /* Google sign-in button */
@@ -104,20 +106,22 @@
   justify-content: center;
   gap: var(--space-5x);
   width: 100%;
-  padding: var(--space-5x) var(--space-5);
+  min-height: var(--h-control-xl);
+  padding: var(--space-2) var(--space-5);
   background-color: var(--surface-1);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
-  font-size: var(--text-15);
+  font-size: var(--text-13);
   font-weight: var(--weight-control);
   color: var(--text-primary);
   cursor: pointer;
-  transition: all var(--dur-base) var(--ease-standard);
+  transition: background-color var(--dur-fast) var(--ease-standard),
+              border-color var(--dur-fast) var(--ease-standard);
 }
 
 .auth-google-btn:hover {
   background-color: var(--surface-2);
-  border-color: var(--surface-3);
+  border-color: var(--border-strong);
 }
 
 /* "or" divider between Google and email form */
@@ -155,7 +159,7 @@
 
 .auth-footer-text {
   font-size: var(--text-13);
-  color: var(--text-placeholder);
+  color: var(--text-muted);
 }
 
 .auth-footer-divider {
@@ -167,7 +171,7 @@
   font-size: var(--text-13);
   color: var(--text-muted);
   text-decoration: none;
-  transition: color var(--dur-base) var(--ease-standard);
+  transition: color var(--dur-fast) var(--ease-standard);
 }
 
 .auth-link:hover {
