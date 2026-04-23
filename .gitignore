@@ -37,6 +37,24 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+**/.env
+**/.env.local
+**/.env.*.local
+
+# apps/ — sibling apps vendored in this repo (0colors, …)
+# Generated outputs, deps, logs, and env files under apps/ are never tracked.
+apps/*/node_modules/
+apps/**/node_modules/
+apps/*/dist/
+apps/**/dist/
+apps/*/build/
+apps/**/build/
+apps/**/.cache/
+apps/**/*.log
+apps/**/.env
+apps/**/.env.local
+apps/**/.env.*.local
+apps/**/.env.production
 
 # Tauri updater signing key — PRIVATE, never commit
 src-tauri/tauri-updater.key

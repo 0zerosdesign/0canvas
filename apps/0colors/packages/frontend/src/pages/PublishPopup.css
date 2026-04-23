@@ -1,0 +1,369 @@
+/* PublishPopup — co-located styles */
+
+/* ─── Overlay ─── */
+.publish-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─── Card ─── */
+.publish-card {
+  width: 100%;
+  max-width: 480px;
+  border-radius: var(--radius-lg);
+  background-color: var(--surface-3);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-xl);
+}
+
+/* ─── Header ─── */
+.publish-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 12px;
+}
+
+.publish-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.publish-header-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-lg);
+  background-color: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.publish-header-icon {
+  height: 16px;
+  width: 16px;
+  color: var(--accent);
+}
+
+.publish-header-title {
+  font-size: 14px;
+  font-weight: var(--weight-heading);
+  color: var(--text-primary);
+}
+
+.publish-header-subtitle {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.publish-close-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  color: var(--text-placeholder);
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s;
+  background: none;
+  border: none;
+}
+
+.publish-close-btn:hover {
+  background-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.publish-close-icon {
+  height: 16px;
+  width: 16px;
+}
+
+/* ─── Loading state ─── */
+.publish-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 0;
+}
+
+.publish-loading-icon {
+  height: 20px;
+  width: 20px;
+  color: var(--text-muted);
+}
+
+/* ─── Form body ─── */
+.publish-body {
+  padding: 0 24px 24px;
+}
+
+/* ─── Field group ─── */
+.publish-field {
+  margin-bottom: 16px;
+}
+
+.publish-label {
+  display: block;
+  font-size: 11px;
+  font-weight: var(--weight-body);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.publish-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: var(--radius-lg);
+  background-color: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  font-size: 13px;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.publish-input::placeholder {
+  color: var(--text-placeholder);
+}
+
+.publish-input:focus {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.publish-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--radius-lg);
+  background-color: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  font-size: 13px;
+  color: var(--text-primary);
+  outline: none;
+  resize: none;
+  transition: border-color 0.15s;
+}
+
+.publish-textarea::placeholder {
+  color: var(--text-placeholder);
+}
+
+.publish-textarea:focus {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.publish-char-count {
+  text-align: right;
+  margin-top: 4px;
+}
+
+.publish-char-count-text {
+  font-size: 11px;
+  color: var(--text-placeholder);
+}
+
+/* ─── Remix checkbox ─── */
+.publish-remix-field {
+  margin-bottom: 24px;
+}
+
+.publish-remix-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.publish-checkbox {
+  margin-top: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-md);
+  border: 2px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.publish-checkbox--checked {
+  background-color: var(--accent);
+  border-color: var(--accent);
+}
+
+.publish-checkbox--unchecked {
+  background-color: transparent;
+  border-color: var(--text-muted);
+}
+
+.publish-checkbox--unchecked:hover {
+  border-color: var(--text-muted);
+}
+
+.publish-checkbox-icon {
+  height: 12px;
+  width: 12px;
+  color: var(--text-primary);
+}
+
+.publish-remix-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.publish-remix-info-icon {
+  height: 14px;
+  width: 14px;
+  color: var(--accent);
+}
+
+.publish-remix-info-text {
+  font-size: 13px;
+  color: var(--text-primary);
+  font-weight: var(--weight-body);
+}
+
+.publish-remix-description {
+  font-size: 11px;
+  color: var(--text-placeholder);
+  margin-top: 2px;
+}
+
+/* ─── Action buttons ─── */
+.publish-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.publish-unpublish-confirm-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.publish-unpublish-confirm-btn {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: var(--radius-lg);
+  background-color: color-mix(in srgb, var(--text-critical) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text-critical) 20%, transparent);
+  color: var(--text-critical);
+  font-size: 12px;
+  font-weight: var(--weight-body);
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.publish-unpublish-confirm-btn:hover {
+  background-color: color-mix(in srgb, var(--text-critical) 20%, transparent);
+}
+
+.publish-unpublish-confirm-btn:disabled {
+  opacity: 0.5;
+}
+
+.publish-unpublish-confirm-spinner {
+  height: 14px;
+  width: 14px;
+}
+
+.publish-unpublish-cancel-btn {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: var(--radius-lg);
+  font-size: 12px;
+  color: var(--text-placeholder);
+  cursor: pointer;
+  transition: color 0.15s;
+  background: none;
+  border: none;
+}
+
+.publish-unpublish-cancel-btn:hover {
+  color: var(--text-muted);
+}
+
+.publish-unpublish-btn {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: var(--radius-lg);
+  color: color-mix(in srgb, var(--text-critical) 60%, transparent);
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+}
+
+.publish-unpublish-btn:hover {
+  color: var(--text-critical);
+}
+
+.publish-unpublish-icon {
+  height: 12px;
+  width: 12px;
+}
+
+.publish-spacer {
+  flex: 1;
+}
+
+.publish-cancel-btn {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: var(--radius-lg);
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s;
+  background: none;
+  border: none;
+}
+
+.publish-cancel-btn:hover {
+  color: var(--text-primary);
+}
+
+.publish-submit-btn {
+  height: 36px;
+  padding: 0 20px;
+  border-radius: var(--radius-lg);
+  background-color: var(--accent);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: var(--weight-heading);
+  cursor: pointer;
+  transition: background-color 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+}
+
+.publish-submit-btn:hover {
+  background-color: var(--accent-hover);
+}
+
+.publish-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.publish-submit-icon {
+  height: 14px;
+  width: 14px;
+}

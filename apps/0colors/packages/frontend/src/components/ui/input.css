@@ -1,0 +1,47 @@
+/* input.css — co-located styles for <Input /> */
+
+[data-slot="input"] {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  padding: 4px 12px;
+
+  font-family: var(--font-ui);
+  font-size: var(--text-12);
+  line-height: 1.5;
+
+  color: var(--text-primary);
+  background-color: var(--surface-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+
+  outline: none;
+  transition: color 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+[data-slot="input"]::placeholder {
+  color: var(--text-muted);
+}
+
+[data-slot="input"]:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+[data-slot="input"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+[data-slot="input"]::file-selector-button {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  font-size: var(--text-12);
+  font-weight: 500;
+  color: var(--text-muted);
+}

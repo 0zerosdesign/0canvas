@@ -433,6 +433,30 @@
 
   --brand-claude: var(--amber-11);   /* Anthropic amber */
   --brand-codex:  var(--grey-10);    /* OpenAI neutral */
+
+
+  /* ═══════════════════════════════════════════════════════════
+     UTILITY — domain indicators (0colors design-authoring UI)
+     ───────────────────────────────────────────────────────────
+     Tints used by 0colors to distinguish domain objects in
+     its color-authoring canvas (projects, APIs, components,
+     variables, etc.). Kept neutral-mapped — every utility
+     folds into an existing semantic token so the two products
+     share one palette. When 0colors is embedded inside Zeros'
+     design module, indicators render identically.
+
+     Add a new utility only when 0colors introduces a new
+     domain concept that needs its own hue.
+     ═══════════════════════════════════════════════════════════ */
+
+  --utility-build:         var(--text-warning);   /* build/CI indicator */
+  --utility-knowledge:     var(--text-muted);     /* knowledge base (neutral) */
+  --utility-project:       var(--accent);         /* project (primary-blue) */
+  --utility-conversation:  var(--text-success);   /* conversation (green) */
+  --utility-api:           var(--text-connecting);/* API endpoint (sky) */
+  --utility-variable:      var(--text-info);      /* variable (blue-11) */
+  --utility-component:     var(--accent-hover);   /* component (blue-11) */
+  --utility-animation:     var(--text-warning);   /* animation (amber) */
 }
 
 

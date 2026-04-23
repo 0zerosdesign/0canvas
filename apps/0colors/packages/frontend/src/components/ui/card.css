@@ -1,0 +1,57 @@
+/* ============================================
+ * CARD.CSS — Co-located styles for Card
+ * Uses [data-slot="card-*"] selectors.
+ * All values from variables.css tokens only.
+ * ============================================ */
+
+/* ─── Card container ─── */
+[data-slot="card"] {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--surface-1);
+  border: 1px solid var(--surface-3);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+}
+
+/* ─── Header ─── */
+[data-slot="card-header"] {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  gap: 6px;
+}
+
+/* ─── Title ─── */
+[data-slot="card-title"] {
+  font-size: var(--text-15);
+  font-weight: var(--weight-heading);
+  line-height: 1;
+  color: var(--text-primary);
+}
+
+/* ─── Description ─── */
+[data-slot="card-description"] {
+  font-size: var(--text-12);
+  color: var(--text-muted);
+}
+
+/* ─── Action ─── */
+[data-slot="card-action"] {
+  align-self: flex-start;
+  margin-left: auto;
+}
+
+/* ─── Content ─── */
+[data-slot="card-content"] {
+  padding: 0 16px 16px;
+}
+
+/* ─── Footer ─── */
+[data-slot="card-footer"] {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 16px;
+  gap: 8px;
+}
