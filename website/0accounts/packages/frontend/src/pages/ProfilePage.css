@@ -6,49 +6,49 @@
 .profile-page {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: var(--space-7);
   max-width: 560px;
 }
 
 .profile-header {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-3x);
 }
 
 .profile-title {
-  font-size: var(--zeros-text-3xl);
-  font-weight: var(--zeros-weight-semibold);
-  color: var(--zeros-text1);
-  letter-spacing: var(--zeros-tracking-tight);
+  font-size: var(--text-26);
+  font-weight: var(--weight-heading);
+  color: var(--text-primary);
+  letter-spacing: var(--tracking-tight);
 }
 
 .profile-subtitle {
-  font-size: var(--zeros-text-md);
-  color: var(--zeros-text3);
+  font-size: var(--text-15);
+  color: var(--text-placeholder);
 }
 
 .profile-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--space-5);
 }
 
 .profile-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-3x);
 }
 
 .profile-label {
-  font-size: var(--zeros-text-sm);
-  font-weight: var(--zeros-weight-medium);
-  color: var(--zeros-text2);
+  font-size: var(--text-13);
+  font-weight: var(--weight-control);
+  color: var(--text-muted);
 }
 
 .profile-optional {
-  font-weight: var(--zeros-weight-normal);
-  color: var(--zeros-text4);
+  font-weight: var(--weight-body);
+  color: var(--text-disabled);
 }
 
 .profile-form input,
@@ -62,22 +62,22 @@
 }
 
 .profile-hint {
-  font-size: var(--zeros-text-xs);
-  color: var(--zeros-text4);
+  font-size: var(--text-12);
+  color: var(--text-disabled);
 }
 
 .profile-save-btn {
   align-self: flex-start;
-  padding: 8px 24px;
-  margin-top: 4px;
-  background-color: var(--zeros-button);
-  color: var(--zeros-button2);
-  font-size: var(--zeros-text-sm);
-  font-weight: var(--zeros-weight-semibold);
+  padding: var(--space-2) var(--space-6);
+  margin-top: var(--space-1);
+  background-color: var(--surface-absolute-inverted);
+  color: var(--surface-floor);
+  font-size: var(--text-13);
+  font-weight: var(--weight-heading);
   border: none;
-  border-radius: var(--zeros-radius-control);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: opacity var(--zeros-duration) var(--zeros-ease);
+  transition: opacity var(--dur-base) var(--ease-standard);
 }
 
 .profile-save-btn:hover:not(:disabled) {

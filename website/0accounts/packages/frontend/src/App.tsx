@@ -52,11 +52,11 @@ export default function App() {
         position="bottom-right"
         toastOptions={{
           style: {
-            background: "var(--zeros-bg3)",
-            color: "var(--zeros-text1)",
-            border: "1px solid var(--zeros-border)",
-            fontFamily: "var(--zeros-font)",
-            fontSize: "var(--zeros-text-sm)",
+            background: "var(--surface-1)",
+            color: "var(--text-primary)",
+            border: "1px solid var(--border-subtle)",
+            fontFamily: "var(--font-ui)",
+            fontSize: "var(--text-13)",
           },
         }}
       />

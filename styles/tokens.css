@@ -177,6 +177,7 @@
   --tint-success-weak:   rgba(61, 214, 140, 0.08);
   --tint-success-soft:   var(--green-2);
   --tint-success-border: rgba(61, 214, 140, 0.32);
+  --tint-warning-weak:   rgba(255, 202, 22, 0.08);
   --tint-warning-soft:   var(--amber-2);
   --tint-warning-border: rgba(255, 202, 22, 0.32);
   --tint-critical-soft:  var(--red-2);

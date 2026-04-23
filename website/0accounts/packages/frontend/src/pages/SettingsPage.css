@@ -6,62 +6,62 @@
 .settings-page {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: var(--space-7);
   max-width: 560px;
 }
 
 .settings-header {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-3x);
 }
 
 .settings-title {
-  font-size: var(--zeros-text-3xl);
-  font-weight: var(--zeros-weight-semibold);
-  color: var(--zeros-text1);
-  letter-spacing: var(--zeros-tracking-tight);
+  font-size: var(--text-26);
+  font-weight: var(--weight-heading);
+  color: var(--text-primary);
+  letter-spacing: var(--tracking-tight);
 }
 
 .settings-subtitle {
-  font-size: var(--zeros-text-md);
-  color: var(--zeros-text3);
+  font-size: var(--text-15);
+  color: var(--text-placeholder);
 }
 
 .settings-section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .settings-section-title {
-  font-size: var(--zeros-text-lg);
-  font-weight: var(--zeros-weight-semibold);
-  color: var(--zeros-text1);
-  letter-spacing: var(--zeros-tracking-tight);
+  font-size: var(--text-15);
+  font-weight: var(--weight-heading);
+  color: var(--text-primary);
+  letter-spacing: var(--tracking-tight);
 }
 
 .settings-card {
   display: flex;
   flex-direction: column;
   gap: 0;
-  background-color: var(--zeros-bg2);
-  border: 1px solid var(--zeros-border);
-  border-radius: var(--zeros-radius);
+  background-color: var(--surface-0);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 
 form.settings-card {
-  gap: 16px;
-  padding: 20px;
+  gap: var(--space-4);
+  padding: var(--space-5);
 }
 
 .settings-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--zeros-border);
+  padding: var(--space-7x) var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .settings-row:last-child {
@@ -69,32 +69,32 @@ form.settings-card {
 }
 
 .settings-row-label {
-  font-size: var(--zeros-text-sm);
-  font-weight: var(--zeros-weight-medium);
-  color: var(--zeros-text2);
+  font-size: var(--text-13);
+  font-weight: var(--weight-control);
+  color: var(--text-muted);
 }
 
 .settings-row-value {
-  font-size: var(--zeros-text-sm);
-  color: var(--zeros-text1);
+  font-size: var(--text-13);
+  color: var(--text-primary);
 }
 
 .settings-mono {
-  font-family: var(--zeros-font-mono);
-  font-size: var(--zeros-text-xs);
-  color: var(--zeros-text3);
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  color: var(--text-placeholder);
 }
 
 .settings-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-3x);
 }
 
 .settings-label {
-  font-size: var(--zeros-text-sm);
-  font-weight: var(--zeros-weight-medium);
-  color: var(--zeros-text2);
+  font-size: var(--text-13);
+  font-weight: var(--weight-control);
+  color: var(--text-muted);
 }
 
 .settings-card input {
@@ -103,15 +103,15 @@ form.settings-card {
 
 .settings-btn {
   align-self: flex-start;
-  padding: 8px 24px;
-  background-color: var(--zeros-button);
-  color: var(--zeros-button2);
-  font-size: var(--zeros-text-sm);
-  font-weight: var(--zeros-weight-semibold);
+  padding: var(--space-2) var(--space-6);
+  background-color: var(--surface-absolute-inverted);
+  color: var(--surface-floor);
+  font-size: var(--text-13);
+  font-weight: var(--weight-heading);
   border: none;
-  border-radius: var(--zeros-radius-control);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: opacity var(--zeros-duration) var(--zeros-ease);
+  transition: opacity var(--dur-base) var(--ease-standard);
 }
 
 .settings-btn:hover:not(:disabled) {

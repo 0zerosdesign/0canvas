@@ -1,9 +1,14 @@
 /* ============================================
-   STYLES: Global Resets & Base Styles
-   PURPOSE: CSS reset and base element styles using zeros tokens
-   ============================================ */
+ * 0accounts — global stylesheet entry
+ *
+ * Design tokens (colors, typography, spacing, radius, shadow,
+ * motion, z-index) are imported from the Withso-shared source
+ * of truth at /styles/tokens.css (repo root). 0accounts does
+ * not redeclare primitives — the accounts dashboard renders
+ * with the same palette as Zeros, 0colors, and 0research.
+ * ============================================ */
 
-@import "./variables.css";
+@import "../../../../../../styles/tokens.css";
 
 *,
 *::before,
@@ -20,27 +25,26 @@ html {
 }
 
 body {
-  font-family: var(--zeros-font);
-  font-size: var(--zeros-text-md);
-  font-weight: var(--zeros-weight-normal);
-  line-height: var(--zeros-leading-normal);
-  letter-spacing: var(--zeros-tracking-normal);
-  color: var(--zeros-text1);
-  background-color: var(--zeros-bg1);
+  font-family: var(--font-ui);
+  font-size: var(--text-15);
+  font-weight: var(--weight-body);
+  line-height: var(--leading-normal);
+  letter-spacing: var(--tracking-normal);
+  color: var(--text-primary);
+  background-color: var(--surface-0);
   min-height: 100vh;
 }
 
 a {
-  color: var(--zeros-text1);
+  color: var(--text-primary);
   text-decoration: none;
 }
-
 a:hover {
-  color: var(--zeros-text2);
+  color: var(--text-muted);
 }
 
 button {
-  font-family: var(--zeros-font);
+  font-family: var(--font-ui);
   cursor: pointer;
   border: none;
   outline: none;
@@ -50,32 +54,32 @@ button {
 input,
 textarea,
 select {
-  font-family: var(--zeros-font);
-  font-size: var(--zeros-text-md);
-  color: var(--zeros-text1);
-  background-color: var(--zeros-bg3);
-  border: 1px solid var(--zeros-border);
-  border-radius: var(--zeros-radius-control);
-  padding: 10px 14px;
+  font-family: var(--font-ui);
+  font-size: var(--text-15);
+  color: var(--text-primary);
+  background-color: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-5x) var(--space-7x);
   outline: none;
-  transition: border-color var(--zeros-duration) var(--zeros-ease);
+  transition: border-color var(--dur-base) var(--ease-standard);
 }
 
 input:focus,
 textarea:focus,
 select:focus {
-  border-color: var(--zeros-text3);
+  border-color: var(--border-strong);
 }
 
 input::placeholder,
 textarea::placeholder {
-  color: var(--zeros-text4);
+  color: var(--text-placeholder);
 }
 
 /* Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: var(--space-3x);
+  height: var(--space-3x);
 }
 
 ::-webkit-scrollbar-track {
@@ -83,15 +87,15 @@ textarea::placeholder {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--zeros-bg5);
+  background: var(--surface-3);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--zeros-bg6);
+  background: var(--grey-8);
 }
 
 /* Toast overrides for sonner */
 [data-sonner-toaster] {
-  font-family: var(--zeros-font) !important;
+  font-family: var(--font-ui) !important;
 }

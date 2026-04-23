@@ -6,14 +6,14 @@
 .product-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .product-grid-empty {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 48px;
-  color: var(--zeros-text3);
-  font-size: var(--zeros-text-md);
+  padding: var(--space-8);
+  color: var(--text-placeholder);
+  font-size: var(--text-15);
 }

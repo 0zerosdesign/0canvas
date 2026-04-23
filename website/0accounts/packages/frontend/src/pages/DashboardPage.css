@@ -6,37 +6,37 @@
 .dashboard-page {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: var(--space-7);
 }
 
 .dashboard-header {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-3x);
 }
 
 .dashboard-greeting {
-  font-size: var(--zeros-text-3xl);
-  font-weight: var(--zeros-weight-semibold);
-  color: var(--zeros-text1);
-  letter-spacing: var(--zeros-tracking-tight);
-  line-height: var(--zeros-leading-tight);
+  font-size: var(--text-26);
+  font-weight: var(--weight-heading);
+  color: var(--text-primary);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
 }
 
 .dashboard-subtitle {
-  font-size: var(--zeros-text-md);
-  color: var(--zeros-text3);
+  font-size: var(--text-15);
+  color: var(--text-placeholder);
 }
 
 .dashboard-section {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .dashboard-section-title {
-  font-size: var(--zeros-text-lg);
-  font-weight: var(--zeros-weight-semibold);
-  color: var(--zeros-text1);
-  letter-spacing: var(--zeros-tracking-tight);
+  font-size: var(--text-15);
+  font-weight: var(--weight-heading);
+  color: var(--text-primary);
+  letter-spacing: var(--tracking-tight);
 }
