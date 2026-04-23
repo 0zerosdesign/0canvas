@@ -115,9 +115,7 @@ export function ThemeModePanel() {
 
     lines.push("## Instructions");
     lines.push("Find each element by its selector and replace the CSS property value with the new design token.");
-    // Instruction text copied to the clipboard — the token example
-    // below is part of the message shown to users. check:ui ignore-next
-    lines.push("Use the `var()` form (e.g., `var(--blue-600)`) in the source code, not the resolved hex value.");
+    lines.push("Use the `var()` form (e.g., `var(--text-primary)`) in the source code, not the resolved hex value.");
 
     copyToClipboard(lines.join("\n"));
     setCopied(true);

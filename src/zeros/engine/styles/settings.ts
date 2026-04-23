@@ -231,13 +231,8 @@ ${S} .oc-ai-tile.is-active {
   background: var(--surface-2);
 }
 ${S} .oc-ai-tile-label { flex: 1; }
-/* Product-brand glyph tints — Claude orange + Codex grey. These are
-   intentionally sourced from primitive scales because they represent
-   the brand's literal color, not a semantic UI role. */
-/* check:ui ignore-next */
-${S} .oc-ai-tile-glyph.is-claude { color: var(--amber-11); }
-/* check:ui ignore-next */
-${S} .oc-ai-tile-glyph.is-codex { color: var(--grey-10); }
+${S} .oc-ai-tile-glyph.is-claude { color: var(--brand-claude); }
+${S} .oc-ai-tile-glyph.is-codex { color: var(--brand-codex); }
 
 ${S} .oc-ai-auth {
   display: flex; flex-direction: column; gap: var(--space-5x);

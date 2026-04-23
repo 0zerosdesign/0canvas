@@ -418,6 +418,21 @@
   --syntax-selector: var(--green-11);
   --syntax-property: var(--blue-11);
   --syntax-value:    var(--amber-11);
+
+
+  /* ═══════════════════════════════════════════════════════════
+     BRAND — third-party product tints (AI providers, etc.)
+     ───────────────────────────────────────────────────────────
+     Each token represents a specific third-party product's
+     brand hue. Used only for provider tiles / badges in
+     settings + chat pickers, never for decoration.
+
+     Keep the list short: add an entry only when a new
+     supported provider ships.
+     ═══════════════════════════════════════════════════════════ */
+
+  --brand-claude: var(--amber-11);   /* Anthropic amber */
+  --brand-codex:  var(--grey-10);    /* OpenAI neutral */
 }
 
 
