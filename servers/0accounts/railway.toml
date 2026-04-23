@@ -1,9 +1,9 @@
 [build]
 builder = "nixpacks"
-buildCommand = "npm i -g pnpm && cd packages/backend && pnpm install && pnpm build"
+buildCommand = "npm i -g pnpm && pnpm install && pnpm build"
 
 [deploy]
-startCommand = "cd packages/backend && node dist/server.js"
+startCommand = "node dist/server.js"
 healthcheckPath = "/api/v1/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"

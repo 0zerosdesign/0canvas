@@ -101,3 +101,17 @@ website/*/tmp/
 website/**/tmp/
 # Dataaset training corpora are multi-GB user data; never tracked
 website/**/Dataaset training/
+
+# servers/ — backend services vendored for Railway deploy (0research, 0accounts, …)
+# Same pattern as website/: env + node_modules + build/dist + logs never tracked.
+servers/*/node_modules/
+servers/**/node_modules/
+servers/*/dist/
+servers/**/dist/
+servers/*/build/
+servers/**/build/
+servers/**/*.log
+servers/**/.env
+servers/**/.env.local
+servers/**/.env.*.local
+servers/**/.env.production
