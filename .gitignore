@@ -82,3 +82,22 @@ package.figmamake.json
 # Visual harness output (local captures)
 snapshots/current/
 snapshots/diff/
+
+# website/ — sibling frontends vendored for Cloudflare Pages deploy (0research, 0accounts, …)
+# Same pattern as apps/: env + node_modules + dist + build + logs + Dataaset training never tracked.
+website/*/node_modules/
+website/**/node_modules/
+website/*/dist/
+website/**/dist/
+website/*/build/
+website/**/build/
+website/**/.cache/
+website/**/*.log
+website/**/.env
+website/**/.env.local
+website/**/.env.*.local
+website/**/.env.production
+website/*/tmp/
+website/**/tmp/
+# Dataaset training corpora are multi-GB user data; never tracked
+website/**/Dataaset training/

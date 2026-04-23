@@ -1,0 +1,54 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment variables and secrets
+.env
+.env.local
+.env.*
+.env*.local
+.envrc
+*.env
+*.env.local
+.claude/.mcp.json
+Dataaset training/**/.env*
+# Explicit: secrets for dataset-training crawlers (BFM auth, etc.)
+Dataaset training/.env
+Dataaset training/.env.openrouter.local
+!**/.env.example
+!**/.env.sample
+!**/.env.template
+
+# Supabase CLI local config
+supabase/.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Local dataset-training outputs
+tmp/
+Dataaset training/crawlers/output/**
+!Dataaset training/crawlers/output/.gitkeep
+Dataaset training/ux-bites/runtime/**
+Dataaset training/ux-bites/data/**
+!Dataaset training/ux-bites/data/.gitkeep
+!Dataaset training/ux-bites/data/assets/
+Dataaset training/ux-bites/data/assets/**
+!Dataaset training/ux-bites/data/assets/.gitkeep
+Dataaset training/case-studies/data/**
+!Dataaset training/case-studies/data/.gitkeep
+Dataaset training/case-studies/data/.crawl-shards/**

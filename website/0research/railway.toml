@@ -1,0 +1,10 @@
+[build]
+builder = "nixpacks"
+buildCommand = "npm i -g pnpm && pnpm install && pnpm build"
+
+[deploy]
+startCommand = "npx -y serve dist -s -l ${PORT:-3000}"
+healthcheckPath = "/"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
