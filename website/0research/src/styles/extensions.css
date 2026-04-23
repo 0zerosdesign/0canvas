@@ -1,0 +1,142 @@
+/* ============================================
+ * 0RESEARCH EXTENSIONS — domain-specific tokens
+ * ============================================
+ *
+ * Tokens unique to 0research's visual language (explore pill
+ * gradient, video/timeline glass surfaces, content-block
+ * rendering for articles, media-backdrop pastels). Every value
+ * here resolves to a canonical token from /styles/tokens.css or
+ * is a clearly-scoped visual composition (gradient stops,
+ * saturated pastels) that doesn't belong in the shared palette.
+ *
+ * NOTHING here redefines canonical tokens. Safe to import after
+ * tokens.css; safe to remove any group that's no longer used.
+ * ============================================ */
+
+:root {
+  /* ── Explore pill — warm/cool gradient for the "Explore" chip ─── */
+  --explore-tag-bg:        var(--surface-0);
+  --explore-border-color:  hsla(230, 20%, 40%, 0.1);
+  --explore-gradient: linear-gradient(
+    135deg,
+    hsl(0, 0%, 11%) 0%,
+    hsl(0, 0%, 11%) 10%,
+    hsl(230, 30%, 16%) 18%,
+    hsl(0, 0%, 12%) 28%,
+    hsl(270, 20%, 15%) 36%,
+    hsl(330, 25%, 16%) 44%,
+    hsl(0, 0%, 11%) 54%,
+    hsl(0, 0%, 12%) 62%,
+    hsl(200, 25%, 15%) 70%,
+    hsl(0, 0%, 11%) 78%,
+    hsl(260, 18%, 15%) 86%,
+    hsl(0, 0%, 11%) 94%,
+    hsl(0, 0%, 11%) 100%
+  );
+  --explore-radial: radial-gradient(
+    ellipse 50% 70% at 50% 50%,
+    hsla(260, 30%, 22%, 0.4) 0%,
+    hsla(330, 25%, 18%, 0.2) 30%,
+    hsla(200, 20%, 16%, 0.1) 50%,
+    transparent 70%
+  );
+
+
+  /* ── Video overlay / timeline glass ─────────────────────────────── */
+  --video-overlay-bg:            rgba(0, 0, 0, 0.35);
+  --video-control-bg:            rgba(255, 255, 255, 0.12);
+  --video-timeline-glass-bg:     rgba(255, 255, 255, 0.12);
+  --video-timeline-glass-border: rgba(255, 255, 255, 0.08);
+  --video-timeline-glass-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    0 0 0 0.5px rgba(255, 255, 255, 0.06);
+  --video-timeline-text:         rgba(255, 255, 255, 0.85);
+  --video-timeline-track:        rgba(255, 255, 255, 0.08);
+  --video-timeline-progress:     rgba(255, 255, 255, 0.35);
+  --video-timeline-knob:         var(--surface-absolute-inverted);
+  --video-timeline-knob-shadow:  0 1px 4px rgba(0, 0, 0, 0.3);
+  --video-timeline-knob-shadow-active:
+    0 0 10px rgba(255, 255, 255, 0.25),
+    0 2px 8px rgba(0, 0, 0, 0.4);
+
+
+  /* ── Content-block tokens — rich article rendering ──────────────── */
+  --block-heading-color:            var(--text-primary);
+  --block-heading-font-size:        var(--text-15);
+  --block-heading-font-weight:      var(--weight-heading);
+  --block-heading-margin-bottom:    var(--space-hair);
+
+  --block-text-color:               var(--text-muted);
+  --block-text-title-color:         var(--text-primary);
+  --block-text-font-size:           var(--text-13);
+  --block-text-line-height:         var(--leading-normal);
+
+  --block-media-max-height:         200px;   /* layout constant */
+  --block-media-border-radius:      var(--radius-sm);
+  --block-media-caption-color:      var(--text-disabled);
+  --block-media-caption-font-size:  var(--text-12);
+
+  --block-code-bg:                  var(--surface-1);
+  --block-code-text-color:          var(--text-muted);
+  --block-code-font-family:         var(--font-mono);
+  --block-code-font-size:           var(--text-13);
+  --block-code-border-radius:       var(--radius-sm);
+  --block-code-padding:             var(--space-3) var(--space-7x);
+  --block-code-lang-bg:             var(--surface-3);
+  --block-code-lang-color:          var(--text-placeholder);
+  --block-code-lang-font-size:      var(--text-12);
+
+  --block-table-border-color:       var(--border-subtle);
+  --block-table-border-radius:      var(--radius-sm);
+  --block-table-title-color:        var(--text-primary);
+  --block-table-header-bg:          var(--surface-1);
+  --block-table-header-color:       var(--text-primary);
+  --block-table-header-font-size:   var(--text-12);
+  --block-table-header-font-weight: var(--weight-control);
+  --block-table-cell-color:         var(--text-muted);
+  --block-table-cell-font-size:     var(--text-12);
+  --block-table-cell-padding:       var(--space-2) var(--space-3);
+  --block-table-row-border-color:   var(--border-subtle);
+
+  --block-quote-border-color:       var(--border-subtle);
+  --block-quote-border-width:       2px;
+  --block-quote-text-color:         var(--text-primary);
+  --block-quote-text-font-size:     var(--text-13);
+  --block-quote-author-color:       var(--text-placeholder);
+  --block-quote-author-font-size:   var(--text-12);
+  --block-quote-padding-left:       var(--space-7x);
+
+  --block-tags-bg:                  var(--surface-1);
+  --block-tags-color:               var(--text-muted);
+  --block-tags-font-size:           var(--text-12);
+  --block-tags-border-radius:       var(--radius-pill);
+  --block-tags-padding:             3px var(--space-5x);
+
+  --block-transcript-border-color:  var(--surface-3);
+  --block-transcript-border-width:  2px;
+  --block-transcript-text-color:    var(--text-muted);
+  --block-transcript-font-size:     var(--text-13);
+  --block-transcript-padding-left:  var(--space-3);
+
+  --block-side-media-max-height:    160px;  /* layout constant */
+  --block-side-media-border-radius: var(--radius-sm);
+  --block-side-media-caption-color: var(--text-disabled);
+  --block-side-media-caption-font-size: var(--text-12);
+
+
+  /* ── Media backdrop palette ─────────────────────────────────────
+     8 tinted-paper backgrounds for UI-screenshot cards.
+     OKLCH L:0.95 C:0.020 — perceptually uniform brightness and
+     saturation across every hue. Kept raw because they are the
+     product's DATA (hue-specific pastels for content cards),
+     not chrome — analogous to 0colors' color-picker swatches.
+     ──────────────────────────────────────────────────────────── */
+  --media-neutral:  #eeeeee;   /* Hue: none  — works with any UI    */
+  --media-coral:    #fceae8;   /* Hue: 25°   — warm, energetic       */
+  --media-amber:    #f4eee0;   /* Hue: 90°   — warm gold, earthy     */
+  --media-mint:     #e6f3e8;   /* Hue: 150°  — fresh, growth         */
+  --media-teal:     #e0f3f3;   /* Hue: 195°  — modern, tech          */
+  --media-sky:      #e5f0fc;   /* Hue: 250°  — professional, trust   */
+  --media-lavender: #f0ecfa;   /* Hue: 300°  — creative, luxury      */
+  --media-rose:     #fae9f0;   /* Hue: 350°  — soft, playful         */
+}

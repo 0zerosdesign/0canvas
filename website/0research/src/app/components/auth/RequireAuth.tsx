@@ -22,7 +22,7 @@ const screenStyle = {
   background: "var(--surface-0, #0d0d0d)",
   color: "var(--text-primary, #ededed)",
   fontFamily: "var(--font-ui, -apple-system, BlinkMacSystemFont, sans-serif)",
-  padding: "24px",
+  padding: "var(--space-6)",
 } as const;
 
 const cardStyle = {
@@ -30,24 +30,24 @@ const cardStyle = {
   width: "100%",
   background: "var(--surface-1, #161616)",
   border: "1px solid var(--border-subtle, #262626)",
-  borderRadius: "12px",
-  padding: "32px",
+  borderRadius: "var(--radius-lg)",
+  padding: "var(--space-7)",
   textAlign: "center" as const,
   boxShadow:
     "var(--shadow-glass, 0 8px 30px rgba(0, 0, 0, 0.5))",
 };
 
 const titleStyle = {
-  margin: "0 0 8px",
-  fontSize: "18px",
-  fontWeight: 600,
+  margin: "0 0 var(--space-2)",
+  fontSize: "var(--text-18)",
+  fontWeight: "var(--weight-heading)",
   color: "var(--text-primary, #ededed)",
 };
 
 const bodyStyle = {
-  margin: "0 0 24px",
-  fontSize: "13px",
-  lineHeight: 1.5,
+  margin: "0 0 var(--space-6)",
+  fontSize: "var(--text-13)",
+  lineHeight: "var(--leading-normal)",
   color: "var(--text-muted, #a0a0a0)",
 };
 
@@ -55,14 +55,14 @@ const btnStyle = {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  height: "36px",
-  padding: "0 20px",
-  borderRadius: "6px",
+  height: "var(--h-control-xl)",
+  padding: "0 var(--space-5)",
+  borderRadius: "var(--radius-sm)",
   border: "none",
   background: "var(--accent, #3b9eff)",
   color: "var(--text-on-accent, #0d2847)",
-  fontSize: "13px",
-  fontWeight: 500,
+  fontSize: "var(--text-13)",
+  fontWeight: "var(--weight-control)",
   fontFamily: "inherit",
   cursor: "pointer",
 };
@@ -73,7 +73,7 @@ export function RequireAuth({ children }: Props) {
   if (loading) {
     return (
       <div style={screenStyle} role="status" aria-live="polite">
-        <span style={{ color: "var(--text-muted, #a0a0a0)", fontSize: "13px" }}>
+        <span style={{ color: "var(--text-muted, #a0a0a0)", fontSize: "var(--text-13)" }}>
           Loading…
         </span>
       </div>

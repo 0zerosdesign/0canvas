@@ -125,9 +125,9 @@ export function VideoPlayer({ src, caption, isActive, onPauseChange }: VideoPlay
       <div
         className="absolute inset-0 flex items-center justify-center"
         style={{
-          background: "var(--zeros-video-overlay-bg)",
+          background: "var(--video-overlay-bg)",
           opacity: isHovering ? 1 : 0,
-          transition: "opacity var(--zeros-duration) var(--zeros-ease)",
+          transition: "opacity var(--dur-base) var(--ease-standard)",
           pointerEvents: "none",
           borderRadius: "inherit",
         }}
@@ -138,14 +138,14 @@ export function VideoPlayer({ src, caption, isActive, onPauseChange }: VideoPlay
           style={{
             width: 52,
             height: 52,
-            background: "var(--zeros-video-control-bg)",
+            background: "var(--video-control-bg)",
             backdropFilter: "blur(8px)",
           }}
         >
           {isPlaying ? (
-            <Pause size={24} style={{ color: "var(--zeros-text1)" }} fill="var(--zeros-text1)" />
+            <Pause size={24} style={{ color: "var(--text-primary)" }} fill="var(--text-primary)" />
           ) : (
-            <Play size={24} style={{ color: "var(--zeros-text1)", marginLeft: 2 }} fill="var(--zeros-text1)" />
+            <Play size={24} style={{ color: "var(--text-primary)", marginLeft: "var(--space-hair)" }} fill="var(--text-primary)" />
           )}
         </div>
       </div>

@@ -133,7 +133,7 @@ export function Settings({ settings, onUpdate, isOpen, onClose }: Props) {
                 </div>
               </div>
               <div className="oai-setup-guide">
-                <div className="oai-field__label" style={{ marginBottom: 8 }}>
+                <div className="oai-field__label" style={{ marginBottom: "var(--space-2)" }}>
                   One-time Setup
                 </div>
                 <ol className="oai-setup-steps">
@@ -155,7 +155,7 @@ export function Settings({ settings, onUpdate, isOpen, onClose }: Props) {
                 </ol>
                 <div
                   className="oai-field__hint"
-                  style={{ marginTop: 8 }}
+                  style={{ marginTop: "var(--space-2)" }}
                 >
                   The proxy routes requests through your ChatGPT subscription
                   via OpenAI's Codex OAuth. Your tokens stay on your machine.

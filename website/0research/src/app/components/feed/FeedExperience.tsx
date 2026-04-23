@@ -37,7 +37,7 @@
 //   animated scroll, run a fast custom requestAnimationFrame animation with
 //   cubic ease-in-out easing, then re-enable scroll-snap after landing.
 //   Intermediate items have their media hidden (via .zeros-media-transit)
-//   so only the --zeros-bg2 background shows — no content glimpses.
+//   so only the --surface-0 background shows — no content glimpses.
 //
 //   Timeline:
 //   1. Sidebar click → determine distance (item count between current & target)
@@ -964,7 +964,7 @@ export function FeedExperience({
 
       // PLAY: start animation on next frame (after browser paints the inverted state)
       requestAnimationFrame(() => {
-        el.style.transition = 'transform var(--zeros-duration-flip) var(--zeros-ease-spring)';
+        el.style.transition = 'transform var(--dur-slow) var(--ease-emphasized)';
         el.style.transform = 'translateY(0)';
 
         const cleanup = () => {
@@ -1032,7 +1032,7 @@ export function FeedExperience({
 
       // PLAY: start animation on next frame (after browser paints the inverted state)
       requestAnimationFrame(() => {
-        el.style.transition = 'transform var(--zeros-duration-flip) var(--zeros-ease-spring)';
+        el.style.transition = 'transform var(--dur-slow) var(--ease-emphasized)';
         el.style.transform = 'translateY(0)';
 
         const cleanup = () => {

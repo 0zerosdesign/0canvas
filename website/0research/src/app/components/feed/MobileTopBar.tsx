@@ -19,7 +19,7 @@ export function MobileTopBar({ onFilterClick, isFilterOpen }: MobileTopBarProps)
       {/* Logo */}
       <span className="zeros-mobile-logo">zero research</span>
 
-      <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
         {/* Filter icon */}
         <button
           className={`zeros-filter-btn${isFilterOpen ? " is-open" : ""}`}

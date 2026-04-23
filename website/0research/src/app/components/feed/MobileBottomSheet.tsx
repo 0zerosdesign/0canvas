@@ -252,7 +252,7 @@ export function MobileBottomSheet({
       style={{
         height: `${sheetHeight * 100}vh`,
         transition: isTransitioning
-          ? "height 0.35s var(--zeros-ease-spring)"
+          ? "height 0.35s var(--ease-emphasized)"
           : "none",
       }}
     >

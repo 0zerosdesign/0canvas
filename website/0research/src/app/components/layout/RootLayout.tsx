@@ -42,8 +42,8 @@ export function RootLayout() {
     <div
       className="w-full h-screen"
       style={{
-        background: "var(--zeros-bg1)",
-        fontFamily: "var(--zeros-font)",
+        background: "var(--surface-floor)",
+        fontFamily: "var(--font-ui)",
       }}
     >
       <Outlet />
@@ -51,11 +51,11 @@ export function RootLayout() {
         position="top-right"
         toastOptions={{
           style: {
-            background: "var(--zeros-bg3)",
-            color: "var(--zeros-text1)",
-            border: "1px solid var(--zeros-border)",
-            fontFamily: "var(--zeros-font)",
-            fontSize: "var(--zeros-text-sm)",
+            background: "var(--surface-1)",
+            color: "var(--text-primary)",
+            border: "1px solid var(--border-subtle)",
+            fontFamily: "var(--font-ui)",
+            fontSize: "var(--text-13)",
           },
         }}
       />

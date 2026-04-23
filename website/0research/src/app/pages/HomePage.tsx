@@ -539,7 +539,7 @@ export function HomePage() {
   return (
     <div
       className="relative w-full h-screen overflow-hidden"
-      style={{ background: "var(--zeros-bg1)" }}
+      style={{ background: "var(--surface-floor)" }}
     >
       {/* ============================
           MAIN FEED EXPERIENCE

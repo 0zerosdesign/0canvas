@@ -170,8 +170,8 @@ export function VideoTimeline({ videoElement }: VideoTimelineProps) {
     <div
       style={{
         width: "100%",
-        paddingTop: 14,
-        paddingBottom: 4,
+        paddingTop: "var(--space-7x)",
+        paddingBottom: "var(--space-1)",
         position: "relative",
       }}
       onMouseEnter={() => setIsHovering(true)}
@@ -190,32 +190,32 @@ export function VideoTimeline({ videoElement }: VideoTimelineProps) {
           left: `${progress * 100}%`,
           bottom: "100%",
           transform: "translateX(-50%)",
-          marginBottom: 4,
+          marginBottom: "var(--space-1)",
           opacity: showTooltip ? 1 : 0,
           scale: showTooltip ? "1" : "0.85",
           pointerEvents: "none",
           transition:
-            "opacity var(--zeros-duration) var(--zeros-ease-emphasized), scale var(--zeros-duration) var(--zeros-ease-emphasized)",
+            "opacity var(--dur-base) var(--ease-emphasized), scale var(--dur-base) var(--ease-emphasized)",
           willChange: "opacity, scale",
         }}
       >
         <div
           style={{
-            background: "var(--zeros-video-timeline-glass-bg)",
+            background: "var(--video-timeline-glass-bg)",
             backdropFilter: "blur(20px) saturate(180%)",
             WebkitBackdropFilter: "blur(20px) saturate(180%)",
-            borderRadius: "var(--zeros-radius-control)",
-            padding: "3px 8px",
-            border: "1px solid var(--zeros-video-timeline-glass-border)",
-            boxShadow: "var(--zeros-video-timeline-glass-shadow)",
+            borderRadius: "var(--radius-md)",
+            padding: "3px var(--space-2)", /* FLAG: 3px vertical — no canonical token for this tight pill height */
+            border: "1px solid var(--video-timeline-glass-border)",
+            boxShadow: "var(--video-timeline-glass-shadow)",
           }}
         >
           <span
             style={{
-              fontFamily: "var(--zeros-font-mono)",
-              fontSize: "10px",
+              fontFamily: "var(--font-mono)",
+              fontSize: "var(--text-10)",
               letterSpacing: "0.03em",
-              color: "var(--zeros-video-timeline-text)",
+              color: "var(--video-timeline-text)",
               whiteSpace: "nowrap",
             }}
           >
@@ -246,10 +246,10 @@ export function VideoTimeline({ videoElement }: VideoTimelineProps) {
             width: "100%",
             height: trackHeight,
             borderRadius: trackHeight,
-            background: "var(--zeros-video-timeline-track)",
+            background: "var(--video-timeline-track)",
             position: "relative",
             overflow: "hidden",
-            transition: "height 250ms var(--zeros-ease-emphasized)",
+            transition: "height 250ms var(--ease-emphasized)",
           }}
         >
           {/* Progress fill — left portion with subtle brightness */}
@@ -261,7 +261,7 @@ export function VideoTimeline({ videoElement }: VideoTimelineProps) {
               height: "100%",
               width: `${progress * 100}%`,
               borderRadius: trackHeight,
-              background: "var(--zeros-video-timeline-progress)",
+              background: "var(--video-timeline-progress)",
               transition: isDragging ? "none" : "width 80ms linear",
             }}
           />
@@ -280,13 +280,13 @@ export function VideoTimeline({ videoElement }: VideoTimelineProps) {
             width: knobSize,
             height: knobSize,
             borderRadius: "50%",
-            background: "var(--zeros-video-timeline-knob)",
+            background: "var(--video-timeline-knob)",
             boxShadow: isActive
-              ? "var(--zeros-video-timeline-knob-shadow-active)"
-              : "var(--zeros-video-timeline-knob-shadow)",
+              ? "var(--video-timeline-knob-shadow-active)"
+              : "var(--video-timeline-knob-shadow)",
             transition: isDragging
-              ? "width var(--zeros-duration) var(--zeros-ease-emphasized), height var(--zeros-duration) var(--zeros-ease-emphasized), box-shadow var(--zeros-duration) var(--zeros-ease)"
-              : "left 80ms linear, width var(--zeros-duration) var(--zeros-ease-emphasized), height var(--zeros-duration) var(--zeros-ease-emphasized), box-shadow var(--zeros-duration) var(--zeros-ease)",
+              ? "width var(--dur-base) var(--ease-emphasized), height var(--dur-base) var(--ease-emphasized), box-shadow var(--dur-base) var(--ease-standard)"
+              : "left 80ms linear, width var(--dur-base) var(--ease-emphasized), height var(--dur-base) var(--ease-emphasized), box-shadow var(--dur-base) var(--ease-standard)",
             pointerEvents: "auto",
             cursor: "grab",
             zIndex: 2,

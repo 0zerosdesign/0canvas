@@ -1,8 +1,21 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
+/* ============================================
+ * 0research — global stylesheet entry.
+ *
+ * Design tokens (colors, typography, spacing, radius, shadow,
+ * motion, z-index) are imported from the Withso-shared source
+ * of truth at /styles/tokens.css (repo root). 0research does
+ * not redeclare primitives — both this site and the Zeros mac
+ * app resolve to the same values. Domain-specific tokens
+ * (explore pill, video overlays, content blocks, media
+ * backdrops) live in ./extensions.css and reference canonical
+ * tokens internally.
+ * ============================================ */
+
+@import "../../../../styles/tokens.css";
 @import "tailwindcss" source(none);
 @source "../**/*.{js,ts,jsx,tsx}";
 @import "tw-animate-css";
-@import "./variables.css";
+@import "./extensions.css";
 
 * {
   -webkit-font-smoothing: antialiased;
