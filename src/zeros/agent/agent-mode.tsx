@@ -1,8 +1,8 @@
 // ──────────────────────────────────────────────────────────
-// AcpMode — orchestrates picker → auth → chat
+// AgentMode — orchestrates picker → auth → chat
 // ──────────────────────────────────────────────────────────
 //
-// Owns the useAcpSession instance and the current "screen" inside the
+// Owns the useAgentSession instance and the current "screen" inside the
 // ACP surface. Four screens, linear flow:
 //
 //   picker   — user chooses an agent from the live registry
@@ -21,16 +21,16 @@
 import React, { useCallback, useState } from "react";
 import { Loader2 } from "lucide-react";
 import type { InitializeResponse } from "@agentclientprotocol/sdk";
-import { useAcpSession } from "./use-acp-session";
+import { useAgentSession } from "./use-agent-session";
 import { AgentsPanel } from "./agents-panel";
-import { AcpChat } from "./acp-chat";
+import { AgentChat } from "./agent-chat";
 import { AuthModal, type AuthChoice } from "./auth-modal";
 import type { BridgeRegistryAgent } from "../bridge/messages";
 
 type Screen = "picker" | "loading" | "auth" | "chat";
 
-export function AcpMode() {
-  const session = useAcpSession();
+export function AgentMode() {
+  const session = useAgentSession();
   const [screen, setScreen] = useState<Screen>("picker");
   const [pendingAgent, setPendingAgent] = useState<BridgeRegistryAgent | null>(null);
   const [initialize, setInitialize] = useState<InitializeResponse | null>(null);
@@ -123,7 +123,7 @@ export function AcpMode() {
   }
 
   if (screen === "chat") {
-    return <AcpChat session={session} onBack={handleChatBack} />;
+    return <AgentChat session={session} onBack={handleChatBack} />;
   }
 
   return (

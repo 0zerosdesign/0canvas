@@ -11,23 +11,23 @@
 // Three states:
 //   - no active chat        → empty/start card
 //   - chat w/o agent        → inline agent picker (set once)
-//   - chat w/ agent         → AcpChat (messages + composer)
+//   - chat w/ agent         → AgentChat (messages + composer)
 //
 // Lazy start: the session isn't created until the view mounts
 // with a chat that has an agentId — typing a prompt warms the
-// subprocess at composer-focus time (handled by AcpChat).
+// subprocess at composer-focus time (handled by AgentChat).
 // ──────────────────────────────────────────────────────────
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Plus, Bot as BotIcon, History } from "lucide-react";
 import { Button } from "../zeros/ui";
 import { useWorkspace, type ChatThread } from "../zeros/store/store";
-import { useAcpSessions, useChatSession } from "../zeros/acp/sessions-provider";
-import { AcpChat } from "../zeros/acp/acp-chat";
-import { AgentsPanel } from "../zeros/acp/agents-panel";
-import { envForChat } from "../zeros/acp/composer-pills";
-import { uiEntryForAgent } from "../zeros/acp/agent-ui-registry";
-import { useEnabledAgents } from "../zeros/acp/enabled-agents";
+import { useAgentSessions, useChatSession } from "../zeros/agent/sessions-provider";
+import { AgentChat } from "../zeros/agent/agent-chat";
+import { AgentsPanel } from "../zeros/agent/agents-panel";
+import { envForChat } from "../zeros/agent/composer-pills";
+import { uiEntryForAgent } from "../zeros/agent/agent-ui-registry";
+import { useEnabledAgents } from "../zeros/agent/enabled-agents";
 import type { SessionInfo } from "@agentclientprotocol/sdk";
 import type { BridgeRegistryAgent } from "../zeros/bridge/messages";
 import { isNativeRuntime, nativeInvoke } from "../native/runtime";
@@ -56,7 +56,7 @@ export function Column2ChatView() {
   }
 
   // Chat has no agent bound yet — show the registry picker. Bind the
-  // first choice to this chat so future mounts go straight to AcpChat.
+  // first choice to this chat so future mounts go straight to AgentChat.
   if (!active.agentId) {
     return (
       <NoAgentView
@@ -99,7 +99,7 @@ function NoAgentView({
   onPicked: (agent: BridgeRegistryAgent) => void;
 }) {
   const session = useChatSession(chatId);
-  const sessions = useAcpSessions();
+  const sessions = useAgentSessions();
   return (
     <AgentsPanel
       listAgents={session.listAgents}
@@ -140,7 +140,7 @@ function ChatBody({
   // same (chatId, agentId) pair is already ready. When the chat has a
   // resumeSessionId set (Codex/Claude "resume recent thread"), we load
   // that session instead of creating a new one.
-  const sessions = useAcpSessions();
+  const sessions = useAgentSessions();
   useEffect(() => {
     const env = chat ? envForChat(chat, session.initialize) : undefined;
     const toResume = chat?.resumeSessionId;
@@ -191,7 +191,7 @@ function ChatBody({
   }, [envKey]);
 
   return (
-    <AcpChat
+    <AgentChat
       session={session}
       onBack={() => session.reset()}
       headerActions={<NewChatPicker />}
@@ -211,7 +211,7 @@ interface RecentThread {
 
 function NewChatPicker() {
   const { dispatch } = useWorkspace();
-  const sessions = useAcpSessions();
+  const sessions = useAgentSessions();
   const { isEnabled } = useEnabledAgents();
   const [open, setOpen] = useState(false);
   const [agents, setAgents] = useState<BridgeRegistryAgent[] | null>(null);
@@ -339,11 +339,18 @@ function NewChatPicker() {
     dispatch({ type: "ADD_CHAT", chat });
   };
 
-  // Show agents the user has toggled on in Settings → Agents. npx/uvx
-  // agents fetch on first use, so "enabled" is sufficient — we no longer
-  // gate by PATH-installed status. Empty list falls through to a hint
-  // pointing the user at the settings panel.
-  const visible = (agents ?? []).filter((a) => isEnabled(a.id));
+  // Every enabled agent shows up; inactive (not installed / not
+  // logged in) rows render disabled with a red dot so the user
+  // sees the full roster but can't accidentally start a chat with
+  // an agent that isn't runnable. Active rows float to the top.
+  const visible = (agents ?? [])
+    .filter((a) => isEnabled(a.id))
+    .sort((a, b) => {
+      const aActive = a.installed === true ? 0 : 1;
+      const bActive = b.installed === true ? 0 : 1;
+      if (aActive !== bActive) return aActive - bActive;
+      return a.name.localeCompare(b.name);
+    });
 
   return (
     <div className="oc-new-chat-picker" ref={rootRef}>
@@ -386,36 +393,56 @@ function NewChatPicker() {
           )}
           {agents && visible.length === 0 && (
             <div className="oc-new-chat-picker__hint">
-              No agents enabled. Turn one on in{" "}
+              No active agents. Log in to one in{" "}
               <strong>Settings → Agents</strong>.
             </div>
           )}
-          {visible.map((a) => (
-            <Button
-              key={a.id}
-              variant="ghost"
-              className="oc-new-chat-picker__item"
-              onClick={() => handlePick(a)}
-              onMouseEnter={() => {
-                if (warmedRef.current.has(a.id)) return;
-                warmedRef.current.add(a.id);
-                void sessions.initAgent(a.id).catch(() => {});
-              }}
-            >
-              {a.icon ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={a.icon}
-                  alt=""
-                  className="oc-new-chat-picker__icon"
-                  loading="lazy"
-                />
-              ) : (
-                <BotIcon className="oc-new-chat-picker__icon" />
-              )}
-              <span>{a.name}</span>
-            </Button>
-          ))}
+          {visible.map((a) => {
+            const isRunnable = a.installed === true;
+            return (
+              <Button
+                key={a.id}
+                variant="ghost"
+                className={`oc-new-chat-picker__item ${isRunnable ? "" : "is-disabled"}`}
+                onClick={() => {
+                  if (!isRunnable) return;
+                  handlePick(a);
+                }}
+                onMouseEnter={() => {
+                  if (!isRunnable) return;
+                  if (warmedRef.current.has(a.id)) return;
+                  warmedRef.current.add(a.id);
+                  void sessions.initAgent(a.id).catch(() => {});
+                }}
+                disabled={!isRunnable}
+                title={
+                  isRunnable
+                    ? a.name
+                    : `${a.name} is not active — log in via Settings → Agents`
+                }
+              >
+                {a.icon ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={a.icon}
+                    alt=""
+                    className="oc-new-chat-picker__icon"
+                    loading="lazy"
+                  />
+                ) : (
+                  <BotIcon className="oc-new-chat-picker__icon" />
+                )}
+                <span>{a.name}</span>
+                {!isRunnable && (
+                  <span
+                    className="oc-chat-agent-inactive-dot"
+                    aria-label="Agent not active"
+                    title="Not active — log in via Settings → Agents"
+                  />
+                )}
+              </Button>
+            );
+          })}
         </div>
       )}
     </div>

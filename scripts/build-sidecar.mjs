@@ -18,8 +18,9 @@
 // ──────────────────────────────────────────────────────────
 
 import { execSync } from "node:child_process";
-import { mkdirSync, existsSync } from "node:fs";
-import { resolve, dirname } from "node:path";
+import { mkdirSync, existsSync, mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -67,8 +68,14 @@ const cmd = [
   outfile,
 ].join(" ");
 
+// Run from a throwaway tmp dir: Bun drops intermediate `.*.bun-build` files in
+// CWD during compile and strands them if the build is killed. Keeping CWD out
+// of the repo means any leftovers land in /tmp (macOS auto-cleans) instead of
+// accumulating in the project root.
+const buildCwd = mkdtempSync(join(tmpdir(), "zeros-sidecar-"));
+
 console.log(`[build-sidecar] ${cmd}`);
-execSync(cmd, { stdio: "inherit", cwd: repoRoot });
+execSync(cmd, { stdio: "inherit", cwd: buildCwd });
 
 // Bun writes 755 already; chmod defensively in case of umask weirdness.
 execSync(`chmod +x ${outfile}`, { stdio: "inherit" });

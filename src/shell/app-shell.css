@@ -229,6 +229,27 @@
   flex-shrink: 0;
 }
 
+/* Inline keyboard-shortcut hint on nav action rows (e.g. ⌘N on New Agent).
+   Sits at the row's trailing edge, echoes the Cursor sidebar treatment. */
+.oc-column-1__kbd {
+  margin-left: auto;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: var(--weight-control);
+  letter-spacing: 0.02em;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.oc-column-1__action:hover:not(:disabled) .oc-column-1__kbd {
+  background: var(--surface-3);
+  color: var(--text-primary);
+}
+
 /* ── Workspace Manager (Phase 2-D) ───────────────────── */
 
 .oc-column-1__workspace {
@@ -284,6 +305,36 @@
   min-width: 280px;
 }
 
+/* Search row pinned to the top of the dropdown. Matches Cursor's
+   "Run Cursor anywhere…" affordance — narrows the recents list by
+   name OR path, autofocused so typing just works on open. */
+.oc-column-1__workspace-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3x);
+  padding: var(--space-2) var(--space-5x);
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: var(--space-1);
+}
+.oc-column-1__workspace-search-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.oc-column-1__workspace-search-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: var(--text-13);
+  padding: 0;
+}
+.oc-column-1__workspace-search-input::placeholder {
+  color: var(--text-muted);
+}
+
 .oc-column-1__workspace-empty {
   margin: 0;
   padding: var(--space-3) var(--space-7x);
@@ -313,62 +364,51 @@
   background: var(--surface-2);
 }
 
+/* Single-line recent-project row: folder icon + path only (no separate
+   name label). The path is tilde-compressed by the caller so the common
+   case fits; long paths truncate with ellipsis. */
 .oc-column-1__workspace-pick {
   flex: 1;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-rows: auto auto;
-  grid-template-areas:
-    "icon name"
-    "icon path";
+  display: flex;
   align-items: center;
-  justify-content: flex-start;
-  gap: 1px var(--space-5x);
+  gap: var(--space-2);
   height: auto;
-  padding: var(--space-2) var(--space-5x);
+  padding: var(--space-2) var(--space-3);
   background: transparent;
   border: none;
   color: var(--text-primary);
   font-family: inherit;
-  font-size: var(--text-13);
+  font-size: var(--text-12);
   text-align: left;
   cursor: pointer;
   min-width: 0;
 }
 
+/* The Open Workspace dropdown is a flat list of recently-opened
+   projects — we intentionally don't highlight the current one (no
+   blue tint, no filled row). It's a switcher, not a "you are here"
+   map; treating every row identically makes the menu read as
+   predictable "pick one and go" rather than "guess what's active". */
 .oc-column-1__workspace-pick.is-current {
   cursor: default;
-  color: var(--accent-hover);
 }
 
 .oc-column-1__workspace-item-icon {
-  grid-area: icon;
   color: var(--text-muted);
-}
-
-.oc-column-1__workspace-pick.is-current .oc-column-1__workspace-item-icon {
-  color: var(--accent-hover);
-}
-
-.oc-column-1__workspace-item-name {
-  grid-area: name;
-  font-size: var(--text-13);
-  font-weight: var(--weight-control);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
+  flex-shrink: 0;
 }
 
 .oc-column-1__workspace-item-path {
-  grid-area: path;
-  font-size: var(--text-11);
-  color: var(--text-muted);
-  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  color: var(--text-primary);
+  /* Inherit the UI font from the rest of the app — paths read as
+     content, not code, so they shouldn't flip to monospace. */
+  font-family: inherit;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+  flex: 1;
 }
 
 .oc-column-1__workspace-forget {
@@ -603,55 +643,27 @@
   gap: var(--space-2);
 }
 
-/* "Other workspaces" — collapsed-by-default section that holds chats from
-   any folder other than the active engine root. Keeps cross-project
-   history accessible without drowning out the active project's chats. */
-.oc-column-1__other {
-  display: flex;
-  flex-direction: column;
-  margin-top: var(--space-1);
-  padding-top: 4px;
-  border-top: 1px solid var(--border-subtle);
-}
-.oc-ui-btn.oc-column-1__other-header {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  gap: var(--space-3x);
-  padding: var(--space-1) var(--space-2);
-  min-height: var(--h-control-sm);
-  font-size: var(--text-11);
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  font-weight: var(--weight-heading);
-}
-.oc-column-1__other-header:hover { color: var(--text-primary); }
-.oc-column-1__other-count {
-  margin-left: auto;
-  font-variant-numeric: tabular-nums;
-  font-weight: var(--weight-control);
-  text-transform: none;
-  letter-spacing: 0;
-}
-
 .oc-column-1__project {
   display: flex;
   flex-direction: column;
 }
 
-/* Project section header: faint label + "+" that appears on hover.
-   No chevron — chats beyond the first 5 hide behind "More" instead. */
+/* Project section header — Cursor-style row:
+     [Workspace Name — truncates] [chevron on hover] ... [+ on hover]
+   No leading indent. The chevron sits flush against the name so the
+   whole "name + chevron" reads as one handle; the `+` floats on the
+   right edge via a flex spacer. */
 .oc-column-1__project-header {
   display: flex;
   align-items: center;
-  gap: var(--space-3x);
+  gap: 4px;
   padding: var(--space-1) var(--space-2);
   min-height: 24px;
+  min-width: 0;
 }
 
 .oc-column-1__project-name {
-  flex: 1;
+  flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -662,8 +674,84 @@
   letter-spacing: 0.01em;
 }
 
-.oc-column-1__project.is-current .oc-column-1__project-name {
+.oc-column-1__project-chevron {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
   color: var(--text-muted);
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-standard),
+    color var(--dur-fast) var(--ease-standard);
+}
+/* Chevron stays visible when the section is collapsed (so the user
+   has a hint that it's clickable) and on header hover / focus. */
+.oc-column-1__project.is-collapsed .oc-column-1__project-chevron,
+.oc-column-1__project-header:hover .oc-column-1__project-chevron,
+.oc-column-1__project-chevron:focus-visible {
+  opacity: 1;
+}
+.oc-column-1__project-chevron:hover {
+  color: var(--text-primary);
+}
+
+/* Pushes `+` to the right edge while the name + chevron hug the left. */
+.oc-column-1__project-header-spacer {
+  flex: 1;
+  min-width: var(--space-2);
+}
+
+.oc-column-1__project-empty {
+  padding: var(--space-3) var(--space-2);
+  color: var(--text-placeholder);
+  font-size: var(--text-11);
+  line-height: var(--leading-snug);
+}
+
+/* Right-click context menu for workspace sections. Fixed-position,
+   anchored at the pointer (set via inline style). Closes on outside
+   click / Escape / item selection — handlers live in column1-nav. */
+.oc-column-1__context-menu {
+  position: fixed;
+  min-width: 200px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-floating, 0 4px 20px rgb(0 0 0 / 0.25));
+  padding: var(--space-1);
+  z-index: 1000;
+}
+
+.oc-column-1__context-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-12);
+  text-align: left;
+}
+.oc-column-1__context-menu-item:hover {
+  background: var(--tint-hover);
+}
+.oc-column-1__context-menu-item.is-danger {
+  color: var(--text-primary);
+}
+.oc-column-1__context-menu-item.is-danger:hover {
+  background: var(--tint-critical-soft);
+  color: var(--text-critical);
+}
+
+/* Max ~10 rows then scroll — keeps long chat lists from pushing the
+   LOCALHOST section and profile footer off-screen. */
+.oc-column-1__chat-list.is-scroll {
+  max-height: calc(10 * 28px);
+  overflow-y: auto;
 }
 
 /* "+" icon-button — always rendered but invisible until the header
@@ -727,13 +815,16 @@
 }
 
 .oc-column-1__chat {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-3x);
-  /* Fixed height — no layout shift on hover, even when the delete
-     icon fades in. Matches Cursor's row cadence (~28px tall). */
+  /* Fixed 28px height — matches Cursor's row cadence. No layout shift
+     on hover, ever. */
   height: 28px;
-  padding: 0 8px;
+  /* Right padding reserves space for the absolute-positioned trailing
+     slot (time stamp at rest, pin + delete actions on hover). */
+  padding: 0 44px 0 8px;
   border-radius: var(--radius-sm);
   color: var(--text-muted);
   font-size: var(--text-12);
@@ -752,6 +843,102 @@
   font-weight: var(--weight-control);
 }
 
+/* Fixed 14px slot on the leading edge. Holds either:
+   - a streaming spinner (chat.is-working),
+   - an amber alert (chat.is-waiting),
+   - a subtle grey dot at rest,
+   - OR on hover, a click-to-pin / click-to-unpin button that swaps in
+     on top of the dot. Keeping the slot a fixed width means titles
+     line up regardless of which indicator is current. */
+.oc-column-1__chat-indicator {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+.oc-column-1__chat.is-pinned .oc-column-1__chat-indicator {
+  color: var(--accent);
+}
+
+/* Pin-toggle button sits on top of the dot. Hidden at rest (dot wins),
+   revealed when the row is hovered so the user can pin/unpin with one
+   click. Pinned and unpinned rows both use the same slot — only the
+   icon (Pin vs PinOff) differs, signaling the available action. */
+.oc-column-1__chat-pin-toggle {
+  position: absolute;
+  inset: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0;
+  border-radius: var(--radius-xs);
+  transition: opacity var(--dur-fast) var(--ease-standard),
+    background var(--dur-fast) var(--ease-standard),
+    color var(--dur-fast) var(--ease-standard);
+}
+.oc-column-1__chat:hover .oc-column-1__chat-pin-toggle,
+.oc-column-1__chat-pin-toggle:focus-visible {
+  opacity: 1;
+}
+.oc-column-1__chat:hover .oc-column-1__chat-dot {
+  opacity: 0;
+}
+.oc-column-1__chat-pin-toggle:hover {
+  color: var(--text-primary);
+  background: var(--surface-2);
+}
+.oc-column-1__chat.is-pinned .oc-column-1__chat-pin-toggle {
+  color: var(--accent);
+}
+.oc-column-1__chat.is-pinned .oc-column-1__chat-pin-toggle:hover {
+  color: var(--text-primary);
+}
+
+/* Subtle 6px grey dot — the *only* resting indicator. Active /
+   streaming / waiting all swap the dot for a Lucide icon in the
+   TSX (spinner, alert-circle, etc.), so the dot never needs to
+   carry state colour of its own. */
+.oc-column-1__chat-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-placeholder);
+  opacity: 0.65;
+  transition: opacity var(--dur-fast) var(--ease-standard);
+}
+.oc-column-1__chat:hover .oc-column-1__chat-dot { opacity: 0.9; }
+.oc-column-1__chat.is-active .oc-column-1__chat-dot { opacity: 1; }
+
+/* Working: spinner takes the dot's slot. Animation handled by the
+   shared .oc-spin utility at the bottom of this file. */
+.oc-column-1__chat-spinner {
+  color: var(--text-muted);
+  animation: oc-spin 1s linear infinite;
+}
+.oc-column-1__chat.is-active .oc-column-1__chat-spinner {
+  color: var(--accent);
+}
+
+/* Waiting on a permission prompt — small amber alert. Solid (no
+   pulse) so users register it as "needs me", not "ongoing work". */
+.oc-column-1__chat-alert {
+  color: var(--text-warning);
+}
+@media (prefers-reduced-motion: reduce) {
+  .oc-column-1__chat-spinner { animation: none !important; }
+}
+
 .oc-column-1__chat-title {
   flex: 1;
   overflow: hidden;
@@ -760,36 +947,93 @@
   min-width: 0;
 }
 
-/* Delete button is always in the DOM with reserved width so the row
-   height never shifts on hover. Invisible at rest, fades in on hover
-   and when the button receives keyboard focus. */
+/* Relative timestamp ("3m", "2h", "4d") pinned to the row's trailing
+   edge. Shares its spot with the action buttons — visible at rest,
+   fades out on hover to reveal pin + delete underneath. */
+.oc-column-1__chat-time {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity var(--dur-fast) var(--ease-standard);
+}
+.oc-column-1__chat:hover .oc-column-1__chat-time,
+.oc-column-1__chat:focus-within .oc-column-1__chat-time {
+  opacity: 0;
+}
+
+/* Action group (pin-toggle + delete) overlays the timestamp slot.
+   Wrapped so both buttons fade in together on hover — easier to reason
+   about than per-button opacity. */
+.oc-column-1__chat-actions {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-fast) var(--ease-standard);
+}
+.oc-column-1__chat:hover .oc-column-1__chat-actions,
+.oc-column-1__chat:focus-within .oc-column-1__chat-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .oc-column-1__chat-delete {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 18px;
   height: 18px;
-  flex-shrink: 0;
   background: transparent;
   border: none;
   border-radius: var(--radius-xs);
   color: var(--text-muted);
   cursor: pointer;
   padding: 0;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--dur-fast) var(--ease-standard), background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
-}
-
-.oc-column-1__chat:hover .oc-column-1__chat-delete,
-.oc-column-1__chat-delete:focus-visible {
-  opacity: 1;
-  pointer-events: auto;
+  transition: background var(--dur-fast) var(--ease-standard),
+    color var(--dur-fast) var(--ease-standard);
 }
 
 .oc-column-1__chat-delete:hover {
   background: var(--tint-critical-soft);
   color: var(--text-critical);
+}
+
+/* ── Pinned section (Cursor-style favorites) ─────────────── */
+
+.oc-column-1__pinned {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: var(--space-2);
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.oc-column-1__pinned-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3x);
+  padding: var(--space-1) var(--space-2);
+  min-height: 24px;
+}
+
+.oc-column-1__pinned-title {
+  font-size: var(--text-11);
+  font-weight: var(--weight-control);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .oc-column-1__spacer {
@@ -983,6 +1227,68 @@
   background: var(--surface-floor);
   border-right: 1px solid var(--border-subtle);
   overflow: hidden;
+  transition: flex-basis var(--dur-fast) var(--ease-standard);
+}
+
+/* Column 3 hidden → Column 2 takes the remaining width. The chat root
+   then centers itself with a comfortable reading max-width so the
+   conversation doesn't sprawl across a 4K display. Cursor's ⌥⌘B
+   "Hide Panel" pattern. */
+.oc-app.is-col3-collapsed .oc-column-2,
+.oc-column-2.is-wide {
+  flex: 1 1 auto;
+  border-right: none;
+}
+.oc-app.is-col3-collapsed .oc-column-2__chat-root {
+  max-width: 920px;
+  margin: 0 auto;
+  width: 100%;
+}
+.oc-app.is-col3-collapsed .oc-column-2__tabs {
+  max-width: 920px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* "Show Panel" pill — appears in Col 2's tab bar when Col 3 is hidden.
+   Floats to the trailing edge so the tabs stay left-aligned. */
+.oc-ui-btn.oc-column-2__show-panel {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3x);
+  padding: var(--space-3x) var(--space-5x);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: var(--text-12);
+  font-weight: var(--weight-control);
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+}
+.oc-ui-btn.oc-column-2__show-panel:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+.oc-column-2__show-panel-kbd {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: var(--weight-control);
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+.oc-column-2__show-panel:hover .oc-column-2__show-panel-kbd {
+  background: var(--surface-3);
+  color: var(--text-primary);
 }
 
 /* ── Tab bar ──────────────────────────────────────────── */
@@ -2669,6 +2975,29 @@
   background: var(--surface-3);
 }
 
+/* "Hide Panel" icon button — pinned to the trailing edge of Col 3's
+   tab bar. Same affordance as Cursor's top-right panel toggle. */
+.oc-ui-btn.oc-column-3__collapse {
+  margin-left: auto;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+}
+.oc-ui-btn.oc-column-3__collapse:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
 .oc-column-3__body {
   flex: 1;
   position: relative;
@@ -3265,7 +3594,7 @@
   align-items: center;
   justify-content: center;
   padding: var(--space-6);
-  background: var(--surface-0);
+  background: var(--surface-floor);
 }
 
 .oc-empty-composer {
@@ -3291,6 +3620,136 @@
   gap: var(--space-1);
   color: var(--text-muted);
   font-weight: var(--weight-control);
+}
+
+.oc-empty-composer__folder--button {
+  background: transparent;
+  border: 0;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition: background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+}
+.oc-empty-composer__folder--button:hover {
+  background: var(--tint-hover);
+  color: var(--text-primary);
+}
+
+.oc-empty-composer__workspace-root {
+  position: relative;
+  display: inline-flex;
+}
+
+.oc-empty-composer__workspace-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  min-width: 280px;
+  max-width: 360px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-floating, 0 4px 20px rgb(0 0 0 / 0.25));
+  padding: var(--space-1);
+  z-index: 20;
+}
+
+.oc-empty-composer__workspace-section {
+  font-size: var(--text-10);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-placeholder);
+  padding: var(--space-2) var(--space-3) var(--space-1);
+}
+
+.oc-empty-composer__workspace-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-12);
+  text-align: left;
+  min-width: 0;
+}
+.oc-empty-composer__workspace-item:hover {
+  background: var(--tint-hover);
+}
+.oc-empty-composer__workspace-item.is-current {
+  color: var(--accent-hover);
+  cursor: default;
+}
+.oc-empty-composer__workspace-item.is-current:hover {
+  background: transparent;
+}
+.oc-empty-composer__workspace-item-name {
+  flex: 0 0 auto;
+  font-weight: var(--weight-control);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.oc-empty-composer__workspace-item-path {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: var(--text-11);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.oc-empty-composer__workspace-sep {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: var(--space-1) 0;
+}
+.oc-empty-composer__workspace-open {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-12);
+  text-align: left;
+}
+.oc-empty-composer__workspace-open:hover {
+  background: var(--tint-hover);
+  color: var(--text-primary);
+}
+
+.oc-empty-composer__branch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  color: var(--text-muted);
+  font-weight: var(--weight-control);
+}
+
+.oc-empty-composer__branch-counters {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: var(--space-1);
+  opacity: 0.8;
 }
 
 .oc-empty-composer__box {
@@ -3336,6 +3795,110 @@
 
 .oc-empty-composer__actions-left {
   flex: 1;
+}
+
+.oc-empty-composer__toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--border-subtle);
+  margin-top: var(--space-2);
+}
+
+.oc-empty-composer__toolbar-btn {
+  color: var(--text-muted);
+}
+
+.oc-empty-composer__toolbar-btn:hover {
+  color: var(--text-primary);
+}
+
+.oc-empty-composer__agent {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  color: var(--text-muted);
+  font-size: var(--text-11);
+  font-weight: var(--weight-control);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oc-empty-composer__agent-icon {
+  width: 12px;
+  height: 12px;
+  object-fit: contain;
+  flex: none;
+}
+
+.oc-empty-composer__toolbar-spacer {
+  flex: 1;
+}
+
+.oc-empty-composer__send {
+  flex: none;
+}
+
+.oc-empty-composer__attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding: var(--space-1) 0 var(--space-1);
+}
+
+.oc-empty-composer__attachment {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px 6px 2px 8px;
+  background: var(--surface-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-11);
+  color: var(--text-primary);
+  max-width: 160px;
+}
+
+.oc-empty-composer__attachment-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.oc-empty-composer__attachment-x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.oc-empty-composer__attachment-x:hover {
+  background: var(--surface-1);
+  color: var(--text-primary);
+}
+
+.oc-empty-composer__chip-kbd {
+  font-family: inherit;
+  font-size: var(--text-10);
+  font-weight: 600;
+  padding: 1px 4px;
+  margin-left: var(--space-1);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
 }
 
 .oc-empty-composer__chips {

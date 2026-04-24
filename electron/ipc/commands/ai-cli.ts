@@ -102,12 +102,48 @@ const AUTH_MARKERS: Record<string, string[]> = {
 function probeAuth(binary: string, home: string): boolean {
   const explicit = AUTH_MARKERS[binary];
   if (explicit) {
-    return explicit.some((m) => existsSync(path.join(home, m)));
-  }
-  return (
+    if (explicit.some((m) => existsSync(path.join(home, m)))) return true;
+  } else if (
     existsSync(path.join(home, `.${binary}`)) ||
     existsSync(path.join(home, ".config", binary))
-  );
+  ) {
+    return true;
+  }
+
+  // Keychain fallback (macOS) — Claude Code's newer versions store
+  // the OAuth entry in Keychain under "Claude Code-credentials"
+  // instead of writing to `~/.claude/.credentials.json`. Check as a
+  // last resort. Memoized for 30s so we don't spawn `security` on
+  // every window focus.
+  if (binary === "claude" && process.platform === "darwin") {
+    return keychainHasClaudeCredentials();
+  }
+  return false;
+}
+
+// Cheap memo — {true/false, lastCheckedAt}. Probe at most every 30s.
+let claudeKcCache: { ok: boolean; at: number } | null = null;
+const KEYCHAIN_CACHE_MS = 30_000;
+
+function keychainHasClaudeCredentials(): boolean {
+  const now = Date.now();
+  if (claudeKcCache && now - claudeKcCache.at < KEYCHAIN_CACHE_MS) {
+    return claudeKcCache.ok;
+  }
+  try {
+    const { spawnSync } = require("node:child_process") as typeof import("node:child_process");
+    const result = spawnSync(
+      "security",
+      ["find-generic-password", "-s", "Claude Code-credentials"],
+      { timeout: 1500, stdio: "ignore" },
+    );
+    const ok = result.status === 0;
+    claudeKcCache = { ok, at: now };
+    return ok;
+  } catch {
+    claudeKcCache = { ok: false, at: now };
+    return false;
+  }
 }
 
 export const aiCliIsAuthenticated: CommandHandler = (args) => {

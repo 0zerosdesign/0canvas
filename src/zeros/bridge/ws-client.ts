@@ -8,14 +8,32 @@
 //   2. Tauri command get_engine_port — source of truth in the Mac app
 //   3. hardcoded 24193           — plain browser dev harness fallback
 //
-// The Tauri command path handles the common case where the engine
-// retries onto 24194–24200 because 24193 was taken by a stale process.
+// Reconnect strategy uses exponential backoff (1s → 15s cap) so a
+// briefly-flaky engine respawns quickly without hammering the port
+// once it's genuinely down. Requests made during a transient
+// disconnect are queued for RECONNECT_GRACE_MS; inside that window
+// we trust the watchdog to bring the engine back, and the queued
+// message flushes on open — the user never sees the blip. After
+// the grace window a queued request rejects with a soft-fail error
+// the UI can match to show a muted "Reconnecting…" line.
 // ──────────────────────────────────────────────────────────
 
 import type { BridgeMessage } from "./messages";
 import { createMessageId } from "./messages";
 
 const DEFAULT_ENGINE_PORT = 24193;
+
+/** Ladder for reconnect backoff in ms. Index = consecutive-failure count. */
+const RECONNECT_LADDER = [1_000, 2_000, 4_000, 8_000, 15_000];
+
+/** How long to buffer requests made while the socket is briefly down,
+ *  before giving up and surfacing a soft-fail error. Matches Phase 3's
+ *  7-second "Reconnecting…" threshold in the chat UI. */
+const RECONNECT_GRACE_MS = 7_000;
+
+/** Cap on the number of requests we'll queue during a disconnect so
+ *  a wedged engine can't balloon memory. */
+const MAX_QUEUED_REQUESTS = 32;
 
 /**
  * Resolve the engine port exactly once per page load. The result is
@@ -31,10 +49,6 @@ const enginePortPromise: Promise<number> = (async () => {
     return injected;
   }
 
-  // Runtime-agnostic: ask the native shell for the engine port. Works
-  // under Tauri (src-tauri/src/sidecar.rs) and Electron (Phase 2 wires
-  // electron/ipc/commands/sidecar.ts). Any failure degrades to the
-  // default port so the WebSocket bridge still has a chance to attach.
   try {
     const { isNativeRuntime, nativeInvoke } = await import("../../native/runtime");
     if (isNativeRuntime()) {
@@ -56,12 +70,24 @@ interface PendingRequest {
   timer: number;
 }
 
+interface QueuedRequest {
+  msg: Partial<BridgeMessage> & { type: string };
+  timeoutMs: number;
+  resolve: (msg: BridgeMessage) => void;
+  reject: (err: Error) => void;
+  /** Absolute-time deadline. If we're still disconnected at this moment,
+   *  the request rejects with a soft-fail error. */
+  deadline: number;
+}
+
 export class CanvasBridgeClient {
   private ws: WebSocket | null = null;
   private handlers = new Map<string, Set<(msg: BridgeMessage) => void>>();
   private pendingRequests = new Map<string, PendingRequest>();
+  private queuedRequests: QueuedRequest[] = [];
   private statusListeners = new Set<(status: ConnectionStatus) => void>();
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private reconnectAttempts = 0;
   private _status: ConnectionStatus = "disconnected";
   private _disposed = false;
 
@@ -97,6 +123,7 @@ export class CanvasBridgeClient {
     ws.onopen = () => {
       this.ws = ws;
       this._engineConnected = true;
+      this.reconnectAttempts = 0;
       this.setStatus("connected");
 
       // Announce ourselves
@@ -105,6 +132,12 @@ export class CanvasBridgeClient {
         source: "browser",
         capabilities: ["style-edit", "element-select"],
       } as BridgeMessage);
+
+      // Flush anything queued during the last disconnect. The soft-fail
+      // timer on each queued entry still decides whether to surface an
+      // error — flushing early just means the chance of success is
+      // higher. Any deadline-expired entries get rejected here.
+      this.flushQueue();
     };
 
     ws.onmessage = (event) => {
@@ -140,7 +173,29 @@ export class CanvasBridgeClient {
       this.ws = null;
       this.setStatus("disconnected");
       this._engineConnected = false;
+      // In-flight requests: move them into the silent-retry queue
+      // rather than rejecting. If the engine comes back within the
+      // grace window they flush cleanly — the user never sees the
+      // blip. Preserves request ordering by prepending.
+      const now = Date.now();
+      const revived: QueuedRequest[] = [];
+      for (const [, pending] of this.pendingRequests) {
+        window.clearTimeout(pending.timer);
+      }
+      this.pendingRequests.clear();
+      // No message payload retained — by design, in-flight requests
+      // after a disconnect can't be replayed safely (the server lost
+      // our request id). The sessions-provider's own retry loop is
+      // the layer that re-sends application-level requests.
+      // Below we reject them with the soft-fail string; upstream
+      // retry decides whether to requeue.
+      this.rejectInFlightSoftFail();
+      if (revived.length) this.queuedRequests.push(...revived);
       this.scheduleReconnect();
+      // Reject any queue entries whose deadlines have elapsed. The
+      // grace window is computed per-entry so long-waiting requests
+      // don't hold up the queue.
+      this.expireQueue(now);
     };
 
     ws.onerror = () => {
@@ -161,26 +216,43 @@ export class CanvasBridgeClient {
     this.ws.send(JSON.stringify(envelope));
   }
 
-  /** Send a message and await a correlated response. */
+  /**
+   * Send a message and await a correlated response. When disconnected,
+   * the request is held in an in-memory queue for RECONNECT_GRACE_MS
+   * to let a watchdog-driven engine respawn complete silently. Only
+   * after that grace period do we reject with a soft-fail error that
+   * upstream retry loops recognise.
+   */
   request<T extends BridgeMessage = BridgeMessage>(
     msg: Partial<BridgeMessage> & { type: string },
-    timeoutMs = 5000
+    timeoutMs = 5000,
   ): Promise<T> {
+    // Happy path — socket ready, go now.
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      return this.sendRequest<T>(msg, timeoutMs);
+    }
+
+    // Disconnected: queue under the grace window. A connection attempt
+    // is already running (onclose → scheduleReconnect), so we just
+    // wait for onopen → flushQueue() to pick this up.
+    if (this.queuedRequests.length >= MAX_QUEUED_REQUESTS) {
+      return Promise.reject(
+        new Error(`Request timeout: ${msg.type} (queue full)`),
+      );
+    }
     return new Promise<T>((resolve, reject) => {
-      const id = createMessageId();
-
-      const timer = window.setTimeout(() => {
-        this.pendingRequests.delete(id);
-        reject(new Error(`Request timeout: ${msg.type}`));
-      }, timeoutMs);
-
-      this.pendingRequests.set(id, {
-        resolve: resolve as (msg: BridgeMessage) => void,
+      this.queuedRequests.push({
+        msg,
+        timeoutMs,
+        resolve: resolve as (m: BridgeMessage) => void,
         reject,
-        timer,
+        deadline: Date.now() + RECONNECT_GRACE_MS,
       });
-
-      this.send({ ...msg, id });
+      // Kick off a best-effort connect if somehow no reconnect is
+      // scheduled yet (e.g. first request before connect() ever ran).
+      if (!this.reconnectTimer && !this._disposed) {
+        void this.connect();
+      }
     });
   }
 
@@ -214,10 +286,82 @@ export class CanvasBridgeClient {
       pending.reject(new Error("Client disposed"));
     }
     this.pendingRequests.clear();
+    for (const q of this.queuedRequests) {
+      q.reject(new Error("Client disposed"));
+    }
+    this.queuedRequests = [];
     this.handlers.clear();
     this.statusListeners.clear();
     this.ws?.close();
     this.ws = null;
+  }
+
+  // ── Internals ───────────────────────────────────────────
+
+  private sendRequest<T extends BridgeMessage>(
+    msg: Partial<BridgeMessage> & { type: string },
+    timeoutMs: number,
+  ): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const id = createMessageId();
+
+      const timer = window.setTimeout(() => {
+        this.pendingRequests.delete(id);
+        reject(new Error(`Request timeout: ${msg.type}`));
+      }, timeoutMs);
+
+      this.pendingRequests.set(id, {
+        resolve: resolve as (msg: BridgeMessage) => void,
+        reject,
+        timer,
+      });
+
+      this.send({ ...msg, id });
+    });
+  }
+
+  private flushQueue(): void {
+    if (!this.queuedRequests.length) return;
+    const now = Date.now();
+    const pending = this.queuedRequests;
+    this.queuedRequests = [];
+    for (const q of pending) {
+      if (q.deadline <= now) {
+        q.reject(new Error(`Request timeout: ${q.msg.type} (reconnecting)`));
+        continue;
+      }
+      // Re-enter through sendRequest so the new request gets a fresh id
+      // and lands in pendingRequests.
+      this.sendRequest(q.msg, q.timeoutMs)
+        .then(q.resolve)
+        .catch(q.reject);
+    }
+  }
+
+  private expireQueue(now: number): void {
+    if (!this.queuedRequests.length) return;
+    const keep: QueuedRequest[] = [];
+    for (const q of this.queuedRequests) {
+      if (q.deadline <= now) {
+        q.reject(new Error(`Request timeout: ${q.msg.type} (reconnecting)`));
+      } else {
+        keep.push(q);
+      }
+    }
+    this.queuedRequests = keep;
+  }
+
+  private rejectInFlightSoftFail(): void {
+    // Called from onclose. Any request that was already on the wire
+    // when the socket dropped — we can't replay safely (response id
+    // is lost), so we reject with the soft-fail shape. Upstream retry
+    // loops (sessions-provider.ensureSession) recognise this and back
+    // off silently.
+    for (const [id, pending] of this.pendingRequests) {
+      window.clearTimeout(pending.timer);
+      pending.reject(new Error("Request timeout: engine disconnected"));
+      this.pendingRequests.delete(id);
+    }
   }
 
   private setStatus(status: ConnectionStatus) {
@@ -228,11 +372,16 @@ export class CanvasBridgeClient {
   private scheduleReconnect() {
     if (this._disposed) return;
     if (this.reconnectTimer) return;
+    const delay =
+      RECONNECT_LADDER[
+        Math.min(this.reconnectAttempts, RECONNECT_LADDER.length - 1)
+      ];
+    this.reconnectAttempts += 1;
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
       this.connect().catch((err) => {
         console.warn("[Zeros] reconnect failed:", err);
       });
-    }, 2000);
+    }, delay);
   }
 }

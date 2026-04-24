@@ -2482,6 +2482,13 @@ ${S} .oc-chat-toolbar-pill:hover {
 ${S} .oc-chat-toolbar-pill.is-skill {
   padding-left: 5px; gap: 6px;
 }
+${S} .oc-chat-toolbar-pill.is-readonly {
+  cursor: default;
+}
+${S} .oc-chat-toolbar-pill.is-readonly:hover {
+  background: transparent;
+  color: var(--text-muted);
+}
 ${S} .oc-chat-toolbar-caret {
   color: var(--text-muted);
   opacity: 0.7;
@@ -2592,6 +2599,133 @@ ${S} .oc-chat-dropdown-item:hover { background: var(--surface-2); }
 ${S} .oc-chat-dropdown-item.is-active {
   background: var(--tint-accent-soft);
   color: var(--accent-hover);
+}
+
+/* Agent-picker row: override the default column stack so the logo
+   and agent name sit side-by-side (Cursor-style). Flex row with
+   center alignment; the trailing slot holds either a check (active
+   selected) or a red dot (inactive). */
+${S} .oc-chat-dropdown-item.is-agent {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  padding-right: 24px;
+}
+${S} .oc-chat-dropdown-item.is-agent.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+${S} .oc-chat-dropdown-item.is-agent.is-disabled:hover {
+  background: transparent;
+}
+
+/* Agent logo — inline-SVG renderer (AgentIcon) injects branded fills
+   via the agent-brands palette. The container is a flex box; the
+   inner SVG stretches to its bounds. */
+${S} .oc-chat-agent-pill-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+${S} .oc-chat-agent-pill-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Compact trigger — logo-only, with a small warm/cold dot sitting
+   at the bottom-right corner of the logo. Shown in both empty
+   composer and active chat footers. */
+${S} .oc-agent-trigger--compact {
+  padding: 4px 6px;
+  gap: 4px;
+}
+${S} .oc-agent-trigger__logo {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+}
+${S} .oc-agent-trigger__dot {
+  position: absolute;
+  right: -1px; bottom: -1px;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  border: 1.5px solid var(--surface-1);
+  flex-shrink: 0;
+}
+${S} .oc-agent-trigger__dot.is-warm {
+  background: var(--text-success, #22c55e);
+}
+${S} .oc-agent-trigger__dot.is-cold {
+  background: var(--text-muted);
+  opacity: 0.55;
+}
+
+/* Dropdown-row warm/cold dot — sits before the "new tab" arrow,
+   same green as the trigger. */
+${S} .oc-agent-row-dot {
+  margin-left: auto;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+${S} .oc-agent-row-dot.is-warm {
+  background: var(--text-success, #22c55e);
+}
+${S} .oc-agent-row-dot.is-cold {
+  background: var(--text-muted);
+  opacity: 0.4;
+}
+
+/* Hover-only "opens in new tab" arrow on dropdown rows in chat view. */
+${S} .oc-agent-row-newtab {
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity 120ms ease;
+  flex-shrink: 0;
+}
+${S} .oc-chat-dropdown-item:hover .oc-agent-row-newtab {
+  opacity: 0.75;
+}
+
+/* Non-signed-in agents in the composer dropdown get a subtle "Sign
+   in" chip on the right instead of a red dot — less alarming, more
+   actionable. Click routes to Settings → Agents. */
+${S} .oc-chat-dropdown-item.is-inactive {
+  opacity: 0.85;
+}
+${S} .oc-chat-dropdown-item.is-inactive .oc-chat-dropdown-item-label {
+  color: var(--text-muted);
+}
+${S} .oc-chat-agent-inactive-hint {
+  margin-left: auto;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+${S} .oc-chat-dropdown-item.is-inactive:hover .oc-chat-agent-inactive-hint {
+  color: var(--text-primary);
+  background: var(--surface-3);
+}
+${S} .oc-chat-dropdown-item-hint--clickable {
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+}
+${S} .oc-chat-dropdown-item-hint--clickable:hover {
+  color: var(--text-primary);
 }
 ${S} .oc-chat-dropdown-item-label { font-size: 12px; font-weight: 500; line-height: 1.3; }
 ${S} .oc-chat-dropdown-item-hint {
@@ -2937,7 +3071,7 @@ ${S} .oc-effects-select option {
 
 ${S} .oc-acp-surface {
   display: flex; flex-direction: column; height: 100%; min-height: 0;
-  background: var(--surface-1);
+  background: transparent;
   color: var(--text-primary);
   font-size: 13px;
 }
@@ -2969,6 +3103,7 @@ ${S} .oc-acp-subheader-status:empty { display: none; }
 ${S} .oc-acp-body {
   flex: 1; min-height: 0; overflow-y: auto;
   padding: 12px;
+  background: transparent;
 }
 
 /* ── Plan panel — rendered when the agent emits session/update plan ─ */
@@ -3024,20 +3159,55 @@ ${S} .oc-acp-plan-desc { flex: 1; min-width: 0; word-break: break-word; }
 
 /* ── Messages (ACP variant of oc-ai-msg) ───────────────── */
 ${S} .oc-acp-messages {
-  display: flex; flex-direction: column; gap: 12px;
+  display: flex; flex-direction: column; gap: 14px;
 }
-${S} .oc-acp-msg { display: flex; gap: 10px; align-items: flex-start; }
-${S} .oc-acp-msg-icon {
-  width: 22px; height: 22px; border-radius: 6px;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; color: var(--text-muted);
+/* No avatar column — messages are distinguished by layout +
+   bubble only (Cursor pattern). The role modifiers below own
+   alignment, background and max-width. */
+${S} .oc-acp-msg {
+  display: flex;
+  align-items: flex-start;
 }
+${S} .oc-acp-msg-icon { display: none; }
 ${S} .oc-acp-msg-content {
   font-size: 13px; line-height: 1.55;
   color: var(--text-primary);
-  flex: 1; min-width: 0; padding-top: 2px;
+  min-width: 0;
+  max-width: 100%;
   white-space: pre-wrap; word-break: break-word;
 }
+
+/* User bubble — right-aligned, subtle surface-0 card with tight
+   padding so a one-line prompt reads as a distinct message. */
+${S} .oc-acp-msg-user {
+  justify-content: flex-end;
+}
+${S} .oc-acp-msg-user .oc-acp-msg-content {
+  background: var(--surface-0);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 8px 12px;
+  max-width: min(78%, 640px);
+}
+
+/* Assistant + system + thought — flat text, no bubble. */
+${S} .oc-acp-msg-assistant .oc-acp-msg-content,
+${S} .oc-acp-msg-system .oc-acp-msg-content,
+${S} .oc-acp-msg-thought .oc-acp-msg-content {
+  max-width: 100%;
+  padding: 0;
+}
+${S} .oc-acp-msg-system .oc-acp-msg-content {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+${S} .oc-acp-msg-thought .oc-acp-msg-content {
+  color: var(--text-muted);
+  font-style: italic;
+  border-left: 2px solid var(--border-subtle);
+  padding-left: 10px;
+}
+
 ${S} .oc-acp-msg-queued { opacity: 0.72; }
 ${S} .oc-acp-msg-queued-hint {
   margin-top: 6px;
@@ -3213,10 +3383,14 @@ ${S} .oc-acp-perm-btn-cancel {
 }
 ${S} .oc-acp-perm-btn-cancel:hover { background: var(--tint-hover-strong); }
 
-/* ── Composer (3-row card: input + toolbar + footer) ───── */
+/* ── Composer (single card: input + toolbar) ──────────── */
 ${S} .oc-acp-composer {
-  border-top: 1px solid var(--border-subtle);
-  padding: 10px 12px 12px;
+  /* Background stays transparent so it sits on the column's
+     surface-floor. The visible card is the inner composer-card
+     (surface-2, with focus ring). */
+  background: transparent;
+  border-top: none;
+  padding: 10px 12px 14px;
   flex-shrink: 0;
   width: 100%;
   min-width: 0;
@@ -3234,16 +3408,15 @@ ${S} .oc-acp-composer-card {
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
-  background: var(--surface-1);
+  background: var(--surface-2);
   border: 1px solid var(--border-subtle);
   border-radius: 10px;
   transition: border-color 120ms ease, background 120ms ease,
               box-shadow 120ms ease;
-  padding: 4px 6px 4px 10px;
+  padding: 6px 8px 6px 12px;
 }
 ${S} .oc-acp-composer-card:focus-within {
   border-color: var(--ring-focus);
-  background: var(--surface-0);
   box-shadow: 0 0 0 2px var(--accent-soft-bg);
 }
 ${S} .oc-acp-composer-input {
@@ -3324,16 +3497,34 @@ ${S} .oc-acp-toolbar-sep {
   flex-shrink: 0;
 }
 
-/* Footer row — branch / permissions / context — lives OUTSIDE
-   the card so the pills read as "chat metadata", not composer
-   inputs. Same type scale as the toolbar pills for visual parity. */
+/* Footer row — project label + branch chip — lives OUTSIDE the
+   composer card so it reads as "chat metadata", not composer
+   inputs. Workspace is read-only (scope is pinned to the chat's
+   folder for the whole conversation); branch stays switchable via
+   the BranchPill. */
 ${S} .oc-acp-composer-footer {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 2px 0;
+  gap: 8px;
+  padding: 6px 4px 0;
   min-width: 0;
   flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+${S} .oc-acp-chat-workspace {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  color: var(--text-muted);
+}
+${S} .oc-acp-chat-workspace span {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Right-anchored variant of .oc-chat-dropdown-root.is-footer — for
@@ -3533,6 +3724,143 @@ ${S} .oc-acp-reg-avatar {
   flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
   color: var(--text-muted); font-size: 11px; font-weight: 600;
+}
+${S} .oc-acp-reg-avatar--icon {
+  background: var(--surface-1);
+}
+${S} .oc-acp-reg-avatar svg {
+  width: 100%; height: 100%; display: block;
+}
+${S} .oc-acp-reg-status-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-right: 2px;
+  align-self: center;
+}
+${S} .oc-acp-reg-status-dot.is-active {
+  background: var(--text-success, #22c55e);
+}
+${S} .oc-acp-reg-status-dot.is-inactive {
+  background: var(--text-muted);
+  opacity: 0.5;
+}
+
+/* Composer state chip — compact session-status indicator that sits
+   next to the agent pill. Only renders for non-ready states. Distinct
+   styling per state so the user can tell auth-required (actionable)
+   apart from warming (passive) without reading. */
+${S} .oc-composer-state-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: default;
+  white-space: nowrap;
+}
+${S} .oc-composer-state-chip.is-warming {
+  color: var(--text-muted);
+}
+${S} .oc-composer-state-chip.is-auth {
+  color: var(--accent-hover, #4aa3ff);
+  background: var(--surface-2);
+  border-color: var(--border-subtle);
+  cursor: pointer;
+}
+${S} .oc-composer-state-chip.is-auth:hover {
+  background: var(--surface-3);
+  color: var(--accent, #60b5ff);
+}
+${S} .oc-composer-state-chip.is-failed {
+  color: var(--text-critical, #ef4444);
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.25);
+  cursor: pointer;
+}
+${S} .oc-composer-state-chip.is-failed:hover {
+  background: rgba(239, 68, 68, 0.14);
+}
+${S} .oc-composer-state-chip__spinner {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid var(--text-muted);
+  border-top-color: transparent;
+  animation: oc-composer-state-spin 0.9s linear infinite;
+}
+@keyframes oc-composer-state-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* In-composer connecting indicator — replaces the textarea's placeholder
+   visual when the session is warming/reconnecting AND the input is empty.
+   Absolutely positioned so the textarea still takes focus on click. */
+${S} .oc-acp-composer-card { position: relative; }
+${S} .oc-acp-composer-connecting {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  padding: 12px 14px;
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  pointer-events: none;
+  z-index: 1;
+}
+${S} .oc-acp-composer-connecting__icon {
+  opacity: 0.85;
+}
+
+/* Summary handoff pill — shown at the top of a chat spawned via
+   agent-switch. Single chip + dismiss; clicking inserts a compact
+   transcript of the prior conversation into the composer. */
+${S} .oc-summary-handoff {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 11.5px;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+${S} .oc-summary-handoff__label {
+  color: var(--text-muted);
+}
+${S} .oc-summary-handoff__chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  max-width: 280px;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+${S} .oc-summary-handoff__chip:hover {
+  background: var(--surface-3);
+  border-color: var(--border-strong, var(--border-subtle));
+}
+${S} .oc-summary-handoff__chip-title {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+${S} .oc-summary-handoff__dismiss {
+  margin-left: auto;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px;
+  border-radius: 4px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+${S} .oc-summary-handoff__dismiss:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
 }
 ${S} .oc-acp-reg-body { min-width: 0; flex: 1; }
 ${S} .oc-acp-reg-title {

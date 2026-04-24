@@ -280,7 +280,7 @@ export function modelEnvVarForAgent(
 }
 
 /** Env var for thinking effort. Zeros convention, not ACP spec. */
-export const EFFORT_ENV_VAR = "ACP_THINKING_EFFORT";
+export const EFFORT_ENV_VAR = "ZEROS_THINKING_EFFORT";
 
 /** Build env map from a chat's composer settings. */
 export function envForChatSettings(args: {

@@ -1,9 +1,9 @@
 // ──────────────────────────────────────────────────────────
-// AcpChat — messages + tool cards + permission modal + composer
+// AgentChat — messages + tool cards + permission modal + composer
 // ──────────────────────────────────────────────────────────
 //
 // The chat surface for an in-flight ACP session. It's driven entirely
-// by the state the useAcpSession hook exposes — this component does
+// by the state the useAgentSession hook exposes — this component does
 // not store message state of its own, which keeps us honest about
 // what the protocol says vs. what we invent.
 //
@@ -27,7 +27,6 @@ import {
 } from "./slash-command-picker";
 import {
   Bot,
-  User as UserIcon,
   Loader2,
   Send,
   Square,
@@ -36,9 +35,7 @@ import {
   XCircle,
   Clock,
   Wrench,
-  Brain,
   AlertCircle,
-  Info,
   Palette,
   Target,
   FileText,
@@ -46,9 +43,7 @@ import {
   Zap,
   MousePointer2,
   GitBranch,
-  Accessibility,
   Layers,
-  Sparkles,
 } from "lucide-react";
 import type {
   PlanEntry,
@@ -56,11 +51,11 @@ import type {
   RequestPermissionOutcome,
 } from "@agentclientprotocol/sdk";
 import type {
-  AcpMessage,
-  AcpSessionControls,
-  AcpSessionState,
-  AcpToolMessage,
-} from "./use-acp-session";
+  AgentMessage,
+  AgentSessionControls,
+  AgentSessionState,
+  AgentToolMessage,
+} from "./use-agent-session";
 import { Button, Textarea } from "../ui";
 import {
   ModelPill,
@@ -69,15 +64,27 @@ import {
   BranchPill,
   ContextPill,
 } from "./composer-pills";
+import { AgentPill } from "./agent-pill";
+import { SummaryHandoffPill } from "./summary-handoff-pill";
+import { ComposerStateChip } from "./composer-state-chip";
+import { ComposerConnectingOverlay } from "./composer-connecting-overlay";
+import { useAgentsSnapshot } from "./agents-cache";
+import { FolderOpen } from "lucide-react";
 import { Image as ImageIcon } from "lucide-react";
+import type { BridgeRegistryAgent } from "../bridge/messages";
 
-interface AcpChatProps {
-  session: AcpSessionState & AcpSessionControls;
+// Error classification is handled by sessions-provider's AgentFailure
+// pipeline; the UI now branches on session.status directly (warming /
+// ready / reconnecting / auth-required / failed). No more regex
+// helpers leaking timeout strings into the banner.
+
+interface AgentChatProps {
+  session: AgentSessionState & AgentSessionControls;
   onBack: () => void;
   /** Optional right-aligned header slot (e.g. a "+ new chat" picker).
    *  When provided the default back button is hidden and the slot
    *  takes over header actions. Keeps the component reusable between
-   *  the AcpMode picker flow (needs "back") and the Column-2 chat
+   *  the AgentMode picker flow (needs "back") and the Column-2 chat
    *  flow (needs "+ new"). */
   headerActions?: React.ReactNode;
   /** When this chat is backed by a ChatThread in the store (Column 2
@@ -87,20 +94,23 @@ interface AcpChatProps {
   chatId?: string;
 }
 
-export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps) {
+export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatProps) {
   const [input, setInput] = useState("");
   const [caret, setCaret] = useState(0);
   const [mentionHighlight, setMentionHighlight] = useState(0);
-  // Text the user hit Enter on while status === "starting". Flushed the
-  // moment the session reaches "ready". Kept as a ref-backed string so
-  // the useEffect below can read the latest value without closing stale.
-  const queuedRef = useRef<string | null>(null);
-  const [queuedPreview, setQueuedPreview] = useState<string | null>(null);
-  // Elapsed time since status transitioned to "starting", for the
-  // progressive "warming up" message on slow agents (Claude ~11s).
+  // Legacy in-flight queue for non-ready status — kept as a stub so
+  // render sites that reference `queuedPreview` don't crash. No code
+  // sets this anymore: EmptyComposer's new speculative-session flow
+  // means the session is already ready on mount. External flows
+  // (inline-edit, feedback) use the pendingChatSubmission store path
+  // and don't touch this ref.
+  const queuedPreview: string | null = null;
+  // Elapsed time since the session entered "warming" / "reconnecting".
+  // No longer drives user-visible copy (state chip owns that) — kept
+  // only for the occasional slow-cold-start diagnostic.
   const [startingElapsed, setStartingElapsed] = useState(0);
   useEffect(() => {
-    if (session.status !== "starting") {
+    if (session.status !== "warming" && session.status !== "reconnecting") {
       setStartingElapsed(0);
       return;
     }
@@ -120,6 +130,7 @@ export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { state: workspaceState, dispatch } = useWorkspace();
+  const agentsList = useAgentsSnapshot();
   const followedToolsRef = useRef<Set<string>>(new Set());
 
   // Chat-thread-backed composer settings. When `chatId` is absent
@@ -139,10 +150,38 @@ export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps
     [chatId, dispatch],
   );
 
-  // Branch pill reads git.status() lazily — we don't wire a refresh
-  // loop here because the Git panel in Col 3 owns that cadence. The
-  // pill is mostly a navigation affordance: clicking it flips to the
-  // Git tab where the full switcher lives.
+  /** Agent switch = open a new chat bound to the target agent,
+   *  remembering the source chat so the summary-handoff pill can offer
+   *  to bring context across. Stays in place for "select the current
+   *  agent" (no-op). */
+  const handleAgentSwitch = useCallback(
+    (a: BridgeRegistryAgent) => {
+      if (!chatThread) return;
+      if (a.id === chatThread.agentId) return;
+      const newId = `chat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+      const newChat: ChatThread = {
+        id: newId,
+        folder: chatThread.folder,
+        agentId: a.id,
+        agentName: a.name,
+        model: null,
+        effort: chatThread.effort,
+        permissionMode: chatThread.permissionMode,
+        title: "New chat",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        sourceChatId: chatThread.id,
+      };
+      dispatch({ type: "ADD_CHAT", chat: newChat });
+      dispatch({ type: "SET_ACTIVE_CHAT", id: newId });
+    },
+    [chatThread, dispatch],
+  );
+
+  // Git status for the below-composer footer. Workspace is shown as a
+  // read-only label (project scope is pinned to the chat's folder for
+  // the whole conversation); branch stays switchable so a mid-chat
+  // "test this on feature/x" is one click away.
   const [gitBranch, setGitBranch] = useState<string | null>(null);
   const [gitAhead, setGitAhead] = useState<number>(0);
   const [gitBehind, setGitBehind] = useState<number>(0);
@@ -163,14 +202,18 @@ export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps
       }
     };
     void refresh();
-    // Refresh every 10s so ahead/behind counters stay fresh while the
-    // user commits/fetches in the Git tab or external terminal.
     const interval = window.setInterval(refresh, 10_000);
     return () => {
       cancelled = true;
       window.clearInterval(interval);
     };
   }, [session.sessionId, chatFolder]);
+
+  const folderLabel = useMemo(() => {
+    if (!chatFolder) return null;
+    const parts = chatFolder.split("/").filter(Boolean);
+    return parts[parts.length - 1] || chatFolder;
+  }, [chatFolder]);
 
   // ── Mention picker plumbing ───────────────────────────────
   const mentionTrigger = detectMentionTrigger(input, caret);
@@ -345,10 +388,11 @@ export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps
   >([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Allow sending during "starting": the message is queued and flushed
-  // when the session becomes ready. Visible feedback is immediate.
+  // Send is only allowed when the session is fully `ready`. No
+  // queueing during warming/reconnecting — the textarea itself is
+  // disabled in those states so this is belt-and-suspenders.
   const canSend =
-    (session.status === "ready" || session.status === "starting") &&
+    session.status === "ready" &&
     !session.pendingPermission &&
     (input.trim().length > 0 || attachments.length > 0);
 
@@ -357,15 +401,6 @@ export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps
     const displayText = rawText.trim();
     if (session.pendingPermission) return;
     if (displayText.length === 0 && attachments.length === 0) return;
-
-    // Queue during "starting" — flush on ready via the effect below.
-    if (session.status === "starting") {
-      queuedRef.current = rawText;
-      setQueuedPreview(displayText);
-      if (override === undefined) setInput("");
-      return;
-    }
-
     if (session.status !== "ready") return;
     const wireText = expandMentionsInText(displayText, workspaceState);
     const extraBlocks = attachments.map((a) => ({
@@ -393,20 +428,9 @@ export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps
     });
   };
 
-  // Flush a queued prompt the moment the session reaches "ready". Uses
-  // session.sendPrompt directly so we don't re-enter handleSend and
-  // have to worry about re-reading stale input state.
-  useEffect(() => {
-    if (session.status !== "ready") return;
-    const queued = queuedRef.current;
-    if (!queued) return;
-    queuedRef.current = null;
-    setQueuedPreview(null);
-    const wireText = expandMentionsInText(queued.trim(), workspaceState);
-    session.sendPrompt(wireText, queued.trim()).catch(() => {
-      /* error surfaces via session.error */
-    });
-  }, [session.status, session.sendPrompt, workspaceState]);
+  // (Previous local queue flush effect removed — EmptyComposer now
+  // sends via a speculative session that is ready at submit time,
+  // so there's nothing to flush locally.)
 
   // Phase 2-B handoff: InlineEdit, feedback pill, and the empty-state
   // composer all funnel AI requests through the ACP chat now. When the
@@ -473,21 +497,6 @@ export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps
 
   const removeAttachment = (id: string) => {
     setAttachments((prev) => prev.filter((a) => a.id !== id));
-  };
-
-  const insertQuickLaunch = (prompt: string) => {
-    // Drop the starter prompt into the composer so the user can tweak or send
-    // as-is. Expanding @-mentions still happens at send time.
-    const next = input.trim() ? `${input.trim()} ${prompt}` : prompt;
-    setInput(next);
-    requestAnimationFrame(() => {
-      const ta = textareaRef.current;
-      if (!ta) return;
-      ta.focus();
-      const pos = next.length;
-      ta.setSelectionRange(pos, pos);
-      setCaret(pos);
-    });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -613,8 +622,12 @@ export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps
                 ? session.lastStopReason
                 : session.status === "ready"
                 ? "ready"
-                : session.status === "starting"
+                : session.status === "warming"
                 ? "connecting…"
+                : session.status === "reconnecting"
+                ? "reconnecting…"
+                : session.status === "auth-required"
+                ? "sign in required"
                 : ""}
             </span>
           </div>
@@ -622,54 +635,36 @@ export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps
         {headerActions}
       </header>
 
-      {session.error && (
+      {session.status === "failed" && session.error && (
         <div className="oc-acp-error">
           <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
           <div className="min-w-0" style={{ flex: 1 }}>
-            <div className="oc-acp-error-title">Something went wrong</div>
             <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
               {session.error}
             </div>
           </div>
-          {session.status === "failed" && session.agentId && (
-            <Button
-              variant="outline"
-              size="sm"
-              type="button"
-              onClick={() => {
-                if (!session.agentId) return;
-                // Force a fresh session with the same agent + cwd. Drops
-                // the failed state and re-runs ensureSession under the hood.
-                void session
-                  .startSession(session.agentId, {
-                    agentName: session.agentName ?? undefined,
-                  })
-                  .catch(() => {
-                    /* error will re-render here */
-                  });
-              }}
-              title="Retry — restart the session with the same agent"
-            >
-              Retry
-            </Button>
-          )}
         </div>
       )}
 
       {session.plan.length > 0 && <PlanPanel entries={session.plan} />}
 
+      {chatThread?.sourceChatId && session.messages.length === 0 && chatId && (
+        <SummaryHandoffPill
+          chatId={chatId}
+          sourceChatId={chatThread.sourceChatId}
+          onInsert={(text) => {
+            setInput((prev) => (prev ? `${text}\n\n${prev}` : text));
+            // Give React a tick to flush the textarea, then focus.
+            window.setTimeout(() => textareaRef.current?.focus(), 0);
+          }}
+        />
+      )}
+
       <div ref={scrollRef} className="oc-acp-body">
         <div className="oc-acp-messages">
-          {session.status === "starting" && (
-            <div className="oc-acp-empty-muted">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              {startingElapsed < 3000
-                ? `Starting session with ${session.agentName ?? session.agentId}…`
-                : startingElapsed < 8000
-                ? `Warming up ${session.agentName ?? session.agentId}…`
-                : `Still connecting — ${session.agentName ?? "the agent"} can take 10+ seconds on cold start.`}
-            </div>
-          )}
+          {/* Warming/reconnecting state is now surfaced by the compact
+              chip in the composer's pill row — keep the message area
+              empty so the user can still see the transcript area. */}
           {session.messages.length === 0 &&
             session.status === "ready" &&
             !session.error &&
@@ -683,9 +678,6 @@ export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps
           ))}
           {queuedPreview && (
             <div className="oc-acp-msg oc-acp-msg-user oc-acp-msg-queued">
-              <div className="oc-acp-msg-icon">
-                <UserIcon className="w-3.5 h-3.5" />
-              </div>
               <div className="oc-acp-msg-content">
                 {queuedPreview}
                 <div className="oc-acp-msg-queued-hint">
@@ -746,6 +738,15 @@ export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps
           </div>
         )}
         <div className="oc-acp-composer-card">
+          <ComposerConnectingOverlay
+            status={session.status}
+            agentId={session.agentId ?? chatThread?.agentId ?? null}
+            agentName={session.agentName ?? chatThread?.agentName ?? null}
+            agentIconUrl={
+              agentsList?.find((a) => a.id === (session.agentId ?? chatThread?.agentId))?.icon ?? null
+            }
+            hidden={input.length > 0 || !!queuedPreview}
+          />
           <Textarea
             ref={textareaRef}
             value={input}
@@ -755,33 +756,21 @@ export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps
             onClick={handleCaretSync}
             onSelect={handleCaretSync}
             rows={1}
+            disabled={
+              session.status !== "ready" && session.status !== "streaming"
+            }
             placeholder={
               session.status === "ready"
                 ? 'Type your message… "/" for commands, "@" for files'
                 : session.status === "streaming"
                 ? "Agent is responding…"
-                : session.status === "starting"
-                ? "Type — we'll send when the session connects…"
-                : "Waiting for session…"
+                : /* warming / reconnecting / auth-required / failed —
+                     the overlay owns the visible state. Keep placeholder
+                     empty so nothing overlaps. */ ""
             }
             className="oc-acp-composer-input"
           />
           <div className="oc-acp-composer-toolbar">
-            {chatThread && (
-              <>
-                <ModelPill
-                  agentId={chatThread.agentId}
-                  initialize={session.initialize}
-                  value={chatThread.model}
-                  onChange={(v) => updateChatSettings({ model: v })}
-                />
-                <EffortPill
-                  value={chatThread.effort}
-                  onChange={(v) => updateChatSettings({ effort: v })}
-                />
-                <span className="oc-acp-toolbar-sep" aria-hidden />
-              </>
-            )}
             <Button
               variant="ghost"
               size="icon-sm"
@@ -799,11 +788,28 @@ export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps
               style={{ display: "none" }}
               onChange={(e) => void handleImageFiles(e.target.files)}
             />
-            {DESIGN_AUDITS.length > 0 && (
-              <DesignAuditsPill
-                onPick={(p) => insertQuickLaunch(p)}
-                disabled={session.status === "streaming"}
-              />
+            {chatThread && (
+              <>
+                <ModelPill
+                  agentId={chatThread.agentId}
+                  initialize={session.initialize}
+                  value={chatThread.model}
+                  onChange={(v) => updateChatSettings({ model: v })}
+                />
+                <EffortPill
+                  value={chatThread.effort}
+                  onChange={(v) => updateChatSettings({ effort: v })}
+                />
+                <PermissionsPill
+                  availableModes={session.availableModes}
+                  currentModeId={session.currentModeId}
+                  onAgentModeChange={(modeId) => {
+                    void session.setMode?.(modeId);
+                  }}
+                  value={chatThread.permissionMode}
+                  onChange={(v) => updateChatSettings({ permissionMode: v })}
+                />
+              </>
             )}
             <div className="oc-acp-toolbar-spacer" />
             {session.status === "streaming" ? (
@@ -832,25 +838,38 @@ export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps
         </div>
         {chatThread && (
           <div className="oc-acp-composer-footer">
+            <AgentPill
+              selectedId={chatThread.agentId}
+              selectedName={chatThread.agentName}
+              showOpenInNewTabHint
+              onSelect={handleAgentSwitch}
+            />
+            <ComposerStateChip
+              status={session.status}
+              agentName={session.agentName ?? chatThread.agentName}
+              onAction={() =>
+                dispatch({ type: "SET_ACTIVE_PAGE", page: "settings" })
+              }
+            />
+            {folderLabel && (
+              <span
+                className="oc-acp-chat-workspace"
+                title={chatThread.folder || "No project"}
+              >
+                <FolderOpen size={11} />
+                <span>{folderLabel}</span>
+              </span>
+            )}
             <BranchPill
               branch={gitBranch}
               ahead={gitAhead}
               behind={gitBehind}
-              cwd={chatThread.folder || undefined}
+              cwd={chatFolder}
               onSwitched={(name) => {
                 setGitBranch(name);
                 setGitAhead(0);
                 setGitBehind(0);
               }}
-            />
-            <PermissionsPill
-              availableModes={session.availableModes}
-              currentModeId={session.currentModeId}
-              onAgentModeChange={(modeId) => {
-                void session.setMode?.(modeId);
-              }}
-              value={chatThread.permissionMode}
-              onChange={(v) => updateChatSettings({ permissionMode: v })}
             />
             <div className="oc-acp-toolbar-spacer" />
             <ContextPill usage={session.usage} />
@@ -862,70 +881,6 @@ export function AcpChat({ session, onBack, headerActions, chatId }: AcpChatProps
 }
 
 // ── Design-audits pill — collapsed quick-launch for a11y/token audits
-
-function DesignAuditsPill({
-  onPick,
-  disabled,
-}: {
-  onPick: (prompt: string) => void;
-  disabled: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDoc = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("mousedown", onDoc, true);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDoc, true);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
-  return (
-    <div ref={rootRef} className="oc-chat-dropdown-root">
-      <button
-        type="button"
-        className="oc-chat-toolbar-pill"
-        title="Design audits"
-        onClick={() => setOpen((v) => !v)}
-        disabled={disabled}
-      >
-        <Sparkles size={11} />
-        <span>Audits</span>
-      </button>
-      {open && (
-        <div className="oc-chat-dropdown-menu">
-          <div className="oc-chat-dropdown-section-label">Quick launch</div>
-          {DESIGN_AUDITS.map((q) => (
-            <button
-              key={q.id}
-              type="button"
-              className="oc-chat-dropdown-item"
-              onClick={() => {
-                onPick(q.prompt);
-                setOpen(false);
-              }}
-            >
-              <q.icon className="w-3 h-3" />
-              <span className="oc-chat-dropdown-item-label">{q.label}</span>
-              <span className="oc-chat-dropdown-item-hint">{q.hint}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ──────────────────────────────────────────────────────────
 // PlanPanel — collapsible todo list from ACP `plan` notifications
@@ -986,23 +941,15 @@ function MessageView({
   message,
   applyReceipts,
 }: {
-  message: AcpMessage;
+  message: AgentMessage;
   applyReceipts: Record<string, ApplyReceipt>;
 }) {
   if (message.kind === "text") {
-    const Icon =
-      message.role === "user"
-        ? UserIcon
-        : message.role === "thought"
-        ? Brain
-        : Bot;
+    // No role icon — Cursor-style "flat text for assistant, subtle
+    // bubble for user" reads cleaner than twin avatar columns.
     const roleClass = `oc-acp-msg oc-acp-msg-${message.role}`;
-
     return (
       <div className={roleClass}>
-        <div className="oc-acp-msg-icon">
-          <Icon className="w-3.5 h-3.5" />
-        </div>
         <div className="oc-acp-msg-content">{message.text}</div>
       </div>
     );
@@ -1156,48 +1103,6 @@ function matchDesignTool(title: string): DesignToolEntry | null {
 
 const SUBAGENT_TITLE_PATTERN = /^(task|spawn_?agent|delegate|subagent)$/i;
 
-/**
- * Starter prompts that nudge the agent to spawn a focused subagent. Each
- * chip drops the prompt into the composer so the designer can tweak the
- * selector / scope before sending. Nothing about these is protocol
- * extension — they're just good opening lines for the agents that
- * support SpawnAgentTool (claude-agent-acp's Task, Codex's delegation, …).
- */
-export interface DesignAudit {
-  id: string;
-  label: string;
-  hint: string;
-  icon: React.ComponentType<{ className?: string }>;
-  prompt: string;
-}
-
-const DESIGN_AUDITS: DesignAudit[] = [
-  {
-    id: "a11y",
-    label: "a11y audit",
-    hint: "Delegate accessibility review to a subagent",
-    icon: Accessibility,
-    prompt:
-      "Spawn an a11y-auditor subagent: review @selection (or the full design state if nothing is selected) for WCAG issues — contrast, focus order, target sizes, missing ARIA. Report findings with the offending selectors.",
-  },
-  {
-    id: "tokens",
-    label: "token audit",
-    hint: "Consolidate duplicate/close-but-different design tokens",
-    icon: Layers,
-    prompt:
-      "Spawn a token-consolidator subagent: scan all design tokens, group near-duplicates, and propose a consolidated set with a per-component migration list. Don't apply changes yet.",
-  },
-  {
-    id: "polish",
-    label: "polish pass",
-    hint: "Scan for tiny visual-consistency wins",
-    icon: Sparkles,
-    prompt:
-      "Spawn a design-polish subagent: look at the current canvas for inconsistencies (spacing rhythm off-grid, border-radius mismatches, one-off font-sizes). Suggest fixes ranked by visual impact; don't apply changes yet.",
-  },
-];
-
 export interface SubagentInfo {
   /** Which subagent role the parent agent is invoking, if declared. */
   subagentType?: string;
@@ -1205,7 +1110,7 @@ export interface SubagentInfo {
   description?: string;
 }
 
-function matchSubagent(tool: AcpToolMessage): SubagentInfo | null {
+function matchSubagent(tool: AgentToolMessage): SubagentInfo | null {
   if (SUBAGENT_TITLE_PATTERN.test(tool.title)) {
     const input = tool.rawInput as
       | { subagent_type?: string; description?: string; prompt?: string }
@@ -1251,7 +1156,7 @@ function ToolCallCard({
   tool,
   receipt,
 }: {
-  tool: AcpToolMessage;
+  tool: AgentToolMessage;
   receipt: ApplyReceipt | null;
 }) {
   const design = matchDesignTool(tool.title);
@@ -1351,7 +1256,7 @@ function ApplyChangeReceipt({
   sourceLine,
 }: {
   receipt: ApplyReceipt;
-  status: AcpToolMessage["status"];
+  status: AgentToolMessage["status"];
   sourcePath?: string;
   sourceLine?: number | null;
 }) {
@@ -1399,7 +1304,7 @@ function ApplyChangeReceipt({
 function ToolContentView({
   content,
 }: {
-  content: NonNullable<AcpToolMessage["content"]>;
+  content: NonNullable<AgentToolMessage["content"]>;
 }) {
   return (
     <div>

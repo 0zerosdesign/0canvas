@@ -182,144 +182,144 @@ export interface ErrorMessage extends BaseMessage {
 
 // ── ACP (Agent Client Protocol) ──────────────────────────
 //
-// See docs/ACP_INTEGRATION.md for the architecture. These wire types
+// See docs/AGENT_RUNTIME.md for the architecture. These wire types
 // mirror src/engine/types.ts — keep them in sync or the union breaks.
 
-export interface AcpListAgentsMessage extends BaseMessage {
-  type: "ACP_LIST_AGENTS";
+export interface AgentListAgentsMessage extends BaseMessage {
+  type: "AGENT_LIST_AGENTS";
   force?: boolean;
 }
 
-export interface AcpNewSessionMessage extends BaseMessage {
-  type: "ACP_NEW_SESSION";
+export interface AgentNewSessionMessage extends BaseMessage {
+  type: "AGENT_NEW_SESSION";
   agentId: string;
   cwd?: string;
   /** Env passed to the agent subprocess at spawn time. */
   env?: Record<string, string>;
 }
 
-export interface AcpInitAgentMessage extends BaseMessage {
-  type: "ACP_INIT_AGENT";
+export interface AgentInitAgentMessage extends BaseMessage {
+  type: "AGENT_INIT_AGENT";
   agentId: string;
 }
 
-export interface AcpAuthenticateMessage extends BaseMessage {
-  type: "ACP_AUTHENTICATE";
+export interface AgentAuthenticateMessage extends BaseMessage {
+  type: "AGENT_AUTHENTICATE";
   agentId: string;
   methodId: string;
 }
 
-export interface AcpPromptMessage extends BaseMessage {
-  type: "ACP_PROMPT";
+export interface AgentPromptMessage extends BaseMessage {
+  type: "AGENT_PROMPT";
   agentId: string;
   sessionId: string;
   prompt: ContentBlock[];
 }
 
-export interface AcpCancelMessage extends BaseMessage {
-  type: "ACP_CANCEL";
+export interface AgentCancelMessage extends BaseMessage {
+  type: "AGENT_CANCEL";
   agentId: string;
   sessionId: string;
 }
 
-export interface AcpPermissionResponseMessage extends BaseMessage {
-  type: "ACP_PERMISSION_RESPONSE";
+export interface AgentPermissionResponseMessage extends BaseMessage {
+  type: "AGENT_PERMISSION_RESPONSE";
   permissionId: string;
   response: RequestPermissionResponse;
 }
 
 /** Change the agent's session mode (ACP `session/set_mode`).
  *  Used by the composer permissions pill. Fire-and-forget —
- *  engine replies with ACP_MODE_CHANGED (ack) or ACP_ERROR. */
-export interface AcpSetModeMessage extends BaseMessage {
-  type: "ACP_SET_MODE";
+ *  engine replies with AGENT_MODE_CHANGED (ack) or AGENT_ERROR. */
+export interface AgentSetModeMessage extends BaseMessage {
+  type: "AGENT_SET_MODE";
   agentId: string;
   sessionId: string;
   modeId: string;
 }
 
-export interface AcpModeChangedMessage extends BaseMessage {
-  type: "ACP_MODE_CHANGED";
+export interface AgentModeChangedMessage extends BaseMessage {
+  type: "AGENT_MODE_CHANGED";
   requestId: string;
   agentId: string;
   sessionId: string;
   modeId: string;
 }
 
-export interface AcpListSessionsMessage extends BaseMessage {
-  type: "ACP_LIST_SESSIONS";
+export interface AgentListSessionsMessage extends BaseMessage {
+  type: "AGENT_LIST_SESSIONS";
   agentId: string;
   cwd?: string;
   cursor?: string | null;
 }
 
-export interface AcpLoadSessionMessage extends BaseMessage {
-  type: "ACP_LOAD_SESSION";
+export interface AgentLoadSessionMessage extends BaseMessage {
+  type: "AGENT_LOAD_SESSION";
   agentId: string;
   sessionId: string;
   cwd?: string;
   env?: Record<string, string>;
 }
 
-export interface AcpSessionsListMessage extends BaseMessage {
-  type: "ACP_SESSIONS_LIST";
+export interface AgentSessionsListMessage extends BaseMessage {
+  type: "AGENT_SESSIONS_LIST";
   requestId: string;
   agentId: string;
   sessions: ListSessionsResponse["sessions"];
   nextCursor?: string | null;
 }
 
-export interface AcpSessionLoadedMessage extends BaseMessage {
-  type: "ACP_SESSION_LOADED";
+export interface AgentSessionLoadedMessage extends BaseMessage {
+  type: "AGENT_SESSION_LOADED";
   requestId: string;
   agentId: string;
   sessionId: string;
   response: LoadSessionResponse;
 }
 
-export interface AcpAgentsListMessage extends BaseMessage {
-  type: "ACP_AGENTS_LIST";
+export interface AgentAgentsListMessage extends BaseMessage {
+  type: "AGENT_AGENTS_LIST";
   requestId: string;
   agents: BridgeRegistryAgent[];
 }
 
-export interface AcpSessionCreatedMessage extends BaseMessage {
-  type: "ACP_SESSION_CREATED";
+export interface AgentSessionCreatedMessage extends BaseMessage {
+  type: "AGENT_SESSION_CREATED";
   requestId: string;
   agentId: string;
   session: NewSessionResponse;
   initialize: InitializeResponse;
 }
 
-export interface AcpAuthCompletedMessage extends BaseMessage {
-  type: "ACP_AUTH_COMPLETED";
+export interface AgentAuthCompletedMessage extends BaseMessage {
+  type: "AGENT_AUTH_COMPLETED";
   requestId: string;
   agentId: string;
   methodId: string;
 }
 
-export interface AcpAgentInitializedMessage extends BaseMessage {
-  type: "ACP_AGENT_INITIALIZED";
+export interface AgentAgentInitializedMessage extends BaseMessage {
+  type: "AGENT_AGENT_INITIALIZED";
   requestId: string;
   agentId: string;
   initialize: InitializeResponse;
 }
 
-export interface AcpSessionUpdateMessage extends BaseMessage {
-  type: "ACP_SESSION_UPDATE";
+export interface AgentSessionUpdateMessage extends BaseMessage {
+  type: "AGENT_SESSION_UPDATE";
   agentId: string;
   notification: SessionNotification;
 }
 
-export interface AcpPermissionRequestMessage extends BaseMessage {
-  type: "ACP_PERMISSION_REQUEST";
+export interface AgentPermissionRequestMessage extends BaseMessage {
+  type: "AGENT_PERMISSION_REQUEST";
   agentId: string;
   permissionId: string;
   request: RequestPermissionRequest;
 }
 
-export interface AcpPromptCompleteMessage extends BaseMessage {
-  type: "ACP_PROMPT_COMPLETE";
+export interface AgentPromptCompleteMessage extends BaseMessage {
+  type: "AGENT_PROMPT_COMPLETE";
   requestId: string;
   agentId: string;
   sessionId: string;
@@ -327,33 +327,64 @@ export interface AcpPromptCompleteMessage extends BaseMessage {
   response: PromptResponse;
 }
 
-export interface AcpPromptFailedMessage extends BaseMessage {
-  type: "ACP_PROMPT_FAILED";
+export interface AgentPromptFailedMessage extends BaseMessage {
+  type: "AGENT_PROMPT_FAILED";
   requestId: string;
   agentId: string;
   sessionId: string;
   error: string;
 }
 
-export interface AcpAgentStderrMessage extends BaseMessage {
-  type: "ACP_AGENT_STDERR";
+export interface AgentAgentStderrMessage extends BaseMessage {
+  type: "AGENT_AGENT_STDERR";
   agentId: string;
   line: string;
 }
 
-export interface AcpAgentExitedMessage extends BaseMessage {
-  type: "ACP_AGENT_EXITED";
+export interface AgentAgentExitedMessage extends BaseMessage {
+  type: "AGENT_AGENT_EXITED";
   agentId: string;
   code: number | null;
   signal: string | null;
 }
 
-export interface AcpErrorMessage extends BaseMessage {
-  type: "ACP_ERROR";
+/** Discriminated-union payload mirroring the engine's AgentFailure.
+ *  Lets the UI route deterministically instead of regex-matching
+ *  `message`. The string `message` field stays populated as a
+ *  fallback / log-friendly description. */
+export interface BridgeAgentFailure {
+  kind:
+    | "timeout"
+    | "auth-required"
+    | "subprocess-exited"
+    | "protocol-error"
+    | "transport-closed";
+  message: string;
+  stage?:
+    | "initialize"
+    | "newSession"
+    | "loadSession"
+    | "prompt"
+    | "cancel"
+    | "setMode";
+  agentId?: string;
+  exit?: {
+    code: number | null;
+    signal: string | null;
+    stderrTail: string;
+  };
+}
+
+export interface AgentErrorMessage extends BaseMessage {
+  type: "AGENT_ERROR";
   requestId?: string;
   agentId?: string;
   code: string;
   message: string;
+  /** New: structured classification. Populated by the engine since the
+   *  `AgentFailure` refactor. Older engine builds won't send this — the UI
+   *  falls back to `message` + `code` in that case. */
+  failure?: BridgeAgentFailure;
 }
 
 // ── Union ────────────────────────────────────────────────
@@ -376,31 +407,31 @@ export type BridgeMessage =
   | CSSFileChangedMessage
   | OCFileChangedMessage
   // ACP (browser → engine)
-  | AcpListAgentsMessage
-  | AcpNewSessionMessage
-  | AcpInitAgentMessage
-  | AcpAuthenticateMessage
-  | AcpPromptMessage
-  | AcpCancelMessage
-  | AcpPermissionResponseMessage
-  | AcpSetModeMessage
-  | AcpListSessionsMessage
-  | AcpLoadSessionMessage
+  | AgentListAgentsMessage
+  | AgentNewSessionMessage
+  | AgentInitAgentMessage
+  | AgentAuthenticateMessage
+  | AgentPromptMessage
+  | AgentCancelMessage
+  | AgentPermissionResponseMessage
+  | AgentSetModeMessage
+  | AgentListSessionsMessage
+  | AgentLoadSessionMessage
   // ACP (engine → browser)
-  | AcpAgentsListMessage
-  | AcpSessionCreatedMessage
-  | AcpAgentInitializedMessage
-  | AcpAuthCompletedMessage
-  | AcpSessionUpdateMessage
-  | AcpPermissionRequestMessage
-  | AcpModeChangedMessage
-  | AcpSessionsListMessage
-  | AcpSessionLoadedMessage
-  | AcpPromptCompleteMessage
-  | AcpPromptFailedMessage
-  | AcpAgentStderrMessage
-  | AcpAgentExitedMessage
-  | AcpErrorMessage;
+  | AgentAgentsListMessage
+  | AgentSessionCreatedMessage
+  | AgentAgentInitializedMessage
+  | AgentAuthCompletedMessage
+  | AgentSessionUpdateMessage
+  | AgentPermissionRequestMessage
+  | AgentModeChangedMessage
+  | AgentSessionsListMessage
+  | AgentSessionLoadedMessage
+  | AgentPromptCompleteMessage
+  | AgentPromptFailedMessage
+  | AgentAgentStderrMessage
+  | AgentAgentExitedMessage
+  | AgentErrorMessage;
 
 // ── Helpers ──────────────────────────────────────────────
 

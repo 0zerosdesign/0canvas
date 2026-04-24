@@ -156,6 +156,74 @@ function killCurrentChild(): void {
   state.port = null;
 }
 
+/** Once-per-process flag so we only reap on cold start. Re-spawning the
+ *  engine for a different project should NOT reap — by that point we
+ *  own the ports through `state.child` and the reaper can't distinguish
+ *  our new child from an orphan before bind completes. */
+let orphansReaped = false;
+
+/**
+ * Kill stranded engine processes left over from prior app runs.
+ *
+ * Zeros' engine binds 24193–24200. When the app was killed without a
+ * clean shutdown (crash, force-quit, Tauri→Electron migration), the
+ * child outlives its parent and keeps the port. The next launch then
+ * gets bumped up the retry chain, and the renderer — which probes
+ * get_engine_port but falls back to 24193 — may talk to a zombie
+ * that speaks an older protocol or is wedged. Symptom: every ACP
+ * request times out even though "an engine" is running.
+ *
+ * We defensively scan the port range with lsof, match the command
+ * line against known engine patterns (current Electron binary, legacy
+ * Tauri binary, dev-mode `bun src/cli.ts`), and SIGTERM the matches.
+ * Non-engine processes on the range are left alone.
+ */
+async function reapOrphanEngines(): Promise<void> {
+  const { spawnSync } = require("node:child_process") as typeof import("node:child_process");
+  let probe;
+  try {
+    probe = spawnSync(
+      "lsof",
+      ["-iTCP:24193-24200", "-sTCP:LISTEN", "-t"],
+      { encoding: "utf-8" },
+    );
+  } catch {
+    return;
+  }
+  if (probe.status !== 0) return;
+  const pids = (probe.stdout ?? "")
+    .split(/\s+/)
+    .map((s) => Number.parseInt(s, 10))
+    .filter((n) => Number.isFinite(n) && n > 0 && n !== process.pid);
+  if (pids.length === 0) return;
+
+  for (const pid of pids) {
+    let ps;
+    try {
+      ps = spawnSync("ps", ["-p", String(pid), "-o", "command="], {
+        encoding: "utf-8",
+      });
+    } catch {
+      continue;
+    }
+    if (ps.status !== 0) continue;
+    const cmd = (ps.stdout ?? "").trim();
+    const looksLikeEngine =
+      cmd.includes("zeros-engine") ||
+      cmd.includes("0canvas-engine") ||
+      (cmd.includes("bun") && cmd.includes("src/cli.ts"));
+    if (!looksLikeEngine) continue;
+    try {
+      process.kill(pid, "SIGTERM");
+      console.log(`[Zeros] reaped orphan engine PID ${pid} on port range 24193-24200`);
+    } catch {
+      /* already gone, or permissions issue — either way, not our problem */
+    }
+  }
+  // Wait briefly for the OS to release the ports before we try to bind.
+  await new Promise<void>((r) => setTimeout(r, 250));
+}
+
 /**
  * Spawn the engine with `projectRoot` as its working directory. Kills
  * any previous child first, then polls for `<root>/.zeros/.port` (up
@@ -163,6 +231,10 @@ function killCurrentChild(): void {
  * spawn_engine_impl byte-for-byte in behaviour.
  */
 export async function spawnEngine(projectRoot: string): Promise<number> {
+  if (!orphansReaped) {
+    orphansReaped = true;
+    await reapOrphanEngines();
+  }
   killCurrentChild();
 
   const { cmd, args: engineArgs } = resolveEngineSpawn();

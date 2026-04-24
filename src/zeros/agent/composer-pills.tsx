@@ -28,7 +28,7 @@ import type {
   ChatThread,
 } from "../store/store";
 import type { InitializeResponse, SessionMode } from "@agentclientprotocol/sdk";
-import type { AcpUsage } from "./use-acp-session";
+import type { AgentUsage } from "./use-agent-session";
 import {
   modelsForAgent as catalogModelsForAgent,
   envForChatSettings,
@@ -390,11 +390,17 @@ export function PermissionsPill({
   );
 }
 
-// ── BranchPill — live git branch switcher ────────────────
+// ── BranchPill — current branch + switcher ───────────────
 //
-// Reads from the active chat's folder (passed as `cwd`). Shows
-// the current branch and ahead/behind counters; click opens a
-// list of local branches; click a row to switch.
+// Reads the active chat's folder (passed as `cwd`) and shows
+// the current branch plus ahead/behind counters. Click opens
+// a list of local branches; click a row to switch. Used in
+// the empty-state composer so the user can scope "New chat"
+// to a specific branch before sending the first prompt.
+//
+// Branch switching is destructive — we confirm nothing else,
+// but git refuses the switch if there are conflicting local
+// changes, so the pill is safe to click casually.
 
 export function BranchPill({
   branch,
@@ -418,8 +424,6 @@ export function BranchPill({
   const rootRef = useRef<HTMLDivElement>(null);
   useClickAway(rootRef, open, () => setOpen(false));
 
-  // Lazy-load the branch list on first open so we don't hammer git
-  // for every chat render.
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
@@ -429,9 +433,7 @@ export function BranchPill({
         const { git } = await import("../../native/native");
         const list = await git.branchList(cwd);
         if (!cancelled) {
-          setBranches(
-            list.map((b) => ({ name: b.name, isHead: !!b.isHead })),
-          );
+          setBranches(list.map((b) => ({ name: b.name, isHead: !!b.isHead })));
         }
       } catch (err) {
         if (!cancelled) {
@@ -463,21 +465,21 @@ export function BranchPill({
     }
   };
 
+  const title = branch
+    ? `Branch: ${branch}${
+        ahead || behind
+          ? ` (${ahead} ahead${behind ? `, ${behind} behind` : ""})`
+          : ""
+      }`
+    : "Not a git repository";
+
   return (
     <div ref={rootRef} className="oc-chat-dropdown-root is-footer">
       <button
         type="button"
         className="oc-chat-toolbar-pill is-footer"
         onClick={() => branch && setOpen((v) => !v)}
-        title={
-          branch
-            ? `Branch: ${branch}${
-                ahead || behind
-                  ? ` (${ahead} ahead${behind ? `, ${behind} behind` : ""})`
-                  : ""
-              }`
-            : "No git repo"
-        }
+        title={title}
         disabled={!branch}
       >
         <GitBranchIcon size={11} />
@@ -541,7 +543,7 @@ function formatTokens(n: number): string {
   return `${(n / 1_000_000).toFixed(2)}M`;
 }
 
-export function ContextPill({ usage }: { usage: AcpUsage }) {
+export function ContextPill({ usage }: { usage: AgentUsage }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   useClickAway(rootRef, open, () => setOpen(false));

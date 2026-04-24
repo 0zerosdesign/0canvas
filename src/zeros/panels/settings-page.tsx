@@ -9,7 +9,7 @@
 // that way nothing pretends to be wired when it isn't.
 // ──────────────────────────────────────────────────────────
 
-import React, { useState, useCallback, useEffect, type ComponentType } from "react";
+import React, { useState, useCallback, useEffect, useRef, type ComponentType } from "react";
 import {
   Sparkles,
   KeyRound,
@@ -22,6 +22,8 @@ import {
   CheckCircle,
   LogOut as LogOutIcon,
   Bot,
+  RefreshCw,
+  Loader2,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -49,14 +51,11 @@ import {
 } from "../../native/secrets";
 import { getSetting, setSetting } from "../../native/settings";
 import { useBridge } from "../bridge/use-bridge";
-import { AgentsPanel } from "../acp/agents-panel";
-import {
-  refreshCatalog,
-  catalogUpdatedAt,
-  catalogSource,
-} from "../acp/model-catalog";
+import { AgentsPanel } from "../agent/agents-panel";
+import { useAgentSessions } from "../agent/sessions-provider";
+import { refreshCatalog } from "../agent/model-catalog";
 import type {
-  AcpAgentsListMessage,
+  AgentAgentsListMessage,
   BridgeRegistryAgent,
 } from "../bridge/messages";
 
@@ -74,11 +73,14 @@ type SectionDef = {
   label: string;
   icon: LucideIcon;
   Panel: ComponentType;
+  /** When true the panel renders its own heading row (so it can place
+   *  inline actions next to the title). */
+  customHeading?: boolean;
 };
 
 const SECTIONS: SectionDef[] = [
   { id: "general", label: "General", icon: User, Panel: GeneralPanel },
-  { id: "agents", label: "Agents", icon: Bot, Panel: AgentsSettingsPanel },
+  { id: "agents", label: "Agents", icon: Bot, Panel: AgentsSettingsPanel, customHeading: true },
   { id: "ai-models", label: "AI Models", icon: Sparkles, Panel: AiSettingsPanel },
   { id: "api-keys", label: "API Keys", icon: KeyRound, Panel: ApiKeysPanel },
   { id: "appearance", label: "Appearance", icon: Palette, Panel: AppearancePanel },
@@ -145,7 +147,9 @@ export function SettingsPage() {
       <div className="oc-settings-content">
         <ScrollArea className="oc-settings-scroll">
           <div className="oc-settings-scroll__inner">
-            <h1 className="oc-settings-heading">{activeDef.label}</h1>
+            {!activeDef.customHeading && (
+              <h1 className="oc-settings-heading">{activeDef.label}</h1>
+            )}
             <Panel />
           </div>
         </ScrollArea>
@@ -159,35 +163,37 @@ export function SettingsPage() {
 // Browses the live ACP agent registry and lets the user designate
 // one as the default for new chats. Clicking a row toggles default
 // — no separate "install" action needed because the registry auto-
-// detects install state from PATH probes.
-
-const CATALOG_URL_KEY = "model-catalog-remote-url";
-const DEFAULT_CATALOG_URL =
-  "https://cdn.jsdelivr.net/gh/Withso/Zeros@main/catalogs/models-v1.json";
+// detects install state from PATH probes. Model catalog refresh is
+// kept internal: the heading's refresh icon force-reloads both the
+// registry AND the catalog without exposing URLs or timestamps.
 
 function AgentsSettingsPanel() {
   const bridge = useBridge();
+  const sessions = useAgentSessions();
   const [defaultId, setDefaultId] = useState<string | null>(() =>
     getDefaultAgentId(),
   );
-
-  // Catalog controls — URL override + Refresh.
-  const [catalogUrl, setCatalogUrl] = useState<string>(() => {
-    try {
-      return window.localStorage.getItem(CATALOG_URL_KEY) ?? DEFAULT_CATALOG_URL;
-    } catch {
-      return DEFAULT_CATALOG_URL;
-    }
-  });
-  const [updatedAt, setUpdatedAt] = useState<string>(() => catalogUpdatedAt());
+  const [refreshNonce, setRefreshNonce] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
-  const [catalogStatus, setCatalogStatus] = useState<string | null>(null);
+  const refreshGuardRef = useRef<number | null>(null);
+
+  // Hover-prewarm — when the user hovers an agent row, spawn its
+  // subprocess in the background so a click pays zero cold-start.
+  // Failures are silent; the real session path surfaces diagnostics.
+  const handlePreWarm = useCallback(
+    (agentId: string) => {
+      void sessions.initAgent(agentId).catch(() => {
+        /* silent */
+      });
+    },
+    [sessions],
+  );
 
   const listAgents = useCallback(
     async (force: boolean = false): Promise<BridgeRegistryAgent[]> => {
       if (!bridge) return [];
-      const resp = await bridge.request<AcpAgentsListMessage>(
-        { type: "ACP_LIST_AGENTS", force },
+      const resp = await bridge.request<AgentAgentsListMessage>(
+        { type: "AGENT_LIST_AGENTS", force },
         30_000,
       );
       return resp.agents;
@@ -205,95 +211,52 @@ function AgentsSettingsPanel() {
     }
   };
 
-  const handleSaveCatalogUrl = () => {
-    const trimmed = catalogUrl.trim();
-    try {
-      if (trimmed && trimmed !== DEFAULT_CATALOG_URL) {
-        window.localStorage.setItem(CATALOG_URL_KEY, trimmed);
-      } else {
-        window.localStorage.removeItem(CATALOG_URL_KEY);
-      }
-    } catch {
-      /* ignore — private browsing */
+  // Refresh icon next to the title. Force-reloads the registry and
+  // the model catalog in parallel — both run silent, the only signal
+  // is a brief spin on the icon. Guarded against double-fire.
+  const handleRefresh = useCallback(async () => {
+    if (refreshGuardRef.current && Date.now() - refreshGuardRef.current < 600) {
+      return;
     }
-    setCatalogStatus("Saved. Click Refresh to fetch.");
-    window.setTimeout(() => setCatalogStatus(null), 2_000);
-  };
-
-  const handleRefresh = async () => {
+    refreshGuardRef.current = Date.now();
     setRefreshing(true);
-    setCatalogStatus(null);
     try {
-      const next = await refreshCatalog();
-      const src = catalogSource();
-      setUpdatedAt(next.updatedAt);
-      setCatalogStatus(
-        src === "remote"
-          ? `Loaded ${next.updatedAt} from remote`
-          : src === "cache"
-          ? `Loaded from cache (remote unreachable)`
-          : `Remote unreachable — using bundled ${next.updatedAt}`,
-      );
-      window.setTimeout(() => setCatalogStatus(null), 4_000);
-    } catch (err) {
-      setCatalogStatus(err instanceof Error ? err.message : "Refresh failed");
+      await Promise.allSettled([refreshCatalog()]);
+      setRefreshNonce((n) => n + 1);
     } finally {
-      setRefreshing(false);
+      window.setTimeout(() => setRefreshing(false), 400);
     }
-  };
+  }, []);
 
   return (
     <div className="oc-settings-panel">
-      <p className="oc-ai-hint">
-        Click an agent to set it as the default for new chats. Install state
-        is auto-detected from your <code>PATH</code>. If your chosen agent
-        isn't installed yet, Zeros will fall back to <code>npx</code> or
-        <code> uvx</code> on first use.
-      </p>
+      <div className="oc-settings-heading-row">
+        <h1 className="oc-settings-heading">Agents</h1>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="oc-settings-heading-action"
+          onClick={() => void handleRefresh()}
+          disabled={refreshing}
+          title="Refresh agents"
+          aria-label="Refresh agents"
+        >
+          {refreshing ? (
+            <Loader2 size={13} className="animate-spin" />
+          ) : (
+            <RefreshCw size={13} />
+          )}
+        </Button>
+      </div>
       <div className="oc-settings-agents">
         <AgentsPanel
           listAgents={listAgents}
           onSelect={handleSetDefault}
           activeAgentId={defaultId}
+          refreshNonce={refreshNonce}
+          onPreWarm={handlePreWarm}
         />
       </div>
-
-      <div className="oc-settings-section-title oc-settings-section-title--spaced">
-        Model catalog
-      </div>
-      <p className="oc-ai-hint">
-        The model picker pulls its list from the agent's ACP initialize
-        response first (when available), then from this remote catalog
-        (cached 24 hours), then from the bundled fallback. Point this at
-        your own fork to ship model updates without an app release.
-      </p>
-      <label className="oc-ai-field">
-        <span className="oc-ai-field-label">Remote catalog URL</span>
-        <div className="oc-ai-auth-row">
-          <Input
-            type="text"
-            value={catalogUrl}
-            onChange={(e) => setCatalogUrl(e.target.value)}
-            placeholder={DEFAULT_CATALOG_URL}
-            spellCheck={false}
-          />
-          <Button variant="ghost" size="sm" onClick={handleSaveCatalogUrl}>
-            Save
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => void handleRefresh()}
-            disabled={refreshing}
-          >
-            {refreshing ? "Refreshing…" : "Refresh"}
-          </Button>
-        </div>
-        <span className="oc-ai-field-hint">
-          Catalog last updated: <code>{updatedAt}</code>
-          {catalogStatus ? ` · ${catalogStatus}` : ""}
-        </span>
-      </label>
     </div>
   );
 }

@@ -258,6 +258,14 @@ export type WorkspaceState = {
   // this triggers Column 2 to switch to the Chat tab, AIChatPanel to
   // auto-submit the text, then clear via CONSUME_CHAT_SUBMISSION.
   pendingChatSubmission: PendingChatSubmission | null;
+
+  // Scope override for the EmptyComposer. Normally the new-agent
+  // surface resolves its folder from the engine's project root. When
+  // the user clicks "+" on a secondary workspace section in Column 1,
+  // we want the empty composer to be contextual to *that* workspace,
+  // not the engine root — so the first chat created from it lands in
+  // the right project. Cleared by the composer after ADD_CHAT.
+  newAgentFolder: string | null;
 };
 
 export type PendingChatSubmission = {
@@ -306,6 +314,15 @@ export type ChatThread = {
    *  calling newSession. Used by the Codex/Claude "Recent threads" resume
    *  flow. Cleared after the first successful load. */
   resumeSessionId?: string;
+  /** Pinned to the top of the sidebar, independent of project grouping.
+   *  Cursor-style favorites. Defaults to false / undefined for old records. */
+  pinned?: boolean;
+  /** Chat that spawned this one via agent-switch. When set and this chat
+   *  has no messages yet, the composer offers a "summary handoff" pill
+   *  at the top so the user can paste the prior conversation into the
+   *  new agent's first turn. Cleared the moment the user either accepts
+   *  or dismisses the handoff. */
+  sourceChatId?: string;
 };
 
 type Action =
@@ -384,11 +401,14 @@ type Action =
   | { type: "SET_ACTIVE_CHAT"; id: string | null }
   | { type: "DELETE_CHAT"; id: string }
   | { type: "UPDATE_CHAT_TITLE"; id: string; title: string }
-  | { type: "UPDATE_CHAT_SETTINGS"; id: string; updates: Partial<Pick<ChatThread, "model" | "effort" | "permissionMode" | "agentId" | "agentName" | "resumeSessionId">> }
+  | { type: "UPDATE_CHAT_SETTINGS"; id: string; updates: Partial<Pick<ChatThread, "model" | "effort" | "permissionMode" | "agentId" | "agentName" | "resumeSessionId" | "sourceChatId">> }
   | { type: "TOUCH_CHAT"; id: string }
+  | { type: "TOGGLE_PIN_CHAT"; id: string }
   // Auto-submit into Column 2 chat (Phase 2-B)
   | { type: "ENQUEUE_CHAT_SUBMISSION"; submission: PendingChatSubmission }
   | { type: "CONSUME_CHAT_SUBMISSION"; id: string }
+  // EmptyComposer scope override — see newAgentFolder doc on WorkspaceState.
+  | { type: "SET_NEW_AGENT_FOLDER"; folder: string | null }
 
 // ──────────────────────────────────────────────────────────
 // IDE definitions
@@ -440,6 +460,7 @@ const initialState: WorkspaceState = {
   chats: [],
   activeChatId: null,
   pendingChatSubmission: null,
+  newAgentFolder: null,
 };
 
 // ──────────────────────────────────────────────────────────
@@ -546,13 +567,23 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
     case "HYDRATE_CHATS":
       return { ...state, chats: action.chats, activeChatId: action.activeChatId };
     case "ADD_CHAT":
+      // Creating a chat consumes the EmptyComposer scope — the chat
+      // now carries its own folder, so the override is stale.
       return {
         ...state,
         chats: [...state.chats, action.chat],
         activeChatId: action.chat.id,
+        newAgentFolder: null,
       };
     case "SET_ACTIVE_CHAT":
-      return { ...state, activeChatId: action.id };
+      // Activating an existing chat also clears the scope override;
+      // the user left the new-agent surface. Only the empty case
+      // preserves the override so "+" on a workspace flows through.
+      return {
+        ...state,
+        activeChatId: action.id,
+        newAgentFolder: action.id === null ? state.newAgentFolder : null,
+      };
     case "DELETE_CHAT": {
       const next = state.chats.filter((c) => c.id !== action.id);
       return {
@@ -587,6 +618,13 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
           c.id === action.id ? { ...c, updatedAt: Date.now() } : c,
         ),
       };
+    case "TOGGLE_PIN_CHAT":
+      return {
+        ...state,
+        chats: state.chats.map((c) =>
+          c.id === action.id ? { ...c, pinned: !c.pinned } : c,
+        ),
+      };
     case "ENQUEUE_CHAT_SUBMISSION":
       return { ...state, pendingChatSubmission: action.submission };
     case "CONSUME_CHAT_SUBMISSION":
@@ -594,6 +632,8 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
       // submission lands between AIChatPanel reading and dispatching.
       if (state.pendingChatSubmission?.id !== action.id) return state;
       return { ...state, pendingChatSubmission: null };
+    case "SET_NEW_AGENT_FOLDER":
+      return { ...state, newAgentFolder: action.folder };
     case "TOGGLE_ELEMENT_VISIBILITY":
       return {
         ...state,

@@ -20,11 +20,11 @@
 import React, { useEffect } from "react";
 import { WorkspaceProvider, useWorkspace, type ChatThread } from "./zeros/store/store";
 import { hydrateAiApiKey } from "./zeros/lib/openai";
-import { BridgeProvider } from "./zeros/bridge/use-bridge";
-import { SelectionSync } from "./zeros/acp/selection-sync";
+import { BridgeProvider, useExtensionConnected } from "./zeros/bridge/use-bridge";
+import { SelectionSync } from "./zeros/agent/selection-sync";
 import { AutoConnect } from "./zeros/engine/zeros-engine";
-import { AcpSessionsProvider, useAcpSessions } from "./zeros/acp/sessions-provider";
-import { loadCatalog } from "./zeros/acp/model-catalog";
+import { AgentSessionsProvider, useAgentSessions } from "./zeros/agent/sessions-provider";
+import { loadCatalog } from "./zeros/agent/model-catalog";
 import { injectStyles } from "./zeros/engine/zeros-styles";
 import { Column1Nav } from "./shell/column1-nav";
 import { Column2Workspace } from "./shell/column2-workspace";
@@ -39,6 +39,12 @@ import { rememberProject } from "./native/recent-projects";
 import "./shell/app-shell.css";
 
 const CHATS_STORAGE_KEY = "chats-v1";
+// Secondary, never-wiped snapshot of the chat list. If the primary key
+// ever shows up empty (corrupt localStorage, accidental reducer wipe, a
+// dev reload that races with hydrate, an origin change), we can still
+// recover the user's sidebar from this. Only updated on writes that
+// *have* chats, so a legitimate empty primary never stomps the backup.
+const CHATS_BACKUP_KEY = "chats-v1-backup";
 const ACTIVE_CHAT_KEY = "active-chat-id";
 
 // Inject the existing Zeros overlay CSS exactly once at module load.
@@ -70,37 +76,95 @@ function LoadModelCatalogOnBoot() {
 }
 
 /**
- * Pre-warm the agent subprocesses referenced by existing chats so the
- * first `ensureSession` call doesn't pay the adapter-spawn + ACP
- * `initialize` round trip. Fires once on mount, fire-and-forget.
+ * Pre-warm agent subprocesses so the first real session isn't paying
+ * cold-start cost (npx download + adapter spawn + ACP `initialize`
+ * handshake). Runs once the bridge reports ENGINE_READY and warms, in
+ * priority order:
  *
- * Only warms unique agent ids; if the user has 10 Claude chats we warm
- * Claude once. Does NOT pre-create sessions — just the subprocess.
+ *   1. the active chat's agent (user is about to talk to it)
+ *   2. the rest of the agents currently attached to any chat
+ *   3. every enabled registry agent (first-run: all of them)
+ *
+ * Everything is fire-and-forget — a real session creation will still
+ * surface the agent's own error. Idempotent: initAgent in the session
+ * manager no-ops when the subprocess is already alive.
  */
 function PreWarmAgents() {
   const { state } = useWorkspace();
-  const sessions = useAcpSessions();
+  const sessions = useAgentSessions();
   const warmedRef = React.useRef(false);
-  useEffect(() => {
-    if (warmedRef.current) return;
-    // Wait until the bridge is up — initAgent rejects otherwise.
-    // A short delay also lets the registry preload from cache.
-    const t = window.setTimeout(() => {
-      if (warmedRef.current) return;
-      const unique = new Set<string>();
+  const engineReady = useExtensionConnected();
+
+  const warmAll = React.useCallback(async () => {
+    try {
+      const registry = await sessions.listAgents();
+      const persisted = readEnabledAgentIds();
+      const isEnabled = (id: string) =>
+        persisted === null ? true : persisted.includes(id);
+
+      const order: string[] = [];
       const active = state.chats.find((c) => c.id === state.activeChatId);
-      if (active?.agentId) unique.add(active.agentId);
-      for (const c of state.chats) if (c.agentId) unique.add(c.agentId);
-      for (const id of unique) {
-        void sessions.initAgent(id).catch(() => {
-          /* warming failures are invisible — real session creation will
-             surface actual errors */
-        });
+      if (active?.agentId) order.push(active.agentId);
+      for (const c of state.chats) {
+        if (c.agentId && !order.includes(c.agentId)) order.push(c.agentId);
       }
-      warmedRef.current = true;
-    }, 800);
-    return () => window.clearTimeout(t);
-  }, [state.chats, state.activeChatId, sessions]);
+      for (const a of registry) {
+        if (isEnabled(a.id) && !order.includes(a.id)) order.push(a.id);
+      }
+
+      await Promise.all(
+        order.map((id) =>
+          sessions.initAgent(id).catch(() => {
+            /* silent */
+          }),
+        ),
+      );
+    } catch {
+      /* registry unreachable — real session flow still recovers */
+    }
+  }, [sessions, state.chats, state.activeChatId]);
+
+  // Initial boot warm — fires once as soon as the engine is reachable.
+  useEffect(() => {
+    if (!engineReady || warmedRef.current) return;
+    warmedRef.current = true;
+    void warmAll();
+  }, [engineReady, warmAll]);
+
+  // Re-warm on window focus. If the user was backgrounded long enough
+  // for the sidecar watchdog to cycle the engine (or for an agent to
+  // self-exit on idle), this makes everything hot again before they
+  // click anything. Throttled so rapid focus/blur doesn't hammer.
+  useEffect(() => {
+    if (!engineReady) return;
+    let lastRun = 0;
+    const onFocus = () => {
+      const now = Date.now();
+      if (now - lastRun < 10_000) return;
+      lastRun = now;
+      void warmAll();
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [engineReady, warmAll]);
+
+  return null;
+}
+
+/** Read the persisted enabled-agents list synchronously so PreWarmAgents
+ *  can decide which agents are visible without mounting the hook. Returns
+ *  null on first run (all agents enabled by default). */
+function readEnabledAgentIds(): string[] | null {
+  try {
+    const raw = localStorage.getItem("zeros.acp.enabledAgents");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { ids?: unknown };
+    if (Array.isArray(parsed?.ids)) {
+      return parsed.ids.filter((x): x is string => typeof x === "string");
+    }
+  } catch {
+    /* corrupt localStorage — fall through to default-on */
+  }
   return null;
 }
 
@@ -142,7 +206,21 @@ function ChatsPersistence() {
   useEffect(() => {
     if (hydrated.current) return;
     hydrated.current = true;
-    const raw = getSetting<ChatThread[]>(CHATS_STORAGE_KEY, []);
+    let raw = getSetting<ChatThread[]>(CHATS_STORAGE_KEY, []);
+    // Recovery path: if the primary list is empty but the backup has
+    // entries, restore from backup. Protects against the "my chats
+    // disappeared after a UI change" class of bugs, where an
+    // unrelated reducer or origin change wiped `chats-v1` while the
+    // backup survived.
+    if (!Array.isArray(raw) || raw.length === 0) {
+      const backup = getSetting<ChatThread[]>(CHATS_BACKUP_KEY, []);
+      if (Array.isArray(backup) && backup.length > 0) {
+        console.warn(
+          `[Zeros] primary chats empty — restored ${backup.length} from backup`,
+        );
+        raw = backup;
+      }
+    }
     // Schema migrations — old chat records predate:
     //   - `folder`   (Stream 3, per-project grouping)
     //   - `agentId`  (Phase C, per-chat ACP binding)
@@ -168,22 +246,55 @@ function ChatsPersistence() {
         (c as any).permissionMode === "plan-only"
           ? (c as any).permissionMode
           : "ask",
+      pinned: typeof (c as any).pinned === "boolean" ? (c as any).pinned : false,
     }));
-    const storedActive = getSetting<string | null>(ACTIVE_CHAT_KEY, null);
-    const storedStillValid =
-      storedActive && chats.some((c) => c.id === storedActive)
-        ? storedActive
-        : null;
-    // If the stored selection is stale (chat deleted, or this is a fresh
-    // workspace-reload path where activeChatId wasn't persisted), fall back
-    // to the most-recently-updated chat rather than showing the blank empty
-    // composer — "I opened the app and my work is gone" is the worst UX.
-    let activeChatId = storedStillValid;
-    if (!activeChatId && chats.length > 0) {
-      const mostRecent = [...chats].sort(
-        (a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0),
-      )[0];
-      activeChatId = mostRecent?.id ?? null;
+    // Three distinct cases for the persisted active-chat-id — we must
+    // not collapse them, or the workspace-swap flow glitches:
+    //   - absent   → fresh app, pick most-recently-touched as a friendly default
+    //   - "null"   → user explicitly cleared (e.g., picked a new workspace,
+    //                 clicked "New Agent"). Honor the intent: land on the
+    //                 EmptyComposer. Do NOT auto-pick a chat, or the
+    //                 Column 3 panel flashes in and out.
+    //   - "<id>"   → restore if still valid; else fall back to most-recent.
+    const rawActive = (() => {
+      try {
+        return localStorage.getItem(`oc-${ACTIVE_CHAT_KEY}`);
+      } catch {
+        return null;
+      }
+    })();
+    let activeChatId: string | null;
+    if (rawActive === null) {
+      // Key absent — fresh app run / post-clear-storage. Land the user
+      // on their most-recent chat so "I reopened the app and my work
+      // is gone" doesn't happen.
+      activeChatId =
+        chats.length > 0
+          ? [...chats].sort(
+              (a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0),
+            )[0]?.id ?? null
+          : null;
+    } else {
+      let parsed: string | null = null;
+      try {
+        parsed = JSON.parse(rawActive) as string | null;
+      } catch {
+        parsed = null;
+      }
+      if (parsed === null) {
+        // Explicit clear — empty composer is the intent.
+        activeChatId = null;
+      } else if (chats.some((c) => c.id === parsed)) {
+        activeChatId = parsed;
+      } else {
+        // Stale selection — chat was deleted between runs.
+        activeChatId =
+          chats.length > 0
+            ? [...chats].sort(
+                (a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0),
+              )[0]?.id ?? null
+            : null;
+      }
     }
     dispatch({ type: "HYDRATE_CHATS", chats, activeChatId });
   }, [dispatch]);
@@ -192,6 +303,12 @@ function ChatsPersistence() {
   useEffect(() => {
     if (!hydrated.current) return;
     setSetting(CHATS_STORAGE_KEY, state.chats);
+    // Only update the backup when the list is non-empty so a momentary
+    // empty state (reducer hiccup, mid-migration re-render) can't
+    // overwrite the safety net.
+    if (state.chats.length > 0) {
+      setSetting(CHATS_BACKUP_KEY, state.chats);
+    }
   }, [state.chats]);
 
   useEffect(() => {
@@ -246,12 +363,53 @@ function ReloadOnProjectChange() {
  * Design / Themes tab pattern. activePage drives which component
  * mounts inside Col 3.
  */
+const COL3_COLLAPSED_KEY = "column-3-collapsed";
+
 function ShellRouter() {
   const { state } = useWorkspace();
   // Activity-bar selected view. Currently wired for visual state only —
   // Col 1 still renders its full tree inside the sidebar slot. Future
   // migration will swap this to filter what appears in the sidebar.
   const [activityView, setActivityView] = React.useState<ActivityView>("chats");
+
+  // Column 3 collapse. When collapsed, the design/IDE panel is hidden and
+  // Column 2 expands to fill the remaining width with its chat content
+  // centered — Cursor's ⌥⌘B "Show/Hide Panel" behaviour.
+  const [col3CollapsedPref, setCol3CollapsedPref] = React.useState<boolean>(
+    () => getSetting<boolean>(COL3_COLLAPSED_KEY, false),
+  );
+  // New-agent window rule: whenever there's no active chat (empty
+  // composer showing, either from "New Agent" or after Open Workspace
+  // picked a new folder), the panel is force-collapsed regardless of
+  // the user's preference. The chat input gets the whole column, the
+  // way it does in Cursor's new-agent flow. As soon as a chat is
+  // active again, the user's persisted preference takes over.
+  const col3Collapsed = col3CollapsedPref || state.activeChatId === null;
+  const toggleCol3 = React.useCallback(() => {
+    setCol3CollapsedPref((prev) => {
+      const next = !prev;
+      setSetting(COL3_COLLAPSED_KEY, next);
+      return next;
+    });
+  }, []);
+
+  // ⌥⌘B anywhere toggles Column 3. Skipped inside editable surfaces so
+  // we don't steal from native text-input bindings (if any use ⌥⌘B).
+  React.useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || !e.altKey || e.shiftKey) return;
+      if (e.key.toLowerCase() !== "b") return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable) {
+        return;
+      }
+      e.preventDefault();
+      toggleCol3();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [toggleCol3]);
 
   // Settings takes the entire body (Cursor-style full-screen). The 3-col
   // shell hides while the user's in settings; a Back button returns them.
@@ -273,10 +431,13 @@ function ShellRouter() {
       <TitleBar />
       <div className="oc-app-body">
         <ActivityBar active={activityView} onChange={setActivityView} />
-        <div className="oc-app">
+        <div className={`oc-app ${col3Collapsed ? "is-col3-collapsed" : ""}`}>
           <Column1Nav />
-          <Column2Workspace />
-          <Column3 />
+          <Column2Workspace
+            col3Collapsed={col3Collapsed}
+            onExpandCol3={toggleCol3}
+          />
+          {!col3Collapsed && <Column3 onCollapse={toggleCol3} />}
         </div>
       </div>
     </div>
@@ -288,7 +449,7 @@ export function AppShell() {
     <WorkspaceProvider>
       <BridgeProvider>
         <AutoConnect>
-          <AcpSessionsProvider>
+          <AgentSessionsProvider>
             <ForceDesignPageOnBoot />
             <HydrateAiApiKey />
             <LoadModelCatalogOnBoot />
@@ -297,7 +458,7 @@ export function AppShell() {
             <ChatsPersistence />
             <SelectionSync />
             <ShellRouter />
-          </AcpSessionsProvider>
+          </AgentSessionsProvider>
         </AutoConnect>
       </BridgeProvider>
     </WorkspaceProvider>

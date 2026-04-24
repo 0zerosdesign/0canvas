@@ -102,6 +102,26 @@ ${S} .oc-settings-heading {
   letter-spacing: -0.01em;
   color: var(--text-primary);
 }
+${S} .oc-settings-heading-row {
+  display: flex; align-items: center; gap: var(--space-2);
+  margin: 0 0 var(--space-3x);
+}
+${S} .oc-settings-heading-row .oc-settings-heading {
+  margin: 0;
+}
+${S} .oc-settings-heading-action {
+  color: var(--text-muted);
+  opacity: 0.7;
+  transition: opacity 120ms ease, color 120ms ease;
+}
+${S} .oc-settings-heading-action:hover:not(:disabled) {
+  opacity: 1;
+  color: var(--text-primary);
+}
+${S} .oc-settings-heading-action:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
 ${S} .oc-settings-section-title--spaced {
   margin-top: var(--space-7);
 }
@@ -174,10 +194,27 @@ ${S} .oc-new-chat-picker__item {
 ${S} .oc-new-chat-picker__item:hover {
   background: var(--tint-hover);
 }
+${S} .oc-new-chat-picker__item.is-disabled,
+${S} .oc-new-chat-picker__item[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+${S} .oc-new-chat-picker__item.is-disabled:hover,
+${S} .oc-new-chat-picker__item[disabled]:hover {
+  background: transparent;
+}
+/* Agent logo in the + menu. color:initial stops SVG currentColor
+   fills from inheriting the row's muted colour, so branded marks
+   render in their own ink. The Lucide fallback icon gets the
+   muted colour via the more-specific selector below. */
 ${S} .oc-new-chat-picker__icon {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
+  object-fit: contain;
+  color: initial;
+}
+${S} .oc-new-chat-picker__item svg.oc-new-chat-picker__icon {
   color: var(--text-muted);
 }
 ${S} .oc-new-chat-picker__sep {

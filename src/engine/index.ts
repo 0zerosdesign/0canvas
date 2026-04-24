@@ -27,7 +27,7 @@ import { OCManager } from "./oc-manager";
 import { FileWatcher } from "./watcher";
 import { EngineServer } from "./server";
 import { ZerosMcp } from "./mcp";
-import { AcpSessionManager } from "./acp/session-manager";
+import { AgentGateway } from "./agents/gateway";
 import { detectFramework, findProjectRoot, type Framework } from "./framework-detector";
 import { createMessage, type EngineMessage } from "./types";
 
@@ -47,7 +47,10 @@ export class ZerosEngine {
   private watcher: FileWatcher;
   private server: EngineServer;
   private mcp: ZerosMcp | null = null;
-  private acp: AcpSessionManager;
+  // Native per-CLI adapter runtime. Keeps the `acp` field name for
+  // now so every handler method below stays unchanged; a full rename
+  // to `agents` is Phase 9b cleanup.
+  private acp: AgentGateway;
 
   private root: string;
   private port: number;
@@ -107,37 +110,37 @@ export class ZerosEngine {
       }
       return full;
     };
-    this.acp = new AcpSessionManager({
+    const backendOpts = {
       projectRoot: this.root,
       events: {
-        onSessionUpdate: (agentId, notification) => {
+        onSessionUpdate: (agentId: string, notification: unknown) => {
           this.server.broadcast(createMessage({
-            type: "ACP_SESSION_UPDATE",
+            type: "AGENT_SESSION_UPDATE",
             source: "engine",
             agentId,
-            notification,
+            notification: notification as never,
           }));
         },
-        onPermissionRequest: (agentId, permissionId, request) => {
+        onPermissionRequest: (agentId: string, permissionId: string, request: unknown) => {
           this.server.broadcast(createMessage({
-            type: "ACP_PERMISSION_REQUEST",
+            type: "AGENT_PERMISSION_REQUEST",
             source: "engine",
             agentId,
             permissionId,
-            request,
+            request: request as never,
           }));
         },
-        onAgentStderr: (agentId, line) => {
+        onAgentStderr: (agentId: string, line: string) => {
           this.server.broadcast(createMessage({
-            type: "ACP_AGENT_STDERR",
+            type: "AGENT_AGENT_STDERR",
             source: "engine",
             agentId,
             line,
           }));
         },
-        onAgentExit: (agentId, code, signal) => {
+        onAgentExit: (agentId: string, code: number | null, signal: string | null) => {
           this.server.broadcast(createMessage({
-            type: "ACP_AGENT_EXITED",
+            type: "AGENT_AGENT_EXITED",
             source: "engine",
             agentId,
             code,
@@ -146,19 +149,22 @@ export class ZerosEngine {
         },
       },
       fs: {
-        async readTextFile({ path: p }) {
+        async readTextFile({ path: p }: { path: string }) {
           const full = resolveInsideRoot(p);
           const content = await fsp.readFile(full, "utf-8");
           return { content };
         },
-        async writeTextFile({ path: p, content }) {
+        async writeTextFile({ path: p, content }: { path: string; content: string }) {
           const full = resolveInsideRoot(p);
           await fsp.mkdir(path.dirname(full), { recursive: true });
           await fsp.writeFile(full, content, "utf-8");
           return {};
         },
       },
-    });
+    };
+
+    this.acp = new AgentGateway(backendOpts as never);
+    console.log(`[Zeros] Agent backend: native`);
 
     const engineStartTime = Date.now();
     this.server.setInfoProvider(() => ({
@@ -268,16 +274,16 @@ export class ZerosEngine {
       case "ELEMENT_SELECTED":
         this.handleElementSelected(msg);
         break;
-      case "ACP_LIST_AGENTS":
-      case "ACP_NEW_SESSION":
-      case "ACP_INIT_AGENT":
-      case "ACP_AUTHENTICATE":
-      case "ACP_PROMPT":
-      case "ACP_CANCEL":
-      case "ACP_PERMISSION_RESPONSE":
-      case "ACP_SET_MODE":
-      case "ACP_LIST_SESSIONS":
-      case "ACP_LOAD_SESSION":
+      case "AGENT_LIST_AGENTS":
+      case "AGENT_NEW_SESSION":
+      case "AGENT_INIT_AGENT":
+      case "AGENT_AUTHENTICATE":
+      case "AGENT_PROMPT":
+      case "AGENT_CANCEL":
+      case "AGENT_PERMISSION_RESPONSE":
+      case "AGENT_SET_MODE":
+      case "AGENT_LIST_SESSIONS":
+      case "AGENT_LOAD_SESSION":
         await this.handleAcpMessage(msg, ws);
         break;
       case "CONNECTED":
@@ -319,26 +325,26 @@ export class ZerosEngine {
   private async handleAcpMessage(msg: EngineMessage, ws: WebSocket): Promise<void> {
     try {
       switch (msg.type) {
-        case "ACP_LIST_AGENTS": {
+        case "AGENT_LIST_AGENTS": {
           const agents = msg.force
             ? await this.acp.refreshRegistry()
             : await this.acp.listAgents();
           this.server.send(ws, createMessage({
-            type: "ACP_AGENTS_LIST",
+            type: "AGENT_AGENTS_LIST",
             source: "engine",
             requestId: msg.id,
             agents,
           }));
           return;
         }
-        case "ACP_NEW_SESSION": {
+        case "AGENT_NEW_SESSION": {
           const initialize = await this.acp.ensureAgent(msg.agentId, { env: msg.env });
           const session = await this.acp.newSession(msg.agentId, {
             cwd: msg.cwd,
             env: msg.env,
           });
           this.server.send(ws, createMessage({
-            type: "ACP_SESSION_CREATED",
+            type: "AGENT_SESSION_CREATED",
             source: "engine",
             requestId: msg.id,
             agentId: msg.agentId,
@@ -347,14 +353,14 @@ export class ZerosEngine {
           }));
           return;
         }
-        case "ACP_INIT_AGENT": {
+        case "AGENT_INIT_AGENT": {
           // Spawns the subprocess with empty env (if not already running)
           // so the auth screen can read the agent's advertised auth methods.
-          // Providing a real env later (via ACP_NEW_SESSION) will transparently
+          // Providing a real env later (via AGENT_NEW_SESSION) will transparently
           // respawn the subprocess — see session-manager `sameEnv` handling.
           const initialize = await this.acp.initializeAgent(msg.agentId);
           this.server.send(ws, createMessage({
-            type: "ACP_AGENT_INITIALIZED",
+            type: "AGENT_AGENT_INITIALIZED",
             source: "engine",
             requestId: msg.id,
             agentId: msg.agentId,
@@ -362,10 +368,10 @@ export class ZerosEngine {
           }));
           return;
         }
-        case "ACP_AUTHENTICATE": {
+        case "AGENT_AUTHENTICATE": {
           await this.acp.authenticate(msg.agentId, msg.methodId);
           this.server.send(ws, createMessage({
-            type: "ACP_AUTH_COMPLETED",
+            type: "AGENT_AUTH_COMPLETED",
             source: "engine",
             requestId: msg.id,
             agentId: msg.agentId,
@@ -373,11 +379,11 @@ export class ZerosEngine {
           }));
           return;
         }
-        case "ACP_PROMPT": {
+        case "AGENT_PROMPT": {
           try {
             const response = await this.acp.prompt(msg.agentId, msg.sessionId, msg.prompt);
             this.server.send(ws, createMessage({
-              type: "ACP_PROMPT_COMPLETE",
+              type: "AGENT_PROMPT_COMPLETE",
               source: "engine",
               requestId: msg.id,
               agentId: msg.agentId,
@@ -387,7 +393,7 @@ export class ZerosEngine {
             }));
           } catch (err) {
             this.server.send(ws, createMessage({
-              type: "ACP_PROMPT_FAILED",
+              type: "AGENT_PROMPT_FAILED",
               source: "engine",
               requestId: msg.id,
               agentId: msg.agentId,
@@ -397,18 +403,18 @@ export class ZerosEngine {
           }
           return;
         }
-        case "ACP_CANCEL": {
+        case "AGENT_CANCEL": {
           await this.acp.cancel(msg.agentId, msg.sessionId);
           return;
         }
-        case "ACP_PERMISSION_RESPONSE": {
+        case "AGENT_PERMISSION_RESPONSE": {
           this.acp.answerPermission(msg.permissionId, msg.response);
           return;
         }
-        case "ACP_SET_MODE": {
+        case "AGENT_SET_MODE": {
           await this.acp.setMode(msg.agentId, msg.sessionId, msg.modeId);
           this.server.send(ws, createMessage({
-            type: "ACP_MODE_CHANGED",
+            type: "AGENT_MODE_CHANGED",
             source: "engine",
             requestId: msg.id,
             agentId: msg.agentId,
@@ -417,13 +423,13 @@ export class ZerosEngine {
           }));
           return;
         }
-        case "ACP_LIST_SESSIONS": {
+        case "AGENT_LIST_SESSIONS": {
           const resp = await this.acp.listSessions(msg.agentId, {
             cwd: msg.cwd,
             cursor: msg.cursor,
           });
           this.server.send(ws, createMessage({
-            type: "ACP_SESSIONS_LIST",
+            type: "AGENT_SESSIONS_LIST",
             source: "engine",
             requestId: msg.id,
             agentId: msg.agentId,
@@ -432,14 +438,14 @@ export class ZerosEngine {
           }));
           return;
         }
-        case "ACP_LOAD_SESSION": {
+        case "AGENT_LOAD_SESSION": {
           const response = await this.acp.loadSession(
             msg.agentId,
             msg.sessionId,
             { cwd: msg.cwd, env: msg.env },
           );
           this.server.send(ws, createMessage({
-            type: "ACP_SESSION_LOADED",
+            type: "AGENT_SESSION_LOADED",
             source: "engine",
             requestId: msg.id,
             agentId: msg.agentId,
@@ -450,13 +456,26 @@ export class ZerosEngine {
         }
       }
     } catch (err) {
+      const agentId =
+        "agentId" in msg ? (msg as { agentId?: string }).agentId : undefined;
+      // Structured AgentFailure classification travels alongside the
+      // free-form message so the UI can route deterministically on
+      // failure.kind. The AgentFailureError class is the native-
+      // backend equivalent of the old ACP AgentFailureError.
+      const { AgentFailureError } = await import("./agents/types.js");
+      const message = err instanceof Error ? err.message : String(err);
+      const failure =
+        err instanceof AgentFailureError ? err.failure : undefined;
       this.server.send(ws, createMessage({
-        type: "ACP_ERROR",
+        type: "AGENT_ERROR",
         source: "engine",
         requestId: msg.id,
-        agentId: "agentId" in msg ? (msg as { agentId?: string }).agentId : undefined,
-        code: "ACP_DISPATCH_FAILED",
-        message: err instanceof Error ? err.message : String(err),
+        agentId,
+        code: failure?.kind
+          ? `AGENT_${failure.kind.toUpperCase().replace(/-/g, "_")}`
+          : "AGENT_DISPATCH_FAILED",
+        message,
+        failure,
       }));
     }
   }

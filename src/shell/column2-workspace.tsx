@@ -19,6 +19,7 @@ import React, { useEffect, useState } from "react";
 import {
   MessageSquare,
   Sparkles,
+  PanelRightOpen,
   type LucideIcon,
 } from "lucide-react";
 import { Column2ChatView } from "./column2-chat-view";
@@ -39,7 +40,13 @@ const TABS: Array<{
 
 const TAB_PLACEHOLDERS: Partial<Record<TabId, { title: string; body: string }>> = {};
 
-export function Column2Workspace() {
+export function Column2Workspace({
+  col3Collapsed = false,
+  onExpandCol3,
+}: {
+  col3Collapsed?: boolean;
+  onExpandCol3?: () => void;
+} = {}) {
   const [activeTab, setActiveTab] = useState<TabId>("chat");
   const { state } = useWorkspace();
   // Remount AIChatPanel when the active chat changes so each thread
@@ -72,7 +79,10 @@ export function Column2Workspace() {
   }, []);
 
   return (
-    <section className="oc-column-2" aria-label="Agent Workspace">
+    <section
+      className={`oc-column-2 ${col3Collapsed ? "is-wide" : ""}`}
+      aria-label="Agent Workspace"
+    >
       <nav className="oc-column-2__tabs" role="tablist" data-tauri-drag-region>
         {TABS.map(({ id, label, icon: Icon }, idx) => {
           const isActive = activeTab === id;
@@ -92,6 +102,20 @@ export function Column2Workspace() {
             </Button>
           );
         })}
+        {col3Collapsed && onExpandCol3 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="oc-column-2__show-panel"
+            onClick={onExpandCol3}
+            title="Show Panel  ⌥⌘B"
+            aria-label="Show design panel"
+          >
+            <PanelRightOpen size={14} />
+            <span>Show Panel</span>
+            <kbd className="oc-column-2__show-panel-kbd" aria-hidden="true">⌥⌘B</kbd>
+          </Button>
+        )}
       </nav>
 
       <div

@@ -18,7 +18,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Loader2,
-  RefreshCw,
   Search,
   ExternalLink,
   Github,
@@ -30,6 +29,12 @@ import { nativeInvoke } from "../../native/runtime";
 import type { BridgeRegistryAgent } from "../bridge/messages";
 import { Button, Input } from "../ui";
 import { useEnabledAgents } from "./enabled-agents";
+import {
+  loadAgents,
+  refreshAgents,
+  useAgentsSnapshot,
+} from "./agents-cache";
+import { AgentIcon } from "./agent-icon";
 
 type EnabledFilter = "all" | "enabled" | "disabled";
 
@@ -41,10 +46,13 @@ interface AgentsPanelProps {
    *  Spawning the agent subprocess in the background hides ~200-500ms
    *  of adapter boot when they actually click. Failures are silent. */
   onPreWarm?: (agentId: string) => void;
+  /** Bumped by the parent to force a registry reload (e.g. when the
+   *  user clicks the refresh icon in the panel heading). */
+  refreshNonce?: number;
 }
 
-export function AgentsPanel({ listAgents, onSelect, activeAgentId, onPreWarm }: AgentsPanelProps) {
-  const [agents, setAgents] = useState<BridgeRegistryAgent[] | null>(null);
+export function AgentsPanel({ listAgents, onSelect, activeAgentId, onPreWarm, refreshNonce }: AgentsPanelProps) {
+  const agents = useAgentsSnapshot();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
@@ -57,8 +65,8 @@ export function AgentsPanel({ listAgents, onSelect, activeAgentId, onPreWarm }: 
     setLoading(true);
     setError(null);
     try {
-      const list = await listAgents(force);
-      setAgents(list);
+      if (force) await refreshAgents(listAgents);
+      else await loadAgents(listAgents);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -69,6 +77,13 @@ export function AgentsPanel({ listAgents, onSelect, activeAgentId, onPreWarm }: 
   useEffect(() => {
     void load(false);
   }, [load]);
+
+  // External refresh signal — heading-bar icon increments the nonce.
+  // Skip the initial 0 so we don't double-fire alongside the mount load.
+  useEffect(() => {
+    if (refreshNonce === undefined || refreshNonce === 0) return;
+    void load(true);
+  }, [refreshNonce, load]);
 
   // Probe auth state for every agent that has a known CLI binary.
   // Running in parallel keeps the round-trip short; failures fall
@@ -99,12 +114,20 @@ export function AgentsPanel({ listAgents, onSelect, activeAgentId, onPreWarm }: 
   // Re-probe when the window regains focus so that running `claude
   // login` in an external terminal flips the row to "Active" the
   // moment the user switches back to Zeros — no manual refresh click.
+  // Also poll every 60s as a belt-and-suspenders fallback for the
+  // case where the user never unfocuses the window (kiosk-style).
   useEffect(() => {
     const onFocus = () => {
       void load(true);
     };
     window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
+    const interval = window.setInterval(() => {
+      if (!document.hidden) void load(true);
+    }, 60_000);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      window.clearInterval(interval);
+    };
   }, [load]);
 
   // Sorted + search-filtered. Tab filter is applied afterwards so each
@@ -157,20 +180,6 @@ export function AgentsPanel({ listAgents, onSelect, activeAgentId, onPreWarm }: 
             className="oc-acp-reg-search-input"
           />
         </div>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          type="button"
-          onClick={() => void load(true)}
-          disabled={loading}
-          title="Refresh from CDN"
-        >
-          {loading ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <RefreshCw className="w-3.5 h-3.5" />
-          )}
-        </Button>
       </div>
 
       <div className="oc-acp-reg-tabs">
@@ -320,12 +329,11 @@ function AgentRow({
 
   const canProbeAuth = !!agent.authBinary;
   const isActive = canProbeAuth && authenticated === true;
-  const pillLabel = !canProbeAuth ? "No login" : isActive ? "Active" : "Not active";
-  const pillClass = !canProbeAuth
-    ? "oc-acp-reg-pill-unavailable"
+  const dotTitle = !canProbeAuth
+    ? "No login required"
     : isActive
-    ? "oc-acp-reg-pill-installed"
-    : "oc-acp-reg-pill-available";
+    ? "Signed in"
+    : "Not signed in";
 
   const handleRowClick = () => {
     // Clicking the body selects the agent as the default for future
@@ -340,24 +348,19 @@ function AgentRow({
       onClick={handleRowClick}
       onMouseEnter={handleMouseEnter}
     >
-      {agent.icon ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={agent.icon}
-          alt=""
-          className="oc-acp-reg-avatar"
-          style={{ objectFit: "contain", padding: "var(--space-1)" }}
-          loading="lazy"
-        />
-      ) : (
-        <div className="oc-acp-reg-avatar">{agent.name.slice(0, 1).toUpperCase()}</div>
-      )}
+      <span
+        className={`oc-acp-reg-status-dot ${isActive || !canProbeAuth ? "is-active" : "is-inactive"}`}
+        title={dotTitle}
+        aria-label={dotTitle}
+      />
+      <div className="oc-acp-reg-avatar oc-acp-reg-avatar--icon">
+        <AgentIcon agentId={agent.id} iconUrl={agent.icon ?? null} size={20} />
+      </div>
       <div className="oc-acp-reg-body">
         <div className="oc-acp-reg-title">
           <span className="oc-acp-reg-name">{agent.name}</span>
           <span className="oc-acp-reg-version">v{agent.version}</span>
           <span className="oc-acp-reg-dist">{distKind}</span>
-          <span className={`oc-acp-reg-pill ${pillClass}`}>{pillLabel}</span>
         </div>
         <div className="oc-acp-reg-desc">{agent.description}</div>
         <div className="oc-acp-reg-id">{agent.id}</div>

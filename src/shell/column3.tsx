@@ -23,6 +23,7 @@ import {
   TerminalSquare,
   KeyRound,
   ListChecks,
+  PanelRightClose,
   type LucideIcon,
 } from "lucide-react";
 import { EngineWorkspace } from "../zeros/engine/zeros-engine";
@@ -42,7 +43,7 @@ const TABS: Array<{ id: Col3Tab; label: string; icon: LucideIcon }> = [
   { id: "todo", label: "Todo", icon: ListChecks },
 ];
 
-export function Column3() {
+export function Column3({ onCollapse }: { onCollapse?: () => void } = {}) {
   const [tab, setTab] = useState<Col3Tab>("design");
 
   // ⌘6..⌘9 + ⌘0 → jump between Column-3 tabs. Matches Col 2's ⌘1-5
@@ -96,6 +97,18 @@ export function Column3() {
             </Button>
           );
         })}
+        {onCollapse && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="oc-column-3__collapse"
+            onClick={onCollapse}
+            title="Hide Panel  ⌥⌘B"
+            aria-label="Hide design panel"
+          >
+            <PanelRightClose size={14} />
+          </Button>
+        )}
       </nav>
 
       <div

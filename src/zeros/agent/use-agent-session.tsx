@@ -1,12 +1,12 @@
 // ──────────────────────────────────────────────────────────
-// useAcpSession — browser-side ACP session over the engine bridge
+// useAgentSession — browser-side ACP session over the engine bridge
 // ──────────────────────────────────────────────────────────
 //
 // Thin React hook on top of CanvasBridgeClient. It manages:
 //   - registry fetch / agent selection
 //   - session creation with an agent
 //   - prompt send / cancel
-//   - consumption of ACP_SESSION_UPDATE notifications
+//   - consumption of AGENT_SESSION_UPDATE notifications
 //   - permission-prompt round-trip
 //
 // It does NOT interpret tool-call kinds or render anything — UI
@@ -29,27 +29,27 @@ import type {
   ToolCallUpdate,
 } from "@agentclientprotocol/sdk";
 import type {
-  AcpAgentsListMessage,
-  AcpAgentInitializedMessage,
-  AcpErrorMessage,
-  AcpPromptCompleteMessage,
-  AcpPromptFailedMessage,
-  AcpSessionCreatedMessage,
+  AgentAgentsListMessage,
+  AgentAgentInitializedMessage,
+  AgentErrorMessage,
+  AgentPromptCompleteMessage,
+  AgentPromptFailedMessage,
+  AgentSessionCreatedMessage,
   BridgeRegistryAgent,
 } from "../bridge/messages";
 import { useBridge } from "../bridge/use-bridge";
 
-export type AcpMessageRole = "user" | "agent" | "thought" | "system";
+export type AgentMessageRole = "user" | "agent" | "thought" | "system";
 
-export interface AcpTextMessage {
+export interface AgentTextMessage {
   id: string;
   kind: "text";
-  role: AcpMessageRole;
+  role: AgentMessageRole;
   text: string;
   createdAt: number;
 }
 
-export interface AcpToolMessage {
+export interface AgentToolMessage {
   id: string;
   kind: "tool";
   toolCallId: string;
@@ -64,7 +64,7 @@ export interface AcpToolMessage {
   updatedAt: number;
 }
 
-export type AcpMessage = AcpTextMessage | AcpToolMessage;
+export type AgentMessage = AgentTextMessage | AgentToolMessage;
 
 export interface PendingPermission {
   permissionId: string;
@@ -73,17 +73,19 @@ export interface PendingPermission {
 }
 
 export type SessionStatus =
-  | "idle"           // no session yet
-  | "starting"       // ACP_NEW_SESSION in flight
+  | "idle"           // no agent bound yet
+  | "warming"        // ACP initialize / newSession in flight, within budget
   | "ready"          // session created, no prompt running
   | "streaming"      // prompt turn in progress
-  | "failed";        // last operation errored; details in `error`
+  | "reconnecting"   // transient loss; engine's respawn pool is reviving
+  | "auth-required"  // agent needs sign-in before we can connect
+  | "failed";        // terminal error; user action needed
 
 /** Token accounting accumulated from ACP session notifications + turn
  *  completion. `size`/`used` come from `usage_update` notifications
  *  (context window view); `inputTokens`/`outputTokens` come from the
  *  PromptResponse.usage at turn end. */
-export interface AcpUsage {
+export interface AgentUsage {
   /** Total context window the model is using (tokens). */
   size: number;
   /** Tokens currently in context. */
@@ -99,17 +101,24 @@ export interface AcpUsage {
   thoughtTokens: number;
 }
 
-export interface AcpSessionState {
+export interface AgentSessionState {
   agentId: string | null;
   agentName: string | null;
   sessionId: string | null;
   initialize: InitializeResponse | null;
   session: NewSessionResponse | null;
   status: SessionStatus;
-  messages: AcpMessage[];
+  messages: AgentMessage[];
   pendingPermission: PendingPermission | null;
   stderrLog: string[];
+  /** Legacy free-form error message. Populated for `failed` state only —
+   *  kept for backwards-compat with log viewers. Structured classification
+   *  lives in `failure` and is the source of truth for UI routing. */
   error: string | null;
+  /** Structured classification of the last failure. Drives the composer
+   *  state chip, banner, and Sign-in button deterministically. Null
+   *  whenever the session is warming/ready/streaming. */
+  failure: import("../bridge/failure").AgentFailure | null;
   lastStopReason: StopReason | null;
   /** Modes advertised by the agent at session creation, if any. */
   availableModes: SessionMode[];
@@ -117,7 +126,7 @@ export interface AcpSessionState {
    *  current_mode_update notifications). */
   currentModeId: string | null;
   /** Token accounting for the context pill + usage popover. */
-  usage: AcpUsage;
+  usage: AgentUsage;
   /** Latest plan (todo list) the agent has produced. Replaced wholesale
    *  each time a `plan` notification arrives. Empty = no plan yet. */
   plan: PlanEntry[];
@@ -133,7 +142,7 @@ export interface StartSessionOptions {
   env?: Record<string, string>;
 }
 
-export interface AcpSessionControls {
+export interface AgentSessionControls {
   /** Fetch the registry. Force=true refetches from CDN. */
   listAgents(force?: boolean): Promise<BridgeRegistryAgent[]>;
   /** Spawn the agent (if needed) and return its initialize response so the
@@ -164,7 +173,7 @@ export interface AcpSessionControls {
 
 const MAX_STDERR_LINES = 200;
 
-export const BLANK_USAGE: AcpUsage = {
+export const BLANK_USAGE: AgentUsage = {
   size: 0,
   used: 0,
   inputTokens: 0,
@@ -174,10 +183,10 @@ export const BLANK_USAGE: AcpUsage = {
   thoughtTokens: 0,
 };
 
-export function useAcpSession(): AcpSessionState & AcpSessionControls {
+export function useAgentSession(): AgentSessionState & AgentSessionControls {
   const bridge = useBridge();
 
-  const [state, setState] = useState<AcpSessionState>({
+  const [state, setState] = useState<AgentSessionState>({
     agentId: null,
     agentName: null,
     sessionId: null,
@@ -188,6 +197,7 @@ export function useAcpSession(): AcpSessionState & AcpSessionControls {
     pendingPermission: null,
     stderrLog: [],
     error: null,
+    failure: null,
     lastStopReason: null,
     availableModes: [],
     currentModeId: null,
@@ -207,7 +217,7 @@ export function useAcpSession(): AcpSessionState & AcpSessionControls {
   useEffect(() => {
     if (!bridge) return;
 
-    const unsubUpdate = bridge.on("ACP_SESSION_UPDATE", (raw) => {
+    const unsubUpdate = bridge.on("AGENT_SESSION_UPDATE", (raw) => {
       const msg = raw as { agentId: string; notification: SessionNotification };
       if (msg.agentId !== stateRef.current.agentId) return;
       if (msg.notification.sessionId !== stateRef.current.sessionId) return;
@@ -217,7 +227,7 @@ export function useAcpSession(): AcpSessionState & AcpSessionControls {
       }));
     });
 
-    const unsubPerm = bridge.on("ACP_PERMISSION_REQUEST", (raw) => {
+    const unsubPerm = bridge.on("AGENT_PERMISSION_REQUEST", (raw) => {
       const msg = raw as {
         agentId: string;
         permissionId: string;
@@ -234,7 +244,7 @@ export function useAcpSession(): AcpSessionState & AcpSessionControls {
       }));
     });
 
-    const unsubStderr = bridge.on("ACP_AGENT_STDERR", (raw) => {
+    const unsubStderr = bridge.on("AGENT_AGENT_STDERR", (raw) => {
       const msg = raw as { agentId: string; line: string };
       if (msg.agentId !== stateRef.current.agentId) return;
       setState((prev) => ({
@@ -243,7 +253,7 @@ export function useAcpSession(): AcpSessionState & AcpSessionControls {
       }));
     });
 
-    const unsubExit = bridge.on("ACP_AGENT_EXITED", (raw) => {
+    const unsubExit = bridge.on("AGENT_AGENT_EXITED", (raw) => {
       const msg = raw as { agentId: string; code: number | null; signal: string | null };
       if (msg.agentId !== stateRef.current.agentId) return;
       setState((prev) => ({
@@ -273,11 +283,11 @@ export function useAcpSession(): AcpSessionState & AcpSessionControls {
 
   // ── Controls ─────────────────────────────────────────────
 
-  const listAgents = useCallback<AcpSessionControls["listAgents"]>(
+  const listAgents = useCallback<AgentSessionControls["listAgents"]>(
     async (force = false) => {
       if (!bridge) return [];
-      const resp = await bridge.request<AcpAgentsListMessage>(
-        { type: "ACP_LIST_AGENTS", force },
+      const resp = await bridge.request<AgentAgentsListMessage>(
+        { type: "AGENT_LIST_AGENTS", force },
         30_000,
       );
       return resp.agents;
@@ -285,13 +295,13 @@ export function useAcpSession(): AcpSessionState & AcpSessionControls {
     [bridge],
   );
 
-  const initAgent = useCallback<AcpSessionControls["initAgent"]>(
+  const initAgent = useCallback<AgentSessionControls["initAgent"]>(
     async (agentId) => {
       if (!bridge) throw new Error("Engine not connected");
       const resp = await bridge.request<
-        AcpAgentInitializedMessage | AcpErrorMessage
-      >({ type: "ACP_INIT_AGENT", agentId }, 60_000);
-      if (resp.type === "ACP_ERROR") {
+        AgentAgentInitializedMessage | AgentErrorMessage
+      >({ type: "AGENT_INIT_AGENT", agentId }, 60_000);
+      if (resp.type === "AGENT_ERROR") {
         throw new Error(resp.message);
       }
       return resp.initialize;
@@ -299,13 +309,14 @@ export function useAcpSession(): AcpSessionState & AcpSessionControls {
     [bridge],
   );
 
-  const startSession = useCallback<AcpSessionControls["startSession"]>(
+  const startSession = useCallback<AgentSessionControls["startSession"]>(
     async (agentId, options) => {
       if (!bridge) throw new Error("Engine not connected");
       setState((prev) => ({
         ...prev,
-        status: "starting",
+        status: "warming",
         error: null,
+        failure: null,
         agentId,
         agentName: options?.agentName ?? agentId,
         sessionId: null,
@@ -324,13 +335,13 @@ export function useAcpSession(): AcpSessionState & AcpSessionControls {
 
       try {
         const resp = await bridge.request<
-          AcpSessionCreatedMessage | AcpErrorMessage
+          AgentSessionCreatedMessage | AgentErrorMessage
         >(
-          { type: "ACP_NEW_SESSION", agentId, env: options?.env },
+          { type: "AGENT_NEW_SESSION", agentId, env: options?.env },
           60_000,
         );
 
-        if (resp.type === "ACP_ERROR") {
+        if (resp.type === "AGENT_ERROR") {
           setState((prev) => ({
             ...prev,
             status: "failed",
@@ -360,14 +371,14 @@ export function useAcpSession(): AcpSessionState & AcpSessionControls {
     [bridge],
   );
 
-  const sendPrompt = useCallback<AcpSessionControls["sendPrompt"]>(
+  const sendPrompt = useCallback<AgentSessionControls["sendPrompt"]>(
     async (text, displayText) => {
       if (!bridge) return;
       const current = stateRef.current;
       if (!current.agentId || !current.sessionId) return;
       if (current.status === "streaming") return;
 
-      const userMessage: AcpTextMessage = {
+      const userMessage: AgentTextMessage = {
         id: `user-${Date.now()}`,
         kind: "text",
         role: "user",
@@ -386,10 +397,10 @@ export function useAcpSession(): AcpSessionState & AcpSessionControls {
 
       try {
         const resp = await bridge.request<
-          AcpPromptCompleteMessage | AcpPromptFailedMessage
+          AgentPromptCompleteMessage | AgentPromptFailedMessage
         >(
           {
-            type: "ACP_PROMPT",
+            type: "AGENT_PROMPT",
             agentId: current.agentId,
             sessionId: current.sessionId,
             prompt,
@@ -397,7 +408,7 @@ export function useAcpSession(): AcpSessionState & AcpSessionControls {
           10 * 60_000,
         );
 
-        if (resp.type === "ACP_PROMPT_FAILED") {
+        if (resp.type === "AGENT_PROMPT_FAILED") {
           setState((prev) => ({
             ...prev,
             status: "failed",
@@ -422,32 +433,32 @@ export function useAcpSession(): AcpSessionState & AcpSessionControls {
     [bridge],
   );
 
-  const cancel = useCallback<AcpSessionControls["cancel"]>(async () => {
+  const cancel = useCallback<AgentSessionControls["cancel"]>(async () => {
     if (!bridge) return;
     const current = stateRef.current;
     if (!current.agentId || !current.sessionId) return;
     bridge.send({
-      type: "ACP_CANCEL",
+      type: "AGENT_CANCEL",
       agentId: current.agentId,
       sessionId: current.sessionId,
     });
   }, [bridge]);
 
   const respondToPermission = useCallback<
-    AcpSessionControls["respondToPermission"]
+    AgentSessionControls["respondToPermission"]
   >((response) => {
     if (!bridge) return;
     const current = stateRef.current;
     if (!current.pendingPermission) return;
     bridge.send({
-      type: "ACP_PERMISSION_RESPONSE",
+      type: "AGENT_PERMISSION_RESPONSE",
       permissionId: current.pendingPermission.permissionId,
       response,
     });
     setState((prev) => ({ ...prev, pendingPermission: null }));
   }, [bridge]);
 
-  const reset = useCallback<AcpSessionControls["reset"]>(() => {
+  const reset = useCallback<AgentSessionControls["reset"]>(() => {
     setState({
       agentId: null,
       agentName: null,
@@ -459,6 +470,7 @@ export function useAcpSession(): AcpSessionState & AcpSessionControls {
       pendingPermission: null,
       stderrLog: [],
       error: null,
+      failure: null,
       lastStopReason: null,
       availableModes: [],
       currentModeId: null,
@@ -485,9 +497,9 @@ export function useAcpSession(): AcpSessionState & AcpSessionControls {
 // ──────────────────────────────────────────────────────────
 
 export function applyUpdate(
-  messages: AcpMessage[],
+  messages: AgentMessage[],
   notification: SessionNotification,
-): AcpMessage[] {
+): AgentMessage[] {
   const upd = notification.update;
   switch (upd.sessionUpdate) {
     case "user_message_chunk":
@@ -498,7 +510,7 @@ export function applyUpdate(
       return appendText(messages, "thought", upd.content);
     case "tool_call": {
       const tc = upd as unknown as ToolCall & { sessionUpdate: "tool_call" };
-      const msg: AcpToolMessage = {
+      const msg: AgentToolMessage = {
         id: `tool-${tc.toolCallId}`,
         kind: "tool",
         toolCallId: tc.toolCallId,
@@ -544,10 +556,10 @@ export function applyUpdate(
 }
 
 function appendText(
-  messages: AcpMessage[],
-  role: AcpMessageRole,
+  messages: AgentMessage[],
+  role: AgentMessageRole,
   content: { type?: string; text?: string } | undefined,
-): AcpMessage[] {
+): AgentMessage[] {
   if (!content || content.type !== "text" || typeof content.text !== "string") {
     return messages;
   }

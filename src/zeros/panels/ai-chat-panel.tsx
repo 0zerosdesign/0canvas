@@ -26,7 +26,7 @@ import { listSkills, type Skill } from "../../native/native";
 import { applyStyle, flashElement } from "../inspector";
 import { ScrollArea } from "../ui/scroll-area";
 import { Button, Textarea } from "../ui";
-import { AcpMode } from "../acp/acp-mode";
+import { AgentMode } from "../agent/agent-mode";
 
 // ── Diff / pending changes types ─────────────────────────
 
@@ -1427,7 +1427,7 @@ Styles:\n${Object.entries(selectedElement.styles)
           </div>
         </div>
         <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-          <AcpMode />
+          <AgentMode />
         </div>
       </div>
     );
