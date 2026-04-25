@@ -2,7 +2,7 @@
   "$schema": "./models-v1.schema.json",
   "version": 1,
   "updatedAt": "2026-04-25",
-  "notes": "Bundled fallback. Hot updates ship via GitHub Pages — see .github/workflows/publish-catalogs.yml. Only ship models that exist on the providers' APIs TODAY — speculative future names (e.g. an unreleased Opus 4.8) cause silent fall-back at best and a hard 'model not found' error at worst. When a vendor ships a new model, update this file (or let the cron PR handle it) and the app picks it up within 24h via the GitHub Pages fetch.",
+  "notes": "Bundled fallback. Hot updates ship via GitHub Pages — see .github/workflows/publish-catalogs.yml. List every model that's real on the provider's API today, even if some users hit a CLI-version or account-tier gate when picking them; the agent CLI surfaces those gates as informative errors (e.g. 'requires a newer Codex') via classifyExit. Only remove a model when it's been retired by the provider or when a live API call returns a hard 404 (e.g. claude-opus-4-8 was here speculatively but Anthropic returns 404 today). When a vendor ships a new model, update this file or let the cron PR handle it; the app picks up changes within 24h via the GitHub Pages fetch.",
   "families": {
     "claude": [
       { "value": "claude-opus-4-7[1m]", "label": "Claude Opus 4.7 (1M)", "badge": "1M" },
@@ -11,17 +11,24 @@
       { "value": "claude-haiku-4-5", "label": "Claude Haiku 4.5" }
     ],
     "codex": [
+      { "value": "gpt-5.5", "label": "GPT-5.5", "badge": "NEW" },
+      { "value": "gpt-5.5-codex", "label": "GPT-5.5 Codex", "badge": "CODE" },
+      { "value": "gpt-5.5-mini", "label": "GPT-5.5 mini" },
+      { "value": "gpt-5.4", "label": "GPT-5.4" },
+      { "value": "gpt-5.4-codex", "label": "GPT-5.4 Codex" },
       { "value": "gpt-5.3", "label": "GPT-5.3" },
-      { "value": "gpt-5.3-codex", "label": "GPT-5.3 Codex", "badge": "CODE" },
+      { "value": "gpt-5.3-codex", "label": "GPT-5.3 Codex" },
       { "value": "gpt-5.3-codex-fast", "label": "GPT-5.3 Codex Fast" },
       { "value": "gpt-5.3-codex-low", "label": "GPT-5.3 Codex Low" },
       { "value": "gpt-5.3-mini", "label": "GPT-5.3 mini" },
       { "value": "gpt-5.3-nano", "label": "GPT-5.3 nano" },
+      { "value": "o4-mini-high", "label": "o4-mini-high" },
       { "value": "o4-mini", "label": "o4-mini" },
       { "value": "o3-pro", "label": "o3-pro" },
       { "value": "o3", "label": "o3" }
     ],
     "gemini": [
+      { "value": "gemini-3.1-pro", "label": "Gemini 3.1 Pro", "badge": "NEW" },
       { "value": "gemini-3-flash", "label": "Gemini 3 Flash" },
       { "value": "gemini-3-flash-lite", "label": "Gemini 3 Flash Lite" },
       { "value": "gemini-2.5-pro", "label": "Gemini 2.5 Pro" },
