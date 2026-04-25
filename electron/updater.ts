@@ -144,8 +144,7 @@ export const updaterInstall: CommandHandler = async () => {
   }
 };
 
-/** Explicit process relaunch (matches Tauri's plugin-process
- *  `relaunch()`). Kept for any caller that still needs an in-place
+/** Explicit process relaunch. Kept for any caller that still needs an in-place
  *  restart after external state change. */
 export const processRelaunch: CommandHandler = () => {
   app.relaunch();

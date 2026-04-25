@@ -71,8 +71,8 @@ export function Column3({ onCollapse }: { onCollapse?: () => void } = {}) {
   // The Zeros engine stylesheet scopes an aggressive reset to
   // [data-Zeros-root] that forces font-size, letter-spacing,
   // text-transform etc. to `inherit !important` on every descendant.
-  // That reset is required for EngineWorkspace (which is ported from
-  // Tailwind and relies on the scoped tokens) but it wipes typography
+  // That reset is required for EngineWorkspace (which still uses the
+  // design workspace CSS reset) but it wipes typography
   // on the IDE panels (Git/Env/Todo/Terminal) whose CSS lives in
   // app-shell.css. Apply the attribute only while the Design tab is
   // active so the other panels keep their own typography.

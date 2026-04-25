@@ -29,7 +29,7 @@ export default defineConfig({
   // Banner runs BEFORE any import resolution — lets us log and
   // catch uncaught exceptions even when one of the imported native
   // modules (keytar, node-pty) throws on load in packaged builds.
-  // No effect on Tauri or dev.
+  // No effect in dev.
   banner: {
     js: `try{require('fs').appendFileSync('/tmp/zeros-boot.log','[banner] main.cjs entered '+new Date().toISOString()+'\\n');}catch(e){}
 process.on('uncaughtException',function(err){try{require('fs').appendFileSync('/tmp/zeros-boot.log','[uncaught] '+(err&&err.stack||err)+'\\n');}catch(e){}});

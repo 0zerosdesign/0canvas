@@ -1,9 +1,9 @@
 // ──────────────────────────────────────────────────────────
-// Column 2 — Chat view (per-chat ACP session)
+// Column 2 — Chat view (per-chat native agent session)
 // ──────────────────────────────────────────────────────────
 //
 // Replaces the Phase-0 AIChatPanel in Column 2's Chat tab. Each
-// ChatThread in the store gets its own ACP session, scoped to
+// ChatThread in the store gets its own agent session, scoped to
 // the chat's folder and agent. When the user switches chats the
 // outer Column2Workspace remounts this component (key=chatId)
 // so state automatically flips.
@@ -107,7 +107,7 @@ function NoAgentView({
       activeAgentId={null}
       onPreWarm={(id) => {
         // Fire-and-forget; errors silently ignored. Warms the adapter
-        // subprocess + ACP initialize so clicking is instant.
+        // subprocess + agent initialize so clicking is instant.
         void sessions.initAgent(id).catch(() => {});
       }}
     />

@@ -3,9 +3,8 @@
 // ──────────────────────────────────────────────────────────
 //
 // Exposes `window.__ZEROS_NATIVE__` to the renderer via contextBridge.
-// The API matches Tauri's `invoke()` + `listen()` shape so the React
-// façade in src/native/runtime.ts can route to either runtime with the
-// same call shape.
+// The API keeps the old native `invoke()` + `listen()` shape so the React
+// facade in src/native/runtime.ts can use one call surface.
 //
 // Channel conventions:
 //   zeros:invoke   — renderer → main request/response (ipcRenderer.invoke)
@@ -23,8 +22,8 @@ interface ZerosEventEnvelope {
 }
 
 /** Subscribers keyed by event name. Each entry is a Set of handlers so
- *  duplicate subscribes deliver once per handler (matches Tauri's
- *  `listen()` behaviour — each subscription is independent). */
+ *  duplicate subscribes deliver once per handler (matches the legacy
+ *  native `listen()` behavior — each subscription is independent). */
 const subscribers = new Map<string, Set<(payload: unknown) => void>>();
 
 // ONE ipcRenderer listener fans out to name-specific subscribers. We
@@ -47,7 +46,7 @@ ipcRenderer.on(EVENT_CHANNEL, (_event: IpcRendererEvent, envelope: ZerosEventEnv
 
 const bridge = {
   /** Call a main-process command. Args is passed through as the single
-   *  object payload the handler receives (mirrors Tauri's `invoke`). */
+   *  object payload the handler receives (mirrors the native invoke shape). */
   invoke<T = unknown>(cmd: string, args?: Record<string, unknown>): Promise<T> {
     return ipcRenderer.invoke(INVOKE_CHANNEL, { cmd, args });
   },

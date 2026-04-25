@@ -1,5 +1,7 @@
 # Visual Editors
 
+> **Doc label (PR 4):** Partial — same as [README.md](README.md) in this folder (historical **VS Code extension** / **Tauri** mentions may appear in the prose). [`03-Mac-App-Architecture.md`](../../Zeros-Structure/03-Mac-App-Architecture.md) · [`12-Doc-Index-And-Labels.md`](../../Zeros-Structure/12-Doc-Index-And-Labels.md).
+
 > `src/zeros/editors/`
 
 The visual editors are specialized React components that replace raw property rows for certain CSS sections. Each editor provides a domain-specific UI that is more intuitive than editing raw CSS values. All editors follow the same integration pattern: they receive `elementId`, `selector`, and `styles`, and apply changes through the local store + DOM + bridge pipeline.

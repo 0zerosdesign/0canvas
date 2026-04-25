@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────
-// Terminal — xterm.js + tauri-plugin-pty, multi-session
+// Terminal — xterm.js + node-pty via Electron IPC, multi-session
 // ──────────────────────────────────────────────────────────
 //
 // Each TerminalSession spawns /bin/zsh -l in the current

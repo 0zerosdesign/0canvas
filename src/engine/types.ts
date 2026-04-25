@@ -3,7 +3,7 @@
 // ──────────────────────────────────────────────────────────
 //
 // Defines the WebSocket protocol between:
-//   - Browser overlay (connects as WebSocket client)
+//   - Design workspace / legacy browser overlay (connects as WebSocket client)
 //   - Zeros Engine (Node.js process, WebSocket server)
 //
 // V2: The engine handles messages directly — no relay, no

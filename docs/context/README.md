@@ -1,14 +1,16 @@
 # Zeros — Context Module Index
 
-> **2026-04-20.** This directory carries per-module reference docs for
-> the engine and overlay code, originally written for the V1/V2 era.
-> The code those docs describe **still lives in the Tauri Mac app** —
-> it's now the Column 3 canvas (engine) and its shared panel/inspector
-> subsystem. This index tells you which module doc is still accurate,
-> which needs a touch-up, and where the gaps are.
+> **2026-04-20; updated PR 2 and PR 4.** Each module `README.md` under this tree has a **doc label** banner (Partial / Superseded): **VS Code extension** and **Tauri** mentions in older prose are **historical**; the shipping app is **Electron** + the local engine — see [../Zeros-Structure/03-Mac-App-Architecture.md](../Zeros-Structure/03-Mac-App-Architecture.md).
 >
-> For the current product vision see
-> [../PRODUCT_VISION_V3.md](../PRODUCT_VISION_V3.md).
+> **2026-04-20; updated PR 2.** This directory carries per-module reference
+> docs for the **design workspace / engine** code, originally written for
+> the V1/V2 browser-overlay era. That code **still runs inside Column 3**
+> of the Electron Mac app (`src/zeros/**`, `src/engine/**`). This index
+> flags accuracy and gaps.
+>
+> **Current product vision and doc labels:** see
+> [../Zeros-Structure/00-Start-Here.md](../Zeros-Structure/00-Start-Here.md)
+> and [../Zeros-Structure/12-Doc-Index-And-Labels.md](../Zeros-Structure/12-Doc-Index-And-Labels.md).
 
 ---
 
@@ -21,8 +23,9 @@ Mac app, and how current the doc is:
   runs as part of the Column 3 canvas.
 - **Shell / Col 1-2**: the code lives in `src/shell/**` — not covered
   by existing docs (see §Gaps).
-- **Rust backend**: the code lives in `src-tauri/src/**` — not covered
-  by existing docs (see §Gaps).
+- **Electron main**: the code lives in `electron/**` (IPC, sidecar,
+  keychain, PTY, Git, menus) — not covered module-by-module here (see
+  `docs/Zeros-Structure/03-Mac-App-Architecture.md`).
 
 | Module | Location | Doc status | Notes |
 |---|---|---|---|
@@ -33,9 +36,9 @@ Mac app, and how current the doc is:
 | [feedback/](feedback/README.md) | Engine / Col 3 | ✅ current | Feedback annotations + right-panel Feedback tab. |
 | [format-persistence/](format-persistence/README.md) | Engine / Col 3 | 🚧 partial | `.0c` file schema still correct. "IndexedDB primary" description is stale — Mac app is file-first via `native/storage.ts`. |
 | [responsive/](responsive/README.md) | Engine / Col 3 | ✅ current | Device presets + breakpoint switcher. |
-| [settings/](settings/README.md) | Engine + Shell | 🚧 partial | Engine-era settings page is still rendered by `settings-page.tsx`, but it now lives *inside Col 3* (Pass 4) and gets the Keychain-backed API key path from `src-tauri/src/secrets.rs`. The sidebar described here is the Pass-4 horizontal tabs. |
+| [settings/](settings/README.md) | Engine + Shell | 🚧 partial | Engine-era settings page is still rendered by `settings-page.tsx`, but it now lives *inside Col 3* (Pass 4) and uses Keychain-backed storage via the Electron main path (see `electron/ipc/commands/secrets.ts`). The sidebar described here is the Pass-4 horizontal tabs. |
 | [ai-agents/](ai-agents/README.md) | Engine / Col 3 | 🚧 partial | Inline-edit flow is still correct. The "AI panel in Col 3 right slot" is being removed per V3 Decision 8 — Col 2 owns AI. |
-| [bridge-communication/](bridge-communication/README.md) | Engine / Col 3 | 🚧 partial | Engine ↔ webview WebSocket is still correct. The sidecar now launches via `src-tauri/src/sidecar.rs` (not user-run CLI). MCP bridge description is still accurate *for the external-AI-tool surface*; Col 2 chat bypasses MCP. |
+| [bridge-communication/](bridge-communication/README.md) | Engine / Col 3 | 🚧 partial | Engine ↔ webview WebSocket is still correct. The sidecar is owned by `electron/sidecar.ts` (not user-run CLI). MCP is still relevant *for external AI tools*; Col 2 agent chat uses the native agent stack, not that MCP path for the same work. |
 | [overlay/](overlay/README.md) | Engine / Col 3 | 🚧 partial | "Overlay" means Col 3 content now. No FAB button in the Mac app. Command palette (Cmd+/) and inline edit (Cmd+K) still work. |
 | [extension/](extension/README.md) | SUPERSEDED | ⏳ obsolete | The VS Code extension is frozen / deprecated per V3. Kept for historical context. |
 | [tailwind/](tailwind/) | *empty directory* | ⏳ gap | Tailwind class-writer docs never written. |
@@ -47,7 +50,7 @@ Mac app, and how current the doc is:
 These are code surfaces that exist but aren't documented in `context/`.
 Each is a candidate for a new subdirectory under this index.
 
-### `src/shell/` — the Tauri shell
+### `src/shell/` — the Electron app shell
 
 Covers Col 1 nav, Col 2 tabs, and the six Col 2 panel components:
 
@@ -61,34 +64,35 @@ Covers Col 1 nav, Col 2 tabs, and the six Col 2 panel components:
 - `todo-panel.tsx` — per-project todos.
 - `mission-panel.tsx` — Mission Control dashboard over the AI subprocess bridge.
 
-### `src-tauri/src/` — Rust backend
+### `electron/` — main process (native)
 
-Ten modules, 3,062 LOC total. See
-[../PRODUCT_VISION_V3.md §7](../PRODUCT_VISION_V3.md#7-rust-backend--what-lives-where)
-for the current breakdown. No per-module reference doc yet.
+IPC handlers, sidecar management, keychain, PTY, Git, file commands,
+deep links, menus. Start with `electron/main.ts`, `electron/sidecar.ts`,
+`electron/ipc/router.ts`, and `electron/preload.ts`. No per-file
+reference doc in `context/` yet; see
+[../Zeros-Structure/03-Mac-App-Architecture.md](../Zeros-Structure/03-Mac-App-Architecture.md).
 
-### `src/native/` — Tauri JS bridge
+### `src/native/` — renderer native facade
 
-Thin TypeScript wrappers around Tauri commands:
+TypeScript wrappers around the preload’s `invoke` / `listen` surface:
 
+- `native.ts` — bridge entry.
 - `storage.ts` — app-data JSON read/write.
-- `settings.ts` — `getSetting` / `setSetting` shim backed by
-  `storage.ts`.
-- `secrets.ts` — Keychain access via `secrets.rs`.
-- `tauri-events.ts` — `onProjectChanged`, `shellOpenUrl`, etc.
+- `settings.ts` — settings shim backed by `storage.ts`.
+- `secrets.ts` — Keychain access via the Electron main process.
 - `recent-projects.ts` — recent project list persistence.
 
 ### Skills system
 
-Skills live in `skills/*.md`. Loaded by `src-tauri/src/skills.rs`.
-See [../PRODUCT_VISION_V3.md §9](../PRODUCT_VISION_V3.md#9-ai-integration).
-No module doc yet.
+Skills are markdown under `<project>/skills/`. The loader lives in
+`electron/ipc/commands/skills.ts`. No module doc in `context/` yet.
 
 ---
 
 ## Per-module TODO (fine-tuning)
 
-Tied to Stream 1.5 of [../PRODUCT_VISION_V3.md §15](../PRODUCT_VISION_V3.md#15-todo--fine-tuning-needed).
+Tracked alongside `docs/Zeros-Structure/09-Cleanup-And-Consolidation-Plan.md`
+and per-module refresh work.
 
 ### format-persistence/
 
@@ -109,8 +113,8 @@ Tied to Stream 1.5 of [../PRODUCT_VISION_V3.md §15](../PRODUCT_VISION_V3.md#15-
 
 - [ ] Remove the "AI panel in Col 3 right slot" references; that path
       is being deleted (Stream 2).
-- [ ] Add a pointer to the Col 2 Chat panel and the `ai_cli.rs` /
-      `anthropic.ts` streaming routing.
+- [ ] Add a pointer to the Col 2 chat surface and the engine’s native
+      agent / CLI adapter routing (`src/engine/agents/`, `electron/ipc/commands/ai-cli.ts`).
 - [ ] Document the Skills system (markdown-driven specialized prompts).
 
 ### bridge-communication/
@@ -118,9 +122,9 @@ Tied to Stream 1.5 of [../PRODUCT_VISION_V3.md §15](../PRODUCT_VISION_V3.md#15-
 - [ ] Clarify two AI surfaces:
       - Engine ↔ external AI tools via MCP (still works; see V2 §7).
       - Col 2 chat ↔ subprocess / Anthropic SDK (new, bypasses MCP).
-- [ ] Document the sidecar lifecycle owned by `src-tauri/src/sidecar.rs`:
-      spawn, port discovery, kill-on-close, `respawn_engine` on project change.
-- [ ] Document the `project-changed` Tauri event + the
+- [ ] Document the sidecar lifecycle owned by `electron/sidecar.ts`:
+      spawn, port discovery, kill-on-close, respawn on project change.
+- [ ] Document the `project-changed` (or equivalent) main→renderer path and the
       `onProjectChanged` listener used by `app-shell.tsx`.
 
 ### overlay/
@@ -132,7 +136,7 @@ Tied to Stream 1.5 of [../PRODUCT_VISION_V3.md §15](../PRODUCT_VISION_V3.md#15-
 
 ### extension/
 
-- [ ] Mark SUPERSEDED at the top. The VS Code extension is frozen
+- [x] Mark SUPERSEDED at the top — **done (PR 4 doc label).** The VS Code extension is frozen
       and not on any active roadmap.
 
 ### tailwind/
@@ -144,9 +148,9 @@ Tied to Stream 1.5 of [../PRODUCT_VISION_V3.md §15](../PRODUCT_VISION_V3.md#15-
 
 - [ ] `shell/README.md` — describe each of the six Col 2 panels +
       Col 1 nav.
-- [ ] `rust-backend/README.md` — one per Rust module, aligned with
-      V3 §7.
-- [ ] `native-bridge/README.md` — Tauri JS bridge.
+- [ ] `electron-main/README.md` — optional: one section per concern in
+      `electron/` (or link out to `Zeros-Structure/03` only).
+- [ ] `native-bridge/README.md` — `src/native/` + preload contract.
 - [ ] `skills/README.md` — skills directory structure, frontmatter
       schema, bundled skills, how to add a custom skill.
 
@@ -164,8 +168,9 @@ plan is:
 3. **Patch the four 🚧 partial docs** (format-persistence, settings,
    ai-agents, bridge-communication, overlay) as the related code is
    touched during Streams 2-5.
-4. **Retire** `extension/` with a SUPERSEDED banner once V3 is the
-   single source of vision truth.
+4. **Retire** `extension/` with a SUPERSEDED banner — done at file level;
+   product vision now lives in `docs/Zeros-Structure/`.
 
-Progress on each of these lives in
-[../PRODUCT_VISION_V3.md §15 Stream 1.5](../PRODUCT_VISION_V3.md#15-todo--fine-tuning-needed).
+Progress on each of these is reflected in
+[../Zeros-Structure/09-Cleanup-And-Consolidation-Plan.md](../Zeros-Structure/09-Cleanup-And-Consolidation-Plan.md)
+and [../Zeros-Structure/12-Doc-Index-And-Labels.md](../Zeros-Structure/12-Doc-Index-And-Labels.md).

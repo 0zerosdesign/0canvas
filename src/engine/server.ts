@@ -7,7 +7,7 @@
 //   POST /mcp   — Reserved for Phase 1B (MCP Streamable HTTP)
 //
 // WebSocket:
-//   /ws — Browser overlay connects here
+//   /ws — Design workspace / legacy browser overlay connects here
 //
 // ──────────────────────────────────────────────────────────
 

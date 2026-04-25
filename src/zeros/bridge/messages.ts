@@ -3,7 +3,7 @@
 // ──────────────────────────────────────────────────────────
 //
 // These types define the WebSocket protocol between:
-//   - Browser overlay (ws-client.ts)
+//   - Design workspace / legacy browser overlay (ws-client.ts)
 //   - Zeros Engine (Node.js process on port 24193)
 //
 // ──────────────────────────────────────────────────────────
@@ -23,10 +23,10 @@ import type {
 
 export type MessageSource = "browser" | "engine";
 
-// ── ACP registry agent (mirror of the engine-side shape) ─
+// ── Agent registry entry (mirror of the engine-side shape) ─
 //
 // We redeclare the browser-visible fields here rather than import the Node
-// module from the browser bundle. Fields track src/engine/acp/registry.ts.
+// module from the browser bundle. Fields track src/engine/agents/registry.ts.
 
 export interface BridgeRegistryAgent {
   id: string;
@@ -250,7 +250,7 @@ export interface AgentPermissionResponseMessage extends BaseMessage {
   response: RequestPermissionResponse;
 }
 
-/** Change the agent's session mode (ACP `session/set_mode`).
+/** Change the agent's session mode (protocol-level `session/set_mode`).
  *  Used by the composer permissions pill. Fire-and-forget —
  *  engine replies with AGENT_MODE_CHANGED (ack) or AGENT_ERROR. */
 export interface AgentSetModeMessage extends BaseMessage {

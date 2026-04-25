@@ -3,8 +3,8 @@
 // ──────────────────────────────────────────────────────────
 //
 // Designer-friendly staging + commit + push/pull on top of
-// libgit2 (via git2-rs in the Rust side). Phase 3 layers the
-// full designer-UX surface on top:
+// native Git commands exposed through Electron IPC. The panel layers
+// the full designer-UX surface on top:
 //
 //   - 3-A  Suggest commit message
 //   - 3-B  Open PR on GitHub
@@ -140,9 +140,9 @@ function VisualDiff({ path, fallbackDiff, cwd }: {
       try {
         const h = await git.fileAtHead(path);
         setHead(h.content ?? "");
-        // Best-effort read of working-tree version via fetch against
-        // the local file. In Tauri we'd have an fs command; for now
-        // fall back to the patch text when fetch is unavailable.
+        // Best-effort read of working-tree version via the native Git
+        // facade. Fall back to the patch text when file content is
+        // unavailable.
         setWork("");
       } catch (e) {
         setErr(e instanceof Error ? e.message : String(e));

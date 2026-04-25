@@ -8,7 +8,7 @@
 // without caring which one it's talking to.
 //
 // Routes through the unified runtime façade so the same calls land
-// on Tauri (ai_cli.rs) or Electron (electron/ipc/commands/ai-cli.ts,
+// in the Electron main process (electron/ipc/commands/ai-cli.ts,
 // Phase 7) without branching here.
 // ──────────────────────────────────────────────────────────
 

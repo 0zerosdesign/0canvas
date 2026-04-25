@@ -1,9 +1,9 @@
 // ──────────────────────────────────────────────────────────
-// Renderer-side PTY shim — tauri-pty-compatible interface
+// Renderer-side PTY shim — native-shell-compatible interface
 // backed by Electron IPC (electron/ipc/commands/pty.ts).
 // ──────────────────────────────────────────────────────────
 //
-// Exposes a `spawn()` function with the same shape tauri-pty's
+// Exposes a `spawn()` function with the same shape the old PTY shim's
 // default export uses, so terminal-panel.tsx can pick one at
 // runtime without restructuring the lifecycle hooks:
 //
@@ -17,7 +17,7 @@
 // Every call is async under the hood (IPC round-trip), but the
 // returned object resolves lazily — writes/resizes queue until
 // the underlying session id arrives, matching the synchronous
-// feel of tauri-pty's API.
+// feel of the previous PTY API.
 // ──────────────────────────────────────────────────────────
 
 import { nativeInvoke, nativeListen } from "./runtime";

@@ -3392,8 +3392,8 @@
   50% { opacity: 0.9; transform: scale(1.1); }
 }
 
-/* Native drag + double-click-zoom are delivered by
- * `data-tauri-drag-region` attached to each column's top container
+/* Native drag + double-click-zoom are delivered by Electron using the
+ * legacy `data-tauri-drag-region` marker on each column's top container
  * (brand row, tab bar, app sidebar, workspace toolbar). No extra
  * strip or dedicated space — the same space the UI occupies is
  * draggable on empty pixels. macOS gives traffic-light clicks

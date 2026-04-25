@@ -1,5 +1,7 @@
 # Overlay Engine
 
+> **Doc label (PR 4):** Partial — engine and Col 3 behavior described here is largely still accurate. Mentions of the **VS Code extension**, **Tauri**, or **live ACP runtime** in the prose below are **historical** unless stated otherwise. Current stack: **Electron** + local engine — see [`03-Mac-App-Architecture.md`](../../Zeros-Structure/03-Mac-App-Architecture.md). Full index: [`12-Doc-Index-And-Labels.md`](../../Zeros-Structure/12-Doc-Index-And-Labels.md).
+>
 > **🚧 Partially stale (2026-04-20).** In the Mac app, "overlay" means
 > **Column 3** — the engine workspace lives inside a native column,
 > not as a portal on `document.body`. No FAB toggle button, no

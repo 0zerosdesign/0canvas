@@ -2,9 +2,8 @@
 // AgentGateway — orchestrator for per-agent adapters
 // ──────────────────────────────────────────────────────────
 //
-// Drop-in replacement for src/engine/acp/session-manager.ts. Exposes
-// the same public surface the engine entry point (src/engine/index.ts)
-// already uses:
+// Native agent gateway. Exposes the same public surface the engine
+// entry point (src/engine/index.ts) already uses:
 //
 //   new AgentGateway({ projectRoot, events, fs })
 //   gateway.registerMcpServer({ name, url })
@@ -117,7 +116,7 @@ export class AgentGateway {
     this.fs = opts.fs;
   }
 
-  // ── Drop-in parity with AgentSessionManager ─────────────
+  // ── Engine-facing gateway API ───────────────────────────
 
   registerMcpServer(server: McpServerRegistration): void {
     this.mcpServers.push(server);
@@ -183,8 +182,7 @@ export class AgentGateway {
     return toBridgeAgents(installed, authenticated, versionInfo);
   }
 
-  /** ACP implementation refreshed a CDN-backed registry; ours is
-   *  local, so `refresh` just re-probes PATH. */
+  /** The registry is local/manifest-backed, so `refresh` re-probes PATH. */
   async refreshRegistry(): Promise<EnrichedRegistryAgent[]> {
     return this.listAgents();
   }
@@ -202,8 +200,7 @@ export class AgentGateway {
     agentId: string,
     _opts: { env?: Record<string, string> } = {},
   ): Promise<InitializeResponse> {
-    // In ACP this would respawn with the given env if it changed. PTY
-    // adapters spawn per-session, so env is applied at newSession
+    // PTY adapters spawn per-session, so env is applied at newSession
     // time; ensureAgent just means "the adapter is initialized."
     return this.initializeAgent(agentId);
   }
@@ -211,8 +208,8 @@ export class AgentGateway {
   async authenticate(_agentId: string, _methodId: string): Promise<void> {
     // Authentication for native CLIs happens in Terminal (see
     // registry.loginCommand + electron/ipc/commands/ai-cli.ts's
-    // runCliLogin). The AGENT_AUTHENTICATE message is a leftover from
-    // the ACP protocol's auth handshake; we accept it and no-op so the
+    // runCliLogin). The AGENT_AUTHENTICATE message is a compatibility
+    // handshake; we accept it and no-op so the
     // UI flow doesn't regress. The `ai_cli_run_login` IPC path is
     // where real auth gets triggered.
     return;

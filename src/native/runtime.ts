@@ -16,7 +16,7 @@
 // write-style ones throw "requires the Mac app".
 //
 // The `isNativeRuntime()` alias survives from the dual-runtime
-// era (Tauri + Electron) so existing call sites keep working. In
+// native-shell era so existing call sites keep working. In
 // practice it's now a synonym for `isElectron()`.
 // ──────────────────────────────────────────────────────────
 
@@ -36,7 +36,7 @@ export function isElectron(): boolean {
 }
 
 /** Back-compat alias — same semantics as isElectron() now that
- *  Tauri is removed. Kept so existing call sites keep compiling;
+ *  the native shell abstraction is simplified. Kept so existing call sites keep compiling;
  *  prefer isElectron() in new code. */
 export function isNativeRuntime(): boolean {
   return isElectron();
@@ -49,7 +49,7 @@ export function runtimeName(): "electron" | "browser" {
 
 /** Call a native command. Errors from the underlying bridge
  *  surface via the promise rejection — callers handle them the
- *  same way they did under Tauri's `invoke()`. */
+ *  same way they did under the old native invoke bridge. */
 export async function nativeInvoke<T>(
   cmd: string,
   args?: Record<string, unknown>,

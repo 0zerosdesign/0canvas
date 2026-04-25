@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────
-// IPC commands: .env editor — port of src-tauri/src/env_files.rs
+// IPC commands: .env editor
 // ──────────────────────────────────────────────────────────
 //
 // Dedicated commands (instead of a generic fs plugin) because:
@@ -57,7 +57,7 @@ function parseEnvLine(line: string): EnvVar | null {
 
 /** Best-effort gitignore check: literal-match the filename (or
  *  common env globs) against every .gitignore between file and
- *  project root. Same heuristic as Rust. */
+ *  project root. */
 function isGitignored(filePath: string, root: string): boolean {
   const filename = path.basename(filePath);
   let dir = path.dirname(filePath);
@@ -101,7 +101,7 @@ function readEnvFile(filePath: string, root: string): EnvFilePayload | null {
   }
   const rawLines = content.split("\n");
   // split("\n") keeps a trailing empty string when content ends with
-  // a newline; strip it to match Rust's `.lines()` which doesn't.
+  // a newline; strip it so the editor sees the same logical rows.
   if (rawLines.length > 0 && rawLines[rawLines.length - 1] === "") {
     rawLines.pop();
   }
@@ -153,7 +153,7 @@ export const saveEnvFile: CommandHandler = (args) => {
     : [];
 
   // Containment check: canonicalize target's parent and project
-  // root, refuse writes outside. Mirrors Rust's canonicalize+
+  // root, refuse writes outside. Use canonicalize+
   // starts_with gate.
   const canonRoot = fs.realpathSync.native(path.resolve(root));
   const parentDir = path.dirname(target);

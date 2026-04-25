@@ -977,8 +977,8 @@ ${S} .oc-variant-action-btn:hover { background: var(--surface-1); color: var(--t
 
 /* ── Agent Panel ──
    REMOVED: legacy per-feature classes (oc-agent-*) were
-   replaced by the ACP-based <AgentsPanel/> which uses
-   primitives (<Button/>, <Card/>) + oc-acp-* classes.
+   replaced by the agent-based <AgentsPanel/> which uses
+   primitives (<Button/>, <Card/>) + legacy oc-acp-* classes.
    Old block deleted in dead-CSS sweep. ── */
 
 /* ── Command Palette ───────────────────────────────────────── */
@@ -3060,9 +3060,9 @@ ${S} .oc-effects-select option {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   ACP (Agent Client Protocol) Beta surface — Phase 2f polish
+   Agent chat surface — legacy oc-acp-* class namespace
    ═══════════════════════════════════════════════════════════
-   Styles for the ACP chat, agents picker, auth modal, tool cards,
+   Styles for the agent chat, agents picker, auth modal, tool cards,
    receipts, permission bar, and mention menu. Rides the same design
    tokens as the legacy oc-chat-* surface so the two modes feel like
    parts of one product, not two bolted-together UIs. Wraps any Tailwind
@@ -3157,7 +3157,7 @@ ${S} .oc-acp-plan-item-completed .oc-acp-plan-bullet { color: var(--text-success
 ${S} .oc-acp-plan-item-in_progress .oc-acp-plan-bullet { color: var(--text-info); }
 ${S} .oc-acp-plan-desc { flex: 1; min-width: 0; word-break: break-word; }
 
-/* ── Messages (ACP variant of oc-ai-msg) ───────────────── */
+/* ── Messages (agent chat variant of oc-ai-msg) ─────────── */
 ${S} .oc-acp-messages {
   display: flex; flex-direction: column; gap: 14px;
 }

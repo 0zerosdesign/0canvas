@@ -4,7 +4,7 @@
 //
 // Standalone Node.js process that:
 //   - Reads and writes CSS/source files directly
-//   - Serves the browser overlay via WebSocket
+//   - Serves the design workspace via WebSocket
 //   - Manages .0c design files on disk
 //   - Exposes MCP endpoint for AI tools (Phase 1B)
 //
@@ -48,8 +48,8 @@ export class ZerosEngine {
   private server: EngineServer;
   private mcp: ZerosMcp | null = null;
   // Native per-CLI adapter runtime. Keeps the `acp` field name for
-  // now so every handler method below stays unchanged; a full rename
-  // to `agents` is Phase 9b cleanup.
+  // compatibility with existing handlers; a later migration can rename
+  // this private field to `agents`.
   private acp: AgentGateway;
 
   private root: string;
@@ -96,9 +96,9 @@ export class ZerosEngine {
       onDisconnect: () => {},
     });
 
-    // ACP session manager — spawns agents on demand, fans notifications out
-    // over the same WebSocket the browser is already listening on. Credentials
-    // never cross this boundary; the agent owns its own auth.
+    // Native agent gateway — spawns agents on demand and fans notifications
+    // over the same WebSocket the renderer is already listening on.
+    // Credentials never cross this boundary; the agent owns its own auth.
     const projectRoot = this.root;
     const resolveInsideRoot = (raw: string): string => {
       const full = path.isAbsolute(raw)
@@ -211,14 +211,14 @@ export class ZerosEngine {
     this.server.setMcpHandler((req, res) => this.mcp!.handleRequest(req, res));
     console.log("[Zeros] MCP server mounted at /mcp");
 
-    // Register the MCP endpoint with the ACP session manager. Every new ACP
-    // session will tell its agent to connect to this endpoint — the agent
-    // gets our 5 design tools natively, no per-agent config required.
+    // Register the MCP endpoint with the native agent gateway. Every new
+    // agent session can attach this endpoint so the agent gets our 5 design
+    // tools without per-agent user configuration.
     this.acp.registerMcpServer({
       name: "Zeros",
       url: `http://127.0.0.1:${this.actualPort}/mcp`,
     });
-    console.log(`[Zeros] MCP auto-attach enabled for ACP sessions`);
+    console.log(`[Zeros] MCP auto-attach enabled for agent sessions`);
 
     // 5. Start file watcher
     await this.watcher.start();
@@ -318,9 +318,9 @@ export class ZerosEngine {
   }
 
   /**
-   * Dispatch ACP-family messages from the browser to the session manager.
+   * Dispatch AGENT_* messages from the renderer to the native agent gateway.
    * Responses fan back out via the shared WebSocket; permission prompts are
-   * pushed proactively by the session manager (not via this request path).
+   * pushed proactively by the gateway (not via this request path).
    */
   private async handleAcpMessage(msg: EngineMessage, ws: WebSocket): Promise<void> {
     try {
@@ -357,7 +357,7 @@ export class ZerosEngine {
           // Spawns the subprocess with empty env (if not already running)
           // so the auth screen can read the agent's advertised auth methods.
           // Providing a real env later (via AGENT_NEW_SESSION) will transparently
-          // respawn the subprocess — see session-manager `sameEnv` handling.
+          // respawn the subprocess when needed.
           const initialize = await this.acp.initializeAgent(msg.agentId);
           this.server.send(ws, createMessage({
             type: "AGENT_AGENT_INITIALIZED",
@@ -460,8 +460,8 @@ export class ZerosEngine {
         "agentId" in msg ? (msg as { agentId?: string }).agentId : undefined;
       // Structured AgentFailure classification travels alongside the
       // free-form message so the UI can route deterministically on
-      // failure.kind. The AgentFailureError class is the native-
-      // backend equivalent of the old ACP AgentFailureError.
+      // failure.kind. The AgentFailureError class is the native
+      // gateway's structured error boundary.
       const { AgentFailureError } = await import("./agents/types.js");
       const message = err instanceof Error ? err.message : String(err);
       const failure =

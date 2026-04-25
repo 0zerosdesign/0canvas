@@ -1,5 +1,7 @@
 # Feedback System
 
+> **Doc label (PR 4):** Partial — engine and Col 3 behavior described here is largely still accurate. Mentions of the **VS Code extension**, **Tauri**, or **live ACP runtime** in the prose below are **historical** unless stated otherwise. Current stack: **Electron** + local engine — see [`03-Mac-App-Architecture.md`](../../Zeros-Structure/03-Mac-App-Architecture.md). Full index: [`12-Doc-Index-And-Labels.md`](../../Zeros-Structure/12-Doc-Index-And-Labels.md).
+
 ## Overview
 
 The feedback system lets designers annotate elements in the live preview with comments, categorized by intent and severity. Feedback items are collected in a panel, can be copied to the clipboard as structured markdown for AI agents, and can optionally be auto-dispatched to a connected agent via the WebSocket bridge.

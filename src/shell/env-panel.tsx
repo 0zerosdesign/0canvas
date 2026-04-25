@@ -5,8 +5,8 @@
 // Lists every `.env*` file in the open project root as a tab
 // strip. Each tab shows a KEY=VALUE table with masked values
 // (click eye to reveal), per-row remove, and a "+ Add Variable"
-// button at the bottom. Saves are server-side via the
-// save_env_file Tauri command, which preserves comments and
+// button at the bottom. Saves go through the native
+// save_env_file command, which preserves comments and
 // writes atomically.
 //
 // Out-of-scope for Phase 1C-Env:

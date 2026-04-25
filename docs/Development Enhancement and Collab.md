@@ -1,17 +1,26 @@
 # Zeros dev-capability strategy — design-first, agent-driven, locally collaborative
 
+> **Label: Aspirational (not the current shipping stack).** This document
+> sketches a **future** architecture with Rust/Tauri-style modules (paths
+> like `src-tauri/…`, Automerge buffers, and iroh collab). The **shipping
+> Zeros Mac app** is **Electron + a Node/Bun local engine** — see
+> [`docs/Zeros-Structure/03-Mac-App-Architecture.md`](Zeros-Structure/03-Mac-App-Architecture.md).
+> Treat every `src-tauri` reference here as a **planning artifact** unless
+> the file exists in the repo.
+
 ## Context
 
 Zeros is a design-first agentic tool (Nordcraft-aligned, Tauri + Rust + React). The user — a designer-developer, solo — wants it to also serve developers doing design-adjacent work, wants to eventually **build Zeros in Zeros itself**, wants design data to stay local (no cloud DB for designs) because designers love collab and storing design data is expensive to scale, and plans a **paid tier ($59/year)** with proper auth so Pro features can be gated.
 
 Constraints:
+
 - **USP is the design tool.** No explicit IDE chrome — no visible "Code / Run / Debug" tabs, no SCM sidebar, no extension marketplace.
 - **Everything must be supported under the hood.** If an agent wants to open a file, LSP a symbol, run a test, or stage a commit, it works — the UI just doesn't advertise it.
 - **Local-first for design state and collab.** A small auth/subscriptions DB is fine. Design data never leaves the device.
 - **Agents are the primary dev interface.** Panels are fallback.
 - **Solo ops budget.** Managed services (Supabase, Stripe, Cloudflare) over self-hosted infra. No Postgres we operate. No k8s. No 3am pages.
 
-Research sources: Zed docs, OpenCode docs, Conductor docs, Rivet Agent OS docs. Current Zeros: git/env/todo/terminal panels built, ACP integration live, no code editor, no LSP, no collab.
+Research sources: Zed docs, OpenCode docs, Conductor docs, Rivet Agent OS docs. *As of the original draft:* Zeros had git/env/todo/terminal panels and an agent wire protocol layer; *today* the runtime is native CLI adapters in the local engine, not ACP. Still no in-app code editor, LSP, or collab as described below.
 
 ## What this plan commits to
 
@@ -38,6 +47,7 @@ A phased buildout that keeps the design-tool face while making Zeros fully capab
 **Editor choice: CodeMirror 6.** Monaco is ~5MB gzipped, assumes a VS-Code-shaped workspace, and ships a web-worker architecture that fights Tauri. CM6 is ~150KB, composable, framework-agnostic, and designed so you add only the extensions you need. For a reveal-surface editor that should feel like it's part of the canvas UI rather than an IDE-in-a-webview, CM6 wins on every axis.
 
 **Package set (concrete):**
+
 - `@uiw/react-codemirror` — the actively-maintained React wrapper. Handles React StrictMode cleanup (`view.destroy()`) correctly. (There are older wrappers that don't — avoid `react-codemirror2`.)
 - `@codemirror/state`, `@codemirror/view`, `@codemirror/commands` — core.
 - `@codemirror/lang-javascript`, `@codemirror/lang-rust`, `@codemirror/lang-css`, `@codemirror/lang-json`, `@codemirror/lang-markdown` — language bundles. Each ships Lezer parser + highlights + indent + folds in one install.
@@ -78,7 +88,7 @@ Every code buffer is an `Automerge.Text` field on an Automerge doc. The `@autome
 
 **Storage — Rust side, disk-backed, sans-IO.**
 
-`src-tauri/src/buffers.rs` owns Automerge docs. Library choice: **`samod`** (see Phase D for why — it's JS-wire-compatible with `automerge-repo`, sans-IO so it plugs into any transport, and keeps the door open for future JS peers). Docs persist to `.zeros/buffers/<doc-id>.automerge` on change. Load eagerly on open, keep in memory for the session, flush debounced to disk.
+`src-tauri/src/buffers.rs` owns Automerge docs. Library choice: `**samod`** (see Phase D for why — it's JS-wire-compatible with `automerge-repo`, sans-IO so it plugs into any transport, and keeps the door open for future JS peers). Docs persist to `.zeros/buffers/<doc-id>.automerge` on change. Load eagerly on open, keep in memory for the session, flush debounced to disk.
 
 **Multibuffer — the agent-review surface.**
 
@@ -94,12 +104,14 @@ CM6 doesn't have native multibuffer. Three patterns are viable; we pick the **si
 This is simpler to build than stacking N `EditorView`s and matches Zed's UX exactly.
 
 **Editor surface UX:**
+
 - Column-3 (already scaffolded in `src/shell/column3.tsx`) becomes the editor host. Default empty state = full canvas.
 - When an agent opens a file, column-3 slides in with the editor. Swipe/click to dismiss.
 - Multibuffer view replaces the editor view when an agent turn completes with file edits. Chat-transcript "View changes" chip opens it.
 - No file tree by default. A command palette–style "open file" overlay (⌘P) is the user-driven entry point. Agent-driven is the primary one.
 
 **Critical files — Phase A:**
+
 - New: `src/editor/codemirror-host.tsx` — React host, `@uiw/react-codemirror`, compartments, Automerge binding.
 - New: `src/editor/multibuffer.tsx` — single-doc + excerpt decorations, accept/reject per hunk.
 - New: `src/editor/extensions/` — factored extension bundles per language + LSP compartment.
@@ -108,6 +120,7 @@ This is simpler to build than stacking N `EditorView`s and matches Zed's UX exac
 - New: `src-tauri/src/buffer_store.rs` — content-addressed blob store shared with checkpoints (Phase C).
 
 **Verification — Phase A:**
+
 - Agent says "open `src/app-shell.tsx`" → column-3 slides in with CM6 editor, Lezer highlights apply within one frame.
 - Edit a character locally → Automerge change logged → survives app restart.
 - Agent edits 4 files in a turn → chat transcript shows "View changes (4 files)" chip → clicking opens multibuffer with 4 excerpts → accept 3, reject 1 → main docs reflect only accepted changes.
@@ -127,6 +140,7 @@ Not the same thing as syntax highlighting in the editor — Lezer handles that i
 - **Selection/motion** — structural "select next sibling", "expand selection to parent block" commands available in the command palette.
 
 **Stack:**
+
 - `tree-sitter` crate (0.24+).
 - Grammar crates: `tree-sitter-typescript`, `tree-sitter-tsx`, `tree-sitter-rust`, `tree-sitter-css`, `tree-sitter-json`, `tree-sitter-markdown`.
 - Query files (`highlights.scm`, `tags.scm`, `folds.scm`) bundled as Rust resources.
@@ -139,6 +153,7 @@ Not the same thing as syntax highlighting in the editor — Lezer handles that i
 #### B.2 — LSP orchestrator (on-demand, Rust-managed)
 
 Rust process manager in `src-tauri/src/lsp.rs` spawns language servers as needed. First-class support for:
+
 - `typescript-language-server` (TS/TSX) — our main language since Zeros is TS.
 - `rust-analyzer` (Rust) — needed for editing `src-tauri/`.
 - `vscode-css-languageserver` (CSS) — needed for design-token editing and component styles.
@@ -146,12 +161,14 @@ Rust process manager in `src-tauri/src/lsp.rs` spawns language servers as needed
 Others added later. Start narrow.
 
 **Stack:**
+
 - `lsp-types` crate — protocol types.
 - `lsp-server` crate — framing + JSON-RPC message I/O. This is what `rust-analyzer` uses internally; it's mature.
 - `tokio::process::Command` — spawn language server subprocesses, capture stdio.
 - Do **not** use `tower-lsp` — it's for *building* a language server, not proxying one. Overkill for our use.
 
 **Server lifecycle:**
+
 - Spawn on first buffer open for a language.
 - Keep alive for the session.
 - One server per workspace root (not per buffer).
@@ -159,6 +176,7 @@ Others added later. Start narrow.
 - Track document state client-side (`HashMap<Url, DocState>`) so we can synthesize `textDocument/didOpen` / `didChange` / `didClose` notifications as the user navigates.
 
 **Server install story (borrowed from Zed).**
+
 - Detect system-installed binary first (`which typescript-language-server`, `which rust-analyzer`).
 - If missing, offer a one-click install via the app's `.zeros/bin/` local directory. Download official release for the platform, verify checksum, chmod +x, path it in.
 - Never bundle servers in the Tauri app (bloats distribution; breaks updates).
@@ -168,6 +186,7 @@ Others added later. Start narrow.
 The standard `codemirror-languageserver` package speaks WebSocket by default. We bypass that — the LSP server is in the same process tree as Tauri, no reason to encode messages as HTTP frames.
 
 Custom transport instead:
+
 - LSP server stdout/stdin → Rust framing via `lsp-server::Message`.
 - Rust forwards frames through Tauri events (`lsp:message:<serverId>`) to the WebView.
 - Frontend CM6 `codemirror-languageserver` uses a thin custom transport that subscribes to those events and sends via `invoke("lsp_send", { ... })`.
@@ -180,11 +199,13 @@ Custom transport instead:
 This is the design-tool-centric decision: **no "Problems" panel ever**.
 
 Where diagnostics surface:
+
 - **Inline in the editor** — red underlines, hover explanations, `⌘.` for fixes. Standard CM6 affordance, nothing else needed. Only visible when the editor is visible.
 - **Agent context** — the ACP `session-manager` subscribes to diagnostics and, on every agent turn, includes relevant diagnostics for any file the agent edited or read. Format: a structured tool-result block the agent sees as context. The agent decides whether to surface.
 - **Checkpoint gating (optional)** — a config can prevent a checkpoint from being marked "clean" if diagnostics are present. Makes auto-advance workflows safer.
 
 Never:
+
 - No bottom "Problems" tab.
 - No workspace-wide diagnostic badge in chrome.
 - No "X errors, Y warnings" status bar. (We have no status bar.)
@@ -225,22 +246,26 @@ The single most impactful UX change. Borrowed directly from OpenCode (`mode: pri
 Conductor's best idea: every *turn* is a restore point, not every edit. Reverting is a single click in the chat transcript.
 
 **What a checkpoint contains:**
+
 - Snapshot of every Automerge doc the agent read/wrote in the turn (cheap — CRDTs dedupe by content hash).
 - The agent tool-call tree for the turn.
 - A `checkpoint_id` embedded in the chat turn's UI.
 - Optional: a hidden git ref `refs/Zeros/checkpoints/<session>/<turn>` so `git` sees it but it never appears in the user's branch list.
 
 **Where checkpoints live:**
+
 - `.zeros/checkpoints/<sessionId>/<turn>.json` — metadata + doc content hashes.
 - Content-addressed blobs in `.zeros/checkpoints/blobs/` (dedupes unchanged docs across turns).
 - A sliding window: keep last 50 turns per session; older turns get coalesced into the baseline. User can pin a checkpoint to prevent coalescing.
 
 **Revert UX:**
+
 - Each turn in the chat transcript has a "⤺ Revert to before this turn" affordance. One click.
 - Revert restores buffers, canvas state, and any agent-touched files to their snapshot. Conversation history is preserved — the user sees "reverted to checkpoint T" as a new turn.
 - Revert is itself a checkpoint — reverts are reversible.
 
 **Why this beats git-based undo:**
+
 - Git is file-granular; checkpoints are session-granular. If the agent edits 12 files in one turn and the user hates turn 7, one click rewinds exactly those 12 files across those 7 turns.
 - Non-code state (canvas, design tokens in Automerge) isn't in git. Checkpoints cover it.
 - The chat transcript is the revert UI — no separate "history" panel to learn.
@@ -250,22 +275,26 @@ Conductor's best idea: every *turn* is a restore point, not every edit. Revertin
 Conductor's core primitive: each session is its own sandboxed workspace. Adapted for a Tauri app.
 
 **Model:**
+
 - Each agent session = one git worktree under `.zeros/worktrees/<sessionId>/`.
 - The main Zeros window always shows *one* active worktree; a session switcher in the left rail shows all sessions with live status (idle / thinking / awaiting-permission / error).
 - Switching sessions is a view swap, not a reload. Agents in inactive sessions keep running in the background.
 - Each session has its own Plan/Build state, its own checkpoint timeline, its own chat.
 
 **Merge model:**
+
 - "Apply this session" = three-way merge of the worktree against the main branch. Conflict resolution uses the existing `src/shell/git-panel.tsx` merge-conflict UI.
 - Optional: designers who don't want to think about git see a simpler "Keep these changes" button that does the merge automatically, dropping into conflict resolution only if it can't fast-forward.
 - A session can be "discarded" — worktree deleted, checkpoints archived for 30 days in case of regret.
 
 **Why this matters:**
+
 - Try three agents on the same problem in parallel ("make this responsive"), review all three diffs side-by-side, pick the best.
 - Let a long-running agent task (big refactor, design-system migration) run in the background while you keep working in a different session.
 - Isolates blast radius — a bad agent run can't trash your current design because it's in a different worktree.
 
 **UI:**
+
 - Session rail in the left column. Avatar/icon per session, color-coded by agent (Claude/Codex/Gemini). Click to switch.
 - Active session gets its name in the title bar.
 - Running agents show a subtle pulse; agents awaiting permission show an attention dot.
@@ -325,6 +354,7 @@ Rivet's pattern — sessions survive app restarts.
 #### D.1 — Transport: iroh
 
 iroh is the right choice — Rust-native, QUIC-based, designed for direct P2P with relay fallback. Alternatives considered and ruled out:
+
 - **libp2p** — broader but heavier (Kademlia DHT, pub/sub, multiple transports we don't need). iroh narrower and simpler.
 - **WebRTC DataChannels** — requires a JS bridge and has worse NAT-traversal tooling than iroh's battle-tested implementation.
 - **Raw TCP/WebSockets via our own relay** — zero NAT traversal, we'd be building what iroh already solved.
@@ -339,6 +369,7 @@ iroh is the right choice — Rust-native, QUIC-based, designed for direct P2P wi
 - **Cross-LAN with relay fallback:** `RelayMode::Default` uses iroh's four public relays (free, rate-limited but enough for casual use). For Pro collab at scale, we run our own relay (iroh relay binary, stateless, ~50MB RAM, one DO or Cloudflare VM — tiny cost).
 
 **Auth integration with Phase D.5 JWT:**
+
 - iroh's `ProtocolHandler::accept` hook lets us validate on the first bidirectional stream.
 - Client sends `{jwt}` as the opening message on a reserved stream.
 - Server verifies JWT signature + expiry against Supabase public key (baked in).
@@ -349,9 +380,9 @@ iroh is the right choice — Rust-native, QUIC-based, designed for direct P2P wi
 
 Automerge core is Rust-native. For the repo layer (sync protocol, storage, network adapter plugging), choose wisely:
 
-- **`automerge-repo` (JS)** — the reference implementation, well-documented, but JS-only. Using it means running CRDT logic in the WebView.
-- **`automerge-repo-rs`** — Rust port, but **not JS-wire-compatible**. Dead-end if we ever want web peers.
-- **`samod` 0.6.x** — JS-wire-compatible Rust `automerge-repo`, **sans-IO** (plugs into any transport), actively maintained. This is the right pick. It lets Rust own the CRDT state and speak the same protocol as JS peers if we ever add a web client.
+- `**automerge-repo` (JS)** — the reference implementation, well-documented, but JS-only. Using it means running CRDT logic in the WebView.
+- `**automerge-repo-rs`** — Rust port, but **not JS-wire-compatible**. Dead-end if we ever want web peers.
+- `**samod` 0.6.x** — JS-wire-compatible Rust `automerge-repo`, **sans-IO** (plugs into any transport), actively maintained. This is the right pick. It lets Rust own the CRDT state and speak the same protocol as JS peers if we ever add a web client.
 
 **Supporting crate:** `autosurgeon` for `#[derive(Reconcile, Hydrate)]` — turns Rust structs into Automerge docs without manual JSON bashing.
 
@@ -385,6 +416,7 @@ impl NetworkAdapter for IrohAdapter {
 Automerge doesn't persist awareness — that's correct, because cursors and voice indicators shouldn't conflict-merge. `automerge-repo` ships **ephemeral messages** as a first-class feature: `handle.broadcast(cbor_payload)` fires a fire-and-forget CBOR message to all peers on a doc; receivers get an `"ephemeral-message"` event. No persistence, no CRDT merge.
 
 We use this for:
+
 - Cursor position (every file per peer).
 - Selection range.
 - Active buffer / active canvas frame.
@@ -409,6 +441,7 @@ Implementation: one ephemeral message type + a frontend `useFollowMode()` hook. 
 #### D.5 — Shared agent sessions
 
 ACP sessions run locally per user. "Shared" means:
+
 - One peer is the driver (their machine runs the agent subprocess).
 - Other peers subscribe as viewers via ephemeral messages.
 - Every ACP message the driver sees is rebroadcast as an ephemeral message.
@@ -420,6 +453,7 @@ No cloud component for this. Rides on the already-established iroh doc connectio
 #### D.6 — Signaling server (minimal, JWT-gated)
 
 Covered in Phase D.6 below. The signaling server exists only to:
+
 - Authenticate Pro users (JWT gate) so non-Pro peers can't free-ride cross-LAN.
 - Keep a tiny ephemeral "room registry" keyed by room-id → list of Pro NodeIds, for "join my session" UX without copying tickets manually.
 
@@ -434,6 +468,7 @@ If we skip the signaling server entirely in v1, users paste iroh tickets to each
 #### Canvas state migration (big job — do in Phase D, not earlier)
 
 Today `src/zeros/engine/` holds canvas state in plain React state / Zustand. Migrating to Automerge docs is non-trivial:
+
 - Every mutation becomes an Automerge change.
 - Undo/redo becomes Automerge-transaction-based instead of state snapshots.
 - Selection stays local (not in the doc).
@@ -467,14 +502,16 @@ This is the single largest engineering task in Phase D. Budget accordingly.
 
 **What lives in cloud, what doesn't:**
 
-| Cloud (scales with users) | Local (scales with design work) |
-|---|---|
-| `users` table (email, auth id) | All canvas state, components, tokens |
-| `subscriptions` table (plan, status, expiry) | All code buffers, Automerge docs |
-| Magic-link / session issuance | Local LSP, tree-sitter, diagnostics |
-| Stripe webhook handler | Agent sessions, transcripts, checkpoints |
-| Collab signaling (Phase D.6, room registry only) | Git state, env files, todos |
-| | **Never in cloud:** file content, designs, buffers, agent chats |
+
+| Cloud (scales with users)                        | Local (scales with design work)                                 |
+| ------------------------------------------------ | --------------------------------------------------------------- |
+| `users` table (email, auth id)                   | All canvas state, components, tokens                            |
+| `subscriptions` table (plan, status, expiry)     | All code buffers, Automerge docs                                |
+| Magic-link / session issuance                    | Local LSP, tree-sitter, diagnostics                             |
+| Stripe webhook handler                           | Agent sessions, transcripts, checkpoints                        |
+| Collab signaling (Phase D.6, room registry only) | Git state, env files, todos                                     |
+|                                                  | **Never in cloud:** file content, designs, buffers, agent chats |
+
 
 This is the whole point: user counts are bounded by paying customers (thousands, maybe tens of thousands over years). Design data is unbounded (MBs per project, dozens of projects per user). Keeping design data local means infra cost grows linearly with revenue, not with usage.
 
@@ -512,6 +549,7 @@ This is the whole point: user counts are bounded by paying customers (thousands,
 This is the standard "try agents free, pay for the design power" pitch. It's also the strongest viral loop — users share Zeros because the AI workflow is free; they convert because the design power is locked.
 
 **Critical files:**
+
 - New external repo: `Zeros-cloud/` — Supabase migrations (`profiles`, `subscriptions` tables), Edge Functions (Stripe webhook, signaling room registry), RLS policies.
 - New: `src-tauri/src/auth.rs` — Supabase JWT verification, refresh-token handling, claim cache.
 - New: `src/shell/auth-panel.tsx` — magic-link sign-in UI. Surfaces when a Pro feature is attempted while signed out.
@@ -553,6 +591,7 @@ This is the standard "try agents free, pay for the design power" pitch. It's als
 - Total server-side state per room: ~200 bytes. Total across all rooms: bounded by concurrent Pro users.
 
 **Critical files:**
+
 - `Zeros-cloud/signaling/` — Durable Object or Worker, JWT middleware, iroh ticket exchange.
 - `src-tauri/src/collab.rs` (from Phase D) — extend with signaling-server client for off-LAN pairing; LAN mDNS path untouched.
 
@@ -561,6 +600,7 @@ This is the standard "try agents free, pay for the design power" pitch. It's als
 ### Phase E — Design features (parallel track, not gated by A–D)
 
 Keeps shipping regardless of dev buildout:
+
 - Design token JSON system (framework-agnostic, feeds Tailwind/Chakra/shadcn adapters).
 - More native style editors (spacing, typography, motion presets).
 - Agent-driven component refactors (extract variant, rename prop across usages — LSP from Phase B powers this).
@@ -618,44 +658,38 @@ Actually: the next real feature you ship is developed *from inside Zeros*. Agent
 
 To write actual Zeros features in Zeros, you need, at minimum:
 
-| Need | Provided by |
-|---|---|
-| Open and edit TS/TSX files with highlighting | Phase A |
-| Type errors visible while editing | Phase B (LSP) |
-| Agent can open + edit files + see diagnostics | Phases A + B + existing ACP |
-| Revert a bad agent turn | Phase C (checkpoints) |
-| Run two agent attempts in parallel | Phase C (parallel sessions) |
-| Run `pnpm dev`, see hot reload | Existing terminal panel — already works |
-| Stage, commit, push | Existing git panel — already works |
-| Design the UI visually | Existing canvas + Phase E |
-| Collab with teammates while doing this | Phase D (optional — solo dev first) |
+
+| Need                                          | Provided by                             |
+| --------------------------------------------- | --------------------------------------- |
+| Open and edit TS/TSX files with highlighting  | Phase A                                 |
+| Type errors visible while editing             | Phase B (LSP)                           |
+| Agent can open + edit files + see diagnostics | Phases A + B + existing ACP             |
+| Revert a bad agent turn                       | Phase C (checkpoints)                   |
+| Run two agent attempts in parallel            | Phase C (parallel sessions)             |
+| Run `pnpm dev`, see hot reload                | Existing terminal panel — already works |
+| Stage, commit, push                           | Existing git panel — already works      |
+| Design the UI visually                        | Existing canvas + Phase E               |
+| Collab with teammates while doing this        | Phase D (optional — solo dev first)     |
+
 
 **Critical path for solo dogfooding:** Phase A + Phase B + Phase C. That's it. Phase D/D.5/D.6/E are not blockers for the "I can build Zeros inside Zeros" milestone.
 
 ### Sharp edges specific to the self-hosting loop
 
 1. **Editing the running app's source.** When Zeros is running and you edit `src/shell/column3.tsx` *inside Zeros*, Vite HMR fires and the app hot-reloads — editor included. This can wipe the editor state mid-edit. Two defenses:
-   - Automerge doc persists to disk on every change; HMR reloads with state intact.
-   - For Tauri-backend changes (`src-tauri/**`), the app needs a full restart. Mitigation: run a separate Zeros install (release build) as the dogfooding host; edit the dev repo inside it. Two binaries, same project.
-
+  - Automerge doc persists to disk on every change; HMR reloads with state intact.
+  - For Tauri-backend changes (`src-tauri/`**), the app needs a full restart. Mitigation: run a separate Zeros install (release build) as the dogfooding host; edit the dev repo inside it. Two binaries, same project.
 2. **Recursion risk — editing ACP while an ACP session is running.** If the agent you're using edits `src/engine/acp/`, the next agent turn may hit a broken build. Mitigation: each agent session runs in its own worktree (Phase C.3). If the agent's edits break the engine in worktree A, main is untouched; you revert via checkpoint.
-
 3. **Rust changes break the host.** Editing `src-tauri/src/*.rs` requires `cargo build`; the running app doesn't pick up Rust changes without a restart. Pattern: Rust changes happen in a dedicated "backend" worktree; the release-build dogfooding host is restarted when merging those. Frontend-only changes HMR in place.
-
 4. **LSP restart on TS config changes.** `tsconfig.json` edits should restart the TS language server in-process — implement as a `lsp:restart` command exposed via the palette.
-
 5. **Canvas → code export regressions.** If a design-feature-driven code export changes what's written to disk, self-dogfooding will hit those regressions immediately. This is a feature, not a bug — fastest feedback loop possible.
 
 ### Dogfooding milestone sequence (ordered, each a shippable signal)
 
 1. **M1 — "Agent edits Zeros code."** After Phase A + B land, an agent opens `src/shell/column3.tsx` inside Zeros, edits it, checkpoint fires. Restart the app, change persists. First proof.
-
 2. **M2 — "Build a feature end-to-end inside Zeros."** Pick one small real feature (e.g., "add a button to the git panel that copies the current branch name"). Do it entirely in-app: agent edits, LSP validates, terminal runs lint, git panel commits. Record the session. If anything forces you to open Cursor/VS Code, that's a Phase A/B bug list.
-
 3. **M3 — "Build a design-involving feature inside Zeros."** Pick a feature that exercises canvas + code: e.g., a new style editor module. Design on canvas, export to code, agent wires it up, LSP validates, commit. This is the full loop.
-
 4. **M4 — "Parallel agent variants."** Phase C.3. Two agents attempt the same feature differently; compare diffs; merge the better one. Demonstrates that Conductor-style parallelism works for design work, not just code.
-
 5. **M5 — "Collab pair-build."** Phase D + D.6. Someone else joins your session (LAN or ticket). You both co-design + co-edit while an agent runs. Proves the full vision.
 
 Each milestone is a concrete demo video you can put on the landing page. Each represents a week-to-two-weeks of real work post-phase-completion, not a year.
@@ -709,7 +743,7 @@ You cannot learn these from outside the tool. That's why self-hosting is the the
 - `src-tauri/src/git.rs` — worktree helpers. **(C.3)**
 - `src-tauri/src/secrets.rs` — extend to hold Supabase refresh token + iroh node keypair. **(D.5, D)**
 - `src/shell/column3.tsx` — editor/multibuffer mount point. **(A)**
-- `src/zeros/engine/*` — canvas state migrates to Automerge via `autosurgeon`. **(D)**
+- `src/zeros/engine/`* — canvas state migrates to Automerge via `autosurgeon`. **(D)**
 
 ### New conventions
 

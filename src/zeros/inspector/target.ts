@@ -5,7 +5,7 @@
 // "Target document" = the iframe document currently being
 // inspected (source preview or a variant). In the Mac app
 // there is always an iframe — the main window.document is
-// the Tauri app chrome, never an inspection surface.
+// the native app chrome, never an inspection surface.
 //
 // Defaults to window.document as a safety fallback for early
 // init races before any iframe has mounted; callers in that

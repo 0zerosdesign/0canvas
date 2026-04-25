@@ -1,5 +1,7 @@
 # Style Panel
 
+> **Doc label (PR 4):** Partial — engine and Col 3 behavior described here is largely still accurate. Mentions of the **VS Code extension**, **Tauri**, or **live ACP runtime** in the prose below are **historical** unless stated otherwise. Current stack: **Electron** + local engine — see [`03-Mac-App-Architecture.md`](../../Zeros-Structure/03-Mac-App-Architecture.md). Full index: [`12-Doc-Index-And-Labels.md`](../../Zeros-Structure/12-Doc-Index-And-Labels.md).
+
 > `src/zeros/panels/style-panel.tsx`
 
 The Style Panel is the primary CSS inspection and editing interface in Zeros. It occupies the right side of the workspace (280px fixed width) and provides a visual, section-based CSS editor for the currently selected DOM element. All edits apply instantly to the live preview via inline styles and, when the bridge is connected, write back to source files through the VS Code extension.

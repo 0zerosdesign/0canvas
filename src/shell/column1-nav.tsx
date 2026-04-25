@@ -90,7 +90,7 @@ const POLL_INTERVAL_MS = 5000;
 function selfOrigin(): string {
   if (typeof window === "undefined") return "";
   // In dev mode this is http://localhost:5173 (Vite serving our own app).
-  // In the release .app it's http://tauri.localhost or similar, and port
+  // In packaged/native app builds this is a local app origin, and port
   // 5173 would be somebody else's dev server — no special handling needed.
   return window.location.origin.replace(/\/$/, "");
 }

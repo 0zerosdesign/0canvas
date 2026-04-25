@@ -16,7 +16,7 @@
 //   Phase 6  — pty_* (terminal)
 //   Phase 7  — ai_cli_* + claude/codex spawns
 //
-// Mirrors tauri::generate_handler![...] in src-tauri/src/lib.rs.
+// Native command router for renderer -> Electron main IPC.
 // ──────────────────────────────────────────────────────────
 
 import { ipcMain, type IpcMainInvokeEvent } from "electron";
@@ -42,9 +42,8 @@ function notImpl(cmd: string, phase: number): CommandHandler {
   };
 }
 
-/** The full command table. Every entry from src-tauri/src/lib.rs's
- *  `invoke_handler` is represented. Keep this list in sync — a missing
- *  entry means a React call site throws "unknown command" in Electron.
+/** The full command table. Keep this list in sync — a missing entry
+ *  means a React call site throws "unknown command" in Electron.
  */
 const commandTable: Record<string, CommandHandler> = {
   // ── Sidecar / engine lifecycle (Phase 2) ──────────────────

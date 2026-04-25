@@ -1,19 +1,19 @@
 // ──────────────────────────────────────────────────────────
-// IPC commands: keychain — port of src-tauri/src/secrets.rs
+// IPC commands: keychain
 // ──────────────────────────────────────────────────────────
 //
 // keytar is the npm-standard wrapper around:
 //   macOS   → Keychain (Security.framework) — same backing store as
-//             the Rust security-framework crate, so entries saved by
-//             the Tauri build are readable here and vice versa.
+//             the legacy native build used, so previously saved entries
+//             remain readable.
 //   Windows → Credential Manager (DPAPI)
 //   Linux   → Secret Service (GNOME Keyring / KDE Wallet)
 //
-// Service name matches Rust exactly:
+// Service name stays stable for keychain compatibility:
 //   Prod (app.isPackaged)          → "Zeros"
 //   Dev  (electron .)              → "Zeros Dev"
-// Any keys you saved under Tauri's "Zeros"/"Zeros Dev" service carry
-// over transparently to the Electron build — no migration needed.
+// Any keys saved under the old "Zeros"/"Zeros Dev" service carry over
+// transparently to the Electron build — no migration needed.
 // ──────────────────────────────────────────────────────────
 
 import { app } from "electron";
@@ -42,8 +42,7 @@ export const keychainGet: CommandHandler = async (args) => {
   if (!account) throw new Error("keychain get failed: missing account");
   try {
     const v = await keytar.getPassword(service(), account);
-    // keytar returns null when not found — matches Rust's Ok(None)
-    // on errSecItemNotFound (-25300).
+    // keytar returns null when not found.
     return v;
   } catch (err) {
     throw new Error(
@@ -57,8 +56,7 @@ export const keychainDelete: CommandHandler = async (args) => {
   if (!account) throw new Error("keychain delete failed: missing account");
   try {
     // keytar returns `true` on deletion, `false` if it didn't exist.
-    // Rust treats -25300 as "already absent → Ok(())"; we silently
-    // accept either outcome to match.
+    // Treat either outcome as success.
     await keytar.deletePassword(service(), account);
   } catch (err) {
     throw new Error(

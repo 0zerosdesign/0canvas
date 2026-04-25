@@ -125,7 +125,7 @@ export function spawnStreamJson(opts: SpawnedStreamOptions): SpawnedStream {
 
 // ── Error classification ─────────────────────────────────
 //
-// Ported from src/engine/acp/failure.ts but trimmed. The heuristics
+// Ported from the former agent failure classifier and trimmed. The heuristics
 // still work for raw CLI stderr (no JSON-RPC framing).
 
 const AUTH_KEYWORDS =

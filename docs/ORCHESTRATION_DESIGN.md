@@ -1,5 +1,7 @@
 # Zeros Orchestration Layer — Design for Discussion
 
+> **Doc label (PR 4):** Partial — design **proposal**, not a spec of the live app. The text still centers **ACP** as a wire protocol; the **shipping** path is the **native agent gateway** in `src/engine/agents/` (protocol-shaped compatibility may remain). See [`docs/Zeros-Structure/12-Doc-Index-And-Labels.md`](Zeros-Structure/12-Doc-Index-And-Labels.md).
+
 **Status:** proposal, not yet built. Reviewed separately from the ACP capability and latency fixes.
 
 ## Why this layer
@@ -23,6 +25,7 @@ Neither Zed nor opencode builds a graph engine on top of ACP. Both use a simpler
 Based on surveying Zed, opencode, LangGraph, Mastra, Inngest Agent Kit, OpenAI Agents SDK, Google ADK, CrewAI, AutoGen, smolagents, Rivet (Ironclad), and factory-style droid specialization. Ordered by load-bearing.
 
 ### 1. `AgentProfile`
+
 ```ts
 type AgentProfile = {
   id: string;
@@ -37,20 +40,24 @@ type AgentProfile = {
   canvasAware: boolean;
 };
 ```
+
 A profile is **orthogonal to the ACP backend.** The same `design-audit` profile can be bound to Claude, Codex, or Gemini — lets us benchmark identically across agents.
 
 Merges Zed's profile + opencode's permission ruleset (which is strictly more expressive than Zed's). `permissions` follow `action: "allow" | "ask" | "deny"` with patterns and directory scoping.
 
 ### 2. `RulesLibrary`
+
 ```ts
 type Rule =
   | { kind: "file"; path: string; defaultOn: boolean }         // .cursorrules, CLAUDE.md, AGENTS.md, GEMINI.md
   | { kind: "library"; id: string; content: string; defaultOn: boolean }
   | { kind: "typed"; id: string; scope: string; assertion: string }; // Zeros-specific: design-constraint predicates
 ```
+
 Typed rules are the Zeros differentiator: `{scope: "text-elements", assertion: "wcag >= 4.5"}` lets the canvas MCP answer programmatically instead of the agent hallucinating audit results.
 
 ### 3. `AcpSessionBinding` — the leaf primitive
+
 ```ts
 type AcpSessionBinding = {
   sessionId: string;
@@ -63,9 +70,11 @@ type AcpSessionBinding = {
   };
 };
 ```
+
 Every orchestration operation — workflow step, subagent spawn, user chat, canvas @ask — is a binding. Bindings form a tree via `parentSessionId`.
 
 ### 4. Spawn / Handoff
+
 Two duals, cloned from OpenAI Agents SDK + Zed's `spawn_agent_tool.rs` + opencode's `TaskTool`:
 
 - **Spawn (agent-as-tool):** primary calls synthesized tool `spawn_<profile>`. A child binding is created with a fresh session. Parent continues after the child's final message. Used for research sub-tasks and audit parallelism.
@@ -74,6 +83,7 @@ Two duals, cloned from OpenAI Agents SDK + Zed's `spawn_agent_tool.rs` + opencod
 Both go through an MCP tool exposed to the active ACP session — so **any backend that supports MCP can do Zeros spawn/handoff.** No per-agent work.
 
 ### 5. `Workflow` — minimal declarative DSL
+
 ```ts
 workflow("design-audit")
   .step("scan",     { profile: "explore", prompt: "Enumerate all tokens in src/" })
@@ -85,6 +95,7 @@ workflow("design-audit")
   .synthesize({ profile: "write", prompt: "Prioritized report → {{scan.output}}" })
   .onInterrupt(approvalUi);
 ```
+
 Takes the shape of Mastra's builder (`.then`, `.parallel`, `.branch`, `.foreach`, `.until`) but reduced to what we need. Each step = `binding.prompt()` + final-message collection.
 
 **State lives in LangGraph-style channels with explicit reducers.** Parallel writes merge by reducer (e.g., `findings[]` appends, `summary` last-writer-wins). Survives across steps, queryable from the canvas.
@@ -92,12 +103,15 @@ Takes the shape of Mastra's builder (`.then`, `.parallel`, `.branch`, `.foreach`
 Execution is sequential-with-fanout. No BSP scheduler. No visual graph editor (resisting the Rivet/n8n temptation — our users code).
 
 ### 6. `Interrupt` / HITL
+
 Uniform wrapper that maps to:
+
 - ACP `session/request_permission` → approval card in Zeros UI
 - `interrupt(value)` inside a workflow step → pause, serialize state, wait for `resume(payload)`
 - Canvas annotation `@approve(element)` → gate workflow progression on user action in the canvas
 
 ### 7. `Checkpoint` / `Run`
+
 SQLite-backed (same choice as Zed and opencode). Each run is a record; each step completion writes channel values + binding state + ACP session ids. Resume = re-attach via `resume_session` / `load_session` (both in the `AgentConnection` trait for every backend). If a backend doesn't support resume, we degrade to re-sending the transcript.
 
 ## How primitives compose with ACP
@@ -122,6 +136,7 @@ SQLite-backed (same choice as Zed and opencode). Each run is a record; each step
 ```
 
 Invariants:
+
 - Every leaf is an `AcpSessionBinding`. Orchestrator never touches models directly.
 - Profile = what the agent sees. Orchestrator = what Zeros exposes to the agent (via MCP).
 - Canvas tools (`canvas.get_selection`, `canvas.apply_mutation`, `design.audit_tokens`) are served as an MCP server — so **any backend that supports MCP gets them for free**.
@@ -133,6 +148,7 @@ Invariants:
 Needs primitives 1, 3, 4, 5, 6, 7. Not 2 (rules) strictly, but the audit reads from rules so effectively all seven.
 
 Shape:
+
 1. `AgentProfile("design-audit")` with `permissions: read/grep/glob allow, write deny, bash deny except *test*`, rules `[design-tokens.md, a11y-checklist.md]`, context servers `[zeros-canvas-mcp]`.
 2. `Workflow("design-audit")` with three phases: (a) enumerate sub-trees of `src/`, (b) parallel analyze (contrast / token coverage / type scale / spacing rhythm / component drift), (c) synthesize into `ZEROS_AUDIT.md` written via the `write` profile.
 3. Checkpoint per step so a 20-minute audit survives laptop sleep.
@@ -143,6 +159,7 @@ Shape:
 Needs primitives 1, 3, 6. Not a workflow — just a single binding.
 
 Shape:
+
 1. MCP server embedded in Zeros exposing canvas tools. Already partly exists.
 2. `AgentProfile("canvas")` with `canvasAware: true`, context server = canvas MCP, rules = design-tokens.
 3. `AcpSessionBinding` with per-turn injection of current selection into the prompt (the profile's `systemPromptAddendum` renderer).
@@ -161,14 +178,14 @@ These are the design-tool axes nobody else optimizes for:
 
 ## Suggested build order
 
-1. **`AgentProfile` + `PermissionRuleset`** — port opencode's ruleset, keep Zed-shape for familiarity.
-2. **`RulesLibrary`** — port Zed's rules; add typed-design-rules schema.
-3. **`AcpSessionBinding`** tree — make the current `acp-chat` a binding; implement `spawn` returning a child.
+1. `**AgentProfile` + `PermissionRuleset`** — port opencode's ruleset, keep Zed-shape for familiarity.
+2. `**RulesLibrary`** — port Zed's rules; add typed-design-rules schema.
+3. `**AcpSessionBinding**` tree — make the current `acp-chat` a binding; implement `spawn` returning a child.
 4. **Spawn-as-tool MCP server** — expose `spawn_agent` MCP tool so any ACP backend with MCP can use it. Clone Zed's `spawn_agent_tool.rs` semantics in TS.
-5. **`Workflow` builder + SQLite checkpointer** — thin DSL, ~500 LOC.
+5. `**Workflow` builder + SQLite checkpointer** — thin DSL, ~500 LOC.
 6. **Approval/interrupt wrapper** — reuses existing `session/request_permission` UI.
-7. **`DesignGraph` + canvas MCP server** — the differentiator.
-8. **`AuditWorkflow` built-in** — flagship use case falsifies everything above.
+7. `**DesignGraph` + canvas MCP server** — the differentiator.
+8. `**AuditWorkflow` built-in** — flagship use case falsifies everything above.
 
 Steps 1–6 mirror existing patterns. Steps 7–8 are Zeros-specific and where novel engineering lives.
 

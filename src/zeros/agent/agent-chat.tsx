@@ -446,7 +446,7 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
   // so there's nothing to flush locally.)
 
   // Phase 2-B handoff: InlineEdit, feedback pill, and the empty-state
-  // composer all funnel AI requests through the ACP chat now. When the
+  // composer all funnel AI requests through the agent chat now. When the
   // pending submission targets this chat (or we're the only live one)
   // and the session is ready, send it and clear the queue.
   const pendingSub = workspaceState.pendingChatSubmission;
@@ -889,7 +889,7 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
 // ── Design-audits pill — collapsed quick-launch for a11y/token audits
 
 // ──────────────────────────────────────────────────────────
-// PlanPanel — collapsible todo list from ACP `plan` notifications
+// PlanPanel — collapsible todo list from agent `plan` notifications
 // ──────────────────────────────────────────────────────────
 
 function PlanPanel({ entries }: { entries: PlanEntry[] }) {
@@ -1102,7 +1102,7 @@ function matchDesignTool(title: string): DesignToolEntry | null {
 // Subagent detection (Phase 5)
 // ──────────────────────────────────────────────────────────
 //
-// The ACP `SpawnAgentTool` call shows up in the stream as a regular
+// A spawn-agent tool call shows up in the stream as a regular
 // ToolCall. claude-agent-sdk's built-in is "Task"; other agents name it
 // differently. Match permissively by title or by rawInput having a
 // subagent_type key.

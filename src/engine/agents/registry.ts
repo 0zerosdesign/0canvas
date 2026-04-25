@@ -2,8 +2,8 @@
 // Agent registry — local manifest
 // ──────────────────────────────────────────────────────────
 //
-// Replaces src/engine/acp/registry.ts. The old registry fetched a CDN
-// JSON describing how to spawn npx/uvx adapters. We don't do that
+// Replaces the former remote agent registry. The old registry fetched
+// CDN JSON describing how to spawn npx/uvx adapters. We don't do that
 // anymore — users bring their own CLI installs, and we know exactly
 // which seven CLIs we support.
 //
@@ -105,7 +105,7 @@ function notYetImplemented(agentId: string): AgentAdapter {
 
 export const AGENT_MANIFEST: AgentManifestEntry[] = [
   {
-    id: "claude-acp", // keep existing id for wire compatibility — rename in Phase 9
+    id: "claude-acp", // compatibility id for saved chats/settings; rename only with migration
     name: "Claude Code",
     description: "Anthropic's Claude Code CLI (subscription or API key).",
     cliBinary: "claude",

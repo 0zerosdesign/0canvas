@@ -1,14 +1,17 @@
 # WebSocket Bridge Communication
 
-> **🚧 Partially stale (2026-04-20).** The engine ↔ webview WebSocket
-> described here is still current (Col 3 uses it). Two changes since
-> this was written:
-> 1. The engine is now launched by `src-tauri/src/sidecar.rs`, not by
->    `src/vite-plugin.ts`. Port discovery goes through the Tauri
->    command `get_engine_port`.
-> 2. Col 2 chat does NOT go through this WebSocket; it uses
->    `ai_cli.rs` (subprocess) or `anthropic.ts` / `openai.ts` (direct
->    HTTPS). The WebSocket is engine-specific.
+> **Doc label (PR 4):** Partial — the WebSocket bridge for the **design workspace** is still real. The **VS Code extension** as a third participant, and any **Tauri** wording, are **historical**; the Mac app uses **Electron** + the local engine — see [`03-Mac-App-Architecture.md`](../../Zeros-Structure/03-Mac-App-Architecture.md). Index: [`12-Doc-Index-And-Labels.md`](../../Zeros-Structure/12-Doc-Index-And-Labels.md).
+>
+> **🚧 Partially stale (2026-04-20).** The engine ↔ renderer WebSocket
+> described here is still current (Col 3 design workspace uses it). Two
+> changes since this was written:
+> 1. The engine is launched by the **Electron** sidecar manager
+>    (`electron/sidecar.ts`), not by `src/vite-plugin.ts` alone. Port
+>    discovery uses the native `get_engine_port` path (preload/IPC), not
+>    a Tauri command.
+> 2. Col 2 **agent chat** does NOT go through this WebSocket; it uses the
+>    **local engine’s native agent gateway** and/or direct provider paths.
+>    The WebSocket remains **engine ↔ design workspace** specific.
 >
 > See [../README.md](../README.md).
 

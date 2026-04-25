@@ -6,7 +6,7 @@
 // src/engine/agents/adapters/base.ts). This module exists only for
 // the handful of UI sites that still need to classify an error string
 // they caught locally (e.g. a network round-trip that never reached
-// the engine). Replaces the old src/engine/acp/failure.ts that was
+// the engine). Replaces the old engine-side failure classifier that was
 // deleted in Phase 9.
 //
 // Keep in sync with BridgeAgentFailure in messages.ts — same kinds,

@@ -1,5 +1,7 @@
 # DOM Inspector
 
+> **Doc label (PR 4):** Partial — engine and Col 3 behavior described here is largely still accurate. Mentions of the **VS Code extension**, **Tauri**, or **live ACP runtime** in the prose below are **historical** unless stated otherwise. Current stack: **Electron** + local engine — see [`03-Mac-App-Architecture.md`](../../Zeros-Structure/03-Mac-App-Architecture.md). Full index: [`12-Doc-Index-And-Labels.md`](../../Zeros-Structure/12-Doc-Index-And-Labels.md).
+
 The DOM Inspector is the core click-to-inspect system that lets users hover, select, and interact with elements in the target document. It was originally a single 2177-line monolith (`dom-inspector.ts`) and was split into 9 focused modules during the A1 refactor.
 
 ## Source Files

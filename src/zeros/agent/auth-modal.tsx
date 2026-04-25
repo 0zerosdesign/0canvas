@@ -38,7 +38,7 @@ export type AuthMethodKind = "env_var" | "terminal" | "agent";
 export interface AuthChoice {
   /** Method id the user picked (or a synthetic id when the modal injected one). */
   methodId: string;
-  /** ACP-spec method type, used by the engine to decide how to proceed. */
+  /** Protocol method type, used by the engine to decide how to proceed. */
   kind: AuthMethodKind;
   /** Env vars to inject at subprocess spawn. Empty for non-env methods. */
   env: Record<string, string>;
@@ -107,14 +107,14 @@ interface OptionBase {
   title: string;
   description: string;
   icon: React.ReactNode;
-  /** The ACP-spec method id to echo back. "" for pure env-only synthetic options. */
+  /** Protocol method id to echo back. "" for pure env-only synthetic options. */
   methodId: string;
   kind: AuthMethodKind;
 }
 
 interface OptionEnvVars extends OptionBase {
   kind: "env_var";
-  /** Optional getting-started link shown below the fields (per ACP spec). */
+  /** Optional getting-started link shown below the fields (per agent spec). */
   link?: string | null;
   /** Inputs to render — one per var the user needs to provide. */
   vars: Array<{

@@ -1,5 +1,7 @@
 # Module: Themes & Design Tokens
 
+> **Doc label (PR 4):** Partial — engine and Col 3 behavior described here is largely still accurate. Mentions of the **VS Code extension**, **Tauri**, or **live ACP runtime** in the prose below are **historical** unless stated otherwise. Current stack: **Electron** + local engine — see [`03-Mac-App-Architecture.md`](../../Zeros-Structure/03-Mac-App-Architecture.md). Full index: [`12-Doc-Index-And-Labels.md`](../../Zeros-Structure/12-Doc-Index-And-Labels.md).
+
 > **Source files:**
 > - `src/zeros/themes/themes-page.tsx` -- token table editor, file import, multi-theme columns
 > - `src/zeros/themes/theme-mode-panel.tsx` -- color inspection panel, change tracking, prompt generation

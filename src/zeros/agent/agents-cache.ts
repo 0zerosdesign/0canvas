@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────
-// agents-cache.ts — shared ACP registry snapshot
+// agents-cache.ts — shared agent registry snapshot
 // ──────────────────────────────────────────────────────────
 //
 // Both the Settings → Agents panel and the composer's agent pill

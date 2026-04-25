@@ -1,8 +1,8 @@
 // ──────────────────────────────────────────────────────────
-// SlashCommandPicker — autocomplete for ACP `available_commands`
+// SlashCommandPicker — autocomplete for agent `available_commands`
 // ──────────────────────────────────────────────────────────
 //
-// Slash commands are advertised by the agent via ACP
+// Slash commands are advertised by the agent session protocol
 // `available_commands_update` notifications and live on
 // `session.availableCommands`. Typing "/" at the start of
 // a prompt opens this picker; selecting inserts "/<name> "

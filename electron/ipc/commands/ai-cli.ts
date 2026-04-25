@@ -2,7 +2,7 @@
 // IPC commands: AI CLI helpers (install-probe, auth-probe, login)
 // ──────────────────────────────────────────────────────────
 //
-// Post-4432b40 (ACP → native agent runtime), the actual CLI
+// In the native agent runtime, the actual CLI
 // subprocess lifecycle lives inside `src/engine/agents/` and rides
 // the WebSocket between engine and renderer. The three commands
 // below are the thin IPC helpers Settings still calls directly
@@ -26,8 +26,8 @@ import type { CommandHandler } from "../router";
 
 // ── which-style binary lookup ─────────────────────────────
 
-/** Rust uses the `which` crate; Node has no built-in, so shell out
- *  to the POSIX `which`. Returns absolute path on success, null when
+/** Node has no built-in `which`, so shell out to the POSIX `which`.
+ *  Returns absolute path on success, null when
  *  not on PATH. PATH inheritance is handled by `fix-path` during
  *  Electron boot (see electron/main.ts::hydrateShellPath). */
 function whichBinary(binary: string): string | null {

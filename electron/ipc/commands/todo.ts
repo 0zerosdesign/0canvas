@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────
-// IPC commands: todo — port of src-tauri/src/todo.rs
+// IPC commands: todo
 // ──────────────────────────────────────────────────────────
 //
 // Markdown-backed todo list at <project>/.zeros/todo.md. Checkbox
@@ -73,10 +73,10 @@ export const loadTodoFile: CommandHandler = (args) => {
   try {
     raw = fs.readFileSync(p, "utf-8");
   } catch {
-    // file may not exist yet → treat as empty (matches Rust)
+    // file may not exist yet -> treat as empty
   }
   const items: TodoItemPayload[] = [];
-  // Rust uses `.lines()` which drops the final trailing newline; match that.
+  // `.split(/\r?\n/)` would keep a final empty row; `.trimEnd()` avoids that.
   const lines = raw.split("\n");
   const hasTrailingNewline = raw.endsWith("\n");
   const iterLen = hasTrailingNewline ? lines.length - 1 : lines.length;

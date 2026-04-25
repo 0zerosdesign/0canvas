@@ -183,7 +183,7 @@ interface SessionsCtx {
     response: RequestPermissionResponse,
   ): void;
 
-  /** Switch session mode via ACP `session/set_mode`. Echoes the change
+  /** Switch session mode via protocol-level `session/set_mode`. Echoes the change
    *  back into session state on success. */
   setMode(chatId: string, modeId: string): Promise<void>;
 

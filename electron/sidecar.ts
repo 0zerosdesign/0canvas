@@ -2,8 +2,8 @@
 // Engine sidecar — spawn, track, shutdown, crash watchdog
 // ──────────────────────────────────────────────────────────
 //
-// Direct port of src-tauri/src/sidecar.rs. The Node.js Zeros engine
-// runs as a child process of the Electron shell. It binds a local
+// Electron sidecar manager. The Node.js Zeros engine runs as a child
+// process of the Electron shell. It binds a local
 // WebSocket + HTTP server on 127.0.0.1:24193 (retries up to 24200)
 // and writes the actual port to `<project_root>/.zeros/.port` once
 // bound.
@@ -121,7 +121,7 @@ function resolveBunPath(): string | null {
   }
 }
 
-/** Tiny TCP probe (500ms timeout) — matches the Rust port_reachable. */
+/** Tiny TCP probe (500ms timeout). */
 function portReachable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const socket = new net.Socket();
@@ -166,16 +166,16 @@ let orphansReaped = false;
  * Kill stranded engine processes left over from prior app runs.
  *
  * Zeros' engine binds 24193–24200. When the app was killed without a
- * clean shutdown (crash, force-quit, Tauri→Electron migration), the
+ * clean shutdown (crash, force-quit, legacy native migration), the
  * child outlives its parent and keeps the port. The next launch then
  * gets bumped up the retry chain, and the renderer — which probes
  * get_engine_port but falls back to 24193 — may talk to a zombie
- * that speaks an older protocol or is wedged. Symptom: every ACP
+ * that speaks an older protocol or is wedged. Symptom: every agent
  * request times out even though "an engine" is running.
  *
  * We defensively scan the port range with lsof, match the command
  * line against known engine patterns (current Electron binary, legacy
- * Tauri binary, dev-mode `bun src/cli.ts`), and SIGTERM the matches.
+ * native binary, dev-mode `bun src/cli.ts`), and SIGTERM the matches.
  * Non-engine processes on the range are left alone.
  */
 async function reapOrphanEngines(): Promise<void> {
@@ -227,8 +227,7 @@ async function reapOrphanEngines(): Promise<void> {
 /**
  * Spawn the engine with `projectRoot` as its working directory. Kills
  * any previous child first, then polls for `<root>/.zeros/.port` (up
- * to 10 s) to discover the actually-bound port. Matches the Rust
- * spawn_engine_impl byte-for-byte in behaviour.
+ * to 10 s) to discover the actually-bound port.
  */
 export async function spawnEngine(projectRoot: string): Promise<number> {
   if (!orphansReaped) {
@@ -284,7 +283,7 @@ export async function spawnEngine(projectRoot: string): Promise<number> {
 
   state.child = child;
   state.root = projectRoot;
-  // Wrapping add — matches Rust semantics; JS numbers are safe up to 2^53.
+  // Wrapping add; JS numbers are safe up to 2^53.
   state.spawnGeneration = (state.spawnGeneration + 1) & 0xffffffff;
 
   child.once("exit", (code, signal) => {
@@ -477,7 +476,7 @@ export function startWatchdog(): void {
 // fine for a user repo (~thousands of files) but catastrophic for
 // $HOME (~millions) or / (entire filesystem). When the watcher exceeds
 // macOS's EMFILE ceiling the engine crashes on every fs event and the
-// IPC bridge stalls indefinitely — the exact "Fetching ACP registry..."
+// IPC bridge stalls indefinitely — the exact "Fetching agent registry..."
 // hang users hit when the packaged app is launched from Finder (CWD=/)
 // or from a shell where the cwd isn't a real project.
 //

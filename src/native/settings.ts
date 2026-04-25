@@ -3,7 +3,7 @@
 // ──────────────────────────────────────────────────────────
 //
 // Phase 0: localStorage-backed (works in Vite dev harness).
-// Phase 1: swap to Tauri fs (`~/Library/Application Support/
+// Native app path: swap to app-data storage (`~/Library/Application Support/
 // zeros/settings.json`) — same call sites, same interface.
 //
 // ──────────────────────────────────────────────────────────

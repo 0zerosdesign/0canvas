@@ -1,11 +1,14 @@
 # Settings
 
+> **Doc label (PR 4):** Partial — engine and Col 3 behavior described here is largely still accurate. Mentions of the **VS Code extension**, **Tauri**, or **live ACP runtime** in the prose below are **historical** unless stated otherwise. Current stack: **Electron** + local engine — see [`03-Mac-App-Architecture.md`](../../Zeros-Structure/03-Mac-App-Architecture.md). Full index: [`12-Doc-Index-And-Labels.md`](../../Zeros-Structure/12-Doc-Index-And-Labels.md).
+>
 > **🚧 Partially stale (2026-04-20).** The Settings page now lives
 > *inside Column 3* (Pass 4), not as a fullscreen takeover, and uses
 > horizontal section tabs (Back / General / AI Models / API Keys /
 > Appearance / MCP / Debug) instead of a 240px vertical sidebar.
-> API keys are backed by the macOS Keychain via
-> `src-tauri/src/secrets.rs`. See [../README.md](../README.md).
+> API keys are backed by the macOS Keychain via the Electron main process
+> (`electron/ipc/commands/secrets.ts`, Keychain through **keytar**). See
+> [../README.md](../README.md).
 
 ---
 

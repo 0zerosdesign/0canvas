@@ -1,5 +1,7 @@
 # AI Chat Panel
 
+> **Doc label (PR 4):** Partial — engine and Col 3 behavior described here is largely still accurate. Mentions of the **VS Code extension**, **Tauri**, or **live ACP runtime** in the prose below are **historical** unless stated otherwise. Current stack: **Electron** + local engine — see [`03-Mac-App-Architecture.md`](../../Zeros-Structure/03-Mac-App-Architecture.md). Full index: [`12-Doc-Index-And-Labels.md`](../../Zeros-Structure/12-Doc-Index-And-Labels.md).
+>
 > **🚧 Partially stale (2026-04-20).** AIChatPanel is no longer mounted
 > as a right-panel in Column 3; it now lives in Column 2 as the primary
 > AI surface per V3 Decision 8. The "AI designMode" path is being
@@ -72,6 +74,7 @@ You are the AI design agent for Zeros. You redesign UI components.
 ```
 
 Key rules:
+
 1. Return ONLY the component HTML in an `html-apply` block
 2. Use INLINE STYLES (the variant renders in an isolated iframe)
 3. Keep it short -- no full page, no `<html>/<head>/<body>/<style>/<script>` tags
@@ -98,6 +101,7 @@ Instructs the AI to return CSS changes in a `css-apply` block. The system auto-a
 For local AI modes (ChatGPT/OpenAI), responses stream via SSE (Server-Sent Events). The `streamChat()` async generator yields text chunks as they arrive. The panel accumulates chunks and updates the message content in real-time, providing a live typing effect.
 
 The SSE parser (`parseSSEStream`) handles two formats:
+
 - **Responses API** (ChatGPT proxy): `response.output_text.delta`
 - **Chat Completions API** (direct OpenAI): `choices[0].delta.content`
 
@@ -137,7 +141,7 @@ Each property is parsed with regex `^([\w-]+)\s*:\s*(.+?)\s*;?\s*$`, converted f
 For element-mode CSS changes, properties are applied incrementally as they stream in -- not after completion. The streaming loop:
 
 1. Accumulates the full response text
-2. Regex-matches the `css-apply` block so far (including incomplete blocks via `(?:\`\`\`|$)`)
+2. Regex-matches the `css-apply` block so far (including incomplete blocks via `(?:\`|$)`)
 3. Tracks already-applied lines via `streamApplied` array
 4. For each new complete property line, calls `applyStyle()` immediately on the DOM
 5. Records the `oldValue` returned by `applyStyle()` for potential rollback
@@ -153,6 +157,7 @@ After streaming completes, instead of auto-committing, the panel shows a diff vi
 ### CSS Changes (`DiffView` Component)
 
 Displays each proposed property change as a row with:
+
 - A **checkbox** (toggled via `handleToggleCssChange`)
 - The **property name**
 - The **old value** (or "(none)")
@@ -160,6 +165,7 @@ Displays each proposed property change as a row with:
 - The **new value**
 
 Three action buttons:
+
 - **Apply Selected** -- commits only checked properties, reverts unchecked ones to their `oldValue`
 - **Apply All** -- commits all properties regardless of checkbox state
 - **Reject** -- reverts ALL streamed preview changes back to original values
@@ -167,6 +173,7 @@ Three action buttons:
 ### Variant Rewrite (`VariantDiffView` Component)
 
 Simpler binary choice:
+
 - **Apply** -- saves the rewritten HTML/CSS to the variant (with undo history push)
 - **Reject** -- discards the rewrite
 
@@ -181,6 +188,7 @@ IDE agent responses also go through the diff view. When an `AI_CHAT_RESPONSE` br
 The panel maintains a stack of up to **10 previous states** in `variantHistory`. Before any variant rewrite (either direct or via diff apply), the current `modifiedHtml` and `modifiedCss` are pushed onto the stack (`slice(-9)` keeps the last 10).
 
 The **Undo button** (shown in the header when history is non-empty):
+
 1. Pops the last state from `variantHistory`
 2. Dispatches `UPDATE_VARIANT` with the previous HTML/CSS
 3. Adds a system message "Reverted to previous design."
@@ -203,6 +211,7 @@ The **Undo button** (shown in the header when history is non-empty):
 ## Message Flow
 
 ### Local AI (ChatGPT / OpenAI)
+
 ```
 User types query
   -> Build system prompt + context
@@ -214,6 +223,7 @@ User types query
 ```
 
 ### IDE Agent
+
 ```
 User types query
   -> bridge.send(AI_CHAT_REQUEST { query, selector, styles, route })
@@ -229,25 +239,28 @@ User types query
 
 ## Key Types
 
-| Type | Purpose |
-|------|---------|
-| `PendingCssChange` | Per-property diff entry: property, oldValue, newValue, checked |
-| `PendingVariantRewrite` | Pending HTML (+CSS) rewrite for variant |
-| `StreamAppliedEntry` | Tracks streamed preview: property, camelProp, oldValue, newValue |
-| `ChatMessage` | Chat history entry: id, role, content, timestamp, pending, applied, appliedChanges |
-| `AiSettings` | Provider config: provider, proxyUrl, apiKey, model, temperature, autoSendFeedback |
-| `OpenAIMessage` | OpenAI chat format: role (system/user/assistant), content |
+
+| Type                    | Purpose                                                                            |
+| ----------------------- | ---------------------------------------------------------------------------------- |
+| `PendingCssChange`      | Per-property diff entry: property, oldValue, newValue, checked                     |
+| `PendingVariantRewrite` | Pending HTML (+CSS) rewrite for variant                                            |
+| `StreamAppliedEntry`    | Tracks streamed preview: property, camelProp, oldValue, newValue                   |
+| `ChatMessage`           | Chat history entry: id, role, content, timestamp, pending, applied, appliedChanges |
+| `AiSettings`            | Provider config: provider, proxyUrl, apiKey, model, temperature, autoSendFeedback  |
+| `OpenAIMessage`         | OpenAI chat format: role (system/user/assistant), content                          |
+
 
 ---
 
 ## File Dependencies
 
-| File | Role |
-|------|------|
-| `src/zeros/panels/ai-chat-panel.tsx` | Main panel component |
-| `src/zeros/lib/openai.ts` | AI client: streaming, settings persistence, model list |
-| `src/zeros/bridge/use-bridge.tsx` | `useBridge`, `useBridgeStatus`, `useExtensionConnected` hooks |
-| `src/zeros/bridge/messages.ts` | `BridgeMessage` type, `AI_CHAT_REQUEST`/`AI_CHAT_RESPONSE` |
-| `src/zeros/store/store.tsx` | `useWorkspace`, `findElement`, `UPDATE_VARIANT`, `UPDATE_STYLE` |
-| `src/zeros/inspector/index.ts` | `applyStyle()`, `flashElement()` for DOM manipulation |
-| `src/zeros/ui/scroll-area.tsx` | `ScrollArea` component |
+
+| File                                 | Role                                                            |
+| ------------------------------------ | --------------------------------------------------------------- |
+| `src/zeros/panels/ai-chat-panel.tsx` | Main panel component                                            |
+| `src/zeros/lib/openai.ts`            | AI client: streaming, settings persistence, model list          |
+| `src/zeros/bridge/use-bridge.tsx`    | `useBridge`, `useBridgeStatus`, `useExtensionConnected` hooks   |
+| `src/zeros/bridge/messages.ts`       | `BridgeMessage` type, `AI_CHAT_REQUEST`/`AI_CHAT_RESPONSE`      |
+| `src/zeros/store/store.tsx`          | `useWorkspace`, `findElement`, `UPDATE_VARIANT`, `UPDATE_STYLE` |
+| `src/zeros/inspector/index.ts`       | `applyStyle()`, `flashElement()` for DOM manipulation           |
+| `src/zeros/ui/scroll-area.tsx`       | `ScrollArea` component                                          |

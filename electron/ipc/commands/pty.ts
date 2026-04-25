@@ -1,10 +1,10 @@
 // ──────────────────────────────────────────────────────────
-// IPC commands: pseudo-terminal — replaces tauri-plugin-pty
+// IPC commands: pseudo-terminal via node-pty
 // ──────────────────────────────────────────────────────────
 //
-// Electron replacement for tauri-pty. xterm.js talks to these
-// through the renderer shim in src/native/pty-shim.ts, which
-// exposes the same spawn() interface tauri-pty does so
+// xterm.js talks to these through the renderer shim in
+// src/native/pty-shim.ts, which exposes the native-shell spawn()
+// interface so
 // terminal-panel.tsx doesn't branch on runtime.
 //
 // Sessions are tracked in a main-process Map<sessionId, IPty>.

@@ -1,9 +1,9 @@
 // ──────────────────────────────────────────────────────────
-// Zeros Mac App — Entry Point (Tauri webview + Vite browser dev)
+// Zeros Mac App — Entry Point (Electron renderer + Vite browser dev)
 // ──────────────────────────────────────────────────────────
 //
-// This is loaded by index.html, which Tauri's devUrl points to
-// in `cargo tauri dev` and which Vite serves in `pnpm dev` for
+// This is loaded by index.html, which Electron opens in app mode
+// and which Vite serves in `pnpm dev` for
 // browser-based iteration. One entry, one layout.
 // ──────────────────────────────────────────────────────────
 

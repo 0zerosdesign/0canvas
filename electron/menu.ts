@@ -2,8 +2,7 @@
 // Native application menu
 // ──────────────────────────────────────────────────────────
 //
-// Ports build_app_menu() from src-tauri/src/lib.rs (lines 371-445)
-// plus the menu event handler at lines 551-560. Five submenus:
+// Electron application menu. Five submenus:
 // Zeros (app menu), File, Edit, View, Window.
 //
 // File > Open Folder invokes the same path as the webview's
@@ -18,7 +17,7 @@ import { openProjectFolder } from "./ipc/commands/sidecar";
 export function installAppMenu(): void {
   const template: MenuItemConstructorOptions[] = [
     // ── Zeros app menu (macOS only — first item always becomes the
-    //    app menu on Darwin). Matches the Rust `app_menu` submenu. ──
+    //    app menu on Darwin). ──
     {
       label: "Zeros",
       submenu: [

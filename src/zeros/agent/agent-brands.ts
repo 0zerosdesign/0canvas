@@ -2,7 +2,7 @@
 // agent-brands.ts — brand colors for MVP agents
 // ──────────────────────────────────────────────────────────
 //
-// The ACP registry CDN serves agent logos as SVGs with
+// The agent registry serves agent logos as SVGs with
 // `fill="currentColor"`. When rendered via `<img>` those SVGs
 // can't inherit CSS color, so they land monochrome (muted grey).
 // This module provides the brand color per agent id; AgentIcon

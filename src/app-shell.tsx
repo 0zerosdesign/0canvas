@@ -2,19 +2,19 @@
 // Zeros Mac App — Three-Column Shell
 // ──────────────────────────────────────────────────────────
 //
-// Layout (Phase 1A-1 scaffold — column 1 and column 2 are
-// placeholders that will be populated in Phase 1B and 1C):
+// Layout: the Electron shell wraps the agent sidebar, chat workspace,
+// and right-side work surface:
 //
 //   ┌──────────┬──────────────────┬──────────────────────┐
 //   │ Column 1 │ Column 2         │ Column 3             │
 //   │ Nav      │ Agent Workspace  │ Design Canvas        │
 //   │ (240px)  │ (440px)          │ (fills remaining)    │
 //   │          │                  │                      │
-//   │ stub     │ tab bar stub     │ <EngineWorkspace />  │
+//   │ chats    │ chat/mission     │ tabs + workspace     │
 //   └──────────┴──────────────────┴──────────────────────┘
 //
-// Column 3 mounts the existing workspace unchanged —
-// 100% feature parity is the Phase 1A exit criterion.
+// Column 3 mounts the design workspace beside native-adjacent tools
+// such as Git, Terminal, Env, and Todo.
 // ──────────────────────────────────────────────────────────
 
 import React, { useEffect } from "react";
@@ -47,7 +47,7 @@ const CHATS_STORAGE_KEY = "chats-v1";
 const CHATS_BACKUP_KEY = "chats-v1-backup";
 const ACTIVE_CHAT_KEY = "active-chat-id";
 
-// Inject the existing Zeros overlay CSS exactly once at module load.
+// Inject the design workspace CSS exactly once at module load.
 // The workspace panels inside Column 3 rely on it.
 injectStyles();
 
@@ -77,7 +77,7 @@ function LoadModelCatalogOnBoot() {
 
 /**
  * Pre-warm agent subprocesses so the first real session isn't paying
- * cold-start cost (npx download + adapter spawn + ACP `initialize`
+ * cold-start cost (CLI discovery + adapter spawn + agent initialize
  * handshake). Runs once the bridge reports ENGINE_READY and warms, in
  * priority order:
  *
@@ -223,7 +223,7 @@ function ChatsPersistence() {
     }
     // Schema migrations — old chat records predate:
     //   - `folder`   (Stream 3, per-project grouping)
-    //   - `agentId`  (Phase C, per-chat ACP binding)
+    //   - `agentId`  (per-chat agent binding)
     //   - `agentName`
     // Default missing fields rather than dropping old chats on the floor.
     const chats: ChatThread[] = raw.map((c) => ({
@@ -320,11 +320,11 @@ function ChatsPersistence() {
 }
 
 /**
- * When the user picks a new project folder via File > Open Folder, the Rust
- * side respawns the engine and emits `project-changed`. Phase 1A-2c uses
+ * When the user picks a new project folder, the Electron main process
+ * respawns the local engine and emits `project-changed`. For now we use
  * the simplest possible refresh: reload the webview so Column 3's workspace
- * re-reads the new project's .0c files from scratch. Phase 1B replaces this
- * with in-place state swap via the Workspace Manager route.
+ * re-reads the new project's .0c files from scratch. A future pass can
+ * replace this with an in-place state swap.
  */
 function ReloadOnProjectChange() {
   useEffect(() => {

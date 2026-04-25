@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────
-// Zeros Engine — Main <Zeros /> Component
+// Zeros Design Workspace — <Zeros /> compatibility entry
 // ──────────────────────────────────────────────────────────
 //
 // This is the component that consumers import:
@@ -8,7 +8,7 @@
 //   <Zeros />
 //
 // It wraps the entire Zeros workspace (store, toolbar,
-// panels, canvas) into a self-contained floating overlay that
+// panels, canvas) into a self-contained design workspace that
 // can be toggled with a keyboard shortcut or FAB button.
 //
 // Architecture:

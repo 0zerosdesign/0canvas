@@ -2,7 +2,7 @@
 // Composer pills — model, effort, permissions, context
 // ──────────────────────────────────────────────────────────
 //
-// Reusable dropdown/pill primitives for the ACP chat composer.
+// Reusable dropdown/pill primitives for the agent chat composer.
 // Uses the same visual language as the legacy AIChatPanel so the
 // two surfaces feel part of one product, not two.
 //
@@ -270,7 +270,7 @@ export function EffortPill({
 //
 // 1. When the agent advertises `availableModes` (Claude Code ACP does:
 //    "default" / "acceptEdits" / "bypassPermissions" / "plan"), the pill
-//    shows those and calls ACP `session/set_mode` on change. This is the
+//    shows those and calls protocol-level `session/set_mode` on change. This is the
 //    real wire — the agent sees the new mode immediately.
 //
 // 2. When the agent advertises no modes (most non-Claude wrappers), the
@@ -534,7 +534,7 @@ export function BranchPill({
   );
 }
 
-// ── ContextPill (real usage via ACP usage_update + prompt usage) ──
+// ── ContextPill (real usage via usage_update + prompt usage) ──
 
 function formatTokens(n: number): string {
   if (n < 1000) return n.toString();

@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────
-// IPC commands: CSS file I/O — port of src-tauri/src/css_files.rs
+// IPC commands: CSS file I/O
 // ──────────────────────────────────────────────────────────
 //
 // Three helpers the Themes page uses:

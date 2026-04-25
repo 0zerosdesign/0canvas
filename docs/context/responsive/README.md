@@ -1,5 +1,7 @@
 # Responsive Editing
 
+> **Doc label (PR 4):** Partial — engine and Col 3 behavior described here is largely still accurate. Mentions of the **VS Code extension**, **Tauri**, or **live ACP runtime** in the prose below are **historical** unless stated otherwise. Current stack: **Electron** + local engine — see [`03-Mac-App-Architecture.md`](../../Zeros-Structure/03-Mac-App-Architecture.md). Full index: [`12-Doc-Index-And-Labels.md`](../../Zeros-Structure/12-Doc-Index-And-Labels.md).
+
 ## Overview
 
 Zeros includes a breakpoint system for previewing and eventually editing designs at different viewport widths. The system connects the workspace toolbar, the global store state, and the canvas source node to provide responsive preview switching.

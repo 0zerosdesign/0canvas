@@ -126,7 +126,7 @@ ${S} .oc-settings-section-title--spaced {
   margin-top: var(--space-7);
 }
 
-/* Agents section embeds the live ACP registry. Give it a bounded
+/* Agents section embeds the live agent registry. Give it a bounded
    height so the internal list scrolls instead of pushing the page. */
 ${S} .oc-settings-agents {
   height: min(70vh, 620px);

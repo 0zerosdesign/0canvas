@@ -4,7 +4,7 @@
 //
 // Replaces the existence checks that lived in
 // electron/ipc/commands/ai-cli.ts and the CDN-backed PATH probes in
-// src/engine/acp/registry.ts. Everything here is:
+// src/engine/agents/registry.ts. Everything here is:
 //   1. Does the user have `<binary>` on PATH?
 //   2. Does the credential file / keychain entry exist?
 //

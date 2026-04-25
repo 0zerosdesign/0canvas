@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────
-// IPC commands: skills — port of src-tauri/src/skills.rs
+// IPC commands: skills
 // ──────────────────────────────────────────────────────────
 //
 // A "skill" is a markdown file under <project>/skills/ with YAML-
@@ -57,7 +57,7 @@ function splitFrontmatter(raw: string): { fm: Map<string, string>; body: string 
 
   let body = afterOpen.slice(closingIdx + "\n---".length);
   // Strip a single leading newline after the closing delimiter,
-  // matching Rust's trim_start_matches('\n') semantics.
+  // Trim leading blank lines so markdown descriptions render cleanly.
   if (body.startsWith("\n")) body = body.slice(1);
   return { fm, body };
 }

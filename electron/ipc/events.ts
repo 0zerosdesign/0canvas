@@ -2,14 +2,14 @@
 // Zeros Electron — event bus (main → renderer)
 // ──────────────────────────────────────────────────────────
 //
-// Tauri's `app.emit(name, payload)` has no built-in Electron analogue.
+// Electron has no app-wide renderer event analogue by default.
 // We channel all events through a single IPC message ("zeros:event")
 // tagged with a name, so the preload can route them to the renderer's
-// subscribers by name. This lets the same façade code in the renderer
+// subscribers by name. This lets the same facade code in the renderer
 // subscribe to `project-changed`, `deep-link`, `ai-stream-event`, etc.
-// in both Tauri and Electron without branching.
+// subscribe through one native-shell abstraction.
 //
-// Event names (canonical, mirrors Rust emissions):
+// Event names (canonical across native-shell emissions):
 //   project-changed   { root: string, port: number }
 //   deep-link         string
 //   ai-stream-event   { session_id, kind, ... }

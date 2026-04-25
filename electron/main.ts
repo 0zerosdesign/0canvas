@@ -14,7 +14,7 @@
 //     stops the watchdog, clears state. Without this the Node
 //     process outlives the window and holds port 24193.
 //
-// Window geometry mirrors src-tauri/tauri.conf.json:
+// Window geometry migrated from the legacy native config:
 //   1600x1000 default, 1200x700 min, hidden-inset title bar so app
 //   content extends under the traffic lights.
 // ──────────────────────────────────────────────────────────

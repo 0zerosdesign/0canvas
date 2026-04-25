@@ -134,9 +134,8 @@ export function registerAllCommands(): void {
   setCommand("skills_list", skillsList);
   setCommand("discover_localhost_services", discoverLocalhostServices);
 
-  // Phase 6 — PTY (terminal) via node-pty. Commands aren't in the
-  // initial router table (Rust used tauri-plugin-pty, not a Tauri
-  // command), so setCommand adds them as new entries.
+  // Phase 6 — PTY (terminal) via node-pty. Commands are registered
+  // here because the terminal bridge is Electron-specific.
   setCommand("pty_spawn", ptySpawn);
   setCommand("pty_write", ptyWrite);
   setCommand("pty_resize", ptyResize);

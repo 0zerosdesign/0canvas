@@ -19,7 +19,7 @@
 //   • Direction-aware (`side` + `align`) anchored to trigger
 //   • max-height + internal scroll (60vh)
 //   • z-index owned by the primitive (never pass z-index)
-//   • No portal (keeps things simple in the Tauri webview)
+//   • No portal (keeps layering simple in the Electron renderer)
 // ============================================================
 import * as React from "react";
 import { Check } from "lucide-react";

@@ -2,9 +2,8 @@
 // zeros:// deep-link handler
 // ──────────────────────────────────────────────────────────
 //
-// Ports handle_deep_link() from src-tauri/src/lib.rs (lines 289-340)
-// plus the tauri_plugin_deep_link plumbing. Electron handles URL
-// schemes differently from Tauri on each platform — all three code
+// Migrated from the legacy native deep-link handler. Electron handles URL
+// schemes differently on each platform — all three code
 // paths converge here:
 //
 //   1. App ALREADY running, user clicks zeros:// URL
@@ -18,7 +17,7 @@
 //         otherwise the URL is dropped before the handler binds.
 //      → Win/Linux: process.argv contains the URL on first boot.
 //
-// Action routing (mirrors Rust):
+// Action routing:
 //   zeros://open?path=/abs/project  → spawn engine at path, emit
 //                                     project-changed
 //   anything else                   → forward verbatim to renderer
@@ -85,7 +84,7 @@ async function handleUrl(rawUrl: string): Promise<void> {
     return;
   }
 
-  // Rust puts the action in the host component for `zeros://open?...`
+  // The legacy native handler put the action in the host component for `zeros://open?...`
   // because there's no //user@ part. WHATWG URL parsing also puts it
   // in `hostname`; falls back to the stripped pathname for exotic
   // forms like `zeros:/open?...`.

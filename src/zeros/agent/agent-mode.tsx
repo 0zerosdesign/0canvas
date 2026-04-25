@@ -3,7 +3,7 @@
 // ──────────────────────────────────────────────────────────
 //
 // Owns the useAgentSession instance and the current "screen" inside the
-// ACP surface. Four screens, linear flow:
+// Agent setup surface. Four screens, linear flow:
 //
 //   picker   — user chooses an agent from the live registry
 //   loading  — we spawn the agent subprocess + read its initialize response

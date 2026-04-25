@@ -2,7 +2,7 @@
 // IPC commands: sidecar + project folder switching
 // ──────────────────────────────────────────────────────────
 //
-// Ports the handlers in src-tauri/src/lib.rs for:
+// Native handlers for:
 //   get_engine_port, get_engine_root,
 //   open_project_folder, open_project_folder_path, open_cloned_project
 //
@@ -28,7 +28,7 @@ interface ProjectChangedPayload {
 }
 
 export const getEnginePort: CommandHandler = () => {
-  // Renderer expects `number | null`; Rust returns `Option<u16>`.
+  // Renderer expects `number | null`.
   return currentPort();
 };
 

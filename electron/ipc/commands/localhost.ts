@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────
-// IPC commands: localhost scan — port of src-tauri/src/localhost.rs
+// IPC commands: localhost scan
 // ──────────────────────────────────────────────────────────
 //
 // Column 1's LOCALHOST panel polls this to surface whatever is

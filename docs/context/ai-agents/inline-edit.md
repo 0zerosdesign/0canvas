@@ -1,13 +1,17 @@
 # Inline AI Quick-Edit (Cmd+K)
 
+> **Doc label (PR 4):** Partial — [ai-agents/README.md](README.md). [`03-Mac-App-Architecture.md`](../../Zeros-Structure/03-Mac-App-Architecture.md) · [`12-Doc-Index-And-Labels.md`](../../Zeros-Structure/12-Doc-Index-And-Labels.md).
+
 The Inline AI Quick-Edit is a floating input panel that lets users describe a visual change in natural language. The AI streams CSS property changes in real-time, applying each property live as it arrives. The user can then accept or reject the entire batch.
 
 ## Source Files
 
-| File | Purpose |
-|------|---------|
-| `src/zeros/panels/inline-edit.tsx` | React component: floating panel, phases, accept/reject, position calculation |
-| `src/zeros/lib/ai-stream.ts` | Lightweight OpenAI streaming module: fetch + ReadableStream, no SDK dependency |
+
+| File                               | Purpose                                                                        |
+| ---------------------------------- | ------------------------------------------------------------------------------ |
+| `src/zeros/panels/inline-edit.tsx` | React component: floating panel, phases, accept/reject, position calculation   |
+| `src/zeros/lib/ai-stream.ts`       | Lightweight OpenAI streaming module: fetch + ReadableStream, no SDK dependency |
+
 
 ---
 
@@ -82,6 +86,7 @@ The main input state. Shows:
 - `Return` kbd hint
 
 **Actions:**
+
 - Enter (without Shift): triggers `handleSubmit()`, transitions to `streaming`
 - Escape: closes the panel
 - Click outside: closes the panel
@@ -91,6 +96,7 @@ The main input state. Shows:
 Shows a spinner and "Applying changes (N)" counter. CSS properties are being applied live.
 
 **Actions:**
+
 - Escape: rejects all changes (reverts) and closes
 - Click outside: ignored (prevents accidental dismissal during streaming)
 
@@ -246,21 +252,25 @@ type AppliedChange = {
 
 ## Keyboard Shortcuts
 
-| Shortcut | Phase | Action |
-|----------|-------|--------|
-| `Cmd+K` / `Ctrl+K` | (any) | Opens inline edit (handled by parent) |
-| `Enter` | `input` | Submit instruction to AI |
-| `Enter` | `done` | Accept changes |
-| `Escape` | `input`, `error`, `api-key` | Close panel |
-| `Escape` | `streaming`, `done` | Reject changes and close |
+
+| Shortcut           | Phase                       | Action                                |
+| ------------------ | --------------------------- | ------------------------------------- |
+| `Cmd+K` / `Ctrl+K` | (any)                       | Opens inline edit (handled by parent) |
+| `Enter`            | `input`                     | Submit instruction to AI              |
+| `Enter`            | `done`                      | Accept changes                        |
+| `Escape`           | `input`, `error`, `api-key` | Close panel                           |
+| `Escape`           | `streaming`, `done`         | Reject changes and close              |
+
 
 ### Click outside behavior
 
-| Phase | Click outside action |
-|-------|---------------------|
-| `input`, `error`, `api-key` | Close panel |
-| `streaming` | Ignored |
-| `done` | Accept changes |
+
+| Phase                       | Click outside action |
+| --------------------------- | -------------------- |
+| `input`, `error`, `api-key` | Close panel          |
+| `streaming`                 | Ignored              |
+| `done`                      | Accept changes       |
+
 
 The click-outside handler is attached with a 100ms delay to prevent the initial Cmd+K click from triggering it.
 

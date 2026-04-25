@@ -12,9 +12,8 @@
 // the caller sees a clear "requires the Mac app" error instead
 // of silent failure.
 //
-// File renamed from tauri-events.ts when Tauri was removed in
-// Phase 11d — the function NAMES are unchanged so consumers only
-// had to update their import path.
+// File renamed during the Electron migration. The function names are
+// unchanged so consumers only had to update their import path.
 // ──────────────────────────────────────────────────────────
 
 import { isElectron, isNativeRuntime, nativeInvoke, nativeListen } from "./runtime";

@@ -1,18 +1,17 @@
 // ──────────────────────────────────────────────────────────
-// IPC commands: git — full port of src-tauri/src/git.rs (28 ops)
+// IPC commands: git — Electron/native implementation of Git operations
 // ──────────────────────────────────────────────────────────
 //
-// The Rust side uses libgit2 via git2-rs. This port uses simple-git,
-// which shells out to the user's system `git` binary — so credential
+// Uses simple-git, which shells out to the user's system `git` binary — so credential
 // helpers (osxkeychain, ssh-agent, ~/.git-credentials, PATs via
 // credential.helper) inherit verbatim. No credential code here.
 //
-// Output shapes match the camelCase serde-rename in git.rs byte-for-
-// byte so tauri-events.ts types (GitStatus, GitCommit, GitBranch,
-// GitDiff, GitConflict, GitWorktree, GitFileVersion) all hold.
+// Output shapes stay compatible with the renderer's native facade types
+// (GitStatus, GitCommit, GitBranch, GitDiff, GitConflict, GitWorktree,
+// GitFileVersion).
 //
 // Every op takes an optional `cwd` string. When absent, falls back to
-// the engine's currentRoot() — mirrors resolve_root() in git.rs.
+// the engine's currentRoot().
 // ──────────────────────────────────────────────────────────
 
 import { existsSync, mkdirSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
@@ -69,9 +68,9 @@ interface GitStatusPayload {
 }
 
 /** Categorise a single porcelain-v1 status row into the unstaged and
- *  staged views that match git.rs's categorise(). A single file can
+ *  staged views used by the renderer. A single file can
  *  appear in BOTH lists when it has both staged and unstaged
- *  changes — that's intentional, matching Rust behaviour. */
+ *  changes — that's intentional. */
 function categorise(
   filePath: string,
   index: string,
@@ -186,7 +185,7 @@ export const gitUnstageFile: CommandHandler = async (args) => {
   const filePath = String(args.path ?? "");
   if (!filePath) throw new Error("git_unstage_file: missing path");
   const git = gitAt(cwd);
-  // Prefer `reset HEAD <path>` — matches Rust's reset_default call.
+  // Prefer `reset HEAD <path>`.
   // Falls back to `rm --cached <path>` for the fresh-repo path (no
   // HEAD yet) where reset has nothing to reset against.
   try {
@@ -208,12 +207,11 @@ export const gitStageAll: CommandHandler = async (args) => {
 export const gitUnstageAll: CommandHandler = async (args) => {
   const cwd = resolveCwd(args);
   const git = gitAt(cwd);
-  // `git reset` (no args, no paths) un-indexes everything, matching
-  // the Rust ResetType::Mixed call with no paths.
+  // `git reset` (no args, no paths) un-indexes everything.
   try {
     await git.raw(["reset"]);
   } catch {
-    // Fresh repo with no HEAD — ignore, matches Rust's silent skip.
+    // Fresh repo with no HEAD — ignore.
   }
 };
 
@@ -234,7 +232,7 @@ export const gitCommit: CommandHandler = async (args) => {
   const result = await git.commit(trimmed);
   const sha = (result.commit ?? "").replace(/^HEAD\s+/, "").trim();
   // `result.commit` may be the short sha (e.g. "abcdef1" or "main abcdef1").
-  // Expand to full sha to match Rust's behaviour of returning the Oid string.
+  // Expand to full sha; simple-git may return a short sha.
   let fullSha = sha;
   try {
     fullSha = (await git.revparse(["HEAD"])).trim();
@@ -278,9 +276,8 @@ export const gitPull: CommandHandler = async (args) => {
   const cwd = resolveCwd(args);
   const git = gitAt(cwd);
   const branch = await requireBranch(git);
-  // Fast-forward only — matches Rust's merge-analysis gate. If the
-  // pull would require a merge, git exits non-zero and we surface
-  // the exact same user-facing message as Rust.
+  // Fast-forward only. If the pull would require a merge, git exits
+  // non-zero and we surface a designer-friendly message.
   try {
     await git.raw(["pull", "--ff-only", "origin", branch]);
   } catch (err) {
@@ -353,12 +350,12 @@ export const gitLogRecent: CommitLogHandler = async (args) => {
         shortSha: sha.slice(0, 7),
         summary: c.message ?? "",
         author: c.author_name ?? "",
-        // `c.date` is an ISO string; convert to seconds to match Rust's i64.
+        // `c.date` is an ISO string; convert to seconds for the renderer.
         timestamp: Math.floor(new Date(c.date).getTime() / 1000),
       };
     });
   } catch {
-    // Empty repo (no HEAD) — mirror Rust's "return empty list".
+    // Empty repo (no HEAD) — return empty list.
     return [];
   }
 };
@@ -381,8 +378,8 @@ export const gitBranchList: CommandHandler = async (args) => {
   const out: BranchInfoPayload[] = [];
   for (const name of br.all) {
     const isRemote = name.startsWith("remotes/");
-    // Strip "remotes/" prefix for parity with Rust's BranchInfo.name
-    // shape (Rust stores "origin/main", not "remotes/origin/main").
+    // Strip "remotes/" prefix so the renderer receives "origin/main",
+    // not "remotes/origin/main".
     const cleanName = isRemote ? name.slice("remotes/".length) : name;
     if (!cleanName || cleanName === "origin/HEAD") continue;
     out.push({
@@ -429,8 +426,8 @@ export const gitBranchDelete: CommandHandler = async (args) => {
 
 // ── Commit-message auto-suggest ────────────────────────────
 //
-// Heuristic port of git_suggest_commit_message() in git.rs: verb
-// from dominant change kind, subject = verb + up to 3 top-level
+// Heuristic commit-message suggestion: verb from dominant change kind,
+// subject = verb + up to 3 top-level
 // segments ("src, docs and more (N files)"), body = grouped bullets.
 // Untracked files are excluded — only staged changes contribute.
 
@@ -451,7 +448,7 @@ export const gitSuggestCommitMessage: CommandHandler = async (args) => {
 
   for (const f of st.files) {
     // Staged column only (index). Untracked is excluded because
-    // include_untracked(false) in Rust → we filter by index.
+    // Only staged/index changes contribute; untracked files are excluded.
     switch (f.index) {
       case "A":
         added.push(f.path);
@@ -593,7 +590,7 @@ export const gitFileAtHead: CommandHandler = async (args) => {
   try {
     // `git show HEAD:<path>` returns the blob content verbatim. If
     // HEAD doesn't exist (empty repo) or the path isn't in the tree,
-    // git exits non-zero → we return exists:false, matching Rust.
+    // git exits non-zero -> return exists:false.
     const content = await git.raw(["show", `HEAD:${filePath}`]);
     const payload: FileVersionPayload = {
       path: filePath,
@@ -669,9 +666,9 @@ export const gitWorktreeList: CommandHandler = async (args) => {
   const cwd = resolveCwd(args);
   const git = gitAt(cwd);
   const raw = await git.raw(["worktree", "list", "--porcelain"]);
-  // Rust returns ONLY linked worktrees (via repo.worktrees()), NOT the
-  // main checkout. `git worktree list` includes the main one first;
-  // skip whichever block matches the main repo dir.
+  // Return only linked worktrees, not the main checkout. `git worktree
+  // list` includes the main one first; skip whichever block matches the
+  // main repo dir.
   const toplevel = (await git.raw(["rev-parse", "--show-toplevel"])).trim();
   const all = parseWorktreePorcelain(raw, cwd);
   return all.filter((wt) => path.resolve(wt.path) !== path.resolve(toplevel));
@@ -714,8 +711,8 @@ export const gitWorktreeRemove: CommandHandler = async (args) => {
   const target = entries.find((w) => w.name === name);
   if (!target) throw new Error(`find_worktree(${name}): not found`);
 
-  // Best-effort rm -rf + prune — same two-step as Rust (remove_dir_all
-  // → prune) because libgit2 refuses to prune a still-valid tree.
+  // Best-effort rm -rf + prune because Git refuses to prune a still-valid
+  // tree.
   if (existsSync(target.path)) {
     try {
       rmSync(target.path, { recursive: true, force: true });
@@ -783,11 +780,10 @@ async function resolveConflict(
 ): Promise<void> {
   // `git checkout --ours|--theirs <path>` writes the chosen side to
   // the working tree. Then `git add <path>` marks the conflict
-  // resolved in the index. Matches the Rust resolve_conflict logic
-  // (read blob → write to workdir → remove_path → add_path).
+  // resolved in the index.
   const flag = theirs ? "--theirs" : "--ours";
   // `checkout <flag>` won't create parent dirs automatically if the
-  // path is new; make sure they exist first (Rust's create_dir_all).
+  // path is new; make sure they exist first.
   const abs = path.join(cwd, filePath);
   const parent = path.dirname(abs);
   if (!existsSync(parent)) {
@@ -804,7 +800,7 @@ async function resolveConflict(
   }
   await git.add([filePath]);
   // Touch the file if checkout didn't create it (extremely rare, but
-  // keeps parity with Rust's fs::write guarantee).
+  // guarantees the staged path exists.
   if (!existsSync(abs)) {
     writeFileSync(abs, "");
     await git.add([filePath]);
@@ -831,8 +827,7 @@ export const gitRevertCommit: CommandHandler = async (args) => {
   const cwd = resolveCwd(args);
   const sha = String(args.sha ?? "");
   if (!sha) throw new Error("git_revert_commit: missing sha");
-  // Validate the sha ref — `git rev-parse --verify` throws on bad
-  // input, matching Rust's `Oid::from_str` error surface.
+  // Validate the sha ref — `git rev-parse --verify` throws on bad input.
   const git = gitAt(cwd);
   try {
     await git.raw(["rev-parse", "--verify", sha]);

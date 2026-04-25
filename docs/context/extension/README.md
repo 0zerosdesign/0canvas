@@ -1,15 +1,18 @@
 # VS Code Extension
 
+> **Doc label (PR 4):** **Superseded** — the Zeros **VS Code extension** is frozen; this entire document is **historical**. Native shell + engine: [../../Zeros-Structure/03-Mac-App-Architecture.md](../../Zeros-Structure/03-Mac-App-Architecture.md), index: [../../Zeros-Structure/12-Doc-Index-And-Labels.md](../../Zeros-Structure/12-Doc-Index-And-Labels.md).
+>
 > **⚠️ SUPERSEDED (2026-04-20).** The VS Code extension is frozen and
 > not on any active roadmap. Its editor-side responsibilities
 > (CSS source resolution, writing styles to disk, MCP tools) have moved
-> into the engine (`src/engine/`), which now runs as a Tauri sidecar in
-> the Mac app. The extension code under `extensions/vscode/` remains
+> into the engine (`src/engine/`), which now runs as a **Node sidecar**
+> in the **Electron** Mac app. The extension code under `extensions/vscode/`
+> remains
 > in the repo for historical reference but is not built, tested, or
 > released.
 >
 > For current architecture see
-> [../../PRODUCT_VISION_V3.md](../../PRODUCT_VISION_V3.md).
+> [../../Zeros-Structure/03-Mac-App-Architecture.md](../../Zeros-Structure/03-Mac-App-Architecture.md).
 
 ---
 

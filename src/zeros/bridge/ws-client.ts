@@ -4,8 +4,8 @@
 //
 // Connects to the Zeros engine on localhost.
 // Port resolution order (first match wins):
-//   1. window.__ZEROS_PORT__   — direct eval from Rust, if present
-//   2. Tauri command get_engine_port — source of truth in the Mac app
+//   1. window.__ZEROS_PORT__   — optional native-shell injection
+//   2. native get_engine_port command — source of truth in the Mac app
 //   3. hardcoded 24193           — plain browser dev harness fallback
 //
 // Reconnect strategy uses exponential backoff (1s → 15s cap) so a
@@ -37,8 +37,8 @@ const MAX_QUEUED_REQUESTS = 32;
 
 /**
  * Resolve the engine port exactly once per page load. The result is
- * cached in-module so the reconnect timer doesn't re-hit Tauri on
- * every retry. Safe to call in both Tauri and plain-browser modes.
+ * cached in-module so the reconnect timer doesn't re-hit native IPC on
+ * every retry. Safe to call in both native-shell and plain-browser modes.
  */
 const enginePortPromise: Promise<number> = (async () => {
   if (typeof window === "undefined") return DEFAULT_ENGINE_PORT;

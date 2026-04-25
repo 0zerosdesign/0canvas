@@ -1,5 +1,11 @@
 # Zeros Colors Integration — Session Transcript
 
+> **Label: historical research transcript (2026-04-22).** The conversation
+> below may name **Tauri**, **`src-tauri`**, or other stacks that are not
+> the current shipping app. For **today’s** architecture, start at
+> [`docs/Zeros-Structure/00-Start-Here.md`](Zeros-Structure/00-Start-Here.md)
+> and [`12-Doc-Index-And-Labels.md`](Zeros-Structure/12-Doc-Index-And-Labels.md).
+
 - **Session ID:** 64faaa8d-fe34-4eb4-a94b-fec88e095177
 - **Date:** 2026-04-22T03:54:45.353Z
 - **Topic:** Planning the integration of the 0colors project into Zeros — deep research across 0research, 0canvas, 0colors, and 0shared/0accounts sub-projects, followed by a synthesised architecture and three hard strategic questions.

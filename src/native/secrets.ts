@@ -2,9 +2,9 @@
 // Phase 2-C — Keychain-backed secrets API
 // ──────────────────────────────────────────────────────────
 //
-// Reads/writes values in the macOS login keychain via the native
-// shell (Tauri: src-tauri/src/secrets.rs, Electron: keytar in the
-// main process). Outside a native runtime (e.g. `pnpm dev` in a
+// Reads/writes values in the macOS login keychain via the Electron
+// main process (legacy native builds used src-tauri/src/secrets.rs).
+// Outside a native runtime (e.g. `pnpm dev` in a
 // plain browser), everything falls back to localStorage under the
 // same key so the dev harness keeps working — the Mac build always
 // wins because `isNativeRuntime()` returns true.

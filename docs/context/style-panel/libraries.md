@@ -1,5 +1,7 @@
 # Shared Libraries
 
+> **Doc label (PR 4):** Partial — same as [README.md](README.md) in this folder (historical **VS Code extension** / **Tauri** mentions may appear in the prose). [`03-Mac-App-Architecture.md`](../../Zeros-Structure/03-Mac-App-Architecture.md) · [`12-Doc-Index-And-Labels.md`](../../Zeros-Structure/12-Doc-Index-And-Labels.md).
+
 Supporting libraries used by the Style Panel and visual editors.
 
 ---

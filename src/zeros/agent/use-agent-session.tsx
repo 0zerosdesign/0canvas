@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────
-// useAgentSession — browser-side ACP session over the engine bridge
+// useAgentSession — renderer-side agent session over the engine bridge
 // ──────────────────────────────────────────────────────────
 //
 // Thin React hook on top of CanvasBridgeClient. It manages:
@@ -80,14 +80,14 @@ export interface PendingPermission {
 
 export type SessionStatus =
   | "idle"           // no agent bound yet
-  | "warming"        // ACP initialize / newSession in flight, within budget
+  | "warming"        // agent initialize / newSession in flight, within budget
   | "ready"          // session created, no prompt running
   | "streaming"      // prompt turn in progress
   | "reconnecting"   // transient loss; engine's respawn pool is reviving
   | "auth-required"  // agent needs sign-in before we can connect
   | "failed";        // terminal error; user action needed
 
-/** Token accounting accumulated from ACP session notifications + turn
+/** Token accounting accumulated from agent session notifications + turn
  *  completion. `size`/`used` come from `usage_update` notifications
  *  (context window view); `inputTokens`/`outputTokens` come from the
  *  PromptResponse.usage at turn end. */
@@ -160,7 +160,7 @@ export interface AgentSessionControls {
   /** Send a user prompt. Enqueues a user message immediately.
    *  `displayText` is what the UI shows (may contain @tokens); `text` is
    *  what goes over the wire (with mentions expanded). When omitted,
-   *  `text` is used for both. Optional `attachments` are ACP ContentBlocks
+   *  `text` is used for both. Optional `attachments` are protocol ContentBlocks
    *  (e.g. images) appended to the prompt after the text block. */
   sendPrompt(
     text: string,
@@ -171,7 +171,7 @@ export interface AgentSessionControls {
   cancel(): Promise<void>;
   /** Resolve a pending permission request. */
   respondToPermission(response: RequestPermissionResponse): void;
-  /** Change the ACP session mode (calls `session/set_mode`). */
+  /** Change the agent session mode (calls `session/set_mode`). */
   setMode?(modeId: string): Promise<void>;
   /** Clear the session and return to idle. Does not kill the agent subprocess. */
   reset(): void;

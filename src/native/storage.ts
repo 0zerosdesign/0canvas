@@ -4,8 +4,8 @@
 //
 // This module is the ONLY place the rest of the app imports
 // storage from. It currently re-exports IndexedDB-backed
-// implementations from internal modules; in Phase 1 (Tauri)
-// the backing swaps to the filesystem via the Tauri fs plugin,
+// implementations from internal modules; in the native Mac app
+// the backing swaps to filesystem/native storage,
 // without any caller needing to change imports.
 //
 // Public surface (keep stable — callers depend on this):
