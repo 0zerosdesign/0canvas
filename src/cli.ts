@@ -100,10 +100,30 @@ async function runServe(cwd: string, port: number, rootOverride?: string) {
     console.log("");
     console.log("  \x1b[2mPress Ctrl+C to stop.\x1b[0m");
     console.log("");
+    startMemoryLogger();
   } catch (err) {
     console.error("\n  \x1b[31mFailed to start engine:\x1b[0m", err);
     process.exit(1);
   }
+}
+
+/** Log engine RSS + V8 heap every 60s. The numbers are the engine
+ *  process only — sibling Electron / renderer / vite processes are
+ *  invisible from here. When the user reports a memory blowup we can
+ *  diff the timestamps in engine.log to see whether it grew here or
+ *  elsewhere. Costs ~one console.log per minute. */
+function startMemoryLogger() {
+  const fmt = (b: number) => `${(b / 1024 / 1024).toFixed(0)}MB`;
+  const tick = () => {
+    const m = process.memoryUsage();
+    console.log(
+      `[Zeros mem] rss=${fmt(m.rss)} heapUsed=${fmt(m.heapUsed)}/${fmt(m.heapTotal)} external=${fmt(m.external)} arrayBuffers=${fmt(m.arrayBuffers)}`,
+    );
+  };
+  tick();
+  const id = setInterval(tick, 60_000);
+  // Don't keep the event loop alive just for the logger.
+  if (typeof id.unref === "function") id.unref();
 }
 
 // ── Status command ────────────────────────────────────────

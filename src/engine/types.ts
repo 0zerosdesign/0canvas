@@ -56,6 +56,32 @@ export interface EnrichedRegistryAgent extends RegistryAgent {
   installed: boolean;
   launchKind: "npx" | "uvx" | "binary" | "unavailable";
   authBinary?: string;
+  /** User-facing install command + docs URL. Rendered by the empty
+   *  composer's "No agent CLI detected" state so the user can
+   *  install the CLI without leaving the app. */
+  installHint?: {
+    command: string;
+    docsUrl?: string;
+  };
+  /** Evaluated from `AuthProbe` in the engine manifest. True means the
+   *  CLI has credentials on disk / keychain. Existence-only probe —
+   *  never reads secret contents. Undefined when the probe couldn't
+   *  run (e.g. platform mismatch, CLI not installed at all). */
+  authenticated?: boolean;
+  /** Raw version string from `<cliBinary> --version` (first semver
+   *  substring, e.g. "1.2.3"). Undefined when the CLI isn't installed
+   *  or the version probe timed out. */
+  installedVersion?: string;
+  /** Whether `installedVersion` falls inside the manifest's
+   *  min/maxCliVersion range. True = known-good; false = out of
+   *  range (UI shows a warning); undefined = version couldn't be
+   *  probed, we default to allowing the user to try. */
+  versionCompatible?: boolean;
+  /** Min version we've tested. Exposed so the UI can render the
+   *  "supported versions: X+" badge without re-fetching the manifest. */
+  minCliVersion?: string;
+  /** Max version we've tested. Usually undefined. */
+  maxCliVersion?: string;
 }
 
 export type MessageSource = "browser" | "engine";

@@ -43,6 +43,7 @@ import type {
 } from "../../types";
 import { AgentFailureError } from "../../types";
 import { ensureSessionDir, removeSessionDir, writeSessionMeta } from "../../session-paths";
+import { TERMINAL_AUTH_METHOD } from "../base";
 import { stripAnsi } from "../copilot/ansi";
 import { GeminiTelemetryTailer } from "./telemetry";
 
@@ -100,7 +101,7 @@ export class GeminiAdapter implements AgentAdapter {
         } as never,
         mcpCapabilities: { http: false, sse: false } as never,
       } as never,
-      authMethods: [],
+      authMethods: [TERMINAL_AUTH_METHOD] as never,
     };
     this.cachedInitialize = init;
     return init;

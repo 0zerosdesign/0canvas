@@ -3953,3 +3953,119 @@
   line-height: var(--leading-snug);
 }
 
+/* ── "Install a CLI" empty-state card ────────────────────
+   Shown above the composer when the engine probe finds zero
+   installed CLIs. Matches the composer card's visual weight
+   (1px subtle border, same radius) so the two read as a
+   single "first-run configuration" unit. */
+.oc-empty-composer__install-card {
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5x);
+}
+
+.oc-empty-composer__install-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-5x);
+}
+
+.oc-empty-composer__install-title-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.oc-empty-composer__install-title {
+  font-size: var(--text-13);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+}
+
+.oc-empty-composer__install-sub {
+  margin-top: 2px;
+  font-size: var(--text-12);
+  color: var(--text-secondary);
+  line-height: var(--leading-snug);
+}
+
+.oc-empty-composer__install-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.oc-empty-composer__install-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto;
+  gap: var(--space-5x);
+  align-items: center;
+  padding: var(--space-5x);
+  border-radius: var(--radius-md);
+  background: var(--tint-hover);
+}
+
+.oc-empty-composer__install-agent {
+  min-width: 0;
+}
+
+.oc-empty-composer__install-agent-name {
+  font-size: var(--text-12);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oc-empty-composer__install-agent-desc {
+  margin-top: 1px;
+  font-size: var(--text-11);
+  color: var(--text-secondary);
+  line-height: var(--leading-snug);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oc-empty-composer__install-cmd {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: var(--text-11);
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 2px var(--space-5x);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oc-empty-composer__install-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.oc-empty-composer__install-docs {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+}
+
+.oc-empty-composer__install-docs:hover {
+  color: var(--text-primary);
+  background: var(--tint-hover);
+}
+

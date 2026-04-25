@@ -112,6 +112,15 @@ export class CodexStreamTranslator {
    *  than a delta, so we diff to emit only the new portion. */
   private readonly emittedMessageText = new Map<string, string>();
 
+  /** Per-translator-instance prefix for the messageIds we emit on
+   *  agent_message_chunk / agent_thought_chunk. Codex resets item.id
+   *  to "item_0" on every fresh `codex exec` (and a new translator is
+   *  created each turn), so the bare item.id collides across turns
+   *  and the renderer merges every reply into one bubble. Prefixing
+   *  with this UUID keeps streaming deltas of the same item coalesced
+   *  while making cross-turn ids distinct. */
+  private readonly turnPrefix: string = randomUUID();
+
   /** Codex's thread id (not our sessionId). Captured from thread.started. */
   codexThreadId: string | null = null;
 
@@ -391,7 +400,7 @@ export class CodexStreamTranslator {
       update: {
         sessionUpdate: isThought ? "agent_thought_chunk" : "agent_message_chunk",
         content: { type: "text", text: delta } as ContentBlock,
-        messageId: item.id,
+        messageId: `${this.turnPrefix}-${item.id}`,
       },
     });
   }

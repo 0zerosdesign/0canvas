@@ -1,10 +1,14 @@
 // Public surface of the Claude adapter.
-//
-// The gateway imports `createClaudeAdapter`; other code that needs
-// to inspect hook shapes or reuse the translator (Phase 1.5+ JSONL
-// tailer, contract-conformance tests) imports from here.
 
-export { ClaudeAdapter, createClaudeAdapter } from "./adapter";
+import type { AgentAdapter, AgentAdapterContext } from "../../types";
+import { StreamJsonAdapter } from "../shared";
+import { claudeSpec } from "./spec";
+
+export function createClaudeAdapter(ctx: AgentAdapterContext): AgentAdapter {
+  return new StreamJsonAdapter(claudeSpec, ctx);
+}
+
+export { claudeSpec } from "./spec";
 export { ClaudeStreamTranslator } from "./translator";
 export type { ClaudeTranslatorOptions } from "./translator";
 export { installClaudeHooks } from "./hooks";

@@ -47,6 +47,12 @@ export interface AgentTextMessage {
   role: AgentMessageRole;
   text: string;
   createdAt: number;
+  /** Engine-side message id from the SessionNotification chunk. Used
+   *  to coalesce streaming chunks of the SAME message; differs across
+   *  turns, so without this every turn's agent reply would merge into
+   *  one growing bubble (the symptom that surfaced after we fixed the
+   *  Codex stdin hang and turns started actually completing). */
+  messageId?: string;
 }
 
 export interface AgentToolMessage {
@@ -503,11 +509,11 @@ export function applyUpdate(
   const upd = notification.update;
   switch (upd.sessionUpdate) {
     case "user_message_chunk":
-      return appendText(messages, "user", upd.content);
+      return appendText(messages, "user", upd.content, upd.messageId);
     case "agent_message_chunk":
-      return appendText(messages, "agent", upd.content);
+      return appendText(messages, "agent", upd.content, upd.messageId);
     case "agent_thought_chunk":
-      return appendText(messages, "thought", upd.content);
+      return appendText(messages, "thought", upd.content, upd.messageId);
     case "tool_call": {
       const tc = upd as unknown as ToolCall & { sessionUpdate: "tool_call" };
       const msg: AgentToolMessage = {
@@ -559,17 +565,30 @@ function appendText(
   messages: AgentMessage[],
   role: AgentMessageRole,
   content: { type?: string; text?: string } | undefined,
+  messageId: string | undefined,
 ): AgentMessage[] {
   if (!content || content.type !== "text" || typeof content.text !== "string") {
     return messages;
   }
   const chunkText = content.text;
 
-  // Coalesce into the trailing text message if it's from the same role.
-  // Agents emit many small chunks during streaming; rendering one DOM node
-  // per chunk kills scroll performance.
+  // Coalesce into the trailing text message ONLY if it's from the same
+  // role AND carries the same engine-side messageId. Without the id
+  // check, two consecutive turns' agent replies would merge into one
+  // growing bubble. With it, streaming deltas of one message still
+  // coalesce (the streaming use case), but a fresh message starts
+  // a new bubble (the new-turn use case).
+  //
+  // If either side has no messageId we fall back to the role-only
+  // merge — preserves the streaming behavior for adapters that
+  // don't (yet) emit messageIds.
   const last = messages[messages.length - 1];
-  if (last && last.kind === "text" && last.role === role) {
+  if (
+    last &&
+    last.kind === "text" &&
+    last.role === role &&
+    sameMessageId(last.messageId, messageId)
+  ) {
     return [
       ...messages.slice(0, -1),
       { ...last, text: last.text + chunkText },
@@ -584,6 +603,15 @@ function appendText(
       role,
       text: chunkText,
       createdAt: Date.now(),
+      messageId,
     },
   ];
+}
+
+function sameMessageId(a: string | undefined, b: string | undefined): boolean {
+  // Both undefined → coalesce (legacy behavior). Both set + equal → coalesce.
+  // One set, one not → DON'T coalesce (treat as separate messages, since
+  // the engine started identifying messages mid-conversation).
+  if (a === undefined && b === undefined) return true;
+  return a === b;
 }

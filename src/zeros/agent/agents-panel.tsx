@@ -86,13 +86,30 @@ export function AgentsPanel({ listAgents, onSelect, activeAgentId, onPreWarm, re
   }, [refreshNonce, load]);
 
   // Probe auth state for every agent that has a known CLI binary.
-  // Running in parallel keeps the round-trip short; failures fall
-  // through to "not active" silently.
+  //
+  // Source-of-truth order:
+  //   1. `agent.authenticated` from the engine wire — evaluated against
+  //      the same `AuthProbe` the engine uses to decide "is this CLI
+  //      signed in?" (keychain entry + dotfiles, existence-only).
+  //      Prefer this so the composer and the Agents panel never disagree.
+  //   2. Legacy `ai_cli_is_authenticated` IPC — called only for agents
+  //      the engine didn't score. Keeps old engine builds / agents
+  //      without an AuthProbe working until we fully drop the legacy
+  //      table in a later cleanup.
   const probeAuth = useCallback(async (list: BridgeRegistryAgent[]) => {
     const next = new Map<string, boolean>();
+    const fallbackQueue: BridgeRegistryAgent[] = [];
+
+    for (const a of list) {
+      if (typeof a.authenticated === "boolean") {
+        next.set(a.id, a.authenticated);
+        continue;
+      }
+      if (a.authBinary) fallbackQueue.push(a);
+    }
+
     await Promise.all(
-      list.map(async (a) => {
-        if (!a.authBinary) return;
+      fallbackQueue.map(async (a) => {
         try {
           const ok = await nativeInvoke<boolean>("ai_cli_is_authenticated", {
             binary: a.authBinary,
@@ -116,17 +133,38 @@ export function AgentsPanel({ listAgents, onSelect, activeAgentId, onPreWarm, re
   // moment the user switches back to Zeros — no manual refresh click.
   // Also poll every 60s as a belt-and-suspenders fallback for the
   // case where the user never unfocuses the window (kiosk-style).
+  //
+  // The interval is gated on visibility — when the window is hidden we
+  // tear down the timer entirely so we're not waking up the renderer
+  // (and fanning out subprocess spawns) for a UI nobody's looking at.
+  // visibilitychange re-arms it when the user comes back.
   useEffect(() => {
+    let interval: number | null = null;
+    const start = () => {
+      if (interval !== null) return;
+      interval = window.setInterval(() => {
+        void load(true);
+      }, 60_000);
+    };
+    const stop = () => {
+      if (interval === null) return;
+      window.clearInterval(interval);
+      interval = null;
+    };
     const onFocus = () => {
       void load(true);
     };
+    const onVisibility = () => {
+      if (document.hidden) stop();
+      else start();
+    };
     window.addEventListener("focus", onFocus);
-    const interval = window.setInterval(() => {
-      if (!document.hidden) void load(true);
-    }, 60_000);
+    document.addEventListener("visibilitychange", onVisibility);
+    if (!document.hidden) start();
     return () => {
       window.removeEventListener("focus", onFocus);
-      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
+      stop();
     };
   }, [load]);
 

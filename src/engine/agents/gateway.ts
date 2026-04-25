@@ -35,9 +35,14 @@ import {
   AGENT_MANIFEST,
   findAgent,
   toBridgeAgents,
+  type AgentVersionInfo,
 } from "./registry";
 import { sessionsRoot } from "./session-paths";
-import { probeCliInstalled } from "./probes";
+import {
+  probeCliInstalled,
+  evaluateAuthProbe,
+  probeCliCompatibility,
+} from "./probes";
 import type {
   AgentAdapter,
   AgentAdapterContext,
@@ -67,6 +72,44 @@ export class AgentGateway {
   private readonly adapters = new Map<string, AgentAdapter>();
   private readonly sessionToAgent = new Map<string, string>();
   private readonly agentInitializes = new Map<string, InitializeResponse>();
+  /** Dedupe concurrent listAgents calls. Without this, every render
+   *  loop in the renderer that hits sessions.listAgents() spawns its
+   *  own round of 7 PATH+auth+version probes. The renderer sometimes
+   *  fires listAgents 5-10×/sec on session-state churn, which used
+   *  to balloon the engine to 200+ live `--version` subprocesses. */
+  private listAgentsInFlight: Promise<EnrichedRegistryAgent[]> | null = null;
+
+  /** Runtime auth invalidation. When an adapter throws `auth-required`,
+   *  the agent's CLI is the source of truth — even if our file/keychain
+   *  probe came back positive (stale / expired / scoped credentials).
+   *  We override the probe result for any agent in this set so the
+   *  green dot disappears the moment the CLI itself disagrees. Cleared
+   *  on a successful prompt, on adapter dispose, and after a 30 min
+   *  TTL so a long-running app doesn't get stuck. */
+  private readonly runtimeAuthFailed = new Map<string, number>();
+  private static readonly AUTH_FAIL_TTL_MS = 30 * 60_000;
+
+  /** Called by adapters whenever a prompt fails with auth-required.
+   *  Drives the green-dot back to gray on the next listAgents fetch. */
+  markAuthFailed(agentId: string): void {
+    this.runtimeAuthFailed.set(agentId, Date.now());
+  }
+
+  /** Called when a prompt succeeds — clears any prior auth-failed
+   *  marker so the dot turns green again as soon as the user re-logs. */
+  markAuthOk(agentId: string): void {
+    this.runtimeAuthFailed.delete(agentId);
+  }
+
+  private isAuthRuntimeInvalidated(agentId: string): boolean {
+    const at = this.runtimeAuthFailed.get(agentId);
+    if (at === undefined) return false;
+    if (Date.now() - at > AgentGateway.AUTH_FAIL_TTL_MS) {
+      this.runtimeAuthFailed.delete(agentId);
+      return false;
+    }
+    return true;
+  }
 
   constructor(opts: AgentGatewayOptions) {
     this.projectRoot = opts.projectRoot;
@@ -81,10 +124,63 @@ export class AgentGateway {
   }
 
   async listAgents(): Promise<EnrichedRegistryAgent[]> {
-    const installed = await probeCliInstalled(
-      AGENT_MANIFEST.map((a) => a.cliBinary),
+    // Concurrent calls share the same in-flight promise so we never
+    // fan out 7×N subprocesses on render-loop churn.
+    if (this.listAgentsInFlight) return this.listAgentsInFlight;
+    this.listAgentsInFlight = this.listAgentsImpl().finally(() => {
+      this.listAgentsInFlight = null;
+    });
+    return this.listAgentsInFlight;
+  }
+
+  private async listAgentsImpl(): Promise<EnrichedRegistryAgent[]> {
+    // Install-probe + auth-probe fan out in parallel. Version probe
+    // is scoped to *installed* binaries only (running `--version` on
+    // an ENOENT is slow ENOENT + noise in logs), so it waits for the
+    // install probe first. probeCliVersion has its own 5min cache so
+    // repeated listAgents calls are cheap.
+    const [installed, authenticated] = await Promise.all([
+      probeCliInstalled(AGENT_MANIFEST.map((a) => a.cliBinary)),
+      (async () => {
+        const set = new Set<string>();
+        await Promise.all(
+          AGENT_MANIFEST.map(async (m) => {
+            // Runtime invalidation wins. If the agent's CLI itself
+            // told us "not logged in" recently, trust that over the
+            // file/keychain probe (which can show stale positives).
+            if (this.isAuthRuntimeInvalidated(m.id)) return;
+            try {
+              if (await evaluateAuthProbe(m.authProbe)) set.add(m.id);
+            } catch {
+              /* probe failed — treat as unauthenticated */
+            }
+          }),
+        );
+        return set;
+      })(),
+    ]);
+
+    const versionInfo = new Map<string, AgentVersionInfo>();
+    await Promise.all(
+      AGENT_MANIFEST.map(async (m) => {
+        if (!installed.has(m.cliBinary)) return;
+        try {
+          const { version, compatible } = await probeCliCompatibility({
+            binary: m.cliBinary,
+            minVersion: m.minCliVersion,
+            maxVersion: m.maxCliVersion,
+          });
+          versionInfo.set(m.id, {
+            installedVersion: version ?? undefined,
+            versionCompatible: compatible ?? undefined,
+          });
+        } catch {
+          /* timeout / parse error → leave entry absent */
+        }
+      }),
     );
-    return toBridgeAgents(installed);
+
+    return toBridgeAgents(installed, authenticated, versionInfo);
   }
 
   /** ACP implementation refreshed a CDN-backed registry; ours is
@@ -164,8 +260,24 @@ export class AgentGateway {
     prompt: ContentBlock[],
   ): Promise<PromptResponse> {
     const adapter = this.adapterForSession(sessionId, agentId);
-    const { response } = await adapter.prompt({ sessionId, prompt });
-    return response;
+    try {
+      const { response } = await adapter.prompt({ sessionId, prompt });
+      // A clean prompt is the strongest possible signal that auth is
+      // good — clear any prior failed-auth marker so the green dot
+      // re-illuminates the moment the user resolves their login.
+      this.markAuthOk(adapter.agentId);
+      return response;
+    } catch (err) {
+      // Adapter raised AgentFailureError; if it's auth-required, mark
+      // the agent so the next listAgents shows the dot as gray + the
+      // chat picker shows "Sign in". Engine-driven, can't be fooled by
+      // a stale ~/.claude/.credentials.json that the file probe sees.
+      const failure = (err as { failure?: { kind?: string } }).failure;
+      if (failure?.kind === "auth-required") {
+        this.markAuthFailed(adapter.agentId);
+      }
+      throw err;
+    }
   }
 
   async cancel(agentId: string, sessionId: string): Promise<void> {

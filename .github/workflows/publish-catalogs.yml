@@ -1,0 +1,113 @@
+# ──────────────────────────────────────────────────────────
+# publish-catalogs.yml — publish /catalogs to GitHub Pages
+# ──────────────────────────────────────────────────────────
+#
+# Every merge to main that touches `catalogs/**` rebuilds the
+# static site served at https://withso.github.io/zeros/ and
+# includes the `catalogs/` folder at the site root. The app's
+# `model-catalog.ts` fetches from
+#   https://withso.github.io/zeros/catalogs/models-v1.json
+# with a 24h cache, so new models are live to every user within
+# hours of a vendor announcement — no app release required.
+#
+# Also runs `pnpm test:adapters` on every push so a bad fixture
+# or a translator regression shows up in CI before it ships.
+# ──────────────────────────────────────────────────────────
+
+name: publish-catalogs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "catalogs/**"
+      - ".github/workflows/publish-catalogs.yml"
+      - "scripts/fixtures/**"
+      - "src/engine/agents/adapters/**/translator.ts"
+  workflow_dispatch:
+
+# Pages publishing needs these permissions. We explicitly narrow
+# to the minimum actions/deploy-pages requires — no write access
+# to the main repo contents.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Serialise concurrent runs so an in-flight deploy isn't raced.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  adapter-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+      # Only the pnpm install is strictly required; the test runner
+      # compiles the translators inline via esbuild (already a
+      # transitive dep).
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:adapters
+
+  publish:
+    needs: adapter-tests
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Build the site payload: just the catalogs/ directory at the
+      # site root. We deliberately DO NOT publish the rest of the
+      # repo as a site — catalogs/ is the contract surface; anything
+      # else changing by accident shouldn't update user-facing URLs.
+      - name: Assemble site
+        run: |
+          mkdir -p _site/catalogs
+          cp -R catalogs/* _site/catalogs/
+          # Drop a landing index so visitors to the Pages root see
+          # something meaningful instead of a 404.
+          cat > _site/index.html <<'HTML'
+          <!doctype html>
+          <html lang="en">
+            <head>
+              <meta charset="utf-8" />
+              <title>Zeros — model catalog</title>
+              <style>
+                body { font: 15px/1.45 system-ui, sans-serif;
+                       max-width: 640px; margin: 48px auto; padding: 0 16px; }
+                code { font-family: ui-monospace, Menlo, monospace;
+                       background: #f4f4f5; padding: 1px 4px; border-radius: 4px; }
+              </style>
+            </head>
+            <body>
+              <h1>Zeros model catalog</h1>
+              <p>
+                This is the hot-updatable model list the
+                <a href="https://github.com/Withso/zeros">Zeros</a> desktop app
+                fetches on boot. Updates here ship to every user within
+                ~24 hours of a merge to <code>main</code>, without an app
+                release.
+              </p>
+              <ul>
+                <li><a href="./catalogs/models-v1.json">catalogs/models-v1.json</a></li>
+              </ul>
+            </body>
+          </html>
+          HTML
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deploy
+        uses: actions/deploy-pages@v4

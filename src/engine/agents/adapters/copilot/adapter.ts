@@ -60,6 +60,7 @@ import type {
 } from "../../types";
 import { AgentFailureError } from "../../types";
 import { ensureSessionDir, removeSessionDir, writeSessionMeta } from "../../session-paths";
+import { TERMINAL_AUTH_METHOD } from "../base";
 import { stripAnsi } from "./ansi";
 import { installCopilotHooks } from "./hooks";
 
@@ -128,7 +129,7 @@ export class CopilotAdapter implements AgentAdapter {
         } as never,
         mcpCapabilities: { http: false, sse: false } as never,
       } as never,
-      authMethods: [],
+      authMethods: [TERMINAL_AUTH_METHOD] as never,
     };
     this.cachedInitialize = init;
     return init;

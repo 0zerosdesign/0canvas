@@ -89,11 +89,22 @@ export function AgentPill({
   }, [open, sessions.listAgents]);
 
   const label = selectedName ?? selectedId ?? "Agent";
+  // An agent is "runnable" only when it's both installed AND signed in
+  // (when sign-in is required). Previously we gated on `installed` alone,
+  // which made Amp / Droid / Gemini show green even when not signed in —
+  // out of sync with the Settings → Agents panel that uses auth state.
+  // Agents with no `authBinary` need no sign-in (none today, but kept
+  // for forward compat).
+  const isRunnableAgent = (a: BridgeRegistryAgent): boolean => {
+    if (a.installed !== true) return false;
+    if (!a.authBinary) return true;
+    return a.authenticated === true;
+  };
   const visible = (agents ?? [])
     .filter((a) => isEnabled(a.id))
     .sort((a, b) => {
-      const aActive = a.installed === true ? 0 : 1;
-      const bActive = b.installed === true ? 0 : 1;
+      const aActive = isRunnableAgent(a) ? 0 : 1;
+      const bActive = isRunnableAgent(b) ? 0 : 1;
       if (aActive !== bActive) return aActive - bActive;
       return a.name.localeCompare(b.name);
     });
@@ -162,7 +173,7 @@ export function AgentPill({
           )}
           {visible.map((a) => {
             const isSelectedRow = a.id === selectedId;
-            const isRunnable = a.installed === true;
+            const isRunnable = isRunnableAgent(a);
             const isWarm = sessions.warmAgentIds.has(a.id);
             const switchesChat = showOpenInNewTabHint && !isSelectedRow;
             return (

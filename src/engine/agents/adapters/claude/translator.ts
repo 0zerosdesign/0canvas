@@ -110,10 +110,17 @@ export class ClaudeStreamTranslator {
 
   /** Messages emitted in this turn get stable IDs so the UI can
    *  merge chunks. Claude doesn't send a messageId today — we
-   *  synthesize one per assistant event (one assistant JSON line =
-   *  one "message"). */
+   *  synthesize one and share it across consecutive text-only
+   *  assistant events (Cursor's --stream-partial-output emits
+   *  deltas as many separate events; we want them in one bubble).
+   *  Rotated on tool_use, onUser, or onResult. */
   private currentAssistantMessageId: string | null = null;
   private currentUserMessageId: string | null = null;
+  /** Running concatenation of text we've already emitted under
+   *  `currentAssistantMessageId`. Used to detect Cursor's final
+   *  full-text event (which arrives after a chain of partial deltas
+   *  and would otherwise re-emit the entire message a second time). */
+  private emittedAssistantText = "";
 
   private lastStopReason: string = "end_turn";
   private hasSeenResult = false;
@@ -185,6 +192,12 @@ export class ClaudeStreamTranslator {
   // and sends tool results as subsequent `{"type":"user"}` events
   // with a tool_result content block. We distinguish by block type.
   private onUser(event: ClaudeMessageEvent): void {
+    // A user event ends the previous assistant message logically — the
+    // next assistant chunk should start a fresh bubble even if it's
+    // text-only (e.g. tool result → assistant continues with more text).
+    this.currentAssistantMessageId = null;
+    this.emittedAssistantText = "";
+
     const blocks = event.message?.content ?? [];
     // Echo of the user prompt — a fresh user message.
     const userTextBlocks = blocks.filter(
@@ -232,7 +245,23 @@ export class ClaudeStreamTranslator {
   // ── Assistant turn (thinking, text, tool_use) ───────────
   private onAssistant(event: ClaudeMessageEvent): void {
     const blocks = event.message?.content ?? [];
-    this.currentAssistantMessageId = randomUUID();
+
+    // Claude emits one assistant event per turn with the full text in
+    // one block — a single messageId per call is correct.
+    //
+    // Cursor (which reuses this translator) with --stream-partial-output
+    // emits MANY assistant events per turn, each carrying a single text
+    // block holding a delta. If we mint a fresh UUID per call, every
+    // word becomes its own bubble. So: reuse the same messageId across
+    // consecutive text-only assistant events, and rotate it whenever a
+    // boundary fires (tool_use seen here, or onUser / onResult elsewhere).
+    const isTextOnly = blocks.every(
+      (b) => b.type === "text" || b.type === "thinking",
+    );
+    if (!this.currentAssistantMessageId || !isTextOnly) {
+      this.currentAssistantMessageId = randomUUID();
+      this.emittedAssistantText = "";
+    }
 
     for (const block of blocks) {
       if (block.type === "thinking" && typeof block.thinking === "string") {
@@ -245,11 +274,35 @@ export class ClaudeStreamTranslator {
           },
         });
       } else if (block.type === "text" && typeof block.text === "string") {
+        const text = block.text;
+        // Cursor's --stream-partial-output protocol: many partial
+        // events with `timestamp_ms` carry small deltas, then ONE
+        // final event without `timestamp_ms` carries the full text.
+        // The final's text equals what we've already streamed, so
+        // we'd emit the same content twice. Detect three cases:
+        //   1. text === running    → exact duplicate (Cursor final), skip
+        //   2. text startsWith(running) → text is "running + new"; emit only the new part
+        //   3. else                → fresh content (Claude single-shot, or first
+        //                            chunk after a rotated id); emit and append
+        let toEmit: string;
+        if (text === this.emittedAssistantText) {
+          continue;
+        } else if (
+          this.emittedAssistantText.length > 0 &&
+          text.startsWith(this.emittedAssistantText)
+        ) {
+          toEmit = text.slice(this.emittedAssistantText.length);
+          this.emittedAssistantText = text;
+        } else {
+          toEmit = text;
+          this.emittedAssistantText += text;
+        }
+        if (!toEmit) continue;
         this.emit({
           sessionId: this.sessionId,
           update: {
             sessionUpdate: "agent_message_chunk",
-            content: { type: "text", text: block.text } as ContentBlock,
+            content: { type: "text", text: toEmit } as ContentBlock,
             messageId: this.currentAssistantMessageId,
           },
         });
@@ -258,7 +311,10 @@ export class ClaudeStreamTranslator {
         typeof block.id === "string" &&
         typeof block.name === "string"
       ) {
-        // New tool call — assign a Zeros-side tool call id.
+        // Tool use ends the current logical message — next text stream
+        // is a separate reply.
+        this.currentAssistantMessageId = null;
+        this.emittedAssistantText = "";
         const toolCallId = randomUUID();
         this.toolCallIds.set(block.id, toolCallId);
         this.emit({
@@ -279,6 +335,9 @@ export class ClaudeStreamTranslator {
   // ── Result (final) ──────────────────────────────────────
   private onResult(event: ClaudeResultEvent): void {
     this.hasSeenResult = true;
+    // Turn boundary — any text after this should bubble separately.
+    this.currentAssistantMessageId = null;
+    this.emittedAssistantText = "";
     if (event.is_error) {
       this.lastStopReason = "refusal";
     } else if (event.subtype === "error_max_turns") {

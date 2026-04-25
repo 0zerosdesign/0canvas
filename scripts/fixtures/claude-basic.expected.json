@@ -1,0 +1,13 @@
+{
+  "fixture": "claude-basic.jsonl",
+  "translator": "ClaudeStreamTranslator",
+  "expectedUpdates": [
+    "user_message_chunk",
+    "agent_thought_chunk",
+    "agent_message_chunk",
+    "usage_update"
+  ],
+  "stopReason": "end_turn",
+  "sawResult": true,
+  "notes": "Minimal round-trip: system.init (no emit) + user echo + thinking + answer + result. Tests the happy path for every content-block variant Claude emits in --output-format stream-json."
+}

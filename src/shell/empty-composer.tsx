@@ -24,11 +24,15 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   Check,
   ChevronDown,
+  Copy,
+  ExternalLink,
   Folder,
   FolderOpen,
   FolderPlus,
   ImagePlus,
+  RefreshCw,
   Send,
+  Terminal,
   X as XIcon,
 } from "lucide-react";
 import { Button, Textarea } from "../zeros/ui";
@@ -50,7 +54,6 @@ import {
 } from "../zeros/agent/composer-pills";
 import { AgentPill } from "../zeros/agent/agent-pill";
 import { ComposerStateChip } from "../zeros/agent/composer-state-chip";
-import { ComposerConnectingOverlay } from "../zeros/agent/composer-connecting-overlay";
 import { envForChatSettings } from "../zeros/agent/model-catalog";
 import type { ContentBlock } from "@agentclientprotocol/sdk";
 import {
@@ -254,6 +257,14 @@ export function EmptyComposer() {
   const [ahead, setAhead] = useState(0);
   const [behind, setBehind] = useState(0);
   const [agent, setAgent] = useState<BridgeRegistryAgent | null>(null);
+  // Full registry (installed + uninstalled) — drives the
+  // "No agent CLI detected" empty state so the user can see
+  // exactly which CLIs Zeros supports and how to install one.
+  // Distinct from `agent` (the single picked agent) because we
+  // need the zero-installed case to render a *list* of options,
+  // not just block on a null pointer.
+  const [allAgents, setAllAgents] = useState<BridgeRegistryAgent[]>([]);
+  const [registryLoaded, setRegistryLoaded] = useState(false);
   const [initialize, setInitialize] = useState<InitializeResponse | null>(null);
   const [model, setModel] = useState<string | null>(null);
   const [effort, setEffort] = useState<ChatEffort>("medium");
@@ -263,27 +274,24 @@ export function EmptyComposer() {
   const [noAgentHint, setNoAgentHint] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
 
-  // Stable speculative chat id — created once on mount and reused for
-  // the speculative session + the eventual ADD_CHAT dispatch. This is
-  // what makes the EmptyComposer → AgentChat handoff instant: the session
-  // keyed under this id is already `ready` by the time ADD_CHAT fires,
-  // so AgentChat mounts on a hot session and the first prompt sends
-  // immediately (no queue, no lost message).
-  const specChatIdRef = useRef<string>(newChatId());
-  // True once we've committed to creating the chat (user hit send).
-  // Prevents the on-unmount cleanup from wiping the session we're
-  // about to hand off to AgentChat.
-  const submittedRef = useRef(false);
+  /** True when the registry came back with zero `installed: true`
+   *  agents. Drives the first-run empty-state card. Kept as a
+   *  derived value rather than its own ref so a post-install
+   *  listAgents refresh flips it back automatically. */
+  const hasNoInstalledAgent = registryLoaded && !agent;
 
-  // The live speculative session from the provider.
-  const specSession = sessions.sessions[specChatIdRef.current] ?? null;
-  const rawStatus = specSession?.status ?? "idle";
-  // Close the render-gap between "agent picked" and "ensureSession
-  // patched the slot to warming". Without this the textarea briefly
-  // ends up disabled with no overlay, which looks like a dead UI.
-  // `idle` + no agent = genuinely idle (show nothing, allow nothing).
-  // `idle` + agent = we're about to warm; render as `warming`.
-  const sessionStatus = rawStatus === "idle" && agent ? "warming" : rawStatus;
+  // The empty composer no longer creates a speculative session. The new
+  // flow on Send is:
+  //   1. ADD_CHAT + SET_ACTIVE_CHAT     — workspace adopts the new chat
+  //   2. ENQUEUE_CHAT_SUBMISSION         — text waits in the store queue
+  //   3. AgentChat mounts → ensureSession → consumes the queue when ready
+  //
+  // This eliminates the closure-stale-state and unmount-cleanup races
+  // that made Send silently drop messages. The speculative-session
+  // pattern was an attempt to make the handoff "instant", but it
+  // introduced too many race conditions to be worth the few-hundred-ms
+  // win. The new flow is racy-by-construction-impossible.
+  const sessionStatus: "idle" | "warming" = "idle";
 
   // Resolve folder + branch for the meta row. The store's
   // `newAgentFolder` override wins — it's set when the user clicks
@@ -308,91 +316,90 @@ export function EmptyComposer() {
     };
   }, [state.newAgentFolder]);
 
-  // Resolve a default agent on mount. We don't warm yet — the agent
-  // chosen here feeds the speculative-session effect below.
+  // Resolve the agent list + default agent on mount. Uninstalled
+  // agents are retained in state so the "no CLI detected" empty
+  // state can render install hints. Re-run this effect via the
+  // `registryVersion` bump so the Refresh button in that empty
+  // state can re-probe PATH without reloading the whole window.
+  const [registryVersion, setRegistryVersion] = useState(0);
+  const refreshAgents = useCallback(() => {
+    setRegistryVersion((v) => v + 1);
+  }, []);
+  // Depend on the stable function ref, NOT the whole `sessions` ctx —
+  // ctx is a fresh object on every session-state update, so the old
+  // `[sessions, registryVersion]` dep made this effect re-fire on every
+  // AGENT_SESSION_UPDATE notification (i.e. every streaming chunk).
+  // Each re-fire calls listAgents() which spawns 7 `--version` probes
+  // on the engine. With slow Node-based CLIs that ignored SIGTERM
+  // during their import phase, those subprocesses piled up to 200+
+  // live processes and ~10GB of RAM in a few minutes.
+  const listAgentsFn = sessions.listAgents;
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
         const configuredId = getDefaultAgentId();
-        const list = await sessions.listAgents();
+        // force:true so Refresh actually re-probes PATH instead of
+        // returning a cached (possibly stale) installed set.
+        const list = await listAgentsFn(registryVersion > 0);
         if (cancelled) return;
-        const installed = list.filter((a) => a.installed === true);
+        setAllAgents(list);
+        // Default-agent selection must require BOTH installed and
+        // signed in — otherwise the empty composer auto-picks an agent
+        // the user can't actually talk to (e.g. Amp installed but no
+        // login), then ensureSession fails with auth-required.
+        const runnable = list.filter(
+          (a) =>
+            a.installed === true &&
+            (!a.authBinary || a.authenticated === true),
+        );
         const chosen =
-          (configuredId && installed.find((a) => a.id === configuredId)) ||
-          installed[0] ||
+          (configuredId && runnable.find((a) => a.id === configuredId)) ||
+          runnable[0] ||
           null;
-        if (!cancelled) setAgent(chosen ?? null);
+        setAgent(chosen ?? null);
+        setRegistryLoaded(true);
       } catch {
-        /* registry unreachable — surfaces on submit */
+        // Registry unreachable — we still mark loaded so the empty
+        // state renders a usable "check your connection / install"
+        // card instead of an eternal spinner.
+        if (!cancelled) setRegistryLoaded(true);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [sessions]);
+  }, [listAgentsFn, registryVersion]);
 
-  // Speculative session: the moment the user has an agent + folder
-  // resolved, ask the provider to create a real session keyed by our
-  // stable specChatId. When they submit, we just ADD_CHAT with that
-  // same id — the session is already warm (or `failed` / `auth-required`
-  // with a clear affordance). Fetches initialize for the ModelPill on
-  // success.
+  // Fetch the agent's InitializeResponse once per agent so the ModelPill
+  // can list advertised models. In the native runtime initialize is
+  // synthesized — no subprocess spawned — so this is essentially free.
+  // Failures (auth-required) are swallowed; the chat-side flow surfaces
+  // them when the user actually starts a session.
   useEffect(() => {
     if (!agent) return;
-    const specChatId = specChatIdRef.current;
-    const env = envForChatSettings({
-      agentId: agent.id,
-      initialize,
-      model,
-      effort,
-    });
+    let cancelled = false;
     void sessions
-      .ensureSession(specChatId, agent.id, {
-        agentName: agent.name,
-        cwd: folder || undefined,
-        env,
-        force: true,
+      .initAgent(agent.id)
+      .then((init) => {
+        if (cancelled) return;
+        setInitialize(init);
       })
       .catch(() => {
-        /* slot's failure/error fields carry the diagnosis — the
-           overlay + chip read those via sessionStatus. */
+        /* model picker stays on built-in defaults */
       });
-    // Intentionally only fires on agent/cwd change — model/effort drift
-    // respawns the subprocess at send-time (envForChatSettings reflects
-    // that automatically).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [agent?.id, folder]);
-
-  // Once the speculative session reaches `ready`, cache its
-  // InitializeResponse so the ModelPill can list agent-advertised models.
-  useEffect(() => {
-    if (sessionStatus !== "ready") return;
-    if (!specSession?.initialize) return;
-    setInitialize(specSession.initialize);
-  }, [sessionStatus, specSession?.initialize]);
-
-  // Abandon the speculative session if the user navigates away without
-  // submitting. Prevents a slow-moving subprocess pool from accumulating
-  // orphan sessions per "started typing but left" cycle.
-  useEffect(() => {
     return () => {
-      if (submittedRef.current) return;
-      sessions.reset(specChatIdRef.current);
+      cancelled = true;
     };
-  }, [sessions]);
+  }, [agent?.id, sessions]);
 
   useEffect(() => {
     textareaRef.current?.focus();
   }, []);
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = useCallback(() => {
     const text = input.trim();
     if ((text.length === 0 && attachments.length === 0) || submitting) return;
-    // Gate by session state — the new flow refuses to submit unless the
-    // speculative session reached `ready`. The UI already disables the
-    // button in that state; this is belt-and-suspenders.
-    if (sessionStatus !== "ready") return;
     if (!agent) {
       setNoAgentHint(true);
       return;
@@ -400,16 +407,18 @@ export function EmptyComposer() {
     setSubmitting(true);
     setNoAgentHint(false);
 
-    const specChatId = specChatIdRef.current;
-    const snapshotText = text;
-    const snapshotAttachments = attachments;
-
-    // Mark submitted BEFORE dispatch so the unmount-cleanup effect
-    // doesn't tear down the session between ADD_CHAT and sendPrompt.
-    submittedRef.current = true;
-
+    // Race-free new-chat flow:
+    //   1. Generate the chatId
+    //   2. ADD_CHAT + SET_ACTIVE_CHAT — workspace mounts AgentChat
+    //   3. ENQUEUE_CHAT_SUBMISSION — text + attachments wait in the store
+    //   4. AgentChat's useEffect on `pendingChatSubmission` consumes the
+    //      queue once the session reaches `ready`
+    // No speculative session, no closure-stale slot reads, no unmount
+    // cleanup race. The text either lands or surfaces a real failure
+    // status (auth-required / failed) inside the new chat view.
+    const newId = newChatId();
     const chat: ChatThread = {
-      id: specChatId,
+      id: newId,
       folder,
       agentId: agent.id,
       agentName: agent.name,
@@ -417,28 +426,22 @@ export function EmptyComposer() {
       effort,
       permissionMode,
       title:
-        snapshotText.length > 40
-          ? `${snapshotText.slice(0, 40).trimEnd()}…`
-          : snapshotText || "New chat",
+        text.length > 40
+          ? `${text.slice(0, 40).trimEnd()}…`
+          : text || "New chat",
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
     dispatch({ type: "ADD_CHAT", chat });
-    dispatch({ type: "SET_ACTIVE_CHAT", id: specChatId });
-
-    // Direct send — session is already `ready` on this chatId, no
-    // queue required. AgentChat will mount and see a hot streaming
-    // session. First message flows immediately.
-    const blocks: ContentBlock[] = snapshotAttachments.map((a) => ({
-      type: "image" as const,
-      mimeType: a.mimeType,
-      data: a.data,
-    }));
-    void sessions
-      .sendPrompt(specChatId, snapshotText, snapshotText, blocks)
-      .catch(() => {
-        /* status carries the error for AgentChat to render */
-      });
+    dispatch({ type: "SET_ACTIVE_CHAT", id: newId });
+    dispatch({
+      type: "ENQUEUE_CHAT_SUBMISSION",
+      submission: {
+        id: newId,
+        text,
+        source: "manual",
+      },
+    });
 
     setInput("");
     setAttachments([]);
@@ -452,8 +455,6 @@ export function EmptyComposer() {
     effort,
     permissionMode,
     submitting,
-    sessionStatus,
-    sessions,
     dispatch,
   ]);
 
@@ -506,39 +507,41 @@ export function EmptyComposer() {
     }
   };
 
+  // Send is enabled the moment there's content. handleSubmit awaits the
+  // in-flight ensureSession when the session isn't ready yet, so the
+  // user no longer has to wait visibly for "Connecting…" to clear.
   const canSend =
-    (input.trim().length > 0 || attachments.length > 0) &&
-    !submitting &&
-    sessionStatus === "ready";
+    (input.trim().length > 0 || attachments.length > 0) && !submitting;
   const agentName = agent?.name ?? null;
 
   const branchLabel = useMemo(() => branch ?? null, [branch]);
 
+  // Empty composer no longer creates a speculative session, so there's
+  // no "Connecting to <agent>…" overlay to coordinate with. The
+  // placeholder is the only visible affordance.
+  const placeholder = hasNoInstalledAgent
+    ? "Install a coding-agent CLI below to start chatting"
+    : "Plan, Build, / for commands, @ for context";
+
   return (
     <div className="oc-empty-composer-wrap">
       <div className="oc-empty-composer" role="region" aria-label="Start a new chat">
-        <div className="oc-acp-composer-card">
-          <ComposerConnectingOverlay
-            status={sessionStatus}
-            agentId={agent?.id ?? null}
-            agentName={agentName}
-            agentIconUrl={agent?.icon ?? null}
-            hidden={sessionStatus === "ready" || sessionStatus === "idle"}
+        {hasNoInstalledAgent && (
+          <NoAgentInstalledCard
+            agents={allAgents}
+            onRefresh={refreshAgents}
           />
+        )}
+        <div className="oc-acp-composer-card">
           <Textarea
             ref={textareaRef}
             className="oc-acp-composer-input"
-            placeholder={
-              sessionStatus === "ready"
-                ? "Plan, Build, / for commands, @ for context"
-                : ""
-            }
+            placeholder={placeholder}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             rows={3}
             aria-label="Message"
-            disabled={sessionStatus !== "ready"}
           />
 
           {attachments.length > 0 && (
@@ -637,7 +640,7 @@ export function EmptyComposer() {
           />
         </div>
 
-        {noAgentHint && (
+        {noAgentHint && !hasNoInstalledAgent && (
           <div className="oc-empty-composer__hint" role="status">
             <span>
               No active agents. Install and log in to one from Settings →
@@ -655,5 +658,117 @@ export function EmptyComposer() {
         )}
       </div>
     </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────
+// NoAgentInstalledCard — first-run "install a CLI" empty state
+// ──────────────────────────────────────────────────────────
+//
+// Rendered above the composer when the engine's registry probe
+// returned zero installed CLIs. Each row shows the install command
+// + a copy button + (where available) a docs link. One Refresh
+// button at the bottom re-probes PATH so the user doesn't have to
+// restart the app after installing.
+//
+// Deliberately no automatic "open terminal and run X" action — we
+// don't want to execute arbitrary install commands behind the
+// user's back. Copy-to-clipboard + docs link keeps every install
+// step consented to.
+
+function NoAgentInstalledCard({
+  agents,
+  onRefresh,
+}: {
+  agents: BridgeRegistryAgent[];
+  onRefresh: () => void;
+}) {
+  // Agents in manifest order (matches the settings page). Filtering
+  // is cosmetic — uninstalled ones are what we're showing, but the
+  // installed=true case shouldn't happen when this card is rendered.
+  const installable = agents.filter((a) => !!a.installHint?.command);
+
+  return (
+    <div className="oc-empty-composer__install-card" role="region" aria-label="Install a coding-agent CLI">
+      <div className="oc-empty-composer__install-head">
+        <Terminal size={14} />
+        <div className="oc-empty-composer__install-title-wrap">
+          <div className="oc-empty-composer__install-title">
+            No coding-agent CLI detected
+          </div>
+          <div className="oc-empty-composer__install-sub">
+            Zeros drives your own CLI — install at least one below, then click
+            Refresh.
+          </div>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          type="button"
+          onClick={onRefresh}
+          title="Re-probe PATH for newly-installed CLIs"
+        >
+          <RefreshCw size={12} />
+          <span>Refresh</span>
+        </Button>
+      </div>
+      <ul className="oc-empty-composer__install-list">
+        {installable.map((a) => (
+          <InstallRow key={a.id} agent={a} />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function InstallRow({ agent }: { agent: BridgeRegistryAgent }) {
+  const [copied, setCopied] = useState(false);
+  const cmd = agent.installHint?.command ?? "";
+  const docsUrl = agent.installHint?.docsUrl;
+
+  const copy = async () => {
+    if (!cmd) return;
+    try {
+      await navigator.clipboard.writeText(cmd);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard API isn't available in every context; ignore.
+    }
+  };
+
+  return (
+    <li className="oc-empty-composer__install-row">
+      <div className="oc-empty-composer__install-agent">
+        <div className="oc-empty-composer__install-agent-name">{agent.name}</div>
+        <div className="oc-empty-composer__install-agent-desc">
+          {agent.description}
+        </div>
+      </div>
+      <code className="oc-empty-composer__install-cmd">{cmd}</code>
+      <div className="oc-empty-composer__install-actions">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          type="button"
+          onClick={() => void copy()}
+          title={copied ? "Copied!" : "Copy install command"}
+          aria-label="Copy install command"
+        >
+          {copied ? <Check size={12} /> : <Copy size={12} />}
+        </Button>
+        {docsUrl && (
+          <a
+            className="oc-empty-composer__install-docs"
+            href={docsUrl}
+            target="_blank"
+            rel="noreferrer noopener"
+            title="Open docs"
+          >
+            <ExternalLink size={12} />
+          </a>
+        )}
+      </div>
+    </li>
   );
 }

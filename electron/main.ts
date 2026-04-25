@@ -186,8 +186,50 @@ function setupDockBrand(): void {
   }
 }
 
+/**
+ * Pull the user's real shell PATH into the Electron process BEFORE we
+ * spawn the engine. macOS GUI apps launched from Finder or the Dock
+ * inherit only `/usr/bin:/bin:/usr/sbin:/sbin` — no Homebrew, no
+ * npm-global, no Volta/fnm/mise/asdf shims. That's why `isOnPath(
+ * "claude")` in the engine's CLI probe returned false for every user
+ * who installed their CLIs the normal way, and why every agent pill
+ * showed "not installed" in the packaged app.
+ *
+ * `fix-path` runs `$SHELL -ilc 'echo $PATH'` once and rewrites
+ * `process.env.PATH` before anything else reads it — including the
+ * engine child spawn, which inherits the fixed PATH. Emdash, Claude
+ * Desktop, and Conductor all land on the same fix; it's the standard
+ * Electron-on-macOS workaround.
+ *
+ * Dynamic-imported because `fix-path` ships ESM-only and our main
+ * bundle is CJS. The await lives inside whenReady() so we never block
+ * the event loop before it's running.
+ */
+async function hydrateShellPath(): Promise<void> {
+  try {
+    const mod = (await import("fix-path")) as { default: () => void };
+    mod.default();
+    console.log(`[Zeros] shell PATH hydrated (${(process.env.PATH ?? "").split(":").length} entries)`);
+  } catch (err) {
+    // Non-fatal: on Linux / Windows the default PATH is usually fine,
+    // and even on macOS the user can still launch from `pnpm electron:dev`
+    // which inherits the terminal PATH anyway.
+    console.warn(
+      `[Zeros] fix-path failed: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    );
+  }
+}
+
 app.whenReady().then(async () => {
   setupDockBrand();
+
+  // PATH repair MUST happen before spawnEngine — the engine's CLI
+  // probe reads process.env.PATH at each listAgents() call, and the
+  // engine child inherits our env. Awaiting here costs ~80–200ms on
+  // a cold shell; worth it to make every agent pill work.
+  await hydrateShellPath();
 
   // Install the native app menu (File > Open Folder, Edit, View, etc).
   // Safe to call before the window exists — macOS associates the

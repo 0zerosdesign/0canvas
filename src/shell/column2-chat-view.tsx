@@ -339,15 +339,20 @@ function NewChatPicker() {
     dispatch({ type: "ADD_CHAT", chat });
   };
 
-  // Every enabled agent shows up; inactive (not installed / not
-  // logged in) rows render disabled with a red dot so the user
-  // sees the full roster but can't accidentally start a chat with
-  // an agent that isn't runnable. Active rows float to the top.
+  // An agent is runnable only when it's installed AND signed in (when
+  // sign-in applies). Mirrors the agent-pill + Settings panel logic so
+  // the user gets one consistent definition of "this is ready to use"
+  // across all three surfaces.
+  const isRunnableAgent = (a: BridgeRegistryAgent): boolean => {
+    if (a.installed !== true) return false;
+    if (!a.authBinary) return true;
+    return a.authenticated === true;
+  };
   const visible = (agents ?? [])
     .filter((a) => isEnabled(a.id))
     .sort((a, b) => {
-      const aActive = a.installed === true ? 0 : 1;
-      const bActive = b.installed === true ? 0 : 1;
+      const aActive = isRunnableAgent(a) ? 0 : 1;
+      const bActive = isRunnableAgent(b) ? 0 : 1;
       if (aActive !== bActive) return aActive - bActive;
       return a.name.localeCompare(b.name);
     });
@@ -398,7 +403,7 @@ function NewChatPicker() {
             </div>
           )}
           {visible.map((a) => {
-            const isRunnable = a.installed === true;
+            const isRunnable = isRunnableAgent(a);
             return (
               <Button
                 key={a.id}

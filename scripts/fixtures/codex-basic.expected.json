@@ -1,0 +1,11 @@
+{
+  "fixture": "codex-basic.jsonl",
+  "translator": "CodexStreamTranslator",
+  "expectedUpdates": [
+    "agent_thought_chunk",
+    "agent_message_chunk"
+  ],
+  "stopReason": "end_turn",
+  "sawTurnTerminal": true,
+  "notes": "Round-trip for Codex: thread.started (captured) + turn.started (no emit) + reasoning delta + agent_message delta + turn.completed. Covers the happy path."
+}

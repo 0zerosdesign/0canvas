@@ -25,10 +25,10 @@
     "electron:rebuild": "electron-rebuild --only node-pty,keytar",
     "electron:build": "pnpm build:sidecar && pnpm electron:compile && pnpm build:ui && electron-builder --config electron-builder.yml",
     "check:ui": "node scripts/check-ui-consistency.mjs",
-    "snap:ui": "node scripts/visual-harness.mjs"
+    "snap:ui": "node scripts/visual-harness.mjs",
+    "test:adapters": "node scripts/test-adapters.mjs"
   },
   "dependencies": {
-    "@agentclientprotocol/sdk": "^0.19.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@radix-ui/react-scroll-area": "^1.2.0",
     "@xterm/addon-fit": "^0.11.0",
@@ -37,6 +37,7 @@
     "chokidar": "^4.0.3",
     "clsx": "^2.1.0",
     "electron-updater": "^6.8.3",
+    "fix-path": "^5.0.0",
     "idb": "^8.0.3",
     "keytar": "^7.9.0",
     "lucide-react": "^0.400.0",
@@ -53,6 +54,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@agentclientprotocol/sdk": "^0.19.0",
     "@electron/rebuild": "^4.0.4",
     "@playwright/test": "^1.59.1",
     "@tailwindcss/cli": "^4.0.0",

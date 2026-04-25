@@ -115,3 +115,6 @@ servers/**/.env
 servers/**/.env.local
 servers/**/.env.*.local
 servers/**/.env.production
+
+# Claude Code runtime artifacts (locks, scheduled-task state)
+.claude/

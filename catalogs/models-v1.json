@@ -1,18 +1,23 @@
 {
   "$schema": "./models-v1.schema.json",
   "version": 1,
-  "updatedAt": "2026-04-21",
-  "notes": "Fallback model catalog for Zeros. The app prefers ACP agent-advertised models (InitializeResponse._meta.models); this file fills in for agents that don't yet. Ship a PR when any vendor releases new models.",
+  "updatedAt": "2026-04-25",
+  "notes": "Bundled fallback. Hot updates ship via GitHub Pages — see .github/workflows/publish-catalogs.yml. The app prefers ACP agent-advertised models (InitializeResponse._meta.models); this file fills in for agents that don't yet.",
   "families": {
     "claude": [
+      { "value": "claude-opus-4-8[1m]", "label": "Claude Opus 4.8 (1M)", "badge": "1M" },
+      { "value": "claude-opus-4-8", "label": "Claude Opus 4.8", "badge": "NEW" },
       { "value": "claude-opus-4-7[1m]", "label": "Claude Opus 4.7 (1M)", "badge": "1M" },
-      { "value": "claude-opus-4-7", "label": "Claude Opus 4.7", "badge": "NEW" },
+      { "value": "claude-opus-4-7", "label": "Claude Opus 4.7" },
       { "value": "claude-sonnet-4-6", "label": "Claude Sonnet 4.6" },
       { "value": "claude-haiku-4-5", "label": "Claude Haiku 4.5" }
     ],
     "codex": [
-      { "value": "gpt-5.4", "label": "GPT-5.4", "badge": "NEW" },
-      { "value": "gpt-5.4-codex", "label": "GPT-5.4 Codex", "badge": "CODE" },
+      { "value": "gpt-5.5", "label": "GPT-5.5", "badge": "NEW" },
+      { "value": "gpt-5.5-codex", "label": "GPT-5.5 Codex", "badge": "CODE" },
+      { "value": "gpt-5.5-mini", "label": "GPT-5.5 mini" },
+      { "value": "gpt-5.4", "label": "GPT-5.4" },
+      { "value": "gpt-5.4-codex", "label": "GPT-5.4 Codex" },
       { "value": "gpt-5.3", "label": "GPT-5.3" },
       { "value": "gpt-5.3-codex", "label": "GPT-5.3 Codex" },
       { "value": "gpt-5.3-mini", "label": "GPT-5.3 mini" },
@@ -29,6 +34,11 @@
       { "value": "gemini-2.5-pro", "label": "Gemini 2.5 Pro" },
       { "value": "gemini-2.5-flash", "label": "Gemini 2.5 Flash" }
     ],
+    "cursor": [
+      { "value": "default", "label": "Cursor default" },
+      { "value": "claude-opus-4-8", "label": "Claude Opus 4.8 (via Cursor)" },
+      { "value": "gpt-5.5", "label": "GPT-5.5 (via Cursor)" }
+    ],
     "amp": [
       { "value": "default", "label": "Amp default" }
     ],
@@ -39,6 +49,7 @@
   "modelEnvVars": {
     "claude": "ANTHROPIC_MODEL",
     "codex": "OPENAI_MODEL",
-    "gemini": "GEMINI_MODEL"
+    "gemini": "GEMINI_MODEL",
+    "cursor": "CURSOR_MODEL"
   }
 }

@@ -82,6 +82,14 @@ interface QueuedRequest {
 
 export class CanvasBridgeClient {
   private ws: WebSocket | null = null;
+  /** A WebSocket that's been created but hasn't fired onopen yet.
+   *  Tracking this prevents `connect()` from racing with itself: HMR
+   *  reloads or rapid status churn used to stack orphan sockets, each
+   *  holding an open connection to the engine. The engine broadcasts to
+   *  every client, so 3 orphans = every chunk arriving at the renderer
+   *  3 times = one bubble with the response text concatenated 3x.
+   *  See coalesce logic in use-agent-session.tsx:appendText. */
+  private pendingWs: WebSocket | null = null;
   private handlers = new Map<string, Set<(msg: BridgeMessage) => void>>();
   private pendingRequests = new Map<string, PendingRequest>();
   private queuedRequests: QueuedRequest[] = [];
@@ -104,9 +112,20 @@ export class CanvasBridgeClient {
   async connect(): Promise<void> {
     if (this._disposed) return;
     if (this.ws?.readyState === WebSocket.OPEN) return;
+    // In-flight guard. Without it, two concurrent connect() calls both
+    // await enginePortPromise then both `new WebSocket(...)` — the
+    // earlier one is orphaned (its onopen never wins the assignment to
+    // this.ws) but its TCP connection stays open until GC. The engine
+    // broadcasts to every connected client, so the renderer sees every
+    // chunk multiplied by the orphan count.
+    if (this.pendingWs) return;
 
     const port = await enginePortPromise;
     if (this._disposed) return;
+    // Re-check after the async hop — another connect() could have won
+    // the race and we'd duplicate.
+    if (this.ws?.readyState === WebSocket.OPEN) return;
+    if (this.pendingWs) return;
 
     const wsUrl = `ws://localhost:${port}/ws`;
     this.setStatus("connecting");
@@ -119,8 +138,16 @@ export class CanvasBridgeClient {
       this.scheduleReconnect();
       return;
     }
+    this.pendingWs = ws;
 
     ws.onopen = () => {
+      // If we were disposed (or another socket beat us to it) while
+      // pending, drop this one rather than promoting it.
+      if (this._disposed || this.pendingWs !== ws) {
+        try { ws.close(); } catch { /* already dead */ }
+        return;
+      }
+      this.pendingWs = null;
       this.ws = ws;
       this._engineConnected = true;
       this.reconnectAttempts = 0;
@@ -170,6 +197,11 @@ export class CanvasBridgeClient {
     };
 
     ws.onclose = () => {
+      // Clear whichever slot held this socket; an orphan that lost the
+      // race could close after the winner promoted itself, and we
+      // don't want to null out the live this.ws.
+      if (this.pendingWs === ws) this.pendingWs = null;
+      if (this.ws !== ws) return;
       this.ws = null;
       this.setStatus("disconnected");
       this._engineConnected = false;
@@ -292,8 +324,14 @@ export class CanvasBridgeClient {
     this.queuedRequests = [];
     this.handlers.clear();
     this.statusListeners.clear();
-    this.ws?.close();
+    // Close BOTH the active socket and any in-flight pending one — an
+    // un-disposed pendingWs would keep its TCP connection to the engine
+    // open even though this client is gone, and on next mount the new
+    // client would see itself as the 2nd connection.
+    try { this.ws?.close(); } catch { /* already dead */ }
+    try { this.pendingWs?.close(); } catch { /* already dead */ }
     this.ws = null;
+    this.pendingWs = null;
   }
 
   // ── Internals ───────────────────────────────────────────

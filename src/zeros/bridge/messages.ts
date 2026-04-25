@@ -54,6 +54,28 @@ export interface BridgeRegistryAgent {
   launchKind?: "npx" | "uvx" | "binary" | "unavailable";
   /** CLI binary used by the Login-in-Terminal flow and the auth-state probe. */
   authBinary?: string;
+  /** Install command + docs URL from the engine's manifest. Populated so the
+   *  composer can render a "install this CLI" hint without hardcoding
+   *  install strings in the UI. */
+  installHint?: {
+    command: string;
+    docsUrl?: string;
+  };
+  /** Evaluated from the engine manifest's `AuthProbe`. True = CLI has
+   *  credentials on disk / keychain. Lets the Agents panel stop
+   *  calling `ai_cli_is_authenticated` on every mount (which had its
+   *  own, drifted, marker table). */
+  authenticated?: boolean;
+  /** Raw version string from `<cliBinary> --version` — lets the UI
+   *  surface "installed: X.Y.Z" next to the agent name. */
+  installedVersion?: string;
+  /** Whether `installedVersion` is within the manifest's tested
+   *  range. False shows an "update required" warning in the pill. */
+  versionCompatible?: boolean;
+  /** Min / max versions from the engine manifest. Used for the
+   *  "supported versions" hint text. */
+  minCliVersion?: string;
+  maxCliVersion?: string;
 }
 
 // ── Base envelope ────────────────────────────────────────

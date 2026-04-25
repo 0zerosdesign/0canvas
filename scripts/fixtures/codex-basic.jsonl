@@ -1,0 +1,9 @@
+{"type":"thread.started","thread_id":"0199a213-f123-4567-89ab-cdef01234567"}
+{"type":"turn.started"}
+{"type":"item.started","item":{"id":"item_1","type":"reasoning","text":""}}
+{"type":"item.updated","item":{"id":"item_1","type":"reasoning","text":"Simple arithmetic."}}
+{"type":"item.completed","item":{"id":"item_1","type":"reasoning","text":"Simple arithmetic."}}
+{"type":"item.started","item":{"id":"item_2","type":"agent_message","text":""}}
+{"type":"item.updated","item":{"id":"item_2","type":"agent_message","text":"2+2=4."}}
+{"type":"item.completed","item":{"id":"item_2","type":"agent_message","text":"2+2=4."}}
+{"type":"turn.completed","usage":{"input_tokens":18,"output_tokens":5}}

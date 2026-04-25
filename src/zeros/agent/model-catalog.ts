@@ -39,15 +39,19 @@ export interface CatalogFile {
   modelEnvVars: Record<string, string>;
 }
 
-/** Default remote URL. Points at the repo's catalog file served via
- *  jsDelivr (GitHub-backed CDN with long-lived caching). Override in
- *  Settings → Agents → Model catalog when self-hosting.
+/** Default remote URL. Served from GitHub Pages, published on every
+ *  merge to `main` by `.github/workflows/publish-catalogs.yml`.
  *
- *  NOTE: this URL only resolves after `catalogs/models-v1.json` is
- *  committed to the `main` branch of the repo. Before then, Refresh
- *  silently falls back to the bundled JSON. */
+ *  Why GitHub Pages over jsDelivr / CloudFront / our own S3?
+ *   - Zero infra to maintain beyond "ship a workflow".
+ *   - Cache-busting is automatic on merge; no 7-day jsDelivr lag.
+ *   - The source JSON lives in THIS repo, versioned next to the
+ *     adapter code that consumes it — one PR updates both.
+ *
+ *  Override in Settings → Agents → Model catalog for self-hosting
+ *  or to point at a staging branch during a catalog experiment. */
 const DEFAULT_REMOTE_URL =
-  "https://cdn.jsdelivr.net/gh/Withso/Zeros@main/catalogs/models-v1.json";
+  "https://withso.github.io/zeros/catalogs/models-v1.json";
 
 const CACHE_KEY = "model-catalog-v1-cache";
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours

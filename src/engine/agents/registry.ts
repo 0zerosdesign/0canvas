@@ -63,6 +63,15 @@ export interface AgentManifestEntry {
   authProbe: AuthProbe;
   /** Command the UI's "Sign in" button runs in Terminal. */
   loginCommand: { binary: string; args: string[] };
+  /** Minimum `<cliBinary> --version` we've tested our translator
+   *  against. Below this, the UI surfaces "supported versions: X+"
+   *  so the user doesn't chase ghost parse errors. Omitted = no
+   *  floor (early-adopter territory, best-effort parse). */
+  minCliVersion?: string;
+  /** Maximum version we've pinned to. Usually omitted — we only set
+   *  this when a vendor ships a breaking stream-json schema change
+   *  that we know breaks our translator, while we work on a fork. */
+  maxCliVersion?: string;
   /** Adapter factory. Called lazily on first use. */
   createAdapter: (ctx: AgentAdapterContext) => AgentAdapter;
 }
@@ -119,6 +128,11 @@ export const AGENT_MANIFEST: AgentManifestEntry[] = [
       ],
     },
     loginCommand: { binary: "claude", args: ["/login"] },
+    // Stream-json stabilised around 1.0.0; our translator captures
+    // usage + session-id from the `result` event shipped in that
+    // release. Below that, streaming works but usage accounting is
+    // silently zero.
+    minCliVersion: "1.0.0",
     createAdapter: (ctx) => createClaudeAdapter(ctx),
   },
   {
@@ -135,6 +149,9 @@ export const AGENT_MANIFEST: AgentManifestEntry[] = [
       paths: ["~/.codex/auth.json"],
     },
     loginCommand: { binary: "codex", args: ["login"] },
+    // `exec resume` landed in 0.8.0; before that `exec --json` shipped
+    // but without a resumable thread id in the result event.
+    minCliVersion: "0.8.0",
     createAdapter: (ctx) => createCodexAdapter(ctx),
   },
   {
@@ -247,21 +264,47 @@ export function findAgent(id: string): AgentManifestEntry | undefined {
  *  Typed as `EnrichedRegistryAgent` so it drops cleanly into the
  *  existing wire message; browser-side `BridgeRegistryAgent` is
  *  structurally compatible. */
+/** Per-agent version compatibility summary the gateway fans out to
+ *  the wire. The caller (AgentGateway.listAgents) runs the probes
+ *  concurrently so we don't pay N × 2s of serialised `--version` calls. */
+export interface AgentVersionInfo {
+  installedVersion?: string;
+  versionCompatible?: boolean;
+}
+
 export function toBridgeAgents(
   installedBinaries: Set<string>,
+  authenticatedAgentIds?: Set<string>,
+  versionInfoByAgentId?: Map<string, AgentVersionInfo>,
 ): EnrichedRegistryAgent[] {
   return AGENT_MANIFEST.map((m) => {
     const installed = installedBinaries.has(m.cliBinary);
+    const vinfo = versionInfoByAgentId?.get(m.id);
     return {
       id: m.id,
       name: m.name,
-      version: "",
+      // `version` historically held the registry-declared version; we
+      // now always pass the CLI's actually-installed version when we
+      // have it. Empty string = not probed / not installed.
+      version: vinfo?.installedVersion ?? "",
       description: m.description,
       icon: m.icon,
       distribution: {}, // no npx/uvx/binary registry — user-installed
       installed,
       launchKind: installed ? "binary" : "unavailable",
       authBinary: m.cliBinary,
+      // Surface install hints to the UI so the "no CLI detected" state
+      // can tell the user exactly what to run. Cheap — a few strings
+      // on every AGENT_AGENTS_LIST broadcast.
+      installHint: m.installHint,
+      // Engine-resolved auth state. Undefined when the caller didn't
+      // supply a probe set (older gateway path); the legacy
+      // `ai_cli_is_authenticated` IPC is the fallback in that case.
+      authenticated: authenticatedAgentIds?.has(m.id),
+      installedVersion: vinfo?.installedVersion,
+      versionCompatible: vinfo?.versionCompatible,
+      minCliVersion: m.minCliVersion,
+      maxCliVersion: m.maxCliVersion,
     } satisfies EnrichedRegistryAgent;
   });
 }

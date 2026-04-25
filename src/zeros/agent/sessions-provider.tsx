@@ -64,6 +64,19 @@ import {
 
 const MAX_STDERR_LINES = 200;
 
+/** Renderer-side cap on per-chat message history. The engine streams
+ *  every tool-call delta as a separate notification; a long session
+ *  with many edits can produce tens of thousands of entries. We keep
+ *  the most recent N so the renderer process doesn't grow without
+ *  bound. The cap is a memory safety net — visible chat scrollback
+ *  in practice never exceeds a few hundred turns. */
+const MAX_MESSAGES_PER_CHAT = 1000;
+
+function capMessages(messages: AgentMessage[]): AgentMessage[] {
+  if (messages.length <= MAX_MESSAGES_PER_CHAT) return messages;
+  return messages.slice(-MAX_MESSAGES_PER_CHAT);
+}
+
 /** User-visible ceiling for session creation. Single attempt — if it
  *  fails we surface the classified failure rather than loop. 10s gives
  *  Claude Agent and Codex enough room for their cold newSession RPC
@@ -133,6 +146,13 @@ interface StartForChatOptions extends StartSessionOptions {
 
 interface SessionsCtx {
   sessions: Record<string, AgentSessionState>;
+
+  /** Read the LATEST session state for a chat — bypasses the React
+   *  closure capture problem. After `await ensureSession`, the ctx
+   *  object held in scope is stale; reading `sessions[chatId]` shows
+   *  pre-await state. Callers that gate on session status across an
+   *  async boundary must use this getter instead. */
+  getSession(chatId: string): AgentSessionState | undefined;
 
   /** Ask for the registry. */
   listAgents(force?: boolean): Promise<BridgeRegistryAgent[]>;
@@ -322,7 +342,7 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
           ...prev,
           [chatId]: {
             ...slot,
-            messages: applyUpdate(slot.messages, msg.notification),
+            messages: capMessages(applyUpdate(slot.messages, msg.notification)),
           },
         };
       });
@@ -601,9 +621,25 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
   const sendPrompt = useCallback<SessionsCtx["sendPrompt"]>(
     async (chatId, text, displayText, attachments) => {
       if (!bridge) return;
-      const current = sessionsRef.current[chatId];
-      if (!current || !current.agentId || !current.sessionId) return;
+      let current = sessionsRef.current[chatId];
+      if (!current || !current.agentId) return;
       if (current.status === "streaming") return;
+      // If the session bounced to warming/reconnecting (engine
+      // respawn, agent crashed mid-turn) await one rebuild before
+      // dropping the prompt. Previously we'd silently return when
+      // sessionId was null, so the user's send button click did
+      // nothing. Now we surface a real failure status if the rebuild
+      // can't recover.
+      if (!current.sessionId && ensureSessionRef.current) {
+        try {
+          await ensureSessionRef.current(chatId, current.agentId);
+        } catch {
+          /* ensureSession patches the slot with the failure */
+        }
+        current = sessionsRef.current[chatId];
+        if (!current || !current.sessionId) return;
+      }
+      if (!current.sessionId) return;
 
       const userMessage: AgentTextMessage = {
         id: `user-${Date.now()}`,
@@ -620,7 +656,7 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
       patch(chatId, {
         status: "streaming",
         error: null,
-        messages: [...current.messages, userMessage],
+        messages: capMessages([...current.messages, userMessage]),
       });
 
       // Prompt flow:
@@ -660,7 +696,7 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
           status: "streaming",
           error: null,
           failure: null,
-          messages: [...rebuilt.messages, userMessage],
+          messages: capMessages([...rebuilt.messages, userMessage]),
         });
         return runPrompt(rebuilt.sessionId);
       };
@@ -902,9 +938,15 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
     [bridge, patch],
   );
 
+  const getSession = useCallback<SessionsCtx["getSession"]>(
+    (chatId) => sessionsRef.current[chatId],
+    [],
+  );
+
   const value = useMemo<SessionsCtx>(
     () => ({
       sessions,
+      getSession,
       listAgents,
       initAgent,
       ensureSession,
@@ -919,6 +961,7 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
     }),
     [
       sessions,
+      getSession,
       listAgents,
       initAgent,
       ensureSession,

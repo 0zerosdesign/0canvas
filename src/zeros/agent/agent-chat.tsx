@@ -388,20 +388,33 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
   >([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Send is only allowed when the session is fully `ready`. No
-  // queueing during warming/reconnecting — the textarea itself is
-  // disabled in those states so this is belt-and-suspenders.
+  // Send is enabled the moment there's content. Native runtime: the
+  // session reaches `ready` quickly enough that gating the button is
+  // user-hostile. We only block on `pendingPermission` (a modal flow)
+  // and `streaming` (the agent is still mid-turn).
   const canSend =
-    session.status === "ready" &&
+    session.status !== "streaming" &&
     !session.pendingPermission &&
     (input.trim().length > 0 || attachments.length > 0);
 
-  const handleSend = (override?: string) => {
+  const handleSend = async (override?: string) => {
     const rawText = override ?? input;
     const displayText = rawText.trim();
     if (session.pendingPermission) return;
     if (displayText.length === 0 && attachments.length === 0) return;
-    if (session.status !== "ready") return;
+    // If the session bounced to warming / reconnecting, kick a fresh
+    // ensureSession and wait for it before sending. Bails on terminal
+    // statuses (failed / auth-required) — those need user action.
+    if (session.status !== "ready") {
+      if (session.status === "failed" || session.status === "auth-required") return;
+      const targetAgentId = session.agentId ?? chatThread?.agentId;
+      if (!targetAgentId) return;
+      try {
+        await session.startSession(targetAgentId);
+      } catch {
+        return;
+      }
+    }
     const wireText = expandMentionsInText(displayText, workspaceState);
     const extraBlocks = attachments.map((a) => ({
       type: "image" as const,
@@ -756,17 +769,10 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
             onClick={handleCaretSync}
             onSelect={handleCaretSync}
             rows={1}
-            disabled={
-              session.status !== "ready" && session.status !== "streaming"
-            }
             placeholder={
-              session.status === "ready"
-                ? 'Type your message… "/" for commands, "@" for files'
-                : session.status === "streaming"
+              session.status === "streaming"
                 ? "Agent is responding…"
-                : /* warming / reconnecting / auth-required / failed —
-                     the overlay owns the visible state. Keep placeholder
-                     empty so nothing overlaps. */ ""
+                : 'Type your message… "/" for commands, "@" for files'
             }
             className="oc-acp-composer-input"
           />

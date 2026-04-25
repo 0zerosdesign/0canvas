@@ -55,6 +55,13 @@ export function spawnStreamJson(opts: SpawnedStreamOptions): SpawnedStream {
   };
 
   const child = spawn(opts.command, opts.args, spawnOpts);
+  // Close stdin immediately. The prompt is always passed via argv for
+  // these CLIs — they only read stdin when piped, and at least Codex
+  // (`codex exec … --json`) hangs forever waiting for EOF if stdin
+  // stays open, even after emitting `turn.completed`. Claude has a 3s
+  // timeout but pays the latency on every turn. Closing stdin once,
+  // here, fixes both for free.
+  child.stdin?.end();
   child.stdout?.setEncoding("utf-8");
   child.stderr?.setEncoding("utf-8");
 
@@ -155,20 +162,34 @@ export function classifyExit(args: {
     };
   }
 
-  // Exit 0/null during initialize with no other signal = almost always auth.
-  if (stage === "initialize" && (code === 0 || code === null)) {
-    return {
-      kind: "auth-required",
-      message: "CLI exited cleanly during initialize — likely unauthenticated",
-      stage,
-      agentId,
-      exit: { code, signal: signal ? String(signal) : null, stderrTail },
-    };
-  }
+  // Previously: a stage=="initialize" branch mapped clean exits to
+  // auth-required. That branch only made sense for the ACP path,
+  // which spawned a subprocess at initialize() time. The native
+  // adapters synthesise InitializeResponse without touching the
+  // subprocess (see each adapter's initialize()), so this classifier
+  // never fires with stage="initialize" anymore. Dropped to avoid
+  // misleading callers who read the code.
+
+  // Pull the most informative line from stderr to use as the user-
+  // facing message. The bare "code=N signal=null" form was useless —
+  // users had no signal to act on (e.g. Cursor's free-plan model
+  // gate prints its real error to stderr only). We pick the last
+  // non-empty stderr line, which is usually the agent's own summary.
+  const lastStderrLine = stderrTail
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .pop();
+  const friendly =
+    lastStderrLine && lastStderrLine.length > 0
+      ? lastStderrLine.length > 240
+        ? lastStderrLine.slice(0, 237) + "…"
+        : lastStderrLine
+      : `CLI exited with code=${code} signal=${signal ?? "null"}`;
 
   return {
     kind: "subprocess-exited",
-    message: `CLI exited with code=${code} signal=${signal ?? "null"}`,
+    message: friendly,
     stage,
     agentId,
     exit: { code, signal: signal ? String(signal) : null, stderrTail },
@@ -193,6 +214,28 @@ export function failureFromError(
   }
   return { kind: "protocol-error", message, stage, agentId };
 }
+
+// ── Auth method advertisement ────────────────────────────
+//
+// In the ACP world, agents advertised their own auth methods via
+// InitializeResponse.authMethods; the UI's sign-in modal rendered
+// those verbatim. The native adapters don't speak a protocol, so
+// they synthesise InitializeResponse. An empty `authMethods: []`
+// here made the sign-in modal render an empty picker — users
+// could never complete sign-in.
+//
+// Every native adapter's real sign-in path is the same: open
+// Terminal.app and run `<cli> login`. So we advertise a single
+// "terminal" method across the board. The UI routes this method
+// id through `runCliLogin` (electron/ipc/commands/ai-cli.ts) which
+// owns the osascript call. Agents that need a different flow
+// can opt out by passing their own authMethods array.
+
+export const TERMINAL_AUTH_METHOD = {
+  id: "terminal",
+  name: "Sign in via Terminal",
+  description: "Open Terminal.app and complete the CLI's own login flow.",
+} as const;
 
 // ── Small utilities ──────────────────────────────────────
 

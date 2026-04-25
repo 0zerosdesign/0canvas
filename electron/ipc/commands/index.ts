@@ -35,12 +35,9 @@ import { skillsList } from "./skills";
 import { discoverLocalhostServices } from "./localhost";
 import { ptyKill, ptyResize, ptySpawn, ptyWrite } from "./pty";
 import {
-  aiCliCancel,
   aiCliCheck,
   aiCliIsAuthenticated,
   aiCliRunLogin,
-  claudeSpawn,
-  codexSpawn,
 } from "./ai-cli";
 import { notifySend } from "./notifications";
 import {
@@ -145,14 +142,21 @@ export function registerAllCommands(): void {
   setCommand("pty_resize", ptyResize);
   setCommand("pty_kill", ptyKill);
 
-  // Phase 7 — AI CLI subprocess spawning (claude / codex) with NDJSON
-  // streaming out to `ai-stream-event` events.
+  // Phase 7 — AI CLI helpers (install-probe + auth-probe + login).
+  //
+  // The engine's AgentGateway owns the actual subprocess lifecycle
+  // now, so the legacy claude_spawn / codex_spawn / ai_cli_cancel
+  // handlers are gone (pre-4432b40 they streamed NDJSON directly
+  // to the renderer; post-migration the same path runs through the
+  // WebSocket + AgentAdapter chain). The three below are kept
+  // because Settings still talks to them directly:
+  //   - ai_cli_check: filesystem probe for "is <binary> on PATH?"
+  //   - ai_cli_is_authenticated: fallback auth probe (the wire-side
+  //     `authenticated` field on BridgeRegistryAgent is the primary).
+  //   - ai_cli_run_login: osascript → Terminal.app → `<bin> login`.
   setCommand("ai_cli_check", aiCliCheck);
   setCommand("ai_cli_is_authenticated", aiCliIsAuthenticated);
-  setCommand("ai_cli_cancel", aiCliCancel);
   setCommand("ai_cli_run_login", aiCliRunLogin);
-  setCommand("claude_spawn", claudeSpawn);
-  setCommand("codex_spawn", codexSpawn);
 
   // Phase 8 — notifications, updater, process
   setCommand("notify_send", notifySend);
