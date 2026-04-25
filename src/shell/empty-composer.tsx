@@ -43,6 +43,7 @@ import {
   type ChatThread,
 } from "../zeros/store/store";
 import { useAgentSessions } from "../zeros/agent/sessions-provider";
+import { useBridgeStatus } from "../zeros/bridge/use-bridge";
 import { getDefaultAgentId } from "../zeros/panels/settings-page";
 import type { InitializeResponse } from "@agentclientprotocol/sdk";
 import type { BridgeRegistryAgent } from "../zeros/bridge/messages";
@@ -61,6 +62,66 @@ import {
   type RecentProject,
 } from "../native/recent-projects";
 import { openProjectFolder, openProjectFolderPath } from "../native/native";
+import { getSetting, setSetting } from "../native/settings";
+
+/** Sticky last-used picker state. The empty composer seeds itself
+ *  from this on mount so "+ New Agent" reliably picks up where the
+ *  user's previous chat left off — same agent, model, effort,
+ *  permission mode, and (when no per-workspace override is set)
+ *  folder. Updated:
+ *    - whenever the user submits a new chat from this composer
+ *    - whenever the active chat changes (a small effect in app-shell
+ *      mirrors the active chat's settings here, so opening a chat
+ *      from the sidebar also refreshes the next-time defaults)
+ */
+const STICKY_DEFAULTS_KEY = "new-agent-sticky-defaults";
+
+export interface StickyDefaults {
+  agentId: string | null;
+  folder: string | null;
+  model: string | null;
+  effort: ChatEffort;
+  permissionMode: ChatPermissionMode;
+}
+
+const STICKY_FALLBACK: StickyDefaults = {
+  agentId: null,
+  folder: null,
+  model: null,
+  effort: "medium",
+  permissionMode: "ask",
+};
+
+export function loadStickyDefaults(): StickyDefaults {
+  const raw = getSetting<Partial<StickyDefaults> | null>(
+    STICKY_DEFAULTS_KEY,
+    null,
+  );
+  if (!raw || typeof raw !== "object") return STICKY_FALLBACK;
+  return {
+    agentId: typeof raw.agentId === "string" ? raw.agentId : null,
+    folder: typeof raw.folder === "string" ? raw.folder : null,
+    model: typeof raw.model === "string" ? raw.model : null,
+    effort:
+      raw.effort === "low" ||
+      raw.effort === "medium" ||
+      raw.effort === "high" ||
+      raw.effort === "xhigh"
+        ? raw.effort
+        : "medium",
+    permissionMode:
+      raw.permissionMode === "full" ||
+      raw.permissionMode === "auto-edit" ||
+      raw.permissionMode === "ask" ||
+      raw.permissionMode === "plan-only"
+        ? raw.permissionMode
+        : "ask",
+  };
+}
+
+export function saveStickyDefaults(d: StickyDefaults): void {
+  setSetting(STICKY_DEFAULTS_KEY, d);
+}
 
 function folderBasename(path: string): string {
   if (!path) return "No project";
@@ -251,6 +312,12 @@ export function EmptyComposer() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Read once on mount. The sticky defaults reflect either the user's
+  // most recent chat (mirrored from active-chat changes) or their
+  // most recent submit from this composer.
+  const stickyRef = useRef<StickyDefaults>(loadStickyDefaults());
+  const sticky = stickyRef.current;
+
   const [input, setInput] = useState("");
   const [folder, setFolder] = useState<string>("");
   const [branch, setBranch] = useState<string | null>(null);
@@ -266,10 +333,10 @@ export function EmptyComposer() {
   const [allAgents, setAllAgents] = useState<BridgeRegistryAgent[]>([]);
   const [registryLoaded, setRegistryLoaded] = useState(false);
   const [initialize, setInitialize] = useState<InitializeResponse | null>(null);
-  const [model, setModel] = useState<string | null>(null);
-  const [effort, setEffort] = useState<ChatEffort>("medium");
+  const [model, setModel] = useState<string | null>(sticky.model);
+  const [effort, setEffort] = useState<ChatEffort>(sticky.effort);
   const [permissionMode, setPermissionMode] =
-    useState<ChatPermissionMode>("ask");
+    useState<ChatPermissionMode>(sticky.permissionMode);
   const [submitting, setSubmitting] = useState(false);
   const [noAgentHint, setNoAgentHint] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -293,16 +360,19 @@ export function EmptyComposer() {
   // win. The new flow is racy-by-construction-impossible.
   const sessionStatus: "idle" | "warming" = "idle";
 
-  // Resolve folder + branch for the meta row. The store's
-  // `newAgentFolder` override wins — it's set when the user clicks
-  // "+" on a secondary workspace in Column 1, and scopes this
-  // composer (and the chat it creates) to that folder instead of
-  // the engine root. Empty / null falls back to the engine root.
+  // Resolve folder + branch for the meta row.
+  // Priority order:
+  //   1. state.newAgentFolder       — explicit "+ on workspace" scope
+  //   2. sticky.folder              — last-used folder from the user's
+  //                                    previous chat / submit
+  //   3. engine root                — first-run default
+  // Sticky comes second because the workspace-section "+" is the user
+  // saying "no, this folder right here" — it should override sticky.
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       const scoped = state.newAgentFolder;
-      const f = scoped ?? (await resolveCurrentFolder());
+      const f = scoped ?? sticky.folder ?? (await resolveCurrentFolder());
       if (cancelled) return;
       setFolder(f);
       const b = await resolveBranch(f || undefined);
@@ -314,7 +384,7 @@ export function EmptyComposer() {
     return () => {
       cancelled = true;
     };
-  }, [state.newAgentFolder]);
+  }, [state.newAgentFolder, sticky.folder]);
 
   // Resolve the agent list + default agent on mount. Uninstalled
   // agents are retained in state so the "no CLI detected" empty
@@ -325,6 +395,22 @@ export function EmptyComposer() {
   const refreshAgents = useCallback(() => {
     setRegistryVersion((v) => v + 1);
   }, []);
+
+  // Auto-refresh the registry when the bridge reconnects. Without
+  // this the empty state can get stuck showing "No coding-agent CLI
+  // detected" after a project switch / engine respawn — listAgents
+  // fired against the disconnected bridge, returned empty (or
+  // queue-full-rejected), and there's no automatic re-probe. The
+  // registryVersion bump piggybacks on the existing effect.
+  const bridgeStatus = useBridgeStatus();
+  const lastBridgeStatusRef = useRef(bridgeStatus);
+  useEffect(() => {
+    const prev = lastBridgeStatusRef.current;
+    lastBridgeStatusRef.current = bridgeStatus;
+    if (prev !== "connected" && bridgeStatus === "connected") {
+      refreshAgents();
+    }
+  }, [bridgeStatus, refreshAgents]);
   // Depend on the stable function ref, NOT the whole `sessions` ctx —
   // ctx is a fresh object on every session-state update, so the old
   // `[sessions, registryVersion]` dep made this effect re-fire on every
@@ -353,7 +439,12 @@ export function EmptyComposer() {
             a.installed === true &&
             (!a.authBinary || a.authenticated === true),
         );
+        // Priority: sticky (the user's last-used agent) > configured
+        // global default > first runnable. Sticky wins because the
+        // user's "what I just used" is a stronger personal signal
+        // than a global default.
         const chosen =
+          (sticky.agentId && runnable.find((a) => a.id === sticky.agentId)) ||
           (configuredId && runnable.find((a) => a.id === configuredId)) ||
           runnable[0] ||
           null;
@@ -432,6 +523,15 @@ export function EmptyComposer() {
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
+    // Stamp the picker state so the next "+ New Agent" defaults to
+    // exactly what the user just used here.
+    saveStickyDefaults({
+      agentId: agent.id,
+      folder: folder || null,
+      model,
+      effort,
+      permissionMode,
+    });
     dispatch({ type: "ADD_CHAT", chat });
     dispatch({ type: "SET_ACTIVE_CHAT", id: newId });
     dispatch({

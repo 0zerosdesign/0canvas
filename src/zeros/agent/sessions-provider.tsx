@@ -212,6 +212,14 @@ interface SessionsCtx {
    *  green-dot indicator on agent pills. Best-effort — we add on a
    *  successful initAgent / newSession and remove on AGENT_AGENT_EXITED. */
   warmAgentIds: ReadonlySet<string>;
+
+  /** Drop every in-memory session and warm-agent flag without
+   *  attempting RPC teardown. Used by the in-place project swap: when
+   *  Electron respawns the engine on a fresh port, every sessionId we
+   *  hold belongs to a dead process — the new engine has its own
+   *  subprocess pool. The persistent chat.sessionId on disk lets us
+   *  re-load on the user's next chat-open. */
+  disposeAll(): void;
 }
 
 const Ctx = createContext<SessionsCtx | null>(null);
@@ -272,6 +280,17 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
   // declared below), so a ref lets the AGENT_AGENT_EXITED handler trigger
   // a silent respawn without re-arranging the component.
   const ensureSessionRef = useRef<SessionsCtx["ensureSession"] | null>(null);
+
+  // Per-chat in-flight ensureSession promises. Without this lock, a
+  // user clicking Send while the initial session creation is still
+  // "warming" fires a second AGENT_NEW_SESSION — both succeed, the
+  // engine returns two different sessionIds, the second overwrites
+  // the first, and any stream events emitted under the orphaned
+  // sessionId can't be routed back through sessionToChatRef. The
+  // user's bubble shows but the response never lands. Concurrent
+  // callers now await the in-flight call instead of starting a
+  // duplicate. Force=true bypasses (model swap intends a rebuild).
+  const ensureInFlightRef = useRef(new Map<string, Promise<void>>());
 
   // ── Bridge listeners (single set for all chats) ──────────
 
@@ -508,13 +527,24 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
       ) {
         return;
       }
-      patch(chatId, {
-        ...BLANK,
-        agentId,
-        agentName: options?.agentName ?? agentId,
-        status: "warming",
-        messages: existing?.messages ?? [],
-      });
+      // De-dup concurrent calls. A user clicking Send while the
+      // initial creation is mid-warming would otherwise kick off a
+      // parallel newSession, orphaning the first sessionId. Wait on
+      // the existing promise instead. Force still bypasses — the
+      // caller wants a fresh subprocess (model swap).
+      if (!options?.force) {
+        const inflight = ensureInFlightRef.current.get(chatId);
+        if (inflight) return inflight;
+      }
+
+      const work = (async () => {
+        patch(chatId, {
+          ...BLANK,
+          agentId,
+          agentName: options?.agentName ?? agentId,
+          status: "warming",
+          messages: existing?.messages ?? [],
+        });
 
       // Retry budget: 2 attempts × 2 s = 4 s ceiling from the user's
       // perspective. The engine's always-warm pool is doing heavier
@@ -608,6 +638,14 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
         error: failure.message,
         failure,
       });
+      })();
+
+      ensureInFlightRef.current.set(chatId, work);
+      try {
+        await work;
+      } finally {
+        ensureInFlightRef.current.delete(chatId);
+      }
     },
     [bridge, patch, markWarm],
   );
@@ -943,6 +981,12 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
     [],
   );
 
+  const disposeAll = useCallback<SessionsCtx["disposeAll"]>(() => {
+    setSessions({});
+    sessionToChatRef.current = {};
+    setWarmAgentIds(new Set());
+  }, []);
+
   const value = useMemo<SessionsCtx>(
     () => ({
       sessions,
@@ -958,6 +1002,7 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
       listSessionsFor,
       loadIntoChat,
       warmAgentIds,
+      disposeAll,
     }),
     [
       sessions,
@@ -973,6 +1018,7 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
       listSessionsFor,
       loadIntoChat,
       warmAgentIds,
+      disposeAll,
     ],
   );
 

@@ -707,6 +707,21 @@
   line-height: var(--leading-snug);
 }
 
+/* Archived disclosure — only renders when the user opts in via
+   Settings → General → "Show archived chats in sidebar". Count chip
+   sits alongside the header, plus a subtle de-emphasis on archived
+   rows so they read as quieter than live chats. */
+.oc-column-1__project-count {
+  font-size: var(--text-10);
+  color: var(--text-placeholder);
+  margin-left: auto;
+  padding: 0 var(--space-2);
+}
+.oc-column-1__chat.is-archived .oc-column-1__chat-title,
+.oc-column-1__chat.is-archived .oc-column-1__chat-time {
+  color: var(--text-placeholder);
+}
+
 /* Right-click context menu for workspace sections. Fixed-position,
    anchored at the pointer (set via inline style). Closes on outside
    click / Escape / item selection — handlers live in column1-nav. */
@@ -745,6 +760,11 @@
 .oc-column-1__context-menu-item.is-danger:hover {
   background: var(--tint-critical-soft);
   color: var(--text-critical);
+}
+.oc-column-1__context-menu-sep {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: var(--space-1) 0;
 }
 
 /* Max ~10 rows then scroll — keeps long chat lists from pushing the
@@ -3401,7 +3421,7 @@
 
 
 /* ============================================================
- * Cursor 3 Chrome — TitleBar, ActivityBar, Sidebar shim, StatusBar
+ * Cursor 3 Chrome — TitleBar, Sidebar shim, StatusBar
  * ============================================================
  * Added in the design-tokens refactor. These sit OUTSIDE the
  * existing .oc-app / .oc-column-* grid — the shell wraps them.
@@ -3485,65 +3505,6 @@
   gap: var(--space-2);
   color: var(--text-muted);
   font-size: var(--text-11);
-}
-
-/* ── ActivityBar ──────────────────────────────────────────── */
-.oc-activitybar {
-  width: var(--activitybar-w);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  background: var(--surface-floor);
-  border-right: 1px solid var(--border-subtle);
-  z-index: var(--z-chrome);
-  flex-shrink: 0;
-}
-.oc-activitybar__list {
-  list-style: none;
-  margin: 0;
-  padding: var(--space-3) 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-1);
-}
-.oc-activitybar__list--footer { padding-bottom: var(--space-4); }
-
-.oc-activitybar__btn {
-  width: 36px;
-  height: 36px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  background: transparent;
-  color: var(--text-muted);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: background var(--dur-fast), color var(--dur-fast);
-  position: relative;
-}
-.oc-activitybar__btn:hover {
-  background: var(--surface-2);
-  color: var(--text-primary);
-}
-.oc-activitybar__btn:focus-visible {
-  outline: 2px solid var(--ring-focus);
-  outline-offset: 1px;
-}
-.oc-activitybar__btn[data-active="true"] {
-  color: var(--text-primary);
-  background: var(--surface-3);
-}
-.oc-activitybar__btn[data-active="true"]::before {
-  content: "";
-  position: absolute;
-  left: -6px;
-  top: 8px;
-  bottom: 8px;
-  width: 2px;
-  background: var(--accent);
-  border-radius: var(--radius-pill);
 }
 
 /* ── StatusBar ────────────────────────────────────────────── */

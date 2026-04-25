@@ -32,35 +32,60 @@ const RECONNECT_LADDER = [1_000, 2_000, 4_000, 8_000, 15_000];
 const RECONNECT_GRACE_MS = 7_000;
 
 /** Cap on the number of requests we'll queue during a disconnect so
+ *  a runaway caller can't pin unbounded memory. The previous 32 was
+ *  too tight for realistic multi-chat use — every project switch
+ *  triggers a brief disconnect, every chat that's mid-mount fires
+ *  AGENT_LOAD_SESSION, and listAgents from the empty composer adds
+ *  one more. With 7+ live chats and a 7s reconnect grace window,
+ *  hitting the cap was easy and surfaced as "queue full" timeouts on
+ *  random chats. 256 covers the realistic upper bound (every chat
+ *  the user has open + a handful of registry probes) without burning
+ *  meaningful memory. The deadline check still expires entries so a
+ *  stuck reconnect doesn't grow the queue forever. */
+/** Cap on the number of requests we'll queue during a disconnect so
  *  a wedged engine can't balloon memory. */
-const MAX_QUEUED_REQUESTS = 32;
+const MAX_QUEUED_REQUESTS = 256;
 
 /**
- * Resolve the engine port exactly once per page load. The result is
- * cached in-module so the reconnect timer doesn't re-hit native IPC on
- * every retry. Safe to call in both native-shell and plain-browser modes.
+ * Resolve the engine port. Cached at module level so the reconnect
+ * timer doesn't hit native IPC on every retry. The cache can be
+ * invalidated via `invalidateEnginePort()` — used by the in-place
+ * project swap, where Electron respawns the engine on a fresh port
+ * and we need to drop the old value before the next connect().
  */
-const enginePortPromise: Promise<number> = (async () => {
-  if (typeof window === "undefined") return DEFAULT_ENGINE_PORT;
+let cachedPortPromise: Promise<number> | null = null;
+function resolveEnginePort(): Promise<number> {
+  if (cachedPortPromise) return cachedPortPromise;
+  cachedPortPromise = (async () => {
+    if (typeof window === "undefined") return DEFAULT_ENGINE_PORT;
 
-  const injected = (window as unknown as { __ZEROS_PORT__?: number })
-    .__ZEROS_PORT__;
-  if (typeof injected === "number" && Number.isFinite(injected) && injected > 0) {
-    return injected;
-  }
-
-  try {
-    const { isNativeRuntime, nativeInvoke } = await import("../../native/runtime");
-    if (isNativeRuntime()) {
-      const port = await nativeInvoke<number | null>("get_engine_port");
-      if (typeof port === "number" && port > 0) return port;
+    const injected = (window as unknown as { __ZEROS_PORT__?: number })
+      .__ZEROS_PORT__;
+    if (typeof injected === "number" && Number.isFinite(injected) && injected > 0) {
+      return injected;
     }
-  } catch (err) {
-    console.warn("[Zeros] get_engine_port failed:", err);
-  }
 
-  return DEFAULT_ENGINE_PORT;
-})();
+    try {
+      const { isNativeRuntime, nativeInvoke } = await import("../../native/runtime");
+      if (isNativeRuntime()) {
+        const port = await nativeInvoke<number | null>("get_engine_port");
+        if (typeof port === "number" && port > 0) return port;
+      }
+    } catch (err) {
+      console.warn("[Zeros] get_engine_port failed:", err);
+    }
+
+    return DEFAULT_ENGINE_PORT;
+  })();
+  return cachedPortPromise;
+}
+
+/** Drop the cached engine port. Call when the engine respawns on a
+ *  new port (in-place project swap) — the next connect() will
+ *  re-resolve via native IPC. */
+export function invalidateEnginePort(): void {
+  cachedPortPromise = null;
+}
 
 export type ConnectionStatus = "disconnected" | "connecting" | "connected";
 
@@ -120,7 +145,7 @@ export class CanvasBridgeClient {
     // chunk multiplied by the orphan count.
     if (this.pendingWs) return;
 
-    const port = await enginePortPromise;
+    const port = await resolveEnginePort();
     if (this._disposed) return;
     // Re-check after the async hop — another connect() could have won
     // the race and we'd duplicate.
@@ -305,6 +330,49 @@ export class CanvasBridgeClient {
     return () => {
       this.statusListeners.delete(cb);
     };
+  }
+
+  /** Drop the current connection and reconnect, re-resolving the
+   *  engine port. Used by the in-place project swap when Electron
+   *  respawns the engine on a fresh port. The client object survives
+   *  (consumer hooks keep their ref) — only the underlying socket and
+   *  in-flight state are reset. Pending RPCs and queued requests are
+   *  rejected immediately so callers don't wait on a server that no
+   *  longer knows about them. */
+  async forceReconnect(): Promise<void> {
+    if (this._disposed) return;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    this.reconnectAttempts = 0;
+    // Reject anything in flight — those request ids are bound to a
+    // server process that's about to die. Soft-fail so upstream retry
+    // loops can decide to resend; we don't requeue silently because
+    // the new engine is a different process entirely.
+    for (const [, pending] of this.pendingRequests) {
+      window.clearTimeout(pending.timer);
+      pending.reject(new Error("Engine swapping — request aborted"));
+    }
+    this.pendingRequests.clear();
+    for (const q of this.queuedRequests) {
+      q.reject(new Error("Engine swapping — request aborted"));
+    }
+    this.queuedRequests = [];
+    // Close any live or pending socket. Closing flips us to
+    // "disconnected" via onclose, but we set it explicitly here to
+    // cover the (rare) case where neither socket fires the event.
+    try { this.ws?.close(); } catch { /* already dead */ }
+    try { this.pendingWs?.close(); } catch { /* already dead */ }
+    this.ws = null;
+    this.pendingWs = null;
+    this._engineConnected = false;
+    this.setStatus("disconnected");
+    invalidateEnginePort();
+    // Kick the reconnect immediately rather than going through the
+    // backoff ladder — the user just clicked "Open Workspace" and is
+    // actively waiting for the new engine.
+    await this.connect();
   }
 
   dispose(): void {

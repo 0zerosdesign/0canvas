@@ -241,3 +241,4 @@ Current limitation:
 The best way to explain this feature to users:
 
 > Zeros lets you bring your own AI coding subscriptions. If you already use Claude Code, Codex, Cursor Agent, Gemini, or another supported CLI, Zeros can run it locally against your project and show the conversation in a designer-friendly workspace.
+

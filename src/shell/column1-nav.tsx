@@ -31,6 +31,8 @@ import {
   GitBranch,
   Loader2,
   AlertCircle,
+  Archive,
+  ArchiveRestore,
   MoreHorizontal,
   Pin,
   PinOff,
@@ -70,6 +72,13 @@ const WORKSPACE_SECTIONS_COLLAPSED_KEY = "column-1-workspace-sections-collapsed"
  *  new chat is created in that folder. */
 const HIDDEN_WORKSPACES_KEY = "column-1-hidden-workspaces";
 const LOCALHOST_COLLAPSED_KEY = "column-1-localhost-collapsed";
+/** Toggleable in Settings → General. When true, an "Archived" group
+ *  renders at the bottom of the per-project list with restore +
+ *  delete-forever affordances. Default: off (Cursor-style hidden UI).
+ *  Re-evaluated only on column-1 mount; the General panel unmounts
+ *  this column when open, so flipping the setting → going back to
+ *  the workspace shell is enough to pick up the change. */
+export const SHOW_ARCHIVED_CHATS_KEY = "show-archived-chats";
 
 /** How many chats to show per project before collapsing behind "More".
  *  Matches Cursor's Agents Window behavior. */
@@ -309,19 +318,18 @@ function useProfileMenu() {
 // + Esc pattern as the profile menu; different scope so opening one
 // doesn't close the other.
 function useWorkspaceMenu() {
+  const { state } = useWorkspace();
   const [open, setOpen] = useState(false);
   const [currentRoot, setCurrentRoot] = useState<string>("");
   const [recents, setRecents] = useState<RecentProject[]>([]);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  // `currentRoot` is fetched once on mount — a project swap triggers a
-  // window.location.reload via ReloadOnProjectChange, so this effect runs
-  // on every project change for free. Previously this was gated on `open`,
-  // which meant Column 1's "current workspace" grouping didn't know the
-  // active folder until the user clicked the dropdown.
+  // Re-resolve the engine root on mount and on every in-place project
+  // swap (signalled by projectGeneration bumping). Used to bootstrap
+  // the "current workspace" grouping in the sidebar.
   useEffect(() => {
     getCurrentProjectFolder().then(setCurrentRoot);
-  }, []);
+  }, [state.projectGeneration]);
 
   // Re-read the recent-projects list every time the menu opens so we
   // pick up the rememberProject() side-effect from ReloadOnProjectChange.
@@ -550,9 +558,36 @@ export function Column1Nav() {
     dispatch({ type: "SET_ACTIVE_CHAT", id });
   };
 
-  const handleDeleteChat = (e: React.MouseEvent, id: string) => {
+  // Trash icon → soft archive. Permanent delete only happens from the
+  // Trash icon archives — the row vanishes from column 1 and stays
+  // archived in state.chats. The on-disk transcript is never touched
+  // (Cursor's model: archive is hidden UI state). Restore + permanent
+  // delete are exposed only when the user opts into the Archived group
+  // via Settings → General → Show archived chats in sidebar.
+  const handleArchiveChat = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    dispatch({ type: "ARCHIVE_CHAT", id });
+  };
+  const handleUnarchiveChat = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    dispatch({ type: "UNARCHIVE_CHAT", id });
+  };
+  const handlePurgeChat = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     dispatch({ type: "DELETE_CHAT", id });
+  };
+
+  // Local state mirror of the setting so a right-click → "Hide
+  // section" can flip it off in-place without remounting column 1.
+  // Kept in sync with the General panel via getSetting on mount —
+  // settings unmounts this column while open, so we don't need a
+  // cross-surface event bus.
+  const [showArchivedSection, setShowArchivedSection] = useState<boolean>(
+    () => getSetting<boolean>(SHOW_ARCHIVED_CHATS_KEY, false),
+  );
+  const hideArchivedSection = () => {
+    setShowArchivedSection(false);
+    setSetting(SHOW_ARCHIVED_CHATS_KEY, false);
   };
 
   const handleTogglePin = (e: React.MouseEvent, id: string) => {
@@ -560,37 +595,51 @@ export function Column1Nav() {
     dispatch({ type: "TOGGLE_PIN_CHAT", id });
   };
 
-  // Pinned chats surface at the top of the sidebar in their own section,
-  // independent of project grouping. Folder groups only show non-pinned
-  // chats so a chat never appears twice in the list.
-  const pinnedChats = React.useMemo(
+  // Live (non-archived) chats power the main sidebar groupings.
+  // Pinned chats surface at the top of the sidebar in their own
+  // section, independent of project grouping. Folder groups only
+  // show non-pinned chats so a chat never appears twice in the list.
+  // Archived chats are filtered out here; they only reach the UI
+  // when the user opts into the Archived disclosure via Settings.
+  const liveChats = React.useMemo(
+    () => state.chats.filter((c) => !c.archived),
+    [state.chats],
+  );
+  const archivedChats = React.useMemo(
     () =>
       state.chats
-        .filter((c) => c.pinned)
+        .filter((c) => c.archived)
         .sort((a, b) => b.updatedAt - a.updatedAt),
     [state.chats],
   );
+  const pinnedChats = React.useMemo(
+    () =>
+      liveChats
+        .filter((c) => c.pinned)
+        .sort((a, b) => b.updatedAt - a.updatedAt),
+    [liveChats],
+  );
   const unpinnedChats = React.useMemo(
-    () => state.chats.filter((c) => !c.pinned),
-    [state.chats],
+    () => liveChats.filter((c) => !c.pinned),
+    [liveChats],
   );
   const grouped = React.useMemo(
     () => groupChatsByFolder(unpinnedChats),
     [unpinnedChats],
   );
-  // Single ordered folder list for the sidebar. Current engine root
-  // first, then the ambient "no project" bucket if present, then every
-  // other folder alphabetically by basename. The current root is
-  // *always* surfaced — even if it has no chats yet — so the user can
-  // land on the empty state and get started.
+  // Single ordered folder list for the sidebar.
+  //
+  // Visibility rule: a workspace appears in column 1 only when it has
+  // at least one live chat AND isn't on the user's hidden list. Empty
+  // workspaces never appear — not even the currently-active one. The
+  // empty composer in column 2 already shows the active workspace via
+  // its own meta pill, so column 1 is reserved for "places with chats
+  // I can return to". This keeps the sidebar from accumulating empty
+  // sections every time the user picks a new workspace.
   const folderKeys = React.useMemo(() => {
     const currentRoot = workspaceMenu.currentRoot;
-    const keys = new Set<string>(grouped.keys());
-    if (currentRoot) keys.add(currentRoot);
     const hidden = new Set(hiddenWorkspaces);
-    const filtered = Array.from(keys).filter(
-      (k) => !hidden.has(k) || k === currentRoot,
-    );
+    const filtered = Array.from(grouped.keys()).filter((k) => !hidden.has(k));
     return filtered.sort((a, b) => {
       if (a === currentRoot && b !== currentRoot) return -1;
       if (b === currentRoot && a !== currentRoot) return 1;
@@ -600,19 +649,15 @@ export function Column1Nav() {
     });
   }, [grouped, hiddenWorkspaces, workspaceMenu.currentRoot]);
 
-  // Auto-reveal: if a folder is hidden but now has chats, unhide it. A
-  // new chat in a hidden folder always wins — the user's latest action
-  // is a stronger signal than the prior "hide".
-  useEffect(() => {
-    if (hiddenWorkspaces.length === 0) return;
-    const toUnhide = hiddenWorkspaces.filter((f) => grouped.has(f));
-    if (toUnhide.length === 0) return;
-    setHiddenWorkspaces((prev) => {
-      const next = prev.filter((f) => !toUnhide.includes(f));
-      setSetting(HIDDEN_WORKSPACES_KEY, next);
-      return next;
-    });
-  }, [grouped, hiddenWorkspaces]);
+  // Hide is sticky. The previous "auto-reveal when chats exist" effect
+  // was wrong — it couldn't distinguish "chats already existed when
+  // you hid" from "chats were just created", so hiding a non-empty
+  // workspace got immediately reversed by the effect race. Re-surface
+  // is now exclusively driven by the user clicking the workspace in
+  // Open Workspace (handlePickProject / handleOpenFolder both call
+  // unhideWorkspace explicitly). Chats created in a hidden folder
+  // stay invisible until the user re-opens that workspace — a
+  // recoverable, predictable state.
 
   const filteredRecents = React.useMemo(() => {
     const q = workspaceQuery.trim().toLowerCase();
@@ -646,7 +691,7 @@ export function Column1Nav() {
     isCurrent: boolean;
     activeChatId: string | null;
     onSelectChat: (id: string) => void;
-    onDeleteChat: (e: React.MouseEvent, id: string) => void;
+    onArchiveChat: (e: React.MouseEvent, id: string) => void;
     onTogglePin: (e: React.MouseEvent, id: string) => void;
     onToggleShowAll: (folder: string) => void;
     onToggleSection: (folder: string) => void;
@@ -661,7 +706,7 @@ export function Column1Nav() {
       isCurrent,
       activeChatId,
       onSelectChat,
-      onDeleteChat,
+      onArchiveChat,
       onTogglePin,
       onToggleShowAll,
       onToggleSection,
@@ -677,16 +722,19 @@ export function Column1Nav() {
       <div
         key={folder}
         className={`oc-column-1__project ${isCurrent ? "is-current" : ""} ${isCollapsed ? "is-collapsed" : ""}`}
+        onContextMenu={(e) => {
+          // Don't intercept right-click on chat rows — they have their
+          // own per-row interactions (the row click is the only direct
+          // way to open a chat, and macOS users two-finger-tap to open
+          // a chat preview in some flows). The menu fires anywhere
+          // *outside* a row: header, empty state, padding, archived
+          // section header, etc.
+          const target = e.target as HTMLElement | null;
+          if (target?.closest(".oc-column-1__chat")) return;
+          onOpenContextMenu(folder, e);
+        }}
       >
-        <div
-          className="oc-column-1__project-header"
-          onContextMenu={(e) => {
-            // Current root can't be removed (it's the engine root). Hide
-            // is only meaningful for secondary workspaces in the list.
-            if (isCurrent) return;
-            onOpenContextMenu(folder, e);
-          }}
-        >
+        <div className="oc-column-1__project-header">
           <span
             className="oc-column-1__project-name"
             title={folder || "Not associated with a project"}
@@ -729,8 +777,11 @@ export function Column1Nav() {
                     chat={chat}
                     isActive={activeChatId === chat.id}
                     onSelect={onSelectChat}
-                    onDelete={onDeleteChat}
-                    onTogglePin={onTogglePin}
+                    mode={{
+                      kind: "active",
+                      onArchive: onArchiveChat,
+                      onTogglePin,
+                    }}
                   />
                 ))}
                 {hiddenCount > 0 && !isShowingAll && (
@@ -804,29 +855,40 @@ export function Column1Nav() {
 
   const handlePickProject = async (path: string) => {
     workspaceMenu.setOpen(false);
-    // Picking the workspace you're already in is a no-op at the
-    // engine level — skip the respawn + reload and just land on the
-    // new-agent window. The chat list for this workspace is already
-    // visible in the sidebar; the user's intent is "start fresh".
+    // Explicit pick is a stronger signal than any prior "Remove from
+    // sidebar" — if the user just asked for this workspace by name,
+    // it should reappear in the list. Same logic as the auto-reveal
+    // effect, but covers the same-project fast path below where
+    // projectGeneration doesn't bump.
+    unhideWorkspace(path);
+    // Pin the empty composer to this exact path BEFORE clearing the
+    // active chat. EmptyComposer reads `state.newAgentFolder` first
+    // when resolving its workspace pill — without this, the composer
+    // would race against `sticky.folder` (which still holds the
+    // previous workspace) and the not-yet-fired `project-changed`
+    // event that clears it. Setting the override explicitly here
+    // means the new workspace is locked in before the composer
+    // mounts, regardless of how long the engine takes to respawn.
     if (path === workspaceMenu.currentRoot) {
-      dispatch({ type: "SET_NEW_AGENT_FOLDER", folder: null });
+      // Picking the workspace you're already in is a no-op at the
+      // engine level — skip the respawn but still land on the
+      // empty composer pre-scoped to that path.
+      dispatch({ type: "SET_NEW_AGENT_FOLDER", folder: path });
       clearActiveChatBeforeSwap();
       return;
     }
     try {
-      await openProjectFolderPath(path);
-      // Engine is mid-respawn; `project-changed` fires in a moment and
-      // ReloadOnProjectChange reloads the webview. Clear the active
-      // chat *now* so the reload lands on the EmptyComposer scoped to
-      // the new workspace, not a stale chat from the previous one.
-      dispatch({ type: "SET_NEW_AGENT_FOLDER", folder: null });
+      dispatch({ type: "SET_NEW_AGENT_FOLDER", folder: path });
       clearActiveChatBeforeSwap();
+      await openProjectFolderPath(path);
     } catch (err) {
       // Path went missing — drop it from the list so the user doesn't
       // keep hitting the same ghost entry.
       console.warn("[Zeros] could not open project:", err);
       forgetProject(path);
       workspaceMenu.refresh();
+      // Roll back the pin so the now-stale path doesn't carry over.
+      dispatch({ type: "SET_NEW_AGENT_FOLDER", folder: null });
     }
   };
 
@@ -840,7 +902,12 @@ export function Column1Nav() {
       // when the user is just browsing and plans to cancel.
       const result = await openProjectFolder();
       if (result) {
-        dispatch({ type: "SET_NEW_AGENT_FOLDER", folder: null });
+        // Explicit Finder pick is a stronger signal than any prior
+        // hide — re-surface the workspace if the user had hidden it.
+        unhideWorkspace(result.root);
+        // Pin the empty composer to the new path so it doesn't race
+        // against stale sticky.folder before project-changed clears it.
+        dispatch({ type: "SET_NEW_AGENT_FOLDER", folder: result.root });
         clearActiveChatBeforeSwap();
       }
     } catch (err) {
@@ -1047,8 +1114,11 @@ export function Column1Nav() {
                           chat={chat}
                           isActive={state.activeChatId === chat.id}
                           onSelect={handleSelectChat}
-                          onDelete={handleDeleteChat}
-                          onTogglePin={handleTogglePin}
+                          mode={{
+                            kind: "active",
+                            onArchive: handleArchiveChat,
+                            onTogglePin: handleTogglePin,
+                          }}
                         />
                       ))}
                     </div>
@@ -1074,7 +1144,7 @@ export function Column1Nav() {
                 isCurrent,
                 activeChatId: state.activeChatId,
                 onSelectChat: handleSelectChat,
-                onDeleteChat: handleDeleteChat,
+                onArchiveChat: handleArchiveChat,
                 onTogglePin: handleTogglePin,
                 onToggleShowAll: toggleProjectExpanded,
                 onToggleSection: toggleSectionCollapsed,
@@ -1082,6 +1152,74 @@ export function Column1Nav() {
                 onNewInFolder: handleNewChatInFolder,
               });
             })}
+            {/* Archived disclosure — opt-in via Settings → General →
+                "Show archived chats in sidebar". Default off so the
+                column stays clean (Cursor model). When enabled, surface
+                them at the bottom of the per-project list with restore
+                + permanent-delete affordances. */}
+            {showArchivedSection && archivedChats.length > 0 && (() => {
+              const ARCHIVED_KEY = "__archived__";
+              const isArchivedCollapsed =
+                sectionsCollapsed[ARCHIVED_KEY] !== false;
+              return (
+                <div
+                  key={ARCHIVED_KEY}
+                  className={`oc-column-1__project oc-column-1__project--archived ${isArchivedCollapsed ? "is-collapsed" : ""}`}
+                  onContextMenu={(e) => {
+                    const target = e.target as HTMLElement | null;
+                    // Mirror the per-workspace rule — clicking inside
+                    // a chat row preserves any future per-row menu.
+                    if (target?.closest(".oc-column-1__chat")) return;
+                    openWorkspaceContextMenu(ARCHIVED_KEY, e);
+                  }}
+                >
+                  <div className="oc-column-1__project-header">
+                    <span className="oc-column-1__project-name">
+                      Archived
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="oc-column-1__project-chevron"
+                      onClick={() => toggleSectionCollapsed(ARCHIVED_KEY)}
+                      title={
+                        isArchivedCollapsed
+                          ? "Expand archived"
+                          : "Collapse archived"
+                      }
+                      aria-expanded={!isArchivedCollapsed}
+                    >
+                      {isArchivedCollapsed ? (
+                        <ChevronRight size={12} />
+                      ) : (
+                        <ChevronDown size={12} />
+                      )}
+                    </Button>
+                    <div className="oc-column-1__project-header-spacer" />
+                    <span className="oc-column-1__project-count">
+                      {archivedChats.length}
+                    </span>
+                  </div>
+                  {!isArchivedCollapsed && (
+                    <div className="oc-column-1__chat-list">
+                      {archivedChats.map((chat) => (
+                        <ChatRow
+                          key={chat.id}
+                          chat={chat}
+                          isActive={false}
+                          onSelect={handleSelectChat}
+                          mode={{
+                            kind: "archived",
+                            onUnarchive: handleUnarchiveChat,
+                            onPurge: handlePurgeChat,
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </section>
       )}
@@ -1191,18 +1329,69 @@ export function Column1Nav() {
           role="menu"
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
-          <button
-            type="button"
-            role="menuitem"
-            className="oc-column-1__context-menu-item is-danger"
-            onClick={() => {
-              hideWorkspace(contextMenu.folder);
-              setContextMenu(null);
-            }}
-          >
-            <Trash2 size={12} />
-            <span>Remove from sidebar</span>
-          </button>
+          {(() => {
+            const folder = contextMenu.folder;
+            // Archived disclosure has its own one-item menu — no
+            // archive-all (these chats are already archived) and the
+            // hide action flips the General-panel setting off rather
+            // than adding to hiddenWorkspaces.
+            if (folder === "__archived__") {
+              return (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="oc-column-1__context-menu-item is-danger"
+                  onClick={() => {
+                    hideArchivedSection();
+                    setContextMenu(null);
+                  }}
+                >
+                  <Trash2 size={12} />
+                  <span>Remove from sidebar</span>
+                </button>
+              );
+            }
+            // Live (non-archived) chats in this workspace — Archive-all
+            // is only meaningful when there's at least one to archive.
+            const liveInFolder = liveChats.filter((c) => c.folder === folder);
+            return (
+              <>
+                {liveInFolder.length > 0 && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="oc-column-1__context-menu-item"
+                    onClick={() => {
+                      liveInFolder.forEach((c) =>
+                        dispatch({ type: "ARCHIVE_CHAT", id: c.id }),
+                      );
+                      setContextMenu(null);
+                    }}
+                  >
+                    <Archive size={12} />
+                    <span>
+                      Archive all chats ({liveInFolder.length})
+                    </span>
+                  </button>
+                )}
+                {liveInFolder.length > 0 && (
+                  <div className="oc-column-1__context-menu-sep" />
+                )}
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="oc-column-1__context-menu-item is-danger"
+                  onClick={() => {
+                    hideWorkspace(folder);
+                    setContextMenu(null);
+                  }}
+                >
+                  <Trash2 size={12} />
+                  <span>Remove from sidebar</span>
+                </button>
+              </>
+            );
+          })()}
         </div>
       )}
     </aside>
@@ -1217,18 +1406,22 @@ export function Column1Nav() {
 // later: each row owns its own subscription and only re-renders when its
 // own session state changes.
 
+type ChatRowMode =
+  // Default sidebar row: trash icon archives (soft-delete).
+  | { kind: "active"; onArchive: (e: React.MouseEvent, id: string) => void; onTogglePin: (e: React.MouseEvent, id: string) => void }
+  // Archived section row: restore + permanent-delete.
+  | { kind: "archived"; onUnarchive: (e: React.MouseEvent, id: string) => void; onPurge: (e: React.MouseEvent, id: string) => void };
+
 function ChatRow({
   chat,
   isActive,
   onSelect,
-  onDelete,
-  onTogglePin,
+  mode,
 }: {
   chat: ChatThread;
   isActive: boolean;
   onSelect: (id: string) => void;
-  onDelete: (e: React.MouseEvent, id: string) => void;
-  onTogglePin: (e: React.MouseEvent, id: string) => void;
+  mode: ChatRowMode;
 }) {
   const session = useChatSession(chat.id);
   const status = chatDotStatus({
@@ -1249,7 +1442,7 @@ function ChatRow({
   // when the user is aiming at the row.
   const handlePinClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onTogglePin(e, chat.id);
+    if (mode.kind === "active") mode.onTogglePin(e, chat.id);
   };
 
   const renderIndicator = () => {
@@ -1258,6 +1451,9 @@ function ChatRow({
     }
     if (status === "waiting") {
       return <AlertCircle size={10} className="oc-column-1__chat-alert" />;
+    }
+    if (mode.kind === "archived") {
+      return <span className="oc-column-1__chat-dot" aria-hidden="true" />;
     }
     return (
       <>
@@ -1283,9 +1479,13 @@ function ChatRow({
     <div
       className={`oc-column-1__chat is-${status} ${
         isActive ? "is-active" : ""
-      } ${pinned ? "is-pinned" : ""}`}
+      } ${pinned ? "is-pinned" : ""} ${mode.kind === "archived" ? "is-archived" : ""}`}
       onClick={() => onSelect(chat.id)}
-      title={chat.title}
+      title={
+        mode.kind === "archived"
+          ? `${chat.title} (archived — read-only preview)`
+          : chat.title
+      }
     >
       <span className="oc-column-1__chat-indicator">
         {renderIndicator()}
@@ -1298,16 +1498,41 @@ function ChatRow({
         className="oc-column-1__chat-actions"
         onClick={(e) => e.stopPropagation()}
       >
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="oc-column-1__chat-delete"
-          onClick={(e) => onDelete(e, chat.id)}
-          title="Delete chat"
-          aria-label="Delete chat"
-        >
-          <Trash2 size={10} />
-        </Button>
+        {mode.kind === "active" ? (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="oc-column-1__chat-delete"
+            onClick={(e) => mode.onArchive(e, chat.id)}
+            title="Archive chat"
+            aria-label="Archive chat"
+          >
+            <Archive size={10} />
+          </Button>
+        ) : (
+          <>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="oc-column-1__chat-delete"
+              onClick={(e) => mode.onUnarchive(e, chat.id)}
+              title="Restore chat"
+              aria-label="Restore chat"
+            >
+              <ArchiveRestore size={10} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="oc-column-1__chat-delete"
+              onClick={(e) => mode.onPurge(e, chat.id)}
+              title="Delete forever"
+              aria-label="Delete chat permanently"
+            >
+              <Trash2 size={10} />
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );

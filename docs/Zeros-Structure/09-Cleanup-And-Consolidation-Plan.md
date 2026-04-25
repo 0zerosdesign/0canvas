@@ -38,7 +38,7 @@ Goal:
 Actions:
 
 - Replace root `README.md` with current Zeros Mac app overview. **(PR 3)**
-- Mark Tauri docs as historical or remove if no longer needed. **`docs/context/` labeled in PR 4;** repo-wide, use `12-Doc-Index-And-Labels.md` and one-off file banners.
+- Mark Tauri docs as historical or remove if no longer needed. `**docs/context/` labeled in PR 4;** repo-wide, use `12-Doc-Index-And-Labels.md` and one-off file banners.
 - Mark VS Code extension docs as historical. **(PR 4 — `context/extension/README.md` + index)**
 - Update comments saying "Tauri", "Rust side", or "ACP" where current behavior is Electron/native agents. **(PR 1)**
 - Add a short architecture diagram to root docs. **(PR 3)**

@@ -42,10 +42,19 @@ export const codexSpec: StreamJsonAgentSpec<CodexExtra> = {
     // Flag order matters: positional prompt comes BEFORE `--json` on
     // resume. Codex's resume parser is stricter than fresh-exec; don't
     // reorder without testing against the live CLI.
+    //
+    // `--skip-git-repo-check` is unconditional. Codex refuses to run in
+    // any directory that isn't a git repo (or marked trusted in
+    // ~/.codex/config.toml) — surfacing that as an "Agent error" in our
+    // chat is bad UX when the user just wants to try Codex on, say, a
+    // fresh notes folder. Conductor and OpenCode both pass this flag for
+    // the same reason. The user's safety story is the permission-mode
+    // gate (Ask First / Auto-Edit / etc.), not Codex's own untrusted-dir
+    // check.
     const threadId = state.extra.codexThreadId;
     return threadId
-      ? ["exec", "resume", threadId, promptText, "--json"]
-      : ["exec", promptText, "--json"];
+      ? ["exec", "--skip-git-repo-check", "resume", threadId, promptText, "--json"]
+      : ["exec", "--skip-git-repo-check", promptText, "--json"];
   },
 
   formatPromptText(blocks: ContentBlock[]): string {

@@ -6,7 +6,7 @@
 // Center: project name + branch chip. Right: ⌘K hint.
 //
 // NEVER add functional controls here other than the command
-// palette shortcut. Global state lives in the ActivityBar.
+// palette shortcut.
 // ============================================================
 import React from "react";
 import { GitBranch, Command } from "lucide-react";

@@ -3795,24 +3795,6 @@ ${S} .oc-composer-state-chip__spinner {
   to { transform: rotate(360deg); }
 }
 
-/* In-composer connecting indicator — replaces the textarea's placeholder
-   visual when the session is warming/reconnecting AND the input is empty.
-   Absolutely positioned so the textarea still takes focus on click. */
-${S} .oc-acp-composer-card { position: relative; }
-${S} .oc-acp-composer-connecting {
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  padding: 12px 14px;
-  display: flex; align-items: center; gap: 6px;
-  font-size: 12.5px;
-  color: var(--text-muted);
-  pointer-events: none;
-  z-index: 1;
-}
-${S} .oc-acp-composer-connecting__icon {
-  opacity: 0.85;
-}
-
 /* Summary handoff pill — shown at the top of a chat spawned via
    agent-switch. Single chip + dismiss; clicking inserts a compact
    transcript of the prior conversation into the composer. */

@@ -719,7 +719,7 @@ Locations:
 - `apps/0colors/packages/frontend/src/routes.ts`
 - `apps/0colors/packages/frontend/src/App.tsx`
 - `apps/0colors/packages/frontend/src/pages/`*
-- `apps/0colors/packages/frontend/src/components/*`
+- `apps/0colors/packages/frontend/src/components/`*
 
 0colors is a separate web app, not yet embedded in the Zeros Mac app.
 
@@ -1039,4 +1039,3 @@ Best user-facing structure for the Mac app:
 - **Column 2**: agent conversation and agent activity.
 - **Column 3**: Design, Colors, Git, Terminal, Env, Todo.
 - **Settings**: app, agents, account, keys, MCP, appearance, debug.
-

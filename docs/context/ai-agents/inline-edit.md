@@ -1,6 +1,6 @@
 # Inline AI Quick-Edit (Cmd+K)
 
-> **Doc label (PR 4):** Partial — [ai-agents/README.md](README.md). [`03-Mac-App-Architecture.md`](../../Zeros-Structure/03-Mac-App-Architecture.md) · [`12-Doc-Index-And-Labels.md`](../../Zeros-Structure/12-Doc-Index-And-Labels.md).
+> **Doc label (PR 4):** Partial — [ai-agents/README.md](README.md). `[03-Mac-App-Architecture.md](../../Zeros-Structure/03-Mac-App-Architecture.md)` · `[12-Doc-Index-And-Labels.md](../../Zeros-Structure/12-Doc-Index-And-Labels.md)`.
 
 The Inline AI Quick-Edit is a floating input panel that lets users describe a visual change in natural language. The AI streams CSS property changes in real-time, applying each property live as it arrives. The user can then accept or reject the entire batch.
 
@@ -336,3 +336,4 @@ It writes back via dispatch:
 - **Provider-agnostic AI:** The module currently hardcodes OpenAI. Future versions could support other providers (Anthropic, local models) or route through the VS Code extension's AI capabilities.
 - **Undo history:** Changes are currently all-or-nothing (accept all / reject all). Granular per-property undo would improve the workflow.
 - **Streaming preview optimization:** Each `applyStyle()` call triggers a DOM reflow. Batching could improve performance when many properties are applied in quick succession.
+

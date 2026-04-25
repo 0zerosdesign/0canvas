@@ -50,6 +50,7 @@ import {
   SECRET_ACCOUNTS,
 } from "../../native/secrets";
 import { getSetting, setSetting } from "../../native/settings";
+import { SHOW_ARCHIVED_CHATS_KEY } from "../../shell/column1-nav";
 import { useBridge } from "../bridge/use-bridge";
 import { AgentsPanel } from "../agent/agents-panel";
 import { useAgentSessions } from "../agent/sessions-provider";
@@ -264,6 +265,20 @@ function AgentsSettingsPanel() {
 // ── General ─────────────────────────────────────────────
 
 function GeneralPanel() {
+  // Sidebar archive disclosure. Default off so column 1 stays clean
+  // (Cursor's archive-as-hidden-state model). Flipping it on adds an
+  // "Archived" group at the bottom of the per-project list with
+  // restore + permanent-delete affordances. Column 1 reads the value
+  // on mount; settings unmounts column 1, so going Back to the
+  // workspace shell is enough to pick up the change.
+  const [showArchived, setShowArchived] = useState<boolean>(() =>
+    getSetting<boolean>(SHOW_ARCHIVED_CHATS_KEY, false),
+  );
+  const toggleShowArchived = (next: boolean) => {
+    setShowArchived(next);
+    setSetting(SHOW_ARCHIVED_CHATS_KEY, next);
+  };
+
   return (
     <div className="oc-settings-panel">
       <div className="oc-settings-section-title">Account</div>
@@ -272,6 +287,32 @@ function GeneralPanel() {
         distribution). Until then Zeros runs in free/BYO-key mode —
         configure your provider in <strong>AI Models</strong>.
       </p>
+
+      <div className="oc-settings-section-title">Sidebar</div>
+      <div className="oc-ai-card">
+        <div className="oc-ai-card-head oc-ai-card-head--row">
+          <div>
+            <div className="oc-ai-card-title">
+              Show archived chats in sidebar
+            </div>
+            <p className="oc-ai-card-hint">
+              Off by default — archived chats stay hidden, like Cursor.
+              Turn on to surface them in an "Archived" group at the
+              bottom of column 1, with restore and delete-forever
+              actions. The on-disk transcript is never touched by
+              archive either way.
+            </p>
+          </div>
+          <label className="oc-ai-toggle">
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={(e) => toggleShowArchived(e.target.checked)}
+            />
+            <span className="oc-ai-toggle-track" />
+          </label>
+        </div>
+      </div>
     </div>
   );
 }

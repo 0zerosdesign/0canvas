@@ -67,7 +67,6 @@ import {
 import { AgentPill } from "./agent-pill";
 import { SummaryHandoffPill } from "./summary-handoff-pill";
 import { ComposerStateChip } from "./composer-state-chip";
-import { ComposerConnectingOverlay } from "./composer-connecting-overlay";
 import { useAgentsSnapshot } from "./agents-cache";
 import { FolderOpen } from "lucide-react";
 import { Image as ImageIcon } from "lucide-react";
@@ -105,21 +104,6 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
   // (inline-edit, feedback) use the pendingChatSubmission store path
   // and don't touch this ref.
   const queuedPreview: string | null = null;
-  // Elapsed time since the session entered "warming" / "reconnecting".
-  // No longer drives user-visible copy (state chip owns that) — kept
-  // only for the occasional slow-cold-start diagnostic.
-  const [startingElapsed, setStartingElapsed] = useState(0);
-  useEffect(() => {
-    if (session.status !== "warming" && session.status !== "reconnecting") {
-      setStartingElapsed(0);
-      return;
-    }
-    const started = Date.now();
-    const id = window.setInterval(() => {
-      setStartingElapsed(Date.now() - started);
-    }, 500);
-    return () => window.clearInterval(id);
-  }, [session.status]);
   // Persistent receipts for apply_change tool calls. Keyed by toolCallId.
   // Captured at first observation of the tool (before the write lands) so
   // "before" still reflects the pre-change value when the card re-renders
@@ -630,15 +614,10 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
               <span className="oc-acp-subheader-agent">{session.agentName}</span>
             )}
             <span className="oc-acp-subheader-status">
-              {session.status === "streaming" && "streaming…"}
-              {session.status !== "streaming" && session.lastStopReason
+              {session.status === "streaming"
+                ? "streaming…"
+                : session.lastStopReason
                 ? session.lastStopReason
-                : session.status === "ready"
-                ? "ready"
-                : session.status === "warming"
-                ? "connecting…"
-                : session.status === "reconnecting"
-                ? "reconnecting…"
                 : session.status === "auth-required"
                 ? "sign in required"
                 : ""}
@@ -751,15 +730,12 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
           </div>
         )}
         <div className="oc-acp-composer-card">
-          <ComposerConnectingOverlay
-            status={session.status}
-            agentId={session.agentId ?? chatThread?.agentId ?? null}
-            agentName={session.agentName ?? chatThread?.agentName ?? null}
-            agentIconUrl={
-              agentsList?.find((a) => a.id === (session.agentId ?? chatThread?.agentId))?.icon ?? null
-            }
-            hidden={input.length > 0 || !!queuedPreview}
-          />
+          {/* The "Connecting to {agent}…" overlay was an ACP-era
+              reassurance for the ~10s handshake. Native adapters
+              spawn in <500ms — surfacing the state in the textarea
+              just covers the placeholder and nothing else. The
+              ComposerStateChip in the footer still handles
+              actionable states (auth-required / failed). */}
           <Textarea
             ref={textareaRef}
             value={input}

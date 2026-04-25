@@ -26,9 +26,10 @@ interface Props {
 }
 
 export function ComposerStateChip({ status, agentName, onAction }: Props) {
-  // Actionable states only — warming / reconnecting are rendered by
-  // ComposerConnectingOverlay inside the composer card so the user
-  // gets a single prominent indicator instead of a small footer chip.
+  // Actionable states only. Warming / reconnecting are silent in the
+  // native runtime — adapter spawn is fast enough that surfacing
+  // those states adds noise without informing the user. The chip
+  // only appears when the user has to *do* something.
   if (status === "auth-required") {
     return (
       <button

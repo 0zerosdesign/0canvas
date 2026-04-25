@@ -23,6 +23,7 @@ import { Plus, Bot as BotIcon, History } from "lucide-react";
 import { Button } from "../zeros/ui";
 import { useWorkspace, type ChatThread } from "../zeros/store/store";
 import { useAgentSessions, useChatSession } from "../zeros/agent/sessions-provider";
+import { useBridgeStatus } from "../zeros/bridge/use-bridge";
 import { AgentChat } from "../zeros/agent/agent-chat";
 import { AgentsPanel } from "../zeros/agent/agents-panel";
 import { envForChat } from "../zeros/agent/composer-pills";
@@ -138,28 +139,39 @@ function ChatBody({
 
   // Initial spawn (idempotent). ensureSession short-circuits if the
   // same (chatId, agentId) pair is already ready. When the chat has a
-  // resumeSessionId set (Codex/Claude "resume recent thread"), we load
-  // that session instead of creating a new one.
+  // persisted sessionId (either seeded by "Resume recent thread" or
+  // carried over from a previous app run), we load that session from
+  // disk instead of creating a new one — provider state is a hot
+  // cache, the agent CLI's on-disk transcript is the source of truth.
   const sessions = useAgentSessions();
   useEffect(() => {
     const env = chat ? envForChat(chat, session.initialize) : undefined;
-    const toResume = chat?.resumeSessionId;
-    if (toResume) {
-      // Clear the resume marker *before* awaiting — if the load fails or
-      // the user closes/reopens the app mid-load, we must not re-enter
-      // the same broken resume on next mount. The Retry button then falls
-      // back to ensureSession (fresh session), which is the right thing
-      // when the prior session is unrecoverable.
-      dispatch({
-        type: "UPDATE_CHAT_SETTINGS",
-        id: chatId,
-        updates: { resumeSessionId: undefined },
-      });
-      void sessions.loadIntoChat(chatId, agentId, toResume, {
-        agentName,
-        cwd: cwd || undefined,
-        env,
-      });
+    const persistedSessionId = chat?.sessionId;
+    // Provider already has a live session for this chat — nothing to do.
+    if (session.sessionId) {
+      envKeyRef.current = envKey;
+      return;
+    }
+    if (persistedSessionId) {
+      // Best effort load. On AGENT_ERROR the provider lands at status
+      // "failed" — clear sessionId so the user's next Retry tap falls
+      // through to a fresh ensureSession instead of retrying the dead id.
+      void sessions
+        .loadIntoChat(chatId, agentId, persistedSessionId, {
+          agentName,
+          cwd: cwd || undefined,
+          env,
+        })
+        .then(() => {
+          const after = sessions.getSession(chatId);
+          if (after?.status === "failed") {
+            dispatch({
+              type: "UPDATE_CHAT_SETTINGS",
+              id: chatId,
+              updates: { sessionId: undefined },
+            });
+          }
+        });
     } else {
       void session.ensureSession(agentId, {
         agentName,
@@ -172,6 +184,22 @@ function ChatBody({
     // on every render or when session internals shuffle.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatId, agentId, cwd]);
+
+  // Persist the session id back onto the chat metadata whenever the
+  // provider reports a new one (after newSession, loadSession, or a
+  // forced model-swap respawn). This is what makes the disk link
+  // survive app restarts and future workspace swaps.
+  useEffect(() => {
+    if (!chat) return;
+    const sid = session.sessionId;
+    if (sid && sid !== chat.sessionId) {
+      dispatch({
+        type: "UPDATE_CHAT_SETTINGS",
+        id: chatId,
+        updates: { sessionId: sid },
+      });
+    }
+  }, [chatId, session.sessionId, chat, dispatch]);
 
   // Respawn when the user changes model/effort. The new env takes
   // effect on the next agent subprocess start; ensureSession with
@@ -189,6 +217,41 @@ function ChatBody({
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [envKey]);
+
+  // Auto-retry on bridge reconnect. The chat lands in `failed` state
+  // when its initial load hits a transient bridge error (queue full
+  // mid-respawn, AGENT_LOAD_SESSION timeout while the engine is
+  // restarting). Without this effect the user has to manually click
+  // away and back to retry — a real "stuck" feeling. We only retry
+  // once per reconnect: on the rising edge of bridgeStatus going to
+  // "connected" while the session is in a failed/transient state.
+  const bridgeStatus = useBridgeStatus();
+  const lastBridgeStatusRef = useRef(bridgeStatus);
+  useEffect(() => {
+    const prev = lastBridgeStatusRef.current;
+    lastBridgeStatusRef.current = bridgeStatus;
+    if (prev === "connected" || bridgeStatus !== "connected") return;
+    if (!chat) return;
+    if (session.status !== "failed" && session.status !== "reconnecting") return;
+    const env = envForChat(chat, session.initialize);
+    const persistedSessionId = chat.sessionId;
+    if (persistedSessionId) {
+      void sessions.loadIntoChat(chatId, agentId, persistedSessionId, {
+        agentName,
+        cwd: cwd || undefined,
+        env,
+      });
+    } else {
+      void session.ensureSession(agentId, {
+        agentName,
+        cwd: cwd || undefined,
+        env,
+      });
+    }
+    // We deliberately exclude `session` from deps — its identity
+    // changes on every state update and would re-fire this loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bridgeStatus, chatId, agentId, agentName, cwd]);
 
   return (
     <AgentChat
@@ -210,17 +273,25 @@ interface RecentThread {
 }
 
 function NewChatPicker() {
-  const { dispatch } = useWorkspace();
+  const { state, dispatch } = useWorkspace();
   const sessions = useAgentSessions();
   const { isEnabled } = useEnabledAgents();
   const [open, setOpen] = useState(false);
   const [agents, setAgents] = useState<BridgeRegistryAgent[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [recent, setRecent] = useState<RecentThread[]>([]);
+  const [showAllRecent, setShowAllRecent] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   // Pre-warm set — agent ids we've already initAgent'd this session, so
   // re-hovering doesn't re-fire the spawn.
   const warmedRef = useRef<Set<string>>(new Set());
+
+  // Reset the "Show all" expansion every time the dropdown closes —
+  // re-opening should start with the compact view, not whatever the
+  // user expanded to last time.
+  useEffect(() => {
+    if (!open) setShowAllRecent(false);
+  }, [open]);
 
   // Close on outside-click / Escape — same pattern as the profile menu.
   useEffect(() => {
@@ -278,10 +349,20 @@ function NewChatPicker() {
         })),
       );
       if (cancelled) return;
+      // Dedupe against already-imported chats by sessionId so the user
+      // can't accidentally create a second sidebar entry pointing at the
+      // same on-disk transcript. Archived chats still count — restoring
+      // is the right path for those, not re-importing.
+      const importedSessionIds = new Set(
+        state.chats
+          .map((c) => c.sessionId)
+          .filter((s): s is string => typeof s === "string"),
+      );
       const flat: RecentThread[] = [];
       for (const r of results) {
         if (r.status !== "fulfilled") continue;
         for (const info of r.value.resp.sessions) {
+          if (importedSessionIds.has(info.sessionId)) continue;
           flat.push({
             agentId: r.value.agent.id,
             agentName: r.value.agent.name,
@@ -289,18 +370,18 @@ function NewChatPicker() {
           });
         }
       }
-      // Most-recent first, cap to 5 across agents.
+      // Most-recent first.
       flat.sort((a, b) => {
         const ta = a.info.updatedAt ? Date.parse(a.info.updatedAt) : 0;
         const tb = b.info.updatedAt ? Date.parse(b.info.updatedAt) : 0;
         return tb - ta;
       });
-      setRecent(flat.slice(0, 5));
+      setRecent(flat);
     })();
     return () => {
       cancelled = true;
     };
-  }, [open, agents, sessions]);
+  }, [open, agents, sessions, state.chats]);
 
   const handleResume = async (r: RecentThread) => {
     setOpen(false);
@@ -316,7 +397,7 @@ function NewChatPicker() {
       title: r.info.title ?? `Resumed ${r.agentName} chat`,
       createdAt: Date.now(),
       updatedAt: Date.now(),
-      resumeSessionId: r.info.sessionId,
+      sessionId: r.info.sessionId,
     };
     dispatch({ type: "ADD_CHAT", chat });
   };
@@ -372,26 +453,51 @@ function NewChatPicker() {
       </Button>
       {open && (
         <div className="oc-new-chat-picker__menu" role="menu">
-          {recent.length > 0 && (
-            <>
-              <div className="oc-new-chat-picker__label">Resume recent</div>
-              {recent.map((r) => (
-                <Button
-                  key={`${r.agentId}:${r.info.sessionId}`}
-                  variant="ghost"
-                  className="oc-new-chat-picker__item"
-                  onClick={() => void handleResume(r)}
-                  title={`${r.agentName} · ${r.info.cwd}`}
-                >
-                  <History className="oc-new-chat-picker__icon" />
-                  <span className="truncate">
-                    {r.info.title ?? r.info.sessionId.slice(0, 8)}
-                  </span>
-                </Button>
-              ))}
-              <div className="oc-new-chat-picker__sep" aria-hidden />
-            </>
-          )}
+          {recent.length > 0 && (() => {
+            // Default cap keeps the dropdown short; "Show all" expands
+            // it for the import-history flow when the user wants to see
+            // every native CLI session that isn't yet in the sidebar.
+            const DEFAULT_CAP = 5;
+            const visibleRecent = showAllRecent
+              ? recent
+              : recent.slice(0, DEFAULT_CAP);
+            const hidden = recent.length - visibleRecent.length;
+            return (
+              <>
+                <div className="oc-new-chat-picker__label">
+                  {showAllRecent
+                    ? `Import from disk (${recent.length})`
+                    : "Resume recent"}
+                </div>
+                {visibleRecent.map((r) => (
+                  <Button
+                    key={`${r.agentId}:${r.info.sessionId}`}
+                    variant="ghost"
+                    className="oc-new-chat-picker__item"
+                    onClick={() => void handleResume(r)}
+                    title={`${r.agentName} · ${r.info.cwd}`}
+                  >
+                    <History className="oc-new-chat-picker__icon" />
+                    <span className="truncate">
+                      {r.info.title ?? r.info.sessionId.slice(0, 8)}
+                    </span>
+                  </Button>
+                ))}
+                {hidden > 0 && (
+                  <Button
+                    variant="ghost"
+                    className="oc-new-chat-picker__item is-muted"
+                    onClick={() => setShowAllRecent(true)}
+                  >
+                    <span className="truncate">
+                      Show {hidden} older session{hidden === 1 ? "" : "s"}…
+                    </span>
+                  </Button>
+                )}
+                <div className="oc-new-chat-picker__sep" aria-hidden />
+              </>
+            );
+          })()}
           <div className="oc-new-chat-picker__label">New chat with…</div>
           {loading && !agents && (
             <div className="oc-new-chat-picker__hint">Loading agents…</div>

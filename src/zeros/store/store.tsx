@@ -266,6 +266,14 @@ export type WorkspaceState = {
   // not the engine root — so the first chat created from it lands in
   // the right project. Cleared by the composer after ADD_CHAT.
   newAgentFolder: string | null;
+
+  // Bumps every time the user swaps the engine project root via Open
+  // Workspace. Project-scoped consumers (column 1's currentRoot probe,
+  // column 3 file tree, terminal, git panel) read this in their effect
+  // deps so they refresh without needing a full webview reload.
+  // Source-of-truth on the new root lives in the native engine — we
+  // don't carry the path in the store, only the generation counter.
+  projectGeneration: number;
 };
 
 export type PendingChatSubmission = {
@@ -310,13 +318,27 @@ export type ChatThread = {
   title: string;
   createdAt: number;
   updatedAt: number;
-  /** When set, the ChatBody loads this ACP sessionId on mount instead of
-   *  calling newSession. Used by the Codex/Claude "Recent threads" resume
-   *  flow. Cleared after the first successful load. */
-  resumeSessionId?: string;
+  /** Persistent ACP/agent sessionId. Source-of-truth link from a chat
+   *  in our sidebar to the on-disk transcript the agent CLI writes
+   *  (Claude: ~/.claude/projects/<hash>/<sessionId>.jsonl, Codex:
+   *  ~/.codex/sessions/...). Set in three ways:
+   *    - "Resume from recent thread" UI seeds it on chat creation.
+   *    - First successful new-session creation writes it back.
+   *    - It updates whenever the active agent forks / starts a new
+   *      session under the same chat (model swap with force=true).
+   *  Provider state is a hot cache; this field survives app restarts
+   *  and is what lets us replay history on next mount. Cleared if a
+   *  loadIntoChat fails so retry can fall through to a fresh session. */
+  sessionId?: string;
   /** Pinned to the top of the sidebar, independent of project grouping.
    *  Cursor-style favorites. Defaults to false / undefined for old records. */
   pinned?: boolean;
+  /** Soft-deleted. Archived chats hide from the main sidebar groupings
+   *  (pinned + per-project) and surface in a collapsible "Archived"
+   *  section at the bottom, where they can be restored or permanently
+   *  deleted. The on-disk transcript is never touched by archive —
+   *  only DELETE_CHAT removes the metadata entry. */
+  archived?: boolean;
   /** Chat that spawned this one via agent-switch. When set and this chat
    *  has no messages yet, the composer offers a "summary handoff" pill
    *  at the top so the user can paste the prior conversation into the
@@ -400,8 +422,10 @@ type Action =
   | { type: "ADD_CHAT"; chat: ChatThread }
   | { type: "SET_ACTIVE_CHAT"; id: string | null }
   | { type: "DELETE_CHAT"; id: string }
+  | { type: "ARCHIVE_CHAT"; id: string }
+  | { type: "UNARCHIVE_CHAT"; id: string }
   | { type: "UPDATE_CHAT_TITLE"; id: string; title: string }
-  | { type: "UPDATE_CHAT_SETTINGS"; id: string; updates: Partial<Pick<ChatThread, "model" | "effort" | "permissionMode" | "agentId" | "agentName" | "resumeSessionId" | "sourceChatId">> }
+  | { type: "UPDATE_CHAT_SETTINGS"; id: string; updates: Partial<Pick<ChatThread, "model" | "effort" | "permissionMode" | "agentId" | "agentName" | "sessionId" | "sourceChatId">> }
   | { type: "TOUCH_CHAT"; id: string }
   | { type: "TOGGLE_PIN_CHAT"; id: string }
   // Auto-submit into Column 2 chat (Phase 2-B)
@@ -409,6 +433,7 @@ type Action =
   | { type: "CONSUME_CHAT_SUBMISSION"; id: string }
   // EmptyComposer scope override — see newAgentFolder doc on WorkspaceState.
   | { type: "SET_NEW_AGENT_FOLDER"; folder: string | null }
+  | { type: "BUMP_PROJECT_GENERATION" }
 
 // ──────────────────────────────────────────────────────────
 // IDE definitions
@@ -461,6 +486,7 @@ const initialState: WorkspaceState = {
   activeChatId: null,
   pendingChatSubmission: null,
   newAgentFolder: null,
+  projectGeneration: 0,
 };
 
 // ──────────────────────────────────────────────────────────
@@ -595,6 +621,32 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
             : state.activeChatId,
       };
     }
+    case "ARCHIVE_CHAT": {
+      // Soft-delete: flip the archived flag and drop the active
+      // selection if the archived chat was open. Pin is cleared so the
+      // chat doesn't reappear in pinned the moment it's restored — the
+      // user can re-pin from Archived if they want.
+      const target = state.chats.find((c) => c.id === action.id);
+      if (!target || target.archived) return state;
+      return {
+        ...state,
+        chats: state.chats.map((c) =>
+          c.id === action.id ? { ...c, archived: true, pinned: false } : c,
+        ),
+        activeChatId:
+          state.activeChatId === action.id ? null : state.activeChatId,
+      };
+    }
+    case "UNARCHIVE_CHAT": {
+      const target = state.chats.find((c) => c.id === action.id);
+      if (!target || !target.archived) return state;
+      return {
+        ...state,
+        chats: state.chats.map((c) =>
+          c.id === action.id ? { ...c, archived: false } : c,
+        ),
+      };
+    }
     case "UPDATE_CHAT_TITLE":
       return {
         ...state,
@@ -634,6 +686,8 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
       return { ...state, pendingChatSubmission: null };
     case "SET_NEW_AGENT_FOLDER":
       return { ...state, newAgentFolder: action.folder };
+    case "BUMP_PROJECT_GENERATION":
+      return { ...state, projectGeneration: state.projectGeneration + 1 };
     case "TOGGLE_ELEMENT_VISIBILITY":
       return {
         ...state,

@@ -244,11 +244,11 @@ Future ideal:
 The codebase has migration leftovers:
 
 - Legacy **attribute** names (for example `data-tauri-drag-region`) may
-  still appear; behavior is provided by the Electron window.
+still appear; behavior is provided by the Electron window.
 - **PR 1** updated many obsolete “Tauri / Rust side / ACP” **comments** in
-  source; **PR 2** labeled documentation (see `12-Doc-Index-And-Labels.md`).
+source; **PR 2** labeled documentation (see `12-Doc-Index-And-Labels.md`).
 - Current root package and main process are **Electron**; the active
-  renderer bridge is `window.__ZEROS_NATIVE__` from `electron/preload.ts`.
+renderer bridge is `window.__ZEROS_NATIVE__` from `electron/preload.ts`.
 
 ## What Happens In Browser-Only Dev
 

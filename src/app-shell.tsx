@@ -20,7 +20,7 @@
 import React, { useEffect } from "react";
 import { WorkspaceProvider, useWorkspace, type ChatThread } from "./zeros/store/store";
 import { hydrateAiApiKey } from "./zeros/lib/openai";
-import { BridgeProvider, useExtensionConnected } from "./zeros/bridge/use-bridge";
+import { BridgeProvider, useBridge, useExtensionConnected } from "./zeros/bridge/use-bridge";
 import { SelectionSync } from "./zeros/agent/selection-sync";
 import { AutoConnect } from "./zeros/engine/zeros-engine";
 import { AgentSessionsProvider, useAgentSessions } from "./zeros/agent/sessions-provider";
@@ -30,9 +30,9 @@ import { Column1Nav } from "./shell/column1-nav";
 import { Column2Workspace } from "./shell/column2-workspace";
 import { Column3 } from "./shell/column3";
 import { TitleBar } from "./shell/title-bar";
-import { ActivityBar, type ActivityView } from "./shell/activity-bar";
 import { SettingsPage } from "./zeros/panels/settings-page";
 import { onProjectChanged } from "./native/native";
+import { loadStickyDefaults, saveStickyDefaults } from "./shell/empty-composer";
 import { nativeInvoke } from "./native/runtime";
 import { getSetting, setSetting } from "./native/settings";
 import { rememberProject } from "./native/recent-projects";
@@ -45,6 +45,12 @@ const CHATS_STORAGE_KEY = "chats-v1";
 // recover the user's sidebar from this. Only updated on writes that
 // *have* chats, so a legitimate empty primary never stomps the backup.
 const CHATS_BACKUP_KEY = "chats-v1-backup";
+// Tombstone flag — true when the most recent write left the primary
+// list intentionally empty (user deleted/archived all chats). Tells
+// hydrate "don't second-guess this; do NOT restore from backup".
+// Without it, the safety net resurrects every chat the user just
+// removed on the next reload.
+const CHATS_TOMBSTONE_KEY = "chats-v1-cleared";
 const ACTIVE_CHAT_KEY = "active-chat-id";
 
 // Inject the design workspace CSS exactly once at module load.
@@ -211,22 +217,32 @@ function ChatsPersistence() {
     // entries, restore from backup. Protects against the "my chats
     // disappeared after a UI change" class of bugs, where an
     // unrelated reducer or origin change wiped `chats-v1` while the
-    // backup survived.
+    // backup survived. Suppressed when the tombstone says the empty
+    // state is intentional (user cleared everything) — otherwise
+    // deleted chats come back on every reload.
     if (!Array.isArray(raw) || raw.length === 0) {
-      const backup = getSetting<ChatThread[]>(CHATS_BACKUP_KEY, []);
-      if (Array.isArray(backup) && backup.length > 0) {
-        console.warn(
-          `[Zeros] primary chats empty — restored ${backup.length} from backup`,
-        );
-        raw = backup;
+      const tombstoned = getSetting<boolean>(CHATS_TOMBSTONE_KEY, false);
+      if (!tombstoned) {
+        const backup = getSetting<ChatThread[]>(CHATS_BACKUP_KEY, []);
+        if (Array.isArray(backup) && backup.length > 0) {
+          console.warn(
+            `[Zeros] primary chats empty — restored ${backup.length} from backup`,
+          );
+          raw = backup;
+        }
       }
     }
     // Schema migrations — old chat records predate:
     //   - `folder`   (Stream 3, per-project grouping)
     //   - `agentId`  (per-chat agent binding)
     //   - `agentName`
+    //   - `sessionId` (replaces the one-shot `resumeSessionId` — old
+    //                  records that still carry resumeSessionId get
+    //                  promoted so existing chats keep their disk link)
     // Default missing fields rather than dropping old chats on the floor.
-    const chats: ChatThread[] = raw.map((c) => ({
+    const chats: ChatThread[] = raw.map((c) => {
+      const legacyResume = (c as any).resumeSessionId;
+      return ({
       ...c,
       folder: typeof c.folder === "string" ? c.folder : "",
       agentId: typeof (c as any).agentId === "string" ? (c as any).agentId : null,
@@ -247,7 +263,16 @@ function ChatsPersistence() {
           ? (c as any).permissionMode
           : "ask",
       pinned: typeof (c as any).pinned === "boolean" ? (c as any).pinned : false,
-    }));
+      archived:
+        typeof (c as any).archived === "boolean" ? (c as any).archived : false,
+      sessionId:
+        typeof (c as any).sessionId === "string"
+          ? (c as any).sessionId
+          : typeof legacyResume === "string"
+            ? legacyResume
+            : undefined,
+    });
+    });
     // Three distinct cases for the persisted active-chat-id — we must
     // not collapse them, or the workspace-swap flow glitches:
     //   - absent   → fresh app, pick most-recently-touched as a friendly default
@@ -263,17 +288,21 @@ function ChatsPersistence() {
         return null;
       }
     })();
+    // Most-recent fallback skips archived chats — landing on an
+    // archived chat would silently confuse the user.
+    const liveChats = chats.filter((c) => !c.archived);
+    const mostRecentLive = (): string | null =>
+      liveChats.length > 0
+        ? [...liveChats].sort(
+            (a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0),
+          )[0]?.id ?? null
+        : null;
     let activeChatId: string | null;
     if (rawActive === null) {
       // Key absent — fresh app run / post-clear-storage. Land the user
       // on their most-recent chat so "I reopened the app and my work
       // is gone" doesn't happen.
-      activeChatId =
-        chats.length > 0
-          ? [...chats].sort(
-              (a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0),
-            )[0]?.id ?? null
-          : null;
+      activeChatId = mostRecentLive();
     } else {
       let parsed: string | null = null;
       try {
@@ -284,16 +313,11 @@ function ChatsPersistence() {
       if (parsed === null) {
         // Explicit clear — empty composer is the intent.
         activeChatId = null;
-      } else if (chats.some((c) => c.id === parsed)) {
+      } else if (chats.some((c) => c.id === parsed && !c.archived)) {
         activeChatId = parsed;
       } else {
-        // Stale selection — chat was deleted between runs.
-        activeChatId =
-          chats.length > 0
-            ? [...chats].sort(
-                (a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0),
-              )[0]?.id ?? null
-            : null;
+        // Stale or archived selection — chat was deleted/archived between runs.
+        activeChatId = mostRecentLive();
       }
     }
     dispatch({ type: "HYDRATE_CHATS", chats, activeChatId });
@@ -303,30 +327,68 @@ function ChatsPersistence() {
   useEffect(() => {
     if (!hydrated.current) return;
     setSetting(CHATS_STORAGE_KEY, state.chats);
-    // Only update the backup when the list is non-empty so a momentary
-    // empty state (reducer hiccup, mid-migration re-render) can't
-    // overwrite the safety net.
+    // Backup mirrors the last known *non-empty* list so a transient
+    // empty state from a reducer hiccup or mid-migration re-render
+    // can't overwrite the safety net. The tombstone is what tells
+    // hydrate whether an empty primary is intentional or accidental.
     if (state.chats.length > 0) {
       setSetting(CHATS_BACKUP_KEY, state.chats);
+      setSetting(CHATS_TOMBSTONE_KEY, false);
+    } else {
+      setSetting(CHATS_TOMBSTONE_KEY, true);
     }
   }, [state.chats]);
 
   useEffect(() => {
     if (!hydrated.current) return;
     setSetting(ACTIVE_CHAT_KEY, state.activeChatId);
-  }, [state.activeChatId]);
+    // Mirror the active chat's picker state into the sticky-defaults
+    // store so the next "+ New Agent" lands with the same agent /
+    // folder / model / effort / permission mode the user is currently
+    // working in. Skipped when activeChatId is null (e.g. user just
+    // clicked New Agent itself) — we want the prior sticky to drive
+    // that empty state, not the absence of a chat.
+    if (state.activeChatId) {
+      const active = state.chats.find((c) => c.id === state.activeChatId);
+      if (active) {
+        saveStickyDefaults({
+          agentId: active.agentId,
+          folder: active.folder || null,
+          model: active.model,
+          effort: active.effort,
+          permissionMode: active.permissionMode,
+        });
+      }
+    }
+  }, [state.activeChatId, state.chats]);
 
   return null;
 }
 
 /**
  * When the user picks a new project folder, the Electron main process
- * respawns the local engine and emits `project-changed`. For now we use
- * the simplest possible refresh: reload the webview so Column 3's workspace
- * re-reads the new project's .0c files from scratch. A future pass can
- * replace this with an in-place state swap.
+ * respawns the local engine on a fresh port and emits `project-changed`.
+ *
+ * In-place swap (no webview reload):
+ *   1. Drop every in-memory session — they reference the dead engine's
+ *      sessionIds. The persistent chat.sessionId on disk lets us
+ *      replay history on the user's next chat-open.
+ *   2. Force the bridge client to re-resolve the engine port and open a
+ *      fresh socket. Pending RPCs reject with a soft-fail — upstream
+ *      retry loops handle it.
+ *   3. Bump projectGeneration in the store. Project-scoped consumers
+ *      (column 1's currentRoot probe, file tree, terminal) rerun their
+ *      effects against the new root.
+ *
+ * Generation guard: any late callback from the old engine is dropped
+ * because (a) the websocket is closed, so events stop arriving, and
+ * (b) the in-memory sessionId → chatId map was wiped by disposeAll().
  */
 function ReloadOnProjectChange() {
+  const sessions = useAgentSessions();
+  const bridge = useBridge();
+  const { dispatch } = useWorkspace();
+
   useEffect(() => {
     let unlisten: (() => void) | null = null;
 
@@ -345,14 +407,25 @@ function ReloadOnProjectChange() {
     onProjectChanged((payload) => {
       console.log("[Zeros] project changed", payload);
       rememberProject(payload.root);
-      window.location.reload();
+      sessions.disposeAll();
+      // Clear just the folder hint on the sticky defaults — the user
+      // explicitly switched workspaces, so the next "+ New Agent"
+      // should default to the new engine root, not the old workspace.
+      // Agent / model / effort / permission carry over, since those
+      // are about how the user likes to work, not where.
+      saveStickyDefaults({ ...loadStickyDefaults(), folder: null });
+      dispatch({ type: "BUMP_PROJECT_GENERATION" });
+      // Fire-and-forget — the bridge will set status to "connecting"
+      // immediately and any consumer waiting on a connected status
+      // sees the update through useBridgeStatus.
+      void bridge?.forceReconnect();
     }).then((fn) => {
       unlisten = fn;
     });
     return () => {
       unlisten?.();
     };
-  }, []);
+  }, [sessions, bridge, dispatch]);
   return null;
 }
 
@@ -367,10 +440,6 @@ const COL3_COLLAPSED_KEY = "column-3-collapsed";
 
 function ShellRouter() {
   const { state } = useWorkspace();
-  // Activity-bar selected view. Currently wired for visual state only —
-  // Col 1 still renders its full tree inside the sidebar slot. Future
-  // migration will swap this to filter what appears in the sidebar.
-  const [activityView, setActivityView] = React.useState<ActivityView>("chats");
 
   // Column 3 collapse. When collapsed, the design/IDE panel is hidden and
   // Column 2 expands to fill the remaining width with its chat content
@@ -430,7 +499,6 @@ function ShellRouter() {
     <div className="oc-app-root">
       <TitleBar />
       <div className="oc-app-body">
-        <ActivityBar active={activityView} onChange={setActivityView} />
         <div className={`oc-app ${col3Collapsed ? "is-col3-collapsed" : ""}`}>
           <Column1Nav />
           <Column2Workspace

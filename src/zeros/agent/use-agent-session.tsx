@@ -508,8 +508,41 @@ export function applyUpdate(
 ): AgentMessage[] {
   const upd = notification.update;
   switch (upd.sessionUpdate) {
-    case "user_message_chunk":
-      return appendText(messages, "user", upd.content, upd.messageId);
+    case "user_message_chunk": {
+      // Speculative dedup. sendPrompt() adds the user's bubble locally
+      // before the AGENT_PROMPT round-trip so the UI updates instantly.
+      // The agent then echoes the prompt back through stream-json as a
+      // user record, which the translator turns into user_message_chunk
+      // — without dedup, this lands as a SECOND identical bubble.
+      // Cursor's stream-json includes the echo; the bug surfaced there
+      // first. Claude / Codex are subject to the same race depending
+      // on schema. The check: the most recent message is a user text
+      // bubble with no engine messageId yet (i.e. the speculative one
+      // we just added). Adopt the engine's messageId on it instead of
+      // creating a new bubble. Replay-from-disk is unaffected — there
+      // the messages array fills *only* via translator events, so the
+      // last-message check fails (or it has a messageId already from
+      // a prior replayed turn). New messages from the user side never
+      // race with replay because replay runs to completion before the
+      // first live prompt.
+      const last = messages[messages.length - 1];
+      const incomingId =
+        typeof upd.messageId === "string" ? upd.messageId : undefined;
+      if (
+        last &&
+        last.kind === "text" &&
+        last.role === "user" &&
+        last.messageId === undefined &&
+        incomingId !== undefined
+      ) {
+        const adopted: AgentTextMessage = {
+          ...(last as AgentTextMessage),
+          messageId: incomingId,
+        };
+        return [...messages.slice(0, -1), adopted];
+      }
+      return appendText(messages, "user", upd.content, incomingId);
+    }
     case "agent_message_chunk":
       return appendText(messages, "agent", upd.content, upd.messageId);
     case "agent_thought_chunk":
