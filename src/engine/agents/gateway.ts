@@ -344,6 +344,10 @@ export class AgentGateway {
     };
     const adapter = entry.createAdapter(ctx);
     this.adapters.set(agentId, adapter);
+    // eslint-disable-next-line no-console
+    console.log(
+      `[agents] adapter created: ${agentId} (live=[${Array.from(this.adapters.keys()).join(",")}])`,
+    );
     return adapter;
   }
 
@@ -355,7 +359,18 @@ export class AgentGateway {
     const resolvedId = agentId ?? this.sessionToAgent.get(sessionId);
     if (!resolvedId) throw new Error(`unknown session: ${sessionId}`);
     const adapter = this.adapters.get(resolvedId);
-    if (!adapter) throw new Error(`adapter not live: ${resolvedId}`);
+    if (!adapter) {
+      // Diagnostic: which adapters DO we have, and what's the routing
+      // table look like? Without this the "adapter not live" error
+      // gives the user a black-box failure with no recovery path.
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[agents] adapterForSession miss: agentId=${resolvedId} sessionId=${sessionId} ` +
+          `live=[${Array.from(this.adapters.keys()).join(",")}] ` +
+          `routes=${this.sessionToAgent.size}`,
+      );
+      throw new Error(`adapter not live: ${resolvedId}`);
+    }
     return adapter;
   }
 

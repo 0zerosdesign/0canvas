@@ -17,7 +17,7 @@
 // such as Git, Terminal, Env, and Todo.
 // ──────────────────────────────────────────────────────────
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { WorkspaceProvider, useWorkspace, type ChatThread } from "./zeros/store/store";
 import { hydrateAiApiKey } from "./zeros/lib/openai";
 import { BridgeProvider, useBridge, useExtensionConnected } from "./zeros/bridge/use-bridge";
@@ -324,18 +324,57 @@ function ChatsPersistence() {
   }, [dispatch]);
 
   // Persist on change (after hydration).
+  //
+  // Tombstone discipline: the previous version set the tombstone the
+  // moment state.chats was empty for any reason — a single transient
+  // empty during workspace swap or a reducer hiccup blocked backup
+  // recovery on next mount and visibly wiped the sidebar. Two guards
+  // now prevent that:
+  //
+  //   1. We require a non-empty → empty *transition*. Empty→empty is a
+  //      no-op so genuinely fresh installs don't keep rewriting the
+  //      tombstone (and don't accidentally set it if the initial reducer
+  //      state slips out before hydrate).
+  //   2. After the transition, we wait 5 seconds before writing the
+  //      tombstone. If chats become non-empty again in that window
+  //      (transient hiccup), the timer is cancelled. Only intentional
+  //      "user cleared everything and walked away" sticks.
+  //
+  // Backup updates remain immediate — they're additive and never
+  // destructive, so writing them on every non-empty render is fine.
+  const prevChatsLengthRef = useRef<number | null>(null);
+  const tombstoneTimerRef = useRef<number | null>(null);
   useEffect(() => {
     if (!hydrated.current) return;
     setSetting(CHATS_STORAGE_KEY, state.chats);
-    // Backup mirrors the last known *non-empty* list so a transient
-    // empty state from a reducer hiccup or mid-migration re-render
-    // can't overwrite the safety net. The tombstone is what tells
-    // hydrate whether an empty primary is intentional or accidental.
     if (state.chats.length > 0) {
       setSetting(CHATS_BACKUP_KEY, state.chats);
       setSetting(CHATS_TOMBSTONE_KEY, false);
-    } else {
-      setSetting(CHATS_TOMBSTONE_KEY, true);
+      if (tombstoneTimerRef.current !== null) {
+        window.clearTimeout(tombstoneTimerRef.current);
+        tombstoneTimerRef.current = null;
+      }
+      prevChatsLengthRef.current = state.chats.length;
+      return;
+    }
+    // state.chats.length === 0 below.
+    const prev = prevChatsLengthRef.current;
+    prevChatsLengthRef.current = 0;
+    if (prev === null || prev === 0) {
+      // Empty → empty. Either initial render before hydrate, or a real
+      // fresh install. Don't touch the tombstone — leaving it false
+      // means a future write that genuinely transitions non-empty →
+      // empty will set it correctly, and a future hydrate sees backup
+      // recovery available.
+      return;
+    }
+    // Non-empty → empty. Schedule a tombstone write after the debounce.
+    // Cancelled in the non-empty branch above if chats reappear.
+    if (tombstoneTimerRef.current === null) {
+      tombstoneTimerRef.current = window.setTimeout(() => {
+        setSetting(CHATS_TOMBSTONE_KEY, true);
+        tombstoneTimerRef.current = null;
+      }, 5000);
     }
   }, [state.chats]);
 

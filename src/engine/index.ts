@@ -323,6 +323,23 @@ export class ZerosEngine {
    * pushed proactively by the gateway (not via this request path).
    */
   private async handleAcpMessage(msg: EngineMessage, ws: WebSocket): Promise<void> {
+    // Diagnostic: log every AGENT_* message at the dispatch boundary so
+    // we can tell from main.log whether prompts are even reaching the
+    // engine. Used to triage "user sent codex prompt, no response" —
+    // without this the only visible log was occasional adapter creation,
+    // and any "request never made it to the engine" bug was invisible.
+    {
+      const requestId = (msg as { id?: string }).id;
+      const agentId = (msg as { agentId?: string }).agentId;
+      const sessionId = (msg as { sessionId?: string }).sessionId;
+      // eslint-disable-next-line no-console
+      console.log(
+        `[agents] dispatch ${msg.type}` +
+          (agentId ? ` agent=${agentId}` : "") +
+          (sessionId ? ` session=${sessionId.slice(0, 8)}…` : "") +
+          (requestId ? ` reqId=${requestId.slice(0, 8)}…` : ""),
+      );
+    }
     try {
       switch (msg.type) {
         case "AGENT_LIST_AGENTS": {

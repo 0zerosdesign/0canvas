@@ -51,10 +51,35 @@ export const codexSpec: StreamJsonAgentSpec<CodexExtra> = {
     // the same reason. The user's safety story is the permission-mode
     // gate (Ask First / Auto-Edit / etc.), not Codex's own untrusted-dir
     // check.
+    //
+    // Model selection: the renderer's model picker writes
+    // OPENAI_MODEL into state.env (catalogs/models-v1.json convention).
+    // Codex CLI itself doesn't read OPENAI_MODEL — it only honors the
+    // `--model` flag or ~/.codex/config.toml. Without this translation
+    // every model picked in the UI was silently ignored, and codex used
+    // whatever default was configured globally (which on older CLI
+    // versions returned a "model requires newer version" error for
+    // every prompt). Translate env → flag here.
     const threadId = state.extra.codexThreadId;
+    const model = state.env?.OPENAI_MODEL;
+    const modelArgs = model ? ["--model", model] : [];
     return threadId
-      ? ["exec", "--skip-git-repo-check", "resume", threadId, promptText, "--json"]
-      : ["exec", "--skip-git-repo-check", promptText, "--json"];
+      ? [
+          "exec",
+          "--skip-git-repo-check",
+          ...modelArgs,
+          "resume",
+          threadId,
+          promptText,
+          "--json",
+        ]
+      : [
+          "exec",
+          "--skip-git-repo-check",
+          ...modelArgs,
+          promptText,
+          "--json",
+        ];
   },
 
   formatPromptText(blocks: ContentBlock[]): string {

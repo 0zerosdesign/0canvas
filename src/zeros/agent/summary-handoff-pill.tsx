@@ -46,7 +46,10 @@ export function SummaryHandoffPill({ chatId, sourceChatId, onInsert }: Props) {
   const sessions = useAgentSessions();
   const { state, dispatch } = useWorkspace();
   const sourceChat = state.chats.find((c) => c.id === sourceChatId) ?? null;
-  const sourceSession = sessions.sessions[sourceChatId];
+  // useAgentSessions().sessions used to be a direct field; it now flows
+  // via getSession so the actions context can stay reference-stable
+  // (was triggering 50+/sec AGENT_INIT_AGENT loops elsewhere).
+  const sourceSession = sessions.getSession(sourceChatId);
 
   if (!sourceChat) return null;
 

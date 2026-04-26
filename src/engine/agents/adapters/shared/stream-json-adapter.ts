@@ -220,19 +220,43 @@ export class StreamJsonAdapter<Extra = unknown> implements AgentAdapter {
       ? { ...(state.env ?? {}), ...this.spec.buildPromptEnv(state) }
       : state.env;
 
+    // eslint-disable-next-line no-console
+    console.log(
+      `[agents] ${this.agentId} prompt spawn: cmd=${this.spec.cliBinary} ` +
+        `args=${JSON.stringify(args)} cwd=${state.cwd}`,
+    );
+    let eventCount = 0;
     const stream = spawnStreamJson({
       command: this.spec.cliBinary,
       args,
       cwd: state.cwd,
       env,
-      onEvent: (obj) => state.translator?.feed(obj),
-      onStderrLine: (line) =>
-        this.ctx.emit.onAgentStderr(this.agentId, line),
+      onEvent: (obj) => {
+        eventCount++;
+        const evType = (obj as { type?: string } | null)?.type;
+        if (eventCount <= 5) {
+          // eslint-disable-next-line no-console
+          console.log(
+            `[agents] ${this.agentId} event ${eventCount}: type=${evType}`,
+          );
+        }
+        state.translator?.feed(obj);
+      },
+      onStderrLine: (line) => {
+        // eslint-disable-next-line no-console
+        console.log(`[agents] ${this.agentId} stderr: ${line}`);
+        this.ctx.emit.onAgentStderr(this.agentId, line);
+      },
     });
     state.active = stream;
 
     try {
       const { code, signal } = await stream.exited;
+      // eslint-disable-next-line no-console
+      console.log(
+        `[agents] ${this.agentId} prompt exit: code=${code} signal=${signal ?? ""} ` +
+          `events=${eventCount} sawTerminal=${state.translator?.sawTerminal ?? false}`,
+      );
 
       if (this.spec.captureAfterPrompt) {
         this.spec.captureAfterPrompt({ state, translator: state.translator });
@@ -253,6 +277,37 @@ export class StreamJsonAdapter<Extra = unknown> implements AgentAdapter {
             stage: "prompt",
           }),
         );
+      }
+
+      // Subprocess exited cleanly (code 0) but produced no terminal
+      // event. Pre-fix this surfaced as `cancelled` and the chat went
+      // silent — visible as "Codex never responds" / "Cursor sends
+      // nothing". The likely cause is a CLI-version mismatch (event
+      // schema drift) or a wrong-command path. Either way, "no events"
+      // is a real failure the user needs to see — log the spawn for
+      // diagnosis and throw a structured protocol-error so the chat
+      // surfaces an actionable message instead of going dark.
+      if (!sawTerminal) {
+        const stderrTail = stream.stderrTail();
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[agents] ${this.agentId} exited cleanly (code 0) with no terminal event. ` +
+            `cmd=${this.spec.cliBinary} args=${JSON.stringify(args)} ` +
+            `stderr=${JSON.stringify(stderrTail).slice(0, 500)}`,
+        );
+        throw new AgentFailureError({
+          kind: "protocol-error",
+          message:
+            `${this.spec.agentName} produced no events. ` +
+            `This usually means the CLI version is incompatible with the ` +
+            `streaming schema we expect. ` +
+            (stderrTail
+              ? `Stderr: ${stderrTail.slice(0, 200)}`
+              : `Try running '${this.spec.cliBinary} --version' in a terminal.`),
+          stage: "prompt",
+          agentId: this.agentId,
+          exit: { code, signal: signal ? String(signal) : null, stderrTail },
+        });
       }
 
       // Agent finished cleanly but its message content told the user

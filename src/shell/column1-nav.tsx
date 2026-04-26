@@ -63,8 +63,12 @@ import { useUpdater } from "../native/updater";
 
 const DOCS_URL = "https://github.com/Withso/zeros#readme";
 const COLLAPSE_KEY = "column-1-collapsed";
-/** Per-folder expanded state for "show all chats beyond the first 5". */
-const PROJECTS_EXPANDED_KEY = "column-1-projects-expanded";
+/** Per-folder visible-count for the chat list. Default 5; each
+ *  "Show more" click adds PROJECT_CHATS_PAGE_SIZE; "Show less" resets.
+ *  Replaces the previous boolean expand-all toggle so long lists
+ *  reveal in chunks instead of dumping everything into a tiny inner
+ *  scroll-clipped box. */
+const PROJECTS_VISIBLE_COUNT_KEY = "column-1-projects-visible-count";
 /** Per-folder section collapsed state (workspace section chevron). */
 const WORKSPACE_SECTIONS_COLLAPSED_KEY = "column-1-workspace-sections-collapsed";
 /** List of folder paths the user has explicitly hidden via right-click.
@@ -80,9 +84,13 @@ const LOCALHOST_COLLAPSED_KEY = "column-1-localhost-collapsed";
  *  the workspace shell is enough to pick up the change. */
 export const SHOW_ARCHIVED_CHATS_KEY = "show-archived-chats";
 
-/** How many chats to show per project before collapsing behind "More".
- *  Matches Cursor's Agents Window behavior. */
+/** Initial number of chats visible per project before any "Show more"
+ *  is clicked. Matches Cursor's Agents Window cadence. */
 const PROJECT_CHATS_VISIBLE = 5;
+/** Each "Show more" click reveals this many additional chats. Multiple
+ *  clicks paginate through the rest of the list, so the user always
+ *  sees the same uniform row UI — no nested scroll-box. */
+const PROJECT_CHATS_PAGE_SIZE = 10;
 
 /** Max recent projects surfaced in the Open Workspace dropdown.
  *  Kept tight so the menu stays scannable — older workspaces live in
@@ -377,10 +385,15 @@ export function Column1Nav() {
   useEffect(() => {
     if (!workspaceMenu.open) setWorkspaceQuery("");
   }, [workspaceMenu.open]);
-  // Per-folder "show all chats beyond the first 5" toggle. Default false
-  // means newest 5 shown, "More" button appears when there are more.
-  const [projectsExpanded, setProjectsExpanded] = useState<Record<string, boolean>>(() =>
-    getSetting<Record<string, boolean>>(PROJECTS_EXPANDED_KEY, {}),
+  // Per-folder visible-count for the chat list. Undefined (or below the
+  // initial 5) means "default 5"; "Show more" increments by
+  // PROJECT_CHATS_PAGE_SIZE; "Show less" resets. Persisting the count
+  // means a user who's expanded their main workspace stays expanded
+  // across reloads. Older builds wrote a boolean flag at a different
+  // settings key (PROJECTS_EXPANDED_KEY) — that data is now ignored;
+  // the user just lands at the default count and can re-expand.
+  const [projectsVisible, setProjectsVisible] = useState<Record<string, number>>(() =>
+    getSetting<Record<string, number>>(PROJECTS_VISIBLE_COUNT_KEY, {}),
   );
   // Per-folder section collapse state — the whole workspace list body
   // folds up when clicked. Inverts for the current engine root (opens
@@ -484,10 +497,28 @@ export function Column1Nav() {
     });
   };
 
-  const toggleProjectExpanded = (folder: string) => {
-    setProjectsExpanded((prev) => {
-      const next = { ...prev, [folder]: !prev[folder] };
-      setSetting(PROJECTS_EXPANDED_KEY, next);
+  /** Reveal the next page of chats for a workspace. Idempotent at the
+   *  end of the list — once visibleCount reaches chats.length the
+   *  button stops rendering. */
+  const showMoreInFolder = (folder: string, total: number) => {
+    setProjectsVisible((prev) => {
+      const current = prev[folder] ?? PROJECT_CHATS_VISIBLE;
+      const nextCount = Math.min(current + PROJECT_CHATS_PAGE_SIZE, total);
+      const next = { ...prev, [folder]: nextCount };
+      setSetting(PROJECTS_VISIBLE_COUNT_KEY, next);
+      return next;
+    });
+  };
+
+  /** Collapse a workspace's chat list back to the default visible count. */
+  const showLessInFolder = (folder: string) => {
+    setProjectsVisible((prev) => {
+      // Drop the entry entirely so the value falls back to the default
+      // (PROJECT_CHATS_VISIBLE) — keeps the persisted shape minimal.
+      if (!(folder in prev)) return prev;
+      const next = { ...prev };
+      delete next[folder];
+      setSetting(PROJECTS_VISIBLE_COUNT_KEY, next);
       return next;
     });
   };
@@ -686,14 +717,17 @@ export function Column1Nav() {
   const renderFolderSection = (args: {
     folder: string;
     chats: ChatThread[];
-    isShowingAll: boolean;
+    /** How many chats to render. Defaulted to PROJECT_CHATS_VISIBLE
+     *  upstream for unset folders; clamped to chats.length below. */
+    visibleCount: number;
     isCollapsed: boolean;
     isCurrent: boolean;
     activeChatId: string | null;
     onSelectChat: (id: string) => void;
     onArchiveChat: (e: React.MouseEvent, id: string) => void;
     onTogglePin: (e: React.MouseEvent, id: string) => void;
-    onToggleShowAll: (folder: string) => void;
+    onShowMore: (folder: string, total: number) => void;
+    onShowLess: (folder: string) => void;
     onToggleSection: (folder: string) => void;
     onOpenContextMenu: (folder: string, e: React.MouseEvent) => void;
     onNewInFolder: (folder: string) => void;
@@ -701,23 +735,26 @@ export function Column1Nav() {
     const {
       folder,
       chats,
-      isShowingAll,
+      visibleCount,
       isCollapsed,
       isCurrent,
       activeChatId,
       onSelectChat,
       onArchiveChat,
       onTogglePin,
-      onToggleShowAll,
+      onShowMore,
+      onShowLess,
       onToggleSection,
       onOpenContextMenu,
       onNewInFolder,
     } = args;
-    const visibleChats =
-      isShowingAll || chats.length <= PROJECT_CHATS_VISIBLE
-        ? chats
-        : chats.slice(0, PROJECT_CHATS_VISIBLE);
-    const hiddenCount = chats.length - visibleChats.length;
+    const effectiveCount = Math.min(
+      Math.max(visibleCount, PROJECT_CHATS_VISIBLE),
+      chats.length,
+    );
+    const visibleChats = chats.slice(0, effectiveCount);
+    const remaining = chats.length - visibleChats.length;
+    const isExpanded = effectiveCount > PROJECT_CHATS_VISIBLE;
     return (
       <div
         key={folder}
@@ -764,9 +801,13 @@ export function Column1Nav() {
           </Button>
         </div>
         {!isCollapsed && (
-          <div
-            className={`oc-column-1__chat-list ${isShowingAll ? "is-scroll" : ""}`}
-          >
+          // No `is-scroll` modifier — long lists used to clip into a
+          // 280px inner scroll-box that broke alignment with the rest
+          // of the column (gaps, hover states, the active row never
+          // matched). Pagination via showMore replaces it: the list
+          // grows in page-sized chunks and the column's own scroll
+          // takes over once the row count exceeds the viewport.
+          <div className="oc-column-1__chat-list">
             {chats.length === 0 ? (
               <div className="oc-column-1__project-empty">No agents</div>
             ) : (
@@ -784,21 +825,29 @@ export function Column1Nav() {
                     }}
                   />
                 ))}
-                {hiddenCount > 0 && !isShowingAll && (
+                {/* Pagination: "Show more" reveals the next page.
+                 *  Stays as long as anything is hidden, so multiple
+                 *  clicks walk through the rest of the list — same
+                 *  uniform row UI throughout, no nested scroll. */}
+                {remaining > 0 && (
                   <Button
                     variant="ghost"
                     className="oc-column-1__project-more"
-                    onClick={() => onToggleShowAll(folder)}
+                    onClick={() => onShowMore(folder, chats.length)}
                   >
                     <MoreHorizontal size={12} />
-                    <span>Show more ({hiddenCount})</span>
+                    <span>
+                      Show more (
+                      {Math.min(remaining, PROJECT_CHATS_PAGE_SIZE)} of{" "}
+                      {remaining})
+                    </span>
                   </Button>
                 )}
-                {isShowingAll && chats.length > PROJECT_CHATS_VISIBLE && (
+                {isExpanded && (
                   <Button
                     variant="ghost"
                     className="oc-column-1__project-more"
-                    onClick={() => onToggleShowAll(folder)}
+                    onClick={() => onShowLess(folder)}
                   >
                     <MoreHorizontal size={12} />
                     <span>Show less</span>
@@ -1139,14 +1188,15 @@ export function Column1Nav() {
               return renderFolderSection({
                 folder,
                 chats: grouped.get(folder) ?? [],
-                isShowingAll: projectsExpanded[folder] === true,
+                visibleCount: projectsVisible[folder] ?? PROJECT_CHATS_VISIBLE,
                 isCollapsed,
                 isCurrent,
                 activeChatId: state.activeChatId,
                 onSelectChat: handleSelectChat,
                 onArchiveChat: handleArchiveChat,
                 onTogglePin: handleTogglePin,
-                onToggleShowAll: toggleProjectExpanded,
+                onShowMore: showMoreInFolder,
+                onShowLess: showLessInFolder,
                 onToggleSection: toggleSectionCollapsed,
                 onOpenContextMenu: openWorkspaceContextMenu,
                 onNewInFolder: handleNewChatInFolder,

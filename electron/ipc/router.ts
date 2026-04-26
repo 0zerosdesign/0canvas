@@ -110,6 +110,14 @@ const commandTable: Record<string, CommandHandler> = {
   ai_cli_run_login: notImpl("ai_cli_run_login", 7),
   claude_spawn: notImpl("claude_spawn", 7),
   codex_spawn: notImpl("codex_spawn", 7),
+
+  // ── Agent transcript persistence (Phase 0 step 4) ─────────
+  agent_history_append: notImpl("agent_history_append", 0),
+  agent_history_window: notImpl("agent_history_window", 0),
+  agent_history_clear_chat: notImpl("agent_history_clear_chat", 0),
+  agent_history_set_chat_meta: notImpl("agent_history_set_chat_meta", 0),
+  agent_history_get_chat_meta: notImpl("agent_history_get_chat_meta", 0),
+  agent_history_list_chats: notImpl("agent_history_list_chats", 0),
 };
 
 export function listCommandNames(): string[] {

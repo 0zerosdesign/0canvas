@@ -1,41 +1,36 @@
 // ──────────────────────────────────────────────────────────
-// AgentSessionsProvider — one ACP session per chat, all sharing
-// agent subprocesses via the engine's session manager.
+// AgentSessionsProvider — bridge-connected actions over the Zustand store
 // ──────────────────────────────────────────────────────────
 //
-// Why this exists: the old useAgentSession hook owns exactly one
-// session per mount. That works for a single-chat beta surface,
-// but the production app has N concurrent chats — each with its
-// own cwd, messages, and permission queue. We want:
+// Phase 0 step 3 split this file in two:
+//   - sessions-store.ts owns *data* (per-chat slots, warm-agent set,
+//     bridge-notification reducers). Subscribes via selectors so chat
+//     A's stream doesn't re-render chat B's components.
+//   - This file owns *actions that need the bridge* (ensureSession,
+//     sendPrompt, …). It writes to the store via store actions.
 //
-//   - One subprocess per agent id (shared across chats)
-//   - One session per chat (own sessionId + messages)
-//   - Session state survives tab switches within the app run
+// The public API (`useChatSession`, `useAgentSessions`) is unchanged
+// from the caller's perspective. Internally, slot reads are now
+// scoped to one chat via Zustand selectors, killing the cross-chat
+// re-render cascade.
 //
-// Implementation: single bridge listener at provider level,
-// indexed by sessionId → chatId. The per-chat hook slices the
-// session map and returns an object shaped like the old hook so
-// <AgentChat> can be reused unchanged.
 // ──────────────────────────────────────────────────────────
 
 import React, {
   createContext,
+  startTransition,
   useCallback,
   useContext,
   useEffect,
   useMemo,
   useRef,
-  useState,
 } from "react";
 import type {
-  AvailableCommand,
   ContentBlock,
   InitializeResponse,
-  PlanEntry,
-  RequestPermissionRequest,
   RequestPermissionResponse,
-  SessionNotification,
 } from "@agentclientprotocol/sdk";
+import type { ListSessionsResponse } from "@agentclientprotocol/sdk";
 import type {
   AgentAgentsListMessage,
   AgentAgentInitializedMessage,
@@ -48,10 +43,8 @@ import type {
   AgentSessionsListMessage,
   BridgeRegistryAgent,
 } from "../bridge/messages";
-import type { ListSessionsResponse } from "@agentclientprotocol/sdk";
 import { useBridge } from "../bridge/use-bridge";
 import {
-  applyUpdate,
   BLANK_USAGE,
   type AgentMessage,
   type AgentSessionControls,
@@ -61,35 +54,37 @@ import {
   type SessionStatus,
   type StartSessionOptions,
 } from "./use-agent-session";
-
-const MAX_STDERR_LINES = 200;
-
-/** Renderer-side cap on per-chat message history. The engine streams
- *  every tool-call delta as a separate notification; a long session
- *  with many edits can produce tens of thousands of entries. We keep
- *  the most recent N so the renderer process doesn't grow without
- *  bound. The cap is a memory safety net — visible chat scrollback
- *  in practice never exceeds a few hundred turns. */
-const MAX_MESSAGES_PER_CHAT = 1000;
-
-function capMessages(messages: AgentMessage[]): AgentMessage[] {
-  if (messages.length <= MAX_MESSAGES_PER_CHAT) return messages;
-  return messages.slice(-MAX_MESSAGES_PER_CHAT);
-}
-
-/** User-visible ceiling for session creation. Single attempt — if it
- *  fails we surface the classified failure rather than loop. 10s gives
- *  Claude Agent and Codex enough room for their cold newSession RPC
- *  (the prior 2s was firing before the adapter finished handshaking
- *  with Anthropic / OpenAI, even on a warm subprocess). */
-const ENSURE_SESSION_ATTEMPT_TIMEOUT_MS = 10_000;
-const ENSURE_SESSION_ATTEMPTS = 1;
-
+import {
+  BLANK,
+  MAX_MESSAGES_PER_CHAT,
+  useSessionsStore,
+} from "./sessions-store";
+import {
+  appendMessages as persistAppendMessages,
+  clearChat as persistClearChat,
+  setChatMeta as persistSetChatMeta,
+  windowMessages as persistWindowMessages,
+} from "./agent-history-client";
 import {
   classifyRpcError,
   isRecoverable as failureIsRecoverable,
   type AgentFailure,
 } from "../bridge/failure";
+
+/** How many messages we hydrate into memory per chat on first mount.
+ *  Older messages stay on disk and load on scroll-up. 200 covers a
+ *  multi-hour session without scrolling. */
+const HYDRATE_WINDOW = 200;
+
+// MAX_MESSAGES_PER_CHAT is re-exported for any caller that needs the
+// cap (display threshold, etc.). The store enforces it on writes.
+export { MAX_MESSAGES_PER_CHAT };
+
+/** User-visible ceiling for session creation. Single attempt — if it
+ *  fails we surface the classified failure rather than loop. 10s gives
+ *  Claude Agent and Codex enough room for their cold newSession RPC. */
+const ENSURE_SESSION_ATTEMPT_TIMEOUT_MS = 10_000;
+const ENSURE_SESSION_ATTEMPTS = 1;
 
 /** Pull the classified failure off an AGENT_ERROR bridge message when
  *  the engine populated it; otherwise classify from the free-form
@@ -106,308 +101,228 @@ function failureFromAcpError(
   });
 }
 
-/** Map a failure classification to the UI session status. The source
- *  of truth for "which status does the UI land in after a failure?" —
- *  keeps acp-chat / composer routing deterministic. */
+/** Map a failure classification to the UI session status. */
 function statusForFailure(failure: AgentFailure): SessionStatus {
   if (failure.kind === "auth-required") return "auth-required";
   if (failureIsRecoverable(failure)) return "reconnecting";
   return "failed";
 }
 
-const BLANK: AgentSessionState = {
-  agentId: null,
-  agentName: null,
-  sessionId: null,
-  initialize: null,
-  session: null,
-  status: "idle",
-  messages: [],
-  pendingPermission: null,
-  stderrLog: [],
-  error: null,
-  failure: null,
-  lastStopReason: null,
-  availableModes: [],
-  currentModeId: null,
-  usage: BLANK_USAGE,
-  plan: [],
-  availableCommands: [],
-};
-
 interface StartForChatOptions extends StartSessionOptions {
   /** Absolute path the agent subprocess should use as cwd. */
   cwd?: string;
   /** Force a fresh session even when one is already ready. Used when
-   *  the user changes model/effort — those propagate via env and only
-   *  take effect on spawn. */
+   *  the user changes model/effort. */
   force?: boolean;
 }
 
-interface SessionsCtx {
-  sessions: Record<string, AgentSessionState>;
-
-  /** Read the LATEST session state for a chat — bypasses the React
-   *  closure capture problem. After `await ensureSession`, the ctx
-   *  object held in scope is stale; reading `sessions[chatId]` shows
-   *  pre-await state. Callers that gate on session status across an
-   *  async boundary must use this getter instead. */
+/** Bridge-connected actions. The context value contains ONLY these —
+ *  no session data — so the value is stable and downstream consumers
+ *  using `useContext(ActionsCtx)` don't re-render on every token. */
+interface SessionsActions {
   getSession(chatId: string): AgentSessionState | undefined;
-
-  /** Ask for the registry. */
   listAgents(force?: boolean): Promise<BridgeRegistryAgent[]>;
-
-  /** Spawn the subprocess with empty env so the auth screen can read
-   *  advertised auth methods. No-op if already started. */
   initAgent(agentId: string): Promise<InitializeResponse>;
-
-  /** Idempotent — creates a session for the chat if one doesn't exist.
-   *  Safe to call on every render; bails out early when session is ready. */
   ensureSession(
     chatId: string,
     agentId: string,
     options?: StartForChatOptions,
   ): Promise<void>;
-
   sendPrompt(
     chatId: string,
     text: string,
     displayText?: string,
     attachments?: ContentBlock[],
   ): Promise<void>;
-
   cancel(chatId: string): Promise<void>;
-
   respondToPermission(
     chatId: string,
     response: RequestPermissionResponse,
   ): void;
-
-  /** Switch session mode via protocol-level `session/set_mode`. Echoes the change
-   *  back into session state on success. */
   setMode(chatId: string, modeId: string): Promise<void>;
-
-  /** Drop browser-side state for this chat. Subprocess stays warm. */
   reset(chatId: string): void;
-
-  /** Enumerate resumable sessions for an agent. Only agents with
-   *  thread-history support (see agent-ui-registry.hasThreadHistory) will
-   *  return anything useful. Errors are surfaced to the caller. */
   listSessionsFor(
     agentId: string,
     opts?: { cwd?: string; cursor?: string | null },
   ): Promise<ListSessionsResponse>;
-
-  /** Load a previously-saved agent session into a chat. Replaces any
-   *  existing session for the chat. Does NOT call newSession — the agent
-   *  replays history via session/update notifications. */
   loadIntoChat(
     chatId: string,
     agentId: string,
     sessionId: string,
     options?: StartForChatOptions,
   ): Promise<void>;
-
-  /** Agent ids with a live subprocess known to the engine. Powers the
-   *  green-dot indicator on agent pills. Best-effort — we add on a
-   *  successful initAgent / newSession and remove on AGENT_AGENT_EXITED. */
-  warmAgentIds: ReadonlySet<string>;
-
-  /** Drop every in-memory session and warm-agent flag without
-   *  attempting RPC teardown. Used by the in-place project swap: when
-   *  Electron respawns the engine on a fresh port, every sessionId we
-   *  hold belongs to a dead process — the new engine has its own
-   *  subprocess pool. The persistent chat.sessionId on disk lets us
-   *  re-load on the user's next chat-open. */
+  /** Load on-disk transcript for `chatId` if the in-memory slot is
+   *  empty. Idempotent — safe to call from a chat view's mount effect.
+   *  Does NOT touch a slot that's already populated; the live store
+   *  is the source of truth once the user is interacting. */
+  hydrateChat(chatId: string): Promise<void>;
   disposeAll(): void;
 }
 
-const Ctx = createContext<SessionsCtx | null>(null);
+/** Public surface — what `useAgentSessions()` returns.
+ *
+ *  This used to also expose `sessions: Record<string, AgentSessionState>`
+ *  and `warmAgentIds: ReadonlySet<string>` as direct fields. That broke
+ *  consumers' useEffect dependency arrays — every store mutation
+ *  produced a new returned-object reference, so any effect with
+ *  `[..., sessions]` in its deps re-fired on every token stream chunk.
+ *  One such effect (empty-composer) called `sessions.initAgent` inside,
+ *  which produced a runaway 50+/sec AGENT_INIT_AGENT loop that
+ *  saturated the bridge queue and prevented real prompts from getting
+ *  through (observed 2026-04-26 with codex never responding).
+ *
+ *  The data fields now live behind dedicated hooks
+ *  (`useChatSlot(id)` for one chat, `useWarmAgentIds()` for the warm
+ *  set, `useAgentSessions().getSession(id)` for one-shot access). The
+ *  context value itself is the stable actions object — its identity
+ *  only changes if a memo dep on the provider does. */
+export type SessionsCtx = SessionsActions;
+
+const ActionsCtx = createContext<SessionsActions | null>(null);
 
 export function AgentSessionsProvider({ children }: { children: React.ReactNode }) {
   const bridge = useBridge();
 
-  const [sessions, setSessions] = useState<Record<string, AgentSessionState>>({});
-  const [warmAgentIds, setWarmAgentIds] = useState<Set<string>>(() => new Set());
-  const markWarm = useCallback((agentId: string) => {
-    setWarmAgentIds((prev) => {
-      if (prev.has(agentId)) return prev;
-      const next = new Set(prev);
-      next.add(agentId);
-      return next;
-    });
-  }, []);
-  const markCold = useCallback((agentId: string) => {
-    setWarmAgentIds((prev) => {
-      if (!prev.has(agentId)) return prev;
-      const next = new Set(prev);
-      next.delete(agentId);
-      return next;
-    });
-  }, []);
+  // Helper: snapshot the store. Used inside async actions to bypass
+  // React's closure capture problem (state read pre-await is stale).
+  const getStore = useSessionsStore.getState;
 
-  // Mutable mirrors of state so listener callbacks don't close over stale
-  // values. The listeners fire off-render, so React's normal stale-closure
-  // story doesn't work — we keep a ref per piece of derived lookup data.
-  const sessionsRef = useRef(sessions);
-  useEffect(() => {
-    sessionsRef.current = sessions;
-  }, [sessions]);
-
-  /** sessionId → chatId. Rebuilt whenever sessions change so notification
-   *  dispatch is O(1) and we never touch an unrelated chat. */
-  const sessionToChatRef = useRef<Record<string, string>>({});
-  useEffect(() => {
-    const map: Record<string, string> = {};
-    for (const [chatId, s] of Object.entries(sessions)) {
-      if (s.sessionId) map[s.sessionId] = chatId;
-    }
-    sessionToChatRef.current = map;
-  }, [sessions]);
-
-  // Patch helper — avoids writing 20 variants of "update one chat's slot".
-  const patch = useCallback(
-    (chatId: string, update: Partial<AgentSessionState>) => {
-      setSessions((prev) => ({
-        ...prev,
-        [chatId]: { ...(prev[chatId] ?? BLANK), ...update },
-      }));
-    },
-    [],
-  );
-
-  // ensureSession isn't in scope of the bridge-listeners effect (it's
-  // declared below), so a ref lets the AGENT_AGENT_EXITED handler trigger
-  // a silent respawn without re-arranging the component.
-  const ensureSessionRef = useRef<SessionsCtx["ensureSession"] | null>(null);
-
-  // Per-chat in-flight ensureSession promises. Without this lock, a
-  // user clicking Send while the initial session creation is still
-  // "warming" fires a second AGENT_NEW_SESSION — both succeed, the
-  // engine returns two different sessionIds, the second overwrites
-  // the first, and any stream events emitted under the orphaned
-  // sessionId can't be routed back through sessionToChatRef. The
-  // user's bubble shows but the response never lands. Concurrent
-  // callers now await the in-flight call instead of starting a
-  // duplicate. Force=true bypasses (model swap intends a rebuild).
+  // Per-chat in-flight ensureSession promises. Concurrent callers wait on
+  // the existing promise instead of starting a duplicate. Force=true
+  // bypasses (model swap intends a rebuild).
   const ensureInFlightRef = useRef(new Map<string, Promise<void>>());
 
-  // ── Bridge listeners (single set for all chats) ──────────
-
+  // Bridge listeners feed the store. Phase 0 step 5: notifications are
+  // buffered into a ring of arrays and flushed once per animation frame
+  // inside `startTransition`. Token-rate inputs (10–100/s during a
+  // streaming response) collapse to ≤60 store updates per second, and
+  // React tags those updates as non-urgent so typing/clicks always
+  // pre-empt them. Pre-buffer the path was: 1 setState per chunk
+  // = render storm; now: 1 setState per frame = smooth.
   useEffect(() => {
     if (!bridge) return;
 
-    const unsubUpdate = bridge.on("AGENT_SESSION_UPDATE", (raw) => {
-      const msg = raw as {
-        agentId: string;
-        notification: SessionNotification;
-      };
-      const chatId = sessionToChatRef.current[msg.notification.sessionId];
-      if (!chatId) return;
+    type SessionNotification =
+      import("@agentclientprotocol/sdk").SessionNotification;
+    type PermissionReq =
+      import("@agentclientprotocol/sdk").RequestPermissionRequest;
 
-      const upd = msg.notification.update as {
-        sessionUpdate?: string;
-        size?: number;
-        used?: number;
-        currentModeId?: string;
-        entries?: PlanEntry[];
-        availableCommands?: AvailableCommand[];
-      };
+    const updateBuffer: SessionNotification[] = [];
+    const permBuffer: Array<{
+      agentId: string;
+      permissionId: string;
+      request: PermissionReq;
+    }> = [];
+    const stderrBuffer: Array<{ agentId: string; line: string }> = [];
+    const exitBuffer: Array<{
+      agentId: string;
+      code: number | null;
+      signal: string | null;
+    }> = [];
 
-      // usage_update → context window accounting. Keep any per-turn
-      // cumulative counters from prompt-response usage; overwrite size/used.
-      if (upd.sessionUpdate === "usage_update") {
-        setSessions((prev) => {
-          const slot = prev[chatId];
-          if (!slot) return prev;
-          const nextUsage: AgentUsage = {
-            ...slot.usage,
-            size: typeof upd.size === "number" ? upd.size : slot.usage.size,
-            used: typeof upd.used === "number" ? upd.used : slot.usage.used,
-          };
-          return { ...prev, [chatId]: { ...slot, usage: nextUsage } };
-        });
-        return;
-      }
+    let rafHandle: number | null = null;
 
-      // current_mode_update → agent told us the mode flipped (e.g. after
-      // a /plan-mode slash command). Echo into state so the pill updates.
-      if (upd.sessionUpdate === "current_mode_update" && upd.currentModeId) {
-        patch(chatId, { currentModeId: upd.currentModeId });
-        return;
-      }
-
-      // plan → agent emitted a fresh todo list. Replaces wholesale (ACP
-      // spec: `plan` always carries the full list, not a delta).
-      if (upd.sessionUpdate === "plan" && Array.isArray(upd.entries)) {
-        patch(chatId, { plan: upd.entries });
-        return;
-      }
-
-      // available_commands_update → slash-command palette refresh.
+    const flush = () => {
+      rafHandle = null;
       if (
-        upd.sessionUpdate === "available_commands_update" &&
-        Array.isArray(upd.availableCommands)
+        updateBuffer.length === 0 &&
+        permBuffer.length === 0 &&
+        stderrBuffer.length === 0 &&
+        exitBuffer.length === 0
       ) {
-        patch(chatId, { availableCommands: upd.availableCommands });
         return;
       }
+      // Drain into local arrays so any new event arriving mid-flush
+      // queues for the next frame instead of being lost or re-processed.
+      const updates = updateBuffer.splice(0);
+      const perms = permBuffer.splice(0);
+      const stderrs = stderrBuffer.splice(0);
+      const exits = exitBuffer.splice(0);
 
-      // Everything else → feed to the messages reducer.
-      setSessions((prev) => {
-        const slot = prev[chatId];
-        if (!slot) return prev;
-        return {
-          ...prev,
-          [chatId]: {
-            ...slot,
-            messages: capMessages(applyUpdate(slot.messages, msg.notification)),
-          },
-        };
+      // Permissions and exits are control-plane events — they affect
+      // routing (session status, sign-in chip). Keep them URGENT so the
+      // user sees the prompt / failure immediately. Token chunks and
+      // stderr are content; they go through startTransition so React
+      // can drop intermediate frames if a newer one arrives.
+      const store = useSessionsStore.getState();
+
+      for (const p of perms) {
+        store.applyBridgePermissionRequest(
+          p.agentId,
+          p.permissionId,
+          p.request,
+        );
+      }
+      for (const e of exits) {
+        console.log(
+          `[Zeros AGENT_AGENT_EXITED] ${e.agentId} code=${e.code} signal=${e.signal}`,
+        );
+        store.applyBridgeAgentExit(e.agentId);
+      }
+
+      startTransition(() => {
+        const s = useSessionsStore.getState();
+        for (const n of updates) s.applyBridgeUpdate(n);
+        for (const t of stderrs) s.applyBridgeStderr(t.agentId, t.line);
       });
+    };
+
+    const schedule = () => {
+      if (rafHandle === null) {
+        rafHandle = requestAnimationFrame(flush);
+      }
+    };
+
+    const unsubUpdate = bridge.on("AGENT_SESSION_UPDATE", (raw) => {
+      const msg = raw as { agentId: string; notification: SessionNotification };
+      // Drop replay content events SYNCHRONOUSLY at receive time.
+      //
+      // Why here and not in applyBridgeUpdate (the rAF flush): the flag
+      // toggles inside loadIntoChat's finally block. The flush runs
+      // lazily, on the next animation frame. For a long replay (Claude
+      // Code dumps 100+ session_updates), the AGENT_SESSION_LOADED RPC
+      // resolves *before* the rAF fires — so by the time the flush
+      // checks the flag, it's already false, and every replay event
+      // gets through. That's the duplication that grows on every
+      // reopen (observed 2026-04-26).
+      //
+      // Checking at receive time is reliable because the flag is set
+      // synchronously *before* loadIntoChat awaits the bridge, so all
+      // replay events arrive while the flag is still true.
+      const state = useSessionsStore.getState();
+      const chatId = state.sessionToChatId[msg.notification.sessionId];
+      if (chatId && state.loadInProgress.has(chatId)) {
+        const upd = msg.notification.update as { sessionUpdate?: string };
+        const isContentEvent =
+          upd.sessionUpdate === "user_message_chunk" ||
+          upd.sessionUpdate === "agent_message_chunk" ||
+          upd.sessionUpdate === "agent_thought_chunk" ||
+          upd.sessionUpdate === "tool_call" ||
+          upd.sessionUpdate === "tool_call_update";
+        if (isContentEvent) return;
+      }
+      updateBuffer.push(msg.notification);
+      schedule();
     });
 
     const unsubPerm = bridge.on("AGENT_PERMISSION_REQUEST", (raw) => {
       const msg = raw as {
         agentId: string;
         permissionId: string;
-        request: RequestPermissionRequest;
+        request: PermissionReq;
       };
-      const sid = (msg.request as { sessionId?: string }).sessionId;
-      const chatId = sid ? sessionToChatRef.current[sid] : undefined;
-      if (!chatId) return;
-      patch(chatId, {
-        pendingPermission: {
-          agentId: msg.agentId,
-          permissionId: msg.permissionId,
-          request: msg.request,
-        },
+      permBuffer.push({
+        agentId: msg.agentId,
+        permissionId: msg.permissionId,
+        request: msg.request,
       });
+      schedule();
     });
 
     const unsubStderr = bridge.on("AGENT_AGENT_STDERR", (raw) => {
       const msg = raw as { agentId: string; line: string };
-      // Stderr isn't session-scoped; attach to every chat on this agent
-      // so the user sees it wherever they're looking.
-      setSessions((prev) => {
-        let changed = false;
-        const next: Record<string, AgentSessionState> = {};
-        for (const [chatId, slot] of Object.entries(prev)) {
-          if (slot.agentId === msg.agentId) {
-            next[chatId] = {
-              ...slot,
-              stderrLog: [
-                ...slot.stderrLog.slice(-(MAX_STDERR_LINES - 1)),
-                msg.line,
-              ],
-            };
-            changed = true;
-          } else {
-            next[chatId] = slot;
-          }
-        }
-        return changed ? next : prev;
-      });
+      stderrBuffer.push({ agentId: msg.agentId, line: msg.line });
+      schedule();
     });
 
     const unsubExit = bridge.on("AGENT_AGENT_EXITED", (raw) => {
@@ -416,63 +331,42 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
         code: number | null;
         signal: string | null;
       };
-      // Green-dot: the subprocess is gone.
-      markCold(msg.agentId);
       // Agent subprocess exited. The ENGINE owns respawn entirely (see
       // the always-warm pool in session-manager.ts). The UI's job is
-      // just to reflect the blip — mark the chat `reconnecting` and
-      // clear the dead sessionId. The NEXT user action (sending a
-      // prompt, switching to the chat, agent/model change) triggers
-      // ensureSession, which lands on the (by-then) respawned subprocess.
+      // just to reflect the blip — mark chats `reconnecting` and clear
+      // the dead sessionId. The next user action triggers ensureSession,
+      // which lands on the (by-then) respawned subprocess.
       //
-      // We intentionally do NOT schedule an automatic retry here.
-      // Every loop we added previously turned into a "reconnecting
-      // forever" bug when the engine couldn't revive (e.g. missing
-      // auth). Let the engine's respawn pool fail loudly via its own
-      // exit events and let user interaction drive session recreation.
-      console.log(
-        `[Zeros AGENT_AGENT_EXITED] ${msg.agentId} code=${msg.code} signal=${msg.signal}`,
-      );
-      setSessions((prev) => {
-        let changed = false;
-        const next: Record<string, AgentSessionState> = {};
-        for (const [chatId, slot] of Object.entries(prev)) {
-          if (slot.agentId === msg.agentId) {
-            changed = true;
-            const terminal =
-              slot.status === "failed" ||
-              slot.status === "auth-required";
-            if (terminal) {
-              next[chatId] = slot;
-              continue;
-            }
-            next[chatId] = {
-              ...slot,
-              status: "reconnecting" as SessionStatus,
-              error: null,
-              failure: null,
-              sessionId: null,
-              session: null,
-            };
-          } else {
-            next[chatId] = slot;
-          }
-        }
-        return changed ? next : prev;
+      // We intentionally do NOT schedule an automatic retry. Loops here
+      // produced "reconnecting forever" bugs when revival was impossible
+      // (e.g. missing auth).
+      exitBuffer.push({
+        agentId: msg.agentId,
+        code: msg.code,
+        signal: msg.signal,
       });
+      schedule();
     });
 
     return () => {
+      // Flush anything still queued so a tear-down (e.g. provider remount,
+      // bridge swap on engine respawn) doesn't drop final permission
+      // prompts or exit events that the next listener can't observe.
+      if (rafHandle !== null) {
+        cancelAnimationFrame(rafHandle);
+        rafHandle = null;
+      }
+      flush();
       unsubUpdate();
       unsubPerm();
       unsubStderr();
       unsubExit();
     };
-  }, [bridge, patch, markCold]);
+  }, [bridge]);
 
-  // ── Public controls ─────────────────────────────────────
+  // ── Actions ─────────────────────────────────────────────
 
-  const listAgents = useCallback<SessionsCtx["listAgents"]>(
+  const listAgents = useCallback<SessionsActions["listAgents"]>(
     async (force = false) => {
       if (!bridge) return [];
       const resp = await bridge.request<AgentAgentsListMessage>(
@@ -484,40 +378,44 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
     [bridge],
   );
 
-  const initAgent = useCallback<SessionsCtx["initAgent"]>(
+  const initAgent = useCallback<SessionsActions["initAgent"]>(
     async (agentId) => {
       if (!bridge) throw new Error("Engine not connected");
       // 5 min ceiling on the bridge request covers first-time npx/uvx
-      // cold starts (downloads can take 10–40 s on slow networks). The
-      // engine's always-warm pool keeps subsequent calls sub-second.
+      // cold starts. The engine's always-warm pool keeps subsequent
+      // calls sub-second.
       const resp = await bridge.request<
         AgentAgentInitializedMessage | AgentErrorMessage
       >({ type: "AGENT_INIT_AGENT", agentId }, 5 * 60_000);
       if (resp.type === "AGENT_ERROR") {
-        markCold(agentId);
+        getStore().setWarmAgent(agentId, false);
         const failure = failureFromAcpError(resp, "initialize");
-        // Throw a structured error the caller can destructure without
-        // regex-matching the message.
         const err = new Error(failure.message) as Error & {
           failure?: AgentFailure;
         };
         err.failure = failure;
         throw err;
       }
-      markWarm(agentId);
+      getStore().setWarmAgent(agentId, true);
       return resp.initialize;
     },
-    [bridge, markWarm, markCold],
+    [bridge, getStore],
   );
 
-  const ensureSession = useCallback<SessionsCtx["ensureSession"]>(
+  // ensureSession is referenced by sendPrompt's recovery path (and could
+  // be by future bridge handlers); a ref breaks the circular dependency
+  // without re-arranging the component.
+  const ensureSessionRef = useRef<SessionsActions["ensureSession"] | null>(null);
+
+  const ensureSession = useCallback<SessionsActions["ensureSession"]>(
     async (chatId, agentId, options) => {
       if (!bridge) return;
-      const existing = sessionsRef.current[chatId];
+      const store = getStore();
+      const existing = store.sessions[chatId];
+
       // Already wired up and healthy — nothing to do unless the caller
-      // forces a rebuild (model/effort change). We treat `reconnecting`
-      // and `auth-required` as "not healthy" so a fresh ensureSession
-      // from user interaction kicks retry.
+      // forces a rebuild. `reconnecting` and `auth-required` count as
+      // "not healthy" so user interaction kicks retry.
       if (
         !options?.force &&
         existing &&
@@ -527,18 +425,18 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
       ) {
         return;
       }
-      // De-dup concurrent calls. A user clicking Send while the
-      // initial creation is mid-warming would otherwise kick off a
-      // parallel newSession, orphaning the first sessionId. Wait on
-      // the existing promise instead. Force still bypasses — the
-      // caller wants a fresh subprocess (model swap).
+
+      // De-dup concurrent calls. A user clicking Send while initial
+      // creation is mid-warming would otherwise kick off a parallel
+      // newSession, orphaning the first sessionId. Wait on the existing
+      // promise instead. Force still bypasses.
       if (!options?.force) {
         const inflight = ensureInFlightRef.current.get(chatId);
         if (inflight) return inflight;
       }
 
       const work = (async () => {
-        patch(chatId, {
+        getStore().setSession(chatId, {
           ...BLANK,
           agentId,
           agentName: options?.agentName ?? agentId,
@@ -546,98 +444,91 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
           messages: existing?.messages ?? [],
         });
 
-      // Retry budget: 2 attempts × 2 s = 4 s ceiling from the user's
-      // perspective. The engine's always-warm pool is doing heavier
-      // lifting in parallel (~ensures subprocess is alive); if both
-      // attempts still can't create a session we classify and route.
-      // No silent third loop — that was the root cause of the eternal
-      // "Reconnecting…" spinner.
-      //
-      // IMPORTANT: we Promise.race the bridge request against an outer
-      // setTimeout. The ws-client has its own reconnect-queue window
-      // (RECONNECT_GRACE_MS, ~7s) which would otherwise mask the 2s
-      // we pass down — the race makes the cap absolute.
-      let lastFailure: AgentFailure | null = null;
-      const attemptOnce = async (): Promise<
-        AgentSessionCreatedMessage | AgentErrorMessage
-      > => {
-        const timer = new Promise<never>((_, reject) => {
-          window.setTimeout(
-            () =>
-              reject(
-                new Error(`Request timeout: AGENT_NEW_SESSION (${ENSURE_SESSION_ATTEMPT_TIMEOUT_MS}ms cap)`),
-              ),
+        // Race the bridge request against an outer setTimeout. The
+        // ws-client has its own reconnect-queue window
+        // (RECONNECT_GRACE_MS, ~7s) which would otherwise mask the cap
+        // we pass down — the race makes it absolute.
+        let lastFailure: AgentFailure | null = null;
+        const attemptOnce = async (): Promise<
+          AgentSessionCreatedMessage | AgentErrorMessage
+        > => {
+          const timer = new Promise<never>((_, reject) => {
+            window.setTimeout(
+              () =>
+                reject(
+                  new Error(
+                    `Request timeout: AGENT_NEW_SESSION (${ENSURE_SESSION_ATTEMPT_TIMEOUT_MS}ms cap)`,
+                  ),
+                ),
+              ENSURE_SESSION_ATTEMPT_TIMEOUT_MS,
+            );
+          });
+          const request = bridge.request<
+            AgentSessionCreatedMessage | AgentErrorMessage
+          >(
+            {
+              type: "AGENT_NEW_SESSION",
+              agentId,
+              cwd: options?.cwd,
+              env: options?.env,
+            },
             ENSURE_SESSION_ATTEMPT_TIMEOUT_MS,
           );
-        });
-        const request = bridge.request<
-          AgentSessionCreatedMessage | AgentErrorMessage
-        >(
-          {
-            type: "AGENT_NEW_SESSION",
-            agentId,
-            cwd: options?.cwd,
-            env: options?.env,
-          },
-          // Inner bridge timeout matches; both layers bail at 2s.
-          ENSURE_SESSION_ATTEMPT_TIMEOUT_MS,
-        );
-        return Promise.race([request, timer]);
-      };
+          return Promise.race([request, timer]);
+        };
 
-      for (let attempt = 1; attempt <= ENSURE_SESSION_ATTEMPTS; attempt++) {
-        try {
-          const resp = await attemptOnce();
-          if (resp.type === "AGENT_ERROR") {
-            lastFailure = failureFromAcpError(resp, "newSession");
+        for (let attempt = 1; attempt <= ENSURE_SESSION_ATTEMPTS; attempt++) {
+          try {
+            const resp = await attemptOnce();
+            if (resp.type === "AGENT_ERROR") {
+              lastFailure = failureFromAcpError(resp, "newSession");
+              console.warn(
+                `[Zeros ensureSession] attempt ${attempt}/${ENSURE_SESSION_ATTEMPTS} for ${agentId}: AGENT_ERROR kind=${lastFailure.kind} message=${lastFailure.message}`,
+              );
+              if (!failureIsRecoverable(lastFailure)) break;
+              continue;
+            }
+            getStore().patchSession(chatId, {
+              status: "ready",
+              sessionId: resp.session.sessionId,
+              session: resp.session,
+              initialize: resp.initialize,
+              availableModes: resp.session.modes?.availableModes ?? [],
+              currentModeId: resp.session.modes?.currentModeId ?? null,
+              usage: BLANK_USAGE,
+              error: null,
+              failure: null,
+            });
+            getStore().setWarmAgent(agentId, true);
+            return;
+          } catch (err) {
+            lastFailure = classifyRpcError({
+              agentId,
+              stage: "newSession",
+              error: err,
+            });
             console.warn(
-              `[Zeros ensureSession] attempt ${attempt}/${ENSURE_SESSION_ATTEMPTS} for ${agentId}: AGENT_ERROR kind=${lastFailure.kind} message=${lastFailure.message}`,
+              `[Zeros ensureSession] attempt ${attempt}/${ENSURE_SESSION_ATTEMPTS} for ${agentId} threw: kind=${lastFailure.kind} msg=${lastFailure.message}`,
             );
-            // auth-required / protocol-error → fail fast, no second try
             if (!failureIsRecoverable(lastFailure)) break;
-            continue;
           }
-          patch(chatId, {
-            status: "ready",
-            sessionId: resp.session.sessionId,
-            session: resp.session,
-            initialize: resp.initialize,
-            availableModes: resp.session.modes?.availableModes ?? [],
-            currentModeId: resp.session.modes?.currentModeId ?? null,
-            usage: BLANK_USAGE,
-            error: null,
-            failure: null,
-          });
-          markWarm(agentId);
-          return;
-        } catch (err) {
-          lastFailure = classifyRpcError({
+        }
+
+        // Both attempts exhausted (or fast-failed). Route by
+        // classification: recoverable → reconnecting (muted),
+        // auth-required → Sign-in chip, else → failed (red).
+        const failure =
+          lastFailure ??
+          classifyRpcError({
             agentId,
             stage: "newSession",
-            error: err,
+            error: new Error("No response"),
           });
-          console.warn(
-            `[Zeros ensureSession] attempt ${attempt}/${ENSURE_SESSION_ATTEMPTS} for ${agentId} threw: kind=${lastFailure.kind} msg=${lastFailure.message}`,
-          );
-          if (!failureIsRecoverable(lastFailure)) break;
-        }
-      }
-
-      // Both attempts exhausted (or we fast-failed on a terminal error).
-      // Route by classification: recoverable → reconnecting (muted),
-      // auth-required → Sign-in chip, anything else → failed (red).
-      const failure =
-        lastFailure ??
-        classifyRpcError({
-          agentId,
-          stage: "newSession",
-          error: new Error("No response"),
+        getStore().patchSession(chatId, {
+          status: statusForFailure(failure),
+          error: failure.message,
+          failure,
         });
-      patch(chatId, {
-        status: statusForFailure(failure),
-        error: failure.message,
-        failure,
-      });
       })();
 
       ensureInFlightRef.current.set(chatId, work);
@@ -647,34 +538,29 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
         ensureInFlightRef.current.delete(chatId);
       }
     },
-    [bridge, patch, markWarm],
+    [bridge, getStore],
   );
 
-  // Expose ensureSession to the bridge-listeners effect (for silent
-  // respawn on AGENT_AGENT_EXITED).
   useEffect(() => {
     ensureSessionRef.current = ensureSession;
   }, [ensureSession]);
 
-  const sendPrompt = useCallback<SessionsCtx["sendPrompt"]>(
+  const sendPrompt = useCallback<SessionsActions["sendPrompt"]>(
     async (chatId, text, displayText, attachments) => {
       if (!bridge) return;
-      let current = sessionsRef.current[chatId];
+      let current = getStore().sessions[chatId];
       if (!current || !current.agentId) return;
       if (current.status === "streaming") return;
-      // If the session bounced to warming/reconnecting (engine
-      // respawn, agent crashed mid-turn) await one rebuild before
-      // dropping the prompt. Previously we'd silently return when
-      // sessionId was null, so the user's send button click did
-      // nothing. Now we surface a real failure status if the rebuild
-      // can't recover.
+
+      // If the session bounced (engine respawn, agent crashed mid-turn)
+      // await one rebuild before dropping the prompt.
       if (!current.sessionId && ensureSessionRef.current) {
         try {
           await ensureSessionRef.current(chatId, current.agentId);
         } catch {
           /* ensureSession patches the slot with the failure */
         }
-        current = sessionsRef.current[chatId];
+        current = getStore().sessions[chatId];
         if (!current || !current.sessionId) return;
       }
       if (!current.sessionId) return;
@@ -691,21 +577,13 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
         ...(attachments ?? []),
       ];
 
-      patch(chatId, {
+      // Append the user bubble immediately for instant UX feedback.
+      getStore().patchSession(chatId, {
         status: "streaming",
         error: null,
-        messages: capMessages([...current.messages, userMessage]),
+        messages: capUserAppend(current.messages, userMessage),
       });
 
-      // Prompt flow:
-      //   1. Send the prompt against the current sessionId.
-      //   2. If it fails with a RECOVERABLE failure (timeout /
-      //      transport-closed), the engine is most likely still warm
-      //      but our session is stale; silently rebuild ONCE via
-      //      ensureSession(force) and retry the prompt.
-      //   3. Anything non-recoverable (auth-required, protocol-error,
-      //      subprocess-exited) surfaces via classification. No sentinel
-      //      strings, no loops.
       const runPrompt = async (sessionId: string) =>
         bridge.request<AgentPromptCompleteMessage | AgentPromptFailedMessage>(
           {
@@ -720,21 +598,25 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
       const rebuildAndRetry = async (): Promise<
         AgentPromptCompleteMessage | AgentPromptFailedMessage | null
       > => {
-        patch(chatId, { status: "warming", error: null, failure: null });
+        getStore().patchSession(chatId, {
+          status: "warming",
+          error: null,
+          failure: null,
+        });
         try {
           await ensureSessionRef.current?.(chatId, current.agentId!, {
             force: true,
           });
         } catch {
-          /* surfaces via sessionsRef below */
+          /* surfaces via store below */
         }
-        const rebuilt = sessionsRef.current[chatId];
+        const rebuilt = getStore().sessions[chatId];
         if (!rebuilt?.sessionId || rebuilt.status !== "ready") return null;
-        patch(chatId, {
+        getStore().patchSession(chatId, {
           status: "streaming",
           error: null,
           failure: null,
-          messages: capMessages([...rebuilt.messages, userMessage]),
+          messages: capUserAppend(rebuilt.messages, userMessage),
         });
         return runPrompt(rebuilt.sessionId);
       };
@@ -750,7 +632,7 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
             error: firstErr,
           });
           if (!failureIsRecoverable(failure)) {
-            patch(chatId, {
+            getStore().patchSession(chatId, {
               status: statusForFailure(failure),
               error: failure.message,
               failure,
@@ -758,11 +640,7 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
             return;
           }
           resp = await rebuildAndRetry();
-          if (!resp) {
-            // ensureSession already reflected the right status (reconnecting
-            // / auth-required / failed) into the slot — nothing to do here.
-            return;
-          }
+          if (!resp) return;
         }
 
         if (resp.type === "AGENT_PROMPT_FAILED") {
@@ -770,7 +648,7 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
             { ...resp, message: resp.error } as unknown as AgentErrorMessage,
             "prompt",
           );
-          patch(chatId, {
+          getStore().patchSession(chatId, {
             status: statusForFailure(failure),
             error: failure.message,
             failure,
@@ -789,32 +667,26 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
               thoughtTokens?: number;
             }
           | undefined;
-        setSessions((prev) => {
-          const slot = prev[chatId];
-          if (!slot) return prev;
-          const u = slot.usage;
-          const next: AgentUsage = turnUsage
-            ? {
-                ...u,
-                inputTokens: u.inputTokens + (turnUsage.inputTokens ?? 0),
-                outputTokens: u.outputTokens + (turnUsage.outputTokens ?? 0),
-                cachedReadTokens:
-                  u.cachedReadTokens + (turnUsage.cachedReadTokens ?? 0),
-                cachedWriteTokens:
-                  u.cachedWriteTokens + (turnUsage.cachedWriteTokens ?? 0),
-                thoughtTokens:
-                  u.thoughtTokens + (turnUsage.thoughtTokens ?? 0),
-              }
-            : u;
-          return {
-            ...prev,
-            [chatId]: {
-              ...slot,
-              status: "ready",
-              lastStopReason: resp!.type === "AGENT_PROMPT_COMPLETE" ? resp!.stopReason : null,
-              usage: next,
-            },
-          };
+        const slot = getStore().sessions[chatId];
+        if (!slot) return;
+        const u = slot.usage;
+        const nextUsage: AgentUsage = turnUsage
+          ? {
+              ...u,
+              inputTokens: u.inputTokens + (turnUsage.inputTokens ?? 0),
+              outputTokens: u.outputTokens + (turnUsage.outputTokens ?? 0),
+              cachedReadTokens:
+                u.cachedReadTokens + (turnUsage.cachedReadTokens ?? 0),
+              cachedWriteTokens:
+                u.cachedWriteTokens + (turnUsage.cachedWriteTokens ?? 0),
+              thoughtTokens: u.thoughtTokens + (turnUsage.thoughtTokens ?? 0),
+            }
+          : u;
+        getStore().patchSession(chatId, {
+          status: "ready",
+          lastStopReason:
+            resp.type === "AGENT_PROMPT_COMPLETE" ? resp.stopReason : null,
+          usage: nextUsage,
         });
       } catch (err) {
         const failure = classifyRpcError({
@@ -822,20 +694,20 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
           stage: "prompt",
           error: err,
         });
-        patch(chatId, {
+        getStore().patchSession(chatId, {
           status: statusForFailure(failure),
           error: failure.message,
           failure,
         });
       }
     },
-    [bridge, patch],
+    [bridge, getStore],
   );
 
-  const cancel = useCallback<SessionsCtx["cancel"]>(
+  const cancel = useCallback<SessionsActions["cancel"]>(
     async (chatId) => {
       if (!bridge) return;
-      const current = sessionsRef.current[chatId];
+      const current = getStore().sessions[chatId];
       if (!current?.agentId || !current.sessionId) return;
       bridge.send({
         type: "AGENT_CANCEL",
@@ -843,34 +715,32 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
         sessionId: current.sessionId,
       });
     },
-    [bridge],
+    [bridge, getStore],
   );
 
-  const respondToPermission = useCallback<
-    SessionsCtx["respondToPermission"]
-  >(
+  const respondToPermission = useCallback<SessionsActions["respondToPermission"]>(
     (chatId, response) => {
       if (!bridge) return;
-      const current = sessionsRef.current[chatId];
+      const current = getStore().sessions[chatId];
       if (!current?.pendingPermission) return;
       bridge.send({
         type: "AGENT_PERMISSION_RESPONSE",
         permissionId: current.pendingPermission.permissionId,
         response,
       });
-      patch(chatId, { pendingPermission: null });
+      getStore().patchSession(chatId, { pendingPermission: null });
     },
-    [bridge, patch],
+    [bridge, getStore],
   );
 
-  const setMode = useCallback<SessionsCtx["setMode"]>(
+  const setMode = useCallback<SessionsActions["setMode"]>(
     async (chatId, modeId) => {
       if (!bridge) return;
-      const current = sessionsRef.current[chatId];
+      const current = getStore().sessions[chatId];
       if (!current?.agentId || !current.sessionId) return;
-      // Optimistically flip the pill so the user sees feedback; the
-      // engine echoes back via AGENT_MODE_CHANGED (or AGENT_ERROR).
-      patch(chatId, { currentModeId: modeId });
+      // Optimistic flip; engine echoes back via AGENT_MODE_CHANGED or AGENT_ERROR.
+      const previousModeId = current.currentModeId;
+      getStore().patchSession(chatId, { currentModeId: modeId });
       try {
         const resp = await bridge.request<
           AgentModeChangedMessage | AgentErrorMessage
@@ -884,32 +754,68 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
           10_000,
         );
         if (resp.type === "AGENT_ERROR") {
-          // Revert on failure so the pill reflects reality.
-          patch(chatId, { currentModeId: current.currentModeId });
-          patch(chatId, { error: resp.message });
+          getStore().patchSession(chatId, {
+            currentModeId: previousModeId,
+            error: resp.message,
+          });
         }
       } catch (err) {
-        patch(chatId, { currentModeId: current.currentModeId });
-        patch(chatId, {
+        getStore().patchSession(chatId, {
+          currentModeId: previousModeId,
           error: err instanceof Error ? err.message : String(err),
         });
       }
     },
-    [bridge, patch],
+    [bridge, getStore],
   );
 
-  const reset = useCallback<SessionsCtx["reset"]>(
+  const reset = useCallback<SessionsActions["reset"]>(
     (chatId) => {
-      setSessions((prev) => {
-        const next = { ...prev };
-        delete next[chatId];
-        return next;
+      getStore().removeSession(chatId);
+      // Drop on-disk transcript too so a "reset" really starts clean.
+      void persistClearChat(chatId).catch((err) => {
+        // eslint-disable-next-line no-console
+        console.warn("[Zeros agent-history] reset clear failed:", err);
       });
     },
-    [],
+    [getStore],
   );
 
-  const listSessionsFor = useCallback<SessionsCtx["listSessionsFor"]>(
+  const hydrateChat = useCallback<SessionsActions["hydrateChat"]>(
+    async (chatId) => {
+      const slot = getStore().sessions[chatId];
+      // Only hydrate when the slot is genuinely empty. If the user has
+      // already started talking we trust the live state — disk is just
+      // a snapshot, the live store is canonical until the user reloads.
+      if (slot && slot.messages.length > 0) return;
+      try {
+        const messages = await persistWindowMessages(chatId, HYDRATE_WINDOW);
+        if (messages.length === 0) return;
+        // Pre-fix builds (before 2026-04-26) wrote agent replay events
+        // to disk on every reopen, so existing chats have stacked
+        // duplicates. Collapse runs of identical consecutive messages
+        // before showing them. The fix that stops new duplicates lives
+        // in the bridge listener (loadInProgress at receive time) — this
+        // is purely cleanup of pre-existing disk content.
+        const deduped = dedupeConsecutiveMessages(messages);
+        // Re-read the slot after the await — the user may have started
+        // typing while we were fetching, in which case live state wins.
+        const fresh = getStore().sessions[chatId];
+        if (fresh && fresh.messages.length > 0) return;
+        getStore().setSession(chatId, {
+          ...BLANK,
+          ...(fresh ?? {}),
+          messages: deduped,
+        });
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn("[Zeros agent-history] hydrate failed:", err);
+      }
+    },
+    [getStore],
+  );
+
+  const listSessionsFor = useCallback<SessionsActions["listSessionsFor"]>(
     async (agentId, opts) => {
       if (!bridge) throw new Error("Engine not connected");
       const resp = await bridge.request<
@@ -932,16 +838,28 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
     [bridge],
   );
 
-  const loadIntoChat = useCallback<SessionsCtx["loadIntoChat"]>(
+  const loadIntoChat = useCallback<SessionsActions["loadIntoChat"]>(
     async (chatId, agentId, sessionId, options) => {
       if (!bridge) return;
-      patch(chatId, {
+      // Preserve any messages already in the slot (typically just put
+      // there by hydrateChat) — wiping them here is what produced the
+      // "chat empty on reopen" bug for agents whose loadSession doesn't
+      // replay (Codex, Cursor). Disk is the source of truth.
+      const existing = getStore().sessions[chatId];
+      getStore().setSession(chatId, {
         ...BLANK,
         agentId,
         agentName: options?.agentName ?? agentId,
         sessionId,
         status: "warming",
+        messages: existing?.messages ?? [],
       });
+      // Suppress the agent's loadSession replay (if any) while the RPC
+      // is in flight. Without this, Claude Code re-emits every prior
+      // turn as a fresh session_update, duplicating the disk hydrate.
+      // The flag clears in the finally block so live messages from the
+      // user's next prompt flow normally.
+      getStore().setLoadInProgress(chatId, true);
       try {
         const resp = await bridge.request<
           AgentSessionLoadedMessage | AgentErrorMessage
@@ -956,10 +874,13 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
           5 * 60_000,
         );
         if (resp.type === "AGENT_ERROR") {
-          patch(chatId, { status: "failed", error: resp.message });
+          getStore().patchSession(chatId, {
+            status: "failed",
+            error: resp.message,
+          });
           return;
         }
-        patch(chatId, {
+        getStore().patchSession(chatId, {
           status: "ready",
           sessionId: resp.sessionId,
           availableModes: resp.response.modes?.availableModes ?? [],
@@ -967,29 +888,35 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
           error: null,
         });
       } catch (err) {
-        patch(chatId, {
+        getStore().patchSession(chatId, {
           status: "failed",
           error: err instanceof Error ? err.message : String(err),
         });
+      } finally {
+        getStore().setLoadInProgress(chatId, false);
       }
     },
-    [bridge, patch],
+    [bridge, getStore],
   );
 
-  const getSession = useCallback<SessionsCtx["getSession"]>(
-    (chatId) => sessionsRef.current[chatId],
-    [],
+  const getSession = useCallback<SessionsActions["getSession"]>(
+    (chatId) => getStore().sessions[chatId],
+    [getStore],
   );
 
-  const disposeAll = useCallback<SessionsCtx["disposeAll"]>(() => {
-    setSessions({});
-    sessionToChatRef.current = {};
-    setWarmAgentIds(new Set());
-  }, []);
+  const disposeAll = useCallback<SessionsActions["disposeAll"]>(() => {
+    getStore().clearAll();
+    // Note: we deliberately do NOT clear the disk transcript here.
+    // disposeAll is called on engine respawn (in-place project swap),
+    // when the in-memory sessionIds become stale but the user still
+    // wants their history when chats reopen on the new engine.
+  }, [getStore]);
 
-  const value = useMemo<SessionsCtx>(
+  // The actions object is stable across renders. No `sessions` field —
+  // consumers reach into the store directly via useChatSession (sliced)
+  // or useAgentSessions (full snapshot via subscription).
+  const actions = useMemo<SessionsActions>(
     () => ({
-      sessions,
       getSession,
       listAgents,
       initAgent,
@@ -1001,50 +928,186 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
       reset,
       listSessionsFor,
       loadIntoChat,
-      warmAgentIds,
+      hydrateChat,
       disposeAll,
     }),
     [
-      sessions,
       getSession,
       listAgents,
       initAgent,
       ensureSession,
       sendPrompt,
       cancel,
-      setMode,
       respondToPermission,
+      setMode,
       reset,
       listSessionsFor,
       loadIntoChat,
-      warmAgentIds,
+      hydrateChat,
       disposeAll,
     ],
   );
 
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  // ── Persistence subscription ────────────────────────────
+  //
+  // Fires after every store mutation (which is rAF-coalesced via the
+  // bridge effect above). Diffs each chat's message list against the
+  // last-persisted reference map and writes only the changed entries.
+  // Streaming text chunks share a stable msgId, so the main process
+  // upserts in place — no row explosion.
+  //
+  // Reference equality is the dirty marker: the store's reducers return
+  // identical state when nothing changed, so unchanged chats short-circuit
+  // before any diffing.
+  useEffect(() => {
+    let prevSessions = useSessionsStore.getState().sessions;
+    const lastWritten = new Map<string, Map<string, AgentMessage>>();
+
+    const unsubscribe = useSessionsStore.subscribe((state) => {
+      if (state.sessions === prevSessions) return;
+      const nextSessions = state.sessions;
+
+      for (const [chatId, slot] of Object.entries(nextSessions)) {
+        if (slot === prevSessions[chatId]) continue; // unchanged
+        let chatMap = lastWritten.get(chatId);
+        if (!chatMap) {
+          chatMap = new Map();
+          lastWritten.set(chatId, chatMap);
+        }
+        const toWrite: AgentMessage[] = [];
+        for (const m of slot.messages) {
+          // Reference identity tells us if this message was touched.
+          // The store does immutable updates: a streaming chunk produces
+          // a new message object, completed cards produce a new tool
+          // object. Pristine messages keep the same ref → no write.
+          if (chatMap.get(m.id) !== m) {
+            toWrite.push(m);
+            chatMap.set(m.id, m);
+          }
+        }
+        if (toWrite.length > 0) {
+          void persistAppendMessages(chatId, toWrite).catch((err) => {
+            // eslint-disable-next-line no-console
+            console.warn(
+              `[Zeros agent-history] append failed for ${chatId}:`,
+              err,
+            );
+          });
+        }
+        // Persist meta (agent + session id) when those change. Cheap —
+        // only fires on session create / load / agent swap.
+        const prevSlot = prevSessions[chatId];
+        if (
+          !prevSlot ||
+          prevSlot.agentId !== slot.agentId ||
+          prevSlot.sessionId !== slot.sessionId ||
+          prevSlot.agentName !== slot.agentName
+        ) {
+          void persistSetChatMeta({
+            chatId,
+            agentId: slot.agentId,
+            agentName: slot.agentName,
+            sessionId: slot.sessionId,
+          }).catch(() => {
+            /* meta is best-effort */
+          });
+        }
+      }
+
+      // Drop entries from lastWritten for chats that disappeared (reset).
+      // Lets the next ensureSession/hydrate write a full transcript again
+      // instead of relying on stale diff state.
+      for (const chatId of lastWritten.keys()) {
+        if (!(chatId in nextSessions)) {
+          lastWritten.delete(chatId);
+        }
+      }
+
+      prevSessions = nextSessions;
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  return <ActionsCtx.Provider value={actions}>{children}</ActionsCtx.Provider>;
+}
+
+/** Append the user's just-sent bubble to a message list, preserving the
+ *  per-chat cap. Extracted because it's used in two places (initial
+ *  send + retry-after-rebuild). */
+function capUserAppend(
+  messages: AgentMessage[],
+  userMessage: AgentTextMessage,
+): AgentMessage[] {
+  const next = [...messages, userMessage];
+  if (next.length <= MAX_MESSAGES_PER_CHAT) return next;
+  return next.slice(-MAX_MESSAGES_PER_CHAT);
+}
+
+/** Collapse runs of consecutive content-equal messages into one. Used
+ *  by hydrateChat to clean up pre-existing on-disk duplicates from
+ *  builds where the agent's loadSession replay landed in the store on
+ *  every reopen. Conservative — only consecutive duplicates are
+ *  removed, so a user who legitimately repeats themselves across
+ *  separate turns keeps both bubbles. */
+function dedupeConsecutiveMessages(messages: AgentMessage[]): AgentMessage[] {
+  if (messages.length < 2) return messages;
+  const out: AgentMessage[] = [];
+  let prev: AgentMessage | null = null;
+  for (const m of messages) {
+    if (prev && messagesContentEqual(prev, m)) continue;
+    out.push(m);
+    prev = m;
+  }
+  return out;
+}
+
+function messagesContentEqual(a: AgentMessage, b: AgentMessage): boolean {
+  if (a.kind !== b.kind) return false;
+  if (a.kind === "text" && b.kind === "text") {
+    return a.role === b.role && a.text === b.text;
+  }
+  if (a.kind === "tool" && b.kind === "tool") {
+    if (a.title !== b.title) return false;
+    if (a.toolKind !== b.toolKind) return false;
+    // Stringified rawInput catches "same tool, same arguments" — the
+    // shape replay always reproduces identically. We don't compare
+    // status because a replayed tool can land in a different terminal
+    // state (completed vs failed-but-retried) and we'd rather keep
+    // both than collapse a real second invocation.
+    try {
+      return JSON.stringify(a.rawInput) === JSON.stringify(b.rawInput);
+    } catch {
+      return false;
+    }
+  }
+  return false;
 }
 
 /** Per-chat session access. Returns an object shaped like the old
  *  useAgentSession return value so <AgentChat session={...} /> works as-is.
- *  Also exposes ensureSession for the Chat view to warm up on mount. */
+ *  Also exposes ensureSession for the Chat view to warm up on mount.
+ *
+ *  Subscribes via Zustand selector so this hook only re-renders when
+ *  *this chat's* slot changes — not when sibling chats stream tokens. */
 export function useChatSession(
   chatId: string,
 ): AgentSessionState & AgentSessionControls & {
   ensureSession(agentId: string, options?: StartForChatOptions): Promise<void>;
+  hydrateChat(): Promise<void>;
 } {
-  const ctx = useContext(Ctx);
+  const ctx = useContext(ActionsCtx);
   if (!ctx) {
     throw new Error("useChatSession must be used inside <AgentSessionsProvider>");
   }
-  const slot = ctx.sessions[chatId] ?? BLANK;
+  const slot = useSessionsStore((s) => s.sessions[chatId] ?? BLANK);
 
   return {
     ...slot,
     listAgents: ctx.listAgents,
     initAgent: ctx.initAgent,
-    // startSession kept for API compatibility with AgentChat / AgentMode —
-    // forwards to ensureSession with the chat's id baked in.
+    // startSession kept for API compatibility; forwards to ensureSession
+    // with the chat's id baked in.
     startSession: (agentId, options) =>
       ctx.ensureSession(chatId, agentId, options),
     sendPrompt: (text, displayText, attachments) =>
@@ -1056,18 +1119,34 @@ export function useChatSession(
     reset: () => ctx.reset(chatId),
     ensureSession: (agentId, options) =>
       ctx.ensureSession(chatId, agentId, options),
+    hydrateChat: () => ctx.hydrateChat(chatId),
   };
 }
 
 /** App-level access for flows that aren't tied to a single chat
- *  (e.g. the settings Agents panel fetching the registry). */
+ *  (e.g. the settings Agents panel fetching the registry).
+ *
+ *  Returns the **stable** actions context. Its identity does NOT change
+ *  on every store mutation — that's the whole point. Consumers can put
+ *  this in `useEffect` / `useCallback` deps without their effects
+ *  re-firing on every chat token (the bug that produced the 50+/sec
+ *  AGENT_INIT_AGENT flood).
+ *
+ *  For chat-slot data: use `useChatSession(chatId)` (sliced) or
+ *  `useChatSlot(chatId)` (raw slot).
+ *
+ *  For warm-agent state: use `useWarmAgentIds()`. */
 export function useAgentSessions(): SessionsCtx {
-  const ctx = useContext(Ctx);
+  const ctx = useContext(ActionsCtx);
   if (!ctx) {
     throw new Error("useAgentSessions must be used inside <AgentSessionsProvider>");
   }
   return ctx;
 }
+
+// Re-export the warm-agent hook so consumers don't have to reach into
+// the store module directly.
+export { useWarmAgentIds } from "./sessions-store";
 
 // Re-export the AgentMessage type so consumers don't have to reach into
 // the older hook file.

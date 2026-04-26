@@ -544,9 +544,12 @@ export function applyUpdate(
       return appendText(messages, "user", upd.content, incomingId);
     }
     case "agent_message_chunk":
-      return appendText(messages, "agent", upd.content, upd.messageId);
+      // ACP SDK 0.19 widened `messageId` to `string | null | undefined`.
+      // Treat null the same as undefined — both mean "no engine id yet",
+      // which falls through to role-only coalescing in appendText.
+      return appendText(messages, "agent", upd.content, upd.messageId ?? undefined);
     case "agent_thought_chunk":
-      return appendText(messages, "thought", upd.content, upd.messageId);
+      return appendText(messages, "thought", upd.content, upd.messageId ?? undefined);
     case "tool_call": {
       const tc = upd as unknown as ToolCall & { sessionUpdate: "tool_call" };
       const msg: AgentToolMessage = {

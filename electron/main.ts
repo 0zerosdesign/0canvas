@@ -295,4 +295,8 @@ app.on("window-all-closed", () => {
 // if multiple windows close, so the shutdown is single-threaded.
 app.on("before-quit", () => {
   shutdownSidecar();
+  // Close the agent-history SQLite handle. better-sqlite3 ignores a
+  // missing close() in dev (the OS reaps the FD), but a clean close
+  // checkpoints the WAL so the next launch reads the latest tail.
+  void import("./db").then((m) => m.closeAgentHistory()).catch(() => {});
 });

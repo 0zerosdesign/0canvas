@@ -145,6 +145,13 @@ function ChatBody({
   // cache, the agent CLI's on-disk transcript is the source of truth.
   const sessions = useAgentSessions();
   useEffect(() => {
+    // Show whatever we saved on disk immediately — works for every
+    // agent regardless of whether its loadSession replays (Claude Code
+    // does, Codex / Cursor don't). The store's `loadInProgress` flag
+    // suppresses the agent's replay events while loadIntoChat runs, so
+    // hydrate + load no longer double-renders messages.
+    void session.hydrateChat();
+
     const env = chat ? envForChat(chat, session.initialize) : undefined;
     const persistedSessionId = chat?.sessionId;
     // Provider already has a live session for this chat — nothing to do.
@@ -153,9 +160,12 @@ function ChatBody({
       return;
     }
     if (persistedSessionId) {
-      // Best effort load. On AGENT_ERROR the provider lands at status
-      // "failed" — clear sessionId so the user's next Retry tap falls
-      // through to a fresh ensureSession instead of retrying the dead id.
+      // Tell the engine about the prior session id so future prompts
+      // can resume the agent's server-side context. The replay events
+      // the agent emits during this RPC are dropped by the store
+      // (loadInProgress) — disk hydrate above is the visible source.
+      // On AGENT_ERROR the provider lands in "failed" — clear sessionId
+      // so the next Retry tap falls into ensureSession with a fresh id.
       void sessions
         .loadIntoChat(chatId, agentId, persistedSessionId, {
           agentName,

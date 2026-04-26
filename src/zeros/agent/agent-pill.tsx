@@ -16,7 +16,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Bot, ChevronDown, Check, Loader2, ArrowUpRight } from "lucide-react";
-import { useAgentSessions } from "./sessions-provider";
+import { useAgentSessions, useWarmAgentIds } from "./sessions-provider";
 import { useEnabledAgents } from "./enabled-agents";
 import {
   loadAgents,
@@ -71,6 +71,12 @@ export function AgentPill({
   showOpenInNewTabHint = false,
 }: AgentPillProps) {
   const sessions = useAgentSessions();
+  // Subscribe directly to the warm-agent set. useAgentSessions used to
+  // expose this as a field, but that made the whole returned object
+  // change identity on every warm/cold transition, which cascaded into
+  // unrelated effect re-fires. Reading it via the dedicated hook keeps
+  // this component re-rendering only when the warm set actually changes.
+  const warmAgentIds = useWarmAgentIds();
   const { isEnabled } = useEnabledAgents();
   const { dispatch } = useWorkspace();
   const [open, setOpen] = useState(false);
@@ -109,7 +115,7 @@ export function AgentPill({
       return a.name.localeCompare(b.name);
     });
   const selected = visible.find((a) => a.id === selectedId) ?? null;
-  const isSelectedWarm = !!selectedId && sessions.warmAgentIds.has(selectedId);
+  const isSelectedWarm = !!selectedId && warmAgentIds.has(selectedId);
 
   const handleInactiveClick = () => {
     dispatch({ type: "SET_ACTIVE_PAGE", page: "settings" });
@@ -174,7 +180,7 @@ export function AgentPill({
           {visible.map((a) => {
             const isSelectedRow = a.id === selectedId;
             const isRunnable = isRunnableAgent(a);
-            const isWarm = sessions.warmAgentIds.has(a.id);
+            const isWarm = warmAgentIds.has(a.id);
             const switchesChat = showOpenInNewTabHint && !isSelectedRow;
             return (
               <button

@@ -367,11 +367,42 @@ export class CodexStreamTranslator {
     } else {
       this.lastStopReason = "end_turn";
     }
+    // Surface the failure to the user. Pre-fix, turn.failed was silent —
+    // an invalid model / quota error / auth problem produced a chat that
+    // appeared to stream forever (renderer status stuck in "streaming"
+    // because nothing visible arrived in the message list, only the
+    // stopReason at exit time). Now we extract the human-readable text
+    // from the nested OpenAI error envelope and emit it as a system
+    // message bubble.
+    const message = extractErrorMessage(event.error?.message);
+    if (message) {
+      this.emit({
+        sessionId: this.sessionId,
+        update: {
+          sessionUpdate: "agent_message_chunk",
+          content: { type: "text", text: `⚠ Codex error: ${message}` } as ContentBlock,
+          messageId: `${this.turnPrefix}-error`,
+        },
+      });
+    }
   }
 
-  private onError(_event: CodexErrorEvent): void {
-    // Stream-level error — the adapter's stderr-tail + exit classification
-    // will surface this as AgentFailure. Nothing to emit to the chat.
+  private onError(event: CodexErrorEvent): void {
+    // Codex sometimes sends both `error` and `turn.failed` for the same
+    // failure (the API returned an error mid-turn). Emit the message
+    // here too — onTurnFailed dedups by messageId via the same prefix
+    // so the user sees one bubble, not two.
+    const message = extractErrorMessage(event.message);
+    if (message) {
+      this.emit({
+        sessionId: this.sessionId,
+        update: {
+          sessionUpdate: "agent_message_chunk",
+          content: { type: "text", text: `⚠ Codex error: ${message}` } as ContentBlock,
+          messageId: `${this.turnPrefix}-error`,
+        },
+      });
+    }
   }
 
   // ── helpers ─────────────────────────────────────────────
@@ -486,4 +517,28 @@ function toolOutput(item: CodexItem): unknown {
 function truncate(s: string, n: number): string {
   if (s.length <= n) return s;
   return s.slice(0, n - 1) + "…";
+}
+
+/** Codex CLI nests OpenAI-API-style errors inside its own envelope:
+ *
+ *    {"type":"error","message":"{\"type\":\"error\",\"status\":400,
+ *      \"error\":{\"type\":\"invalid_request_error\",
+ *        \"message\":\"The 'gpt-5.5' model requires a newer version…\"}}"}
+ *
+ *  Walk one level of that JSON-in-JSON to surface the human message.
+ *  Falls back to the outer message if parsing fails. */
+function extractErrorMessage(raw: unknown): string {
+  if (typeof raw !== "string" || raw.length === 0) return "";
+  // Common case: the message is itself JSON.
+  try {
+    const parsed = JSON.parse(raw) as {
+      error?: { message?: string };
+      message?: string;
+    };
+    if (parsed?.error?.message) return parsed.error.message;
+    if (parsed?.message) return parsed.message;
+  } catch {
+    /* not JSON, fall through */
+  }
+  return raw;
 }

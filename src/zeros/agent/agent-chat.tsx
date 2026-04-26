@@ -27,22 +27,12 @@ import {
 } from "./slash-command-picker";
 import {
   Bot,
-  Loader2,
   Send,
   Square,
   ArrowLeft,
-  CheckCircle2,
-  XCircle,
   Clock,
-  Wrench,
   AlertCircle,
   Palette,
-  Target,
-  FileText,
-  MessageSquare,
-  Zap,
-  MousePointer2,
-  GitBranch,
   Layers,
 } from "lucide-react";
 import type {
@@ -51,11 +41,16 @@ import type {
   RequestPermissionOutcome,
 } from "@agentclientprotocol/sdk";
 import type {
-  AgentMessage,
   AgentSessionControls,
   AgentSessionState,
-  AgentToolMessage,
 } from "./use-agent-session";
+import {
+  MessageView,
+  matchDesignTool,
+  lookupCurrentValue,
+  type ApplyReceipt,
+  type RendererContext,
+} from "./renderers";
 import { Button, Textarea } from "../ui";
 import {
   ModelPill,
@@ -109,8 +104,15 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
   // "before" still reflects the pre-change value when the card re-renders
   // in its completed state.
   const [applyReceipts, setApplyReceipts] = useState<
-    Record<string, { before: string | null; selector: string; property: string; after: string }>
+    Record<string, ApplyReceipt>
   >({});
+  // Stable ctx object for MessageView memoization. Without useMemo, every
+  // parent re-render hands a new ref to every message and the per-message
+  // memo can never short-circuit.
+  const messageCtx: RendererContext = useMemo(
+    () => ({ applyReceipts }),
+    [applyReceipts],
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { state: workspaceState, dispatch } = useWorkspace();
@@ -666,7 +668,7 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
               </div>
             )}
           {session.messages.map((m) => (
-            <MessageView key={m.id} message={m} applyReceipts={applyReceipts} />
+            <MessageView key={m.id} message={m} ctx={messageCtx} />
           ))}
           {queuedPreview && (
             <div className="oc-acp-msg oc-acp-msg-user oc-acp-msg-queued">
@@ -904,410 +906,6 @@ function PlanPanel({ entries }: { entries: PlanEntry[] }) {
           ))}
         </ul>
       )}
-    </div>
-  );
-}
-
-// ──────────────────────────────────────────────────────────
-// MessageView
-// ──────────────────────────────────────────────────────────
-
-type ApplyReceipt = {
-  before: string | null;
-  selector: string;
-  property: string;
-  after: string;
-};
-
-function MessageView({
-  message,
-  applyReceipts,
-}: {
-  message: AgentMessage;
-  applyReceipts: Record<string, ApplyReceipt>;
-}) {
-  if (message.kind === "text") {
-    // No role icon — Cursor-style "flat text for assistant, subtle
-    // bubble for user" reads cleaner than twin avatar columns.
-    const roleClass = `oc-acp-msg oc-acp-msg-${message.role}`;
-    return (
-      <div className={roleClass}>
-        <div className="oc-acp-msg-content">{message.text}</div>
-      </div>
-    );
-  }
-
-  return (
-    <ToolCallCard
-      tool={message}
-      receipt={applyReceipts[message.toolCallId] ?? null}
-    />
-  );
-}
-
-// ──────────────────────────────────────────────────────────
-// Design-aware tool-card metadata
-// ──────────────────────────────────────────────────────────
-//
-// The 5 design tools are exposed to the agent via the auto-attached
-// Zeros MCP server (src/engine/index.ts registerMcpServer). Agents
-// surface them through ACP ToolCall; their titles vary per agent — we
-// match on substring to stay forgiving.
-//
-// This table is the ONLY place the chat UI hardcodes design-tool knowledge;
-// the registry and protocol remain agent-agnostic.
-
-export interface PermissionPrompt {
-  /** Short sentence the designer reads first. */
-  headline: string;
-  /** Optional secondary body (multi-line, subtitle-style). */
-  body?: string;
-  /** When the tool will mutate state, a before→after pair we can render. */
-  diff?: {
-    before?: string;
-    after: string;
-  };
-  /** Risk level — tints the bar. Reads are "low", writes are "high". */
-  risk: "low" | "high";
-}
-
-type DesignToolEntry = {
-  match: RegExp;
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  summarize?: (input: unknown) => string | null;
-  /** Designer-facing permission prompt. Null = use default handling. */
-  describePermission?: (
-    input: unknown,
-    ctx: { currentValueForSelector: (sel: string, prop: string) => string | undefined },
-  ) => PermissionPrompt | null;
-};
-
-const DESIGN_TOOLS: Array<DesignToolEntry> = [
-  {
-    match: /(^|_)get_selection$|get_selection\b/,
-    icon: MousePointer2,
-    label: "Read current selection",
-    describePermission: () => ({
-      headline: "Read your current canvas selection",
-      body: "The agent will see the selector, tag, class list and computed styles. No changes.",
-      risk: "low",
-    }),
-  },
-  {
-    match: /(^|_)list_tokens$|list_tokens\b/,
-    icon: Palette,
-    label: "Read design tokens",
-    describePermission: () => ({
-      headline: "Read all design tokens",
-      body: "The agent will see every CSS custom property defined in your theme files.",
-      risk: "low",
-    }),
-  },
-  {
-    match: /(^|_)get_element_styles$|get_element_styles\b/,
-    icon: Target,
-    label: "Inspect element",
-    summarize: (input) => {
-      const sel = (input as { selector?: string })?.selector;
-      return sel ? sel : null;
-    },
-    describePermission: (input) => {
-      const sel = (input as { selector?: string })?.selector;
-      return {
-        headline: sel
-          ? `Inspect styles on ${sel}`
-          : "Inspect an element's styles",
-        body: "The agent will read the CSS source locations and computed rules. No changes.",
-        risk: "low",
-      };
-    },
-  },
-  {
-    match: /(^|_)read_design_state$|read_design_state\b/,
-    icon: FileText,
-    label: "Read design state",
-    describePermission: () => ({
-      headline: "Read the full design state",
-      body: "The agent will see the contents of every .0c project file — variants, metadata, feedback. No changes.",
-      risk: "low",
-    }),
-  },
-  {
-    match: /(^|_)get_feedback$|get_feedback\b/,
-    icon: MessageSquare,
-    label: "Read feedback",
-    describePermission: () => ({
-      headline: "Read pending feedback items",
-      body: "The agent will see every feedback item still in the pending state. No changes.",
-      risk: "low",
-    }),
-  },
-  {
-    match: /(^|_)apply_change$|apply_change\b/,
-    icon: Zap,
-    label: "Apply CSS change",
-    summarize: (input) => {
-      const obj = input as { selector?: string; property?: string; value?: string };
-      if (!obj?.selector || !obj?.property) return null;
-      return `${obj.selector} { ${obj.property}: ${obj.value ?? "…"} }`;
-    },
-    describePermission: (input, ctx) => {
-      const obj = input as { selector?: string; property?: string; value?: string };
-      if (!obj?.selector || !obj?.property) return null;
-      const before = ctx.currentValueForSelector(obj.selector, obj.property);
-      const after = obj.value ?? "";
-      return {
-        headline: `Apply CSS change to ${obj.selector}`,
-        body: `Writes to the CSS source file for this selector. Hot-reloads the canvas on save.`,
-        diff: { before, after: `${obj.property}: ${after};` },
-        risk: "high",
-      };
-    },
-  },
-];
-
-function matchDesignTool(title: string): DesignToolEntry | null {
-  for (const entry of DESIGN_TOOLS) {
-    if (entry.match.test(title)) return entry;
-  }
-  return null;
-}
-
-// ──────────────────────────────────────────────────────────
-// Subagent detection (Phase 5)
-// ──────────────────────────────────────────────────────────
-//
-// A spawn-agent tool call shows up in the stream as a regular
-// ToolCall. claude-agent-sdk's built-in is "Task"; other agents name it
-// differently. Match permissively by title or by rawInput having a
-// subagent_type key.
-
-const SUBAGENT_TITLE_PATTERN = /^(task|spawn_?agent|delegate|subagent)$/i;
-
-export interface SubagentInfo {
-  /** Which subagent role the parent agent is invoking, if declared. */
-  subagentType?: string;
-  /** One-line description of the job the parent handed off. */
-  description?: string;
-}
-
-function matchSubagent(tool: AgentToolMessage): SubagentInfo | null {
-  if (SUBAGENT_TITLE_PATTERN.test(tool.title)) {
-    const input = tool.rawInput as
-      | { subagent_type?: string; description?: string; prompt?: string }
-      | undefined;
-    return {
-      subagentType: input?.subagent_type,
-      description:
-        input?.description ??
-        (typeof input?.prompt === "string" ? input.prompt.slice(0, 160) : undefined),
-    };
-  }
-  const input = tool.rawInput as
-    | { subagent_type?: string; description?: string }
-    | undefined;
-  if (input && typeof input.subagent_type === "string") {
-    return {
-      subagentType: input.subagent_type,
-      description: input.description,
-    };
-  }
-  return null;
-}
-
-/**
- * Camel-case / style-object lookup of a CSS property on a workspace element
- * matched by its canonical selector. Used only for the before→after in the
- * apply_change permission prompt; failures return undefined.
- */
-function lookupCurrentValue(
-  elements: import("../store/store").ElementNode[],
-  selector: string,
-  property: string,
-): string | undefined {
-  const target = findBySelector(elements, selector);
-  if (!target) return undefined;
-  // Styles are stored camel-case on the workspace element; ACP tools pass
-  // either form. Probe both.
-  const camel = property.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
-  return target.styles[property] ?? target.styles[camel];
-}
-
-function ToolCallCard({
-  tool,
-  receipt,
-}: {
-  tool: AgentToolMessage;
-  receipt: ApplyReceipt | null;
-}) {
-  const design = matchDesignTool(tool.title);
-  const subagent = !design ? matchSubagent(tool) : null;
-  const Icon = design?.icon ?? (subagent ? GitBranch : Wrench);
-  const label = design?.label
-    ?? (subagent
-      ? subagent.subagentType
-        ? `Delegated to ${subagent.subagentType}`
-        : "Subagent delegation"
-      : tool.title);
-  const summary =
-    design?.summarize?.(tool.rawInput) ?? subagent?.description ?? null;
-  // Persistent receipt only for apply_change that has both a captured before
-  // snapshot and a completed or failed status — we don't clutter pending
-  // cards with a diff that isn't final yet.
-  const hasReceipt =
-    !!receipt &&
-    /apply_change/.test(tool.title) &&
-    (tool.status === "completed" || tool.status === "failed");
-  const sourcePath = tool.locations?.[0]?.path;
-  const sourceLine = tool.locations?.[0]?.line;
-  const cardClass = design
-    ? "oc-acp-tool oc-acp-tool-design"
-    : subagent
-    ? "oc-acp-tool oc-acp-tool-subagent"
-    : "oc-acp-tool";
-  const vendorLabel = design
-    ? "Zeros"
-    : subagent
-    ? "Subagent"
-    : null;
-
-  const statusIcon =
-    tool.status === "completed" ? (
-      <CheckCircle2
-        className="w-3.5 h-3.5"
-        style={{ color: "var(--text-success)" }}
-      />
-    ) : tool.status === "failed" ? (
-      <XCircle
-        className="w-3.5 h-3.5"
-        style={{ color: "var(--text-critical)" }}
-      />
-    ) : tool.status === "in_progress" ? (
-      <Loader2
-        className="w-3.5 h-3.5 animate-spin"
-        style={{ color: "var(--text-muted)" }}
-      />
-    ) : (
-      <Clock
-        className="w-3.5 h-3.5"
-        style={{ color: "var(--text-placeholder)" }}
-      />
-    );
-
-  return (
-    <div className={cardClass}>
-      <div className="oc-acp-tool-head">
-        <Icon className="oc-acp-tool-icon w-3.5 h-3.5" />
-        <div className="oc-acp-tool-body">
-          <div className="oc-acp-tool-title">
-            {label}
-            {vendorLabel && (
-              <span className="oc-acp-tool-vendor">{vendorLabel}</span>
-            )}
-          </div>
-          {!hasReceipt && summary ? (
-            <div className="oc-acp-tool-summary">{summary}</div>
-          ) : !hasReceipt && tool.toolKind ? (
-            <div className="oc-acp-tool-kind">{tool.toolKind}</div>
-          ) : null}
-        </div>
-        <div className="oc-acp-tool-status">{statusIcon}</div>
-      </div>
-      {hasReceipt && receipt && (
-        <ApplyChangeReceipt
-          receipt={receipt}
-          status={tool.status}
-          sourcePath={sourcePath}
-          sourceLine={sourceLine}
-        />
-      )}
-      {!hasReceipt && tool.content && tool.content.length > 0 && (
-        <div className="oc-acp-tool-content">
-          <ToolContentView content={tool.content} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ApplyChangeReceipt({
-  receipt,
-  status,
-  sourcePath,
-  sourceLine,
-}: {
-  receipt: ApplyReceipt;
-  status: AgentToolMessage["status"];
-  sourcePath?: string;
-  sourceLine?: number | null;
-}) {
-  const failed = status === "failed";
-  return (
-    <div className="oc-acp-receipt">
-      <div className="oc-acp-receipt-head">
-        <span className="oc-acp-receipt-selector">{receipt.selector}</span>
-        <span className="oc-acp-receipt-tag">
-          {failed ? "not applied" : "updated"}
-        </span>
-      </div>
-      <div className="oc-acp-receipt-diff">
-        <div className="oc-acp-receipt-row oc-acp-receipt-row-before">
-          <span className="oc-acp-receipt-sign">−</span>
-          <span className="oc-acp-receipt-value">
-            {receipt.before !== null && receipt.before !== "" ? (
-              `${receipt.property}: ${receipt.before};`
-            ) : (
-              <span className="oc-acp-receipt-value-unset">(unset)</span>
-            )}
-          </span>
-        </div>
-        <div
-          className={`oc-acp-receipt-row ${
-            failed ? "oc-acp-receipt-row-failed" : "oc-acp-receipt-row-after"
-          }`}
-        >
-          <span className="oc-acp-receipt-sign">+</span>
-          <span className="oc-acp-receipt-value">
-            {receipt.property}: {receipt.after};
-          </span>
-        </div>
-      </div>
-      {sourcePath && (
-        <div className="oc-acp-receipt-source">
-          {sourcePath}
-          {sourceLine ? `:${sourceLine}` : ""}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ToolContentView({
-  content,
-}: {
-  content: NonNullable<AgentToolMessage["content"]>;
-}) {
-  return (
-    <div>
-      {content.map((block, i) => {
-        if (block.type === "content" && block.content.type === "text") {
-          return <pre key={i}>{block.content.text}</pre>;
-        }
-        if (block.type === "diff") {
-          return (
-            <div key={i} className="oc-acp-tool-content-diff">
-              <span className="oc-acp-mono">diff:</span>
-              {block.path}
-            </div>
-          );
-        }
-        return (
-          <div key={i} className="oc-acp-tool-content-diff">
-            [{block.type} block]
-          </div>
-        );
-      })}
     </div>
   );
 }

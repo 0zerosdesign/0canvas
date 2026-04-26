@@ -41,6 +41,14 @@ import {
 } from "./ai-cli";
 import { notifySend } from "./notifications";
 import {
+  agentHistoryAppend,
+  agentHistoryClearChat,
+  agentHistoryGetChatMeta,
+  agentHistoryListChats,
+  agentHistorySetChatMeta,
+  agentHistoryWindow,
+} from "./agent-history";
+import {
   processRelaunch,
   updaterCheck,
   updaterInstall,
@@ -162,4 +170,14 @@ export function registerAllCommands(): void {
   setCommand("updater_check", updaterCheck);
   setCommand("updater_install", updaterInstall);
   setCommand("process_relaunch", processRelaunch);
+
+  // Phase 0 step 4 — agent transcript persistence (better-sqlite3).
+  // Renderer-side store calls these via window.__ZEROS_NATIVE__ to
+  // append on every chunk, hydrate on boot, and clear on chat reset.
+  setCommand("agent_history_append", agentHistoryAppend);
+  setCommand("agent_history_window", agentHistoryWindow);
+  setCommand("agent_history_clear_chat", agentHistoryClearChat);
+  setCommand("agent_history_set_chat_meta", agentHistorySetChatMeta);
+  setCommand("agent_history_get_chat_meta", agentHistoryGetChatMeta);
+  setCommand("agent_history_list_chats", agentHistoryListChats);
 }

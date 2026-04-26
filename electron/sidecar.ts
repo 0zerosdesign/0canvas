@@ -244,25 +244,67 @@ export async function spawnEngine(projectRoot: string): Promise<number> {
     /* file may not exist; fine */
   }
 
-  // In packaged builds we must pipe stdio and forward to a log file —
-  // `inherit` sends to the parent's stdout which is detached for a
-  // macOS GUI bundle, so engine logs (including bind failures) vanish.
-  // In dev we can keep `inherit` so logs reach the terminal.
+  // Always pipe stdio. We used to use `inherit` in dev so engine logs
+  // appeared in the dev terminal — that worked locally but made remote
+  // diagnosis impossible because the central main.log file (the one
+  // the renderer's "View → Toggle Developer Tools → main log path"
+  // surfaces) only captured Electron-main logs. Anything from the
+  // engine subprocess vanished. Now we pipe in both modes and forward:
+  //   - dev:      child stdout/stderr → console.log/error → main.log
+  //               (and the dev terminal still sees them via the
+  //                inherited console writes from Electron main).
+  //   - packaged: same forwarding, plus a side-stream into engine.log
+  //               for raw spool inspection.
   const isPackaged = app.isPackaged;
-  const stdioMode = isPackaged ? "pipe" : "inherit";
   const child = spawn(
     cmd,
     [...engineArgs, "serve", "--root", projectRoot, "--port", "24193"],
     {
       cwd: projectRoot,
-      stdio: stdioMode as "pipe" | "inherit",
+      stdio: "pipe",
     },
   );
 
+  // Forward child stdout/stderr line-by-line through the parent's
+  // overridden console.log / console.error so they land in main.log
+  // (set up in electron/main.ts setupLogFile()). Without this every
+  // engine `[agents] adapter created`, `[agents] adapterForSession
+  // miss`, codex/claude/cursor stderr leak, and AGENT_ERROR breadcrumb
+  // vanished into the void in dev — making remote diagnosis blind.
+  const forwardLines = (
+    stream: NodeJS.ReadableStream | null,
+    write: (s: string) => void,
+  ) => {
+    if (!stream) return;
+    let buf = "";
+    stream.setEncoding?.("utf-8");
+    stream.on("data", (chunk: string | Buffer) => {
+      buf += typeof chunk === "string" ? chunk : chunk.toString("utf-8");
+      let nl = buf.indexOf("\n");
+      while (nl !== -1) {
+        const line = buf.slice(0, nl).replace(/\r$/, "");
+        buf = buf.slice(nl + 1);
+        if (line.length > 0) write(line);
+        nl = buf.indexOf("\n");
+      }
+    });
+    stream.on("end", () => {
+      if (buf.length > 0) write(buf);
+    });
+  };
+  forwardLines(child.stdout, (line) => {
+    // eslint-disable-next-line no-console
+    console.log(`[engine] ${line}`);
+  });
+  forwardLines(child.stderr, (line) => {
+    // eslint-disable-next-line no-console
+    console.error(`[engine] ${line}`);
+  });
+
   if (isPackaged) {
-    // Mirror the engine's output into a rotating log alongside the
-    // main log. Easiest path to diagnose engine-side crashes in a
-    // shipped build.
+    // Side-stream into a raw engine log for deep-dive parsing — useful
+    // when the line-buffered forwarding above can't keep up with bursty
+    // codex/claude streams or when inspecting binary blobs.
     const engineLogPath = path.join(
       os.homedir(),
       "Library",
@@ -277,7 +319,7 @@ export async function spawnEngine(projectRoot: string): Promise<number> {
       child.stdout?.pipe(logStream);
       child.stderr?.pipe(logStream);
     } catch {
-      /* unable to create log stream — engine just runs dark */
+      /* unable to create log stream — main.log forwarding still works */
     }
   }
 

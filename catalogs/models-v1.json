@@ -1,8 +1,8 @@
 {
   "$schema": "./models-v1.schema.json",
   "version": 1,
-  "updatedAt": "2026-04-25",
-  "notes": "Bundled fallback. Hot updates ship via GitHub Pages — see .github/workflows/publish-catalogs.yml. List every model that's real on the provider's API today, even if some users hit a CLI-version or account-tier gate when picking them; the agent CLI surfaces those gates as informative errors (e.g. 'requires a newer Codex') via classifyExit. Only remove a model when it's been retired by the provider or when a live API call returns a hard 404 (e.g. claude-opus-4-8 was here speculatively but Anthropic returns 404 today). When a vendor ships a new model, update this file or let the cron PR handle it; the app picks up changes within 24h via the GitHub Pages fetch.",
+  "updatedAt": "2026-04-26",
+  "notes": "Bundled fallback. Hot updates ship via GitHub Pages — see .github/workflows/publish-catalogs.yml. Verification policy (updated 2026-04-26): empirically test every model against the live CLI before listing. The codex list was previously over-inclusive — it shipped 15 models, but 12 of them returned 'not supported when using Codex with a ChatGPT account' for users on a ChatGPT subscription auth (the most common case). Those models are real on the OpenAI API, but they require an API-key auth flow we don't support yet, so listing them in the picker just gave users 12 ways to fail. Trimmed to the verified-working set for ChatGPT-tier auth. When we add API-key auth support, re-add o3 / o4-mini / gpt-5-codex / gpt-5.5-codex / etc. with a tier marker so the picker filters by the user's auth.",
   "families": {
     "claude": [
       { "value": "claude-opus-4-7[1m]", "label": "Claude Opus 4.7 (1M)", "badge": "1M" },
@@ -12,20 +12,8 @@
     ],
     "codex": [
       { "value": "gpt-5.5", "label": "GPT-5.5", "badge": "NEW" },
-      { "value": "gpt-5.5-codex", "label": "GPT-5.5 Codex", "badge": "CODE" },
-      { "value": "gpt-5.5-mini", "label": "GPT-5.5 mini" },
       { "value": "gpt-5.4", "label": "GPT-5.4" },
-      { "value": "gpt-5.4-codex", "label": "GPT-5.4 Codex" },
-      { "value": "gpt-5.3", "label": "GPT-5.3" },
-      { "value": "gpt-5.3-codex", "label": "GPT-5.3 Codex" },
-      { "value": "gpt-5.3-codex-fast", "label": "GPT-5.3 Codex Fast" },
-      { "value": "gpt-5.3-codex-low", "label": "GPT-5.3 Codex Low" },
-      { "value": "gpt-5.3-mini", "label": "GPT-5.3 mini" },
-      { "value": "gpt-5.3-nano", "label": "GPT-5.3 nano" },
-      { "value": "o4-mini-high", "label": "o4-mini-high" },
-      { "value": "o4-mini", "label": "o4-mini" },
-      { "value": "o3-pro", "label": "o3-pro" },
-      { "value": "o3", "label": "o3" }
+      { "value": "gpt-5.3-codex", "label": "GPT-5.3 Codex", "badge": "CODE" }
     ],
     "gemini": [
       { "value": "gemini-3.1-pro", "label": "Gemini 3.1 Pro", "badge": "NEW" },
