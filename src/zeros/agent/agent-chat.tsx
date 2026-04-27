@@ -215,6 +215,19 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
     [policyChatId],
   );
   const autoDecisions = useSessionsStore((s) => s.autoDecisions);
+  // Stage 6.3 — surface the session's setMode through ctx so the
+  // ExitPlanModeCard can apply the user's "approve and continue in
+  // mode X" pick. setMode? is optional on the session controls; we
+  // wrap it so consumers don't have to handle the maybe-undefined.
+  const setModeForCtx = useMemo(
+    () =>
+      session.setMode
+        ? (modeId: string) => {
+            void session.setMode!(modeId);
+          }
+        : null,
+    [session],
+  );
   const messageCtx: RendererContext = useMemo(
     () => ({
       applyReceipts,
@@ -229,6 +242,7 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
       revokePolicy,
       autoDecisions,
       chatId: chatId ?? null,
+      setMode: setModeForCtx,
     }),
     [
       applyReceipts,
@@ -243,6 +257,7 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
       revokePolicy,
       autoDecisions,
       chatId,
+      setModeForCtx,
     ],
   );
   // Scroll + active-prompt elements tracked via state so the

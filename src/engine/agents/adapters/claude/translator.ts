@@ -572,6 +572,11 @@ function mapToolKind(name: string): ToolKind {
   if (/^WebFetch$/i.test(name)) return "fetch";
   if (/^Task$/i.test(name)) return "subagent";
   if (/^AskUserQuestion$/i.test(name)) return "question";
+  // Stage 6.3 — ExitPlanMode is Claude's "I'm done planning, please
+  // approve and pick the next mode" tool. Routes to the dedicated
+  // ExitPlanModeCard via canonical kind=switch_mode. Future Gemini
+  // enter_plan_mode / exit_plan_mode tools land here too.
+  if (/^ExitPlanMode$/i.test(name)) return "switch_mode";
   // MCP-prefixed tool names: `mcp__<server>__<tool>`. Anthropic's
   // convention. Surface as `mcp` so the dedicated card renders.
   if (/^mcp__/i.test(name)) return "mcp";

@@ -107,6 +107,11 @@ export interface RendererContext {
    *  cluster to scope an Always-for-X rule to the right chat. Null
    *  when no chat is active (e.g. the empty-state composer). */
   chatId: string | null;
+  /** Stage 6.3 — switch the agent to a named permission mode. Used
+   *  by the ExitPlanModeCard to apply the user's "approve plan and
+   *  continue in Default / Accept Edits / Auto" pick. Returns null
+   *  for sessions whose adapter doesn't expose modes (Codex, Amp). */
+  setMode: ((modeId: string) => void) | null;
 }
 
 export interface ApplyReceipt {

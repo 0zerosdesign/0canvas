@@ -31,6 +31,7 @@ import { QuestionCard } from "./question-card";
 import { MCPCard } from "./tool-mcp";
 import { SubagentCard } from "./tool-subagent";
 import { ModeSwitchBanner } from "./mode-switch-banner";
+import { ExitPlanModeCard } from "./tool-exit-plan-mode";
 
 /** The default registry. New renderers register here; this is the single
  *  point of composition for the chat. */
@@ -70,6 +71,8 @@ export const defaultRegistry: RendererRegistry = {
     question: QuestionCard,
     mcp: MCPCard,
     subagent: SubagentCard,
+    // Stage 6.3: ExitPlanMode (Claude) — proposed plan + mode-pick.
+    switch_mode: ExitPlanModeCard,
   },
   toolFallback: ToolCard,
   byKind: {

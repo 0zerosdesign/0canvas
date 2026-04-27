@@ -34,8 +34,13 @@ export const MessageView = memo(
     // render the Allow/Deny cluster directly under the card. Pulls
     // the decision into the user's reading flow instead of forcing
     // them to glance at the chrome between message list and composer.
+    //
+    // Stage 6.3 — kind="switch_mode" tools (Claude ExitPlanMode) get
+    // a dedicated card that owns its own permission UI. Suppress the
+    // generic cluster for those so we don't render two prompts.
     const inlinePermission =
       message.kind === "tool" &&
+      message.toolKind !== "switch_mode" &&
       ctx.pendingPermission &&
       ctx.pendingPermission.request.toolCall.toolCallId === message.toolCallId
         ? ctx.pendingPermission.request

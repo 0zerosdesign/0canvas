@@ -5044,6 +5044,153 @@ ${S} .oc-agent-perm-inline-btn-cancel:hover {
   color: var(--text-primary);
 }
 
+/* ── Stage 6.3: ExitPlanModeCard ───────────────────────── */
+${S} .oc-agent-tool-exitplan {
+  border: 1px solid var(--tint-info-border);
+  background: var(--tint-info-weak);
+  border-radius: 10px;
+  overflow: hidden;
+}
+${S} .oc-agent-tool-exitplan-pending {
+  /* While awaiting the user's pick the card pulses subtly so it
+   * reads as an action item even when scrolled away from. */
+  animation: ocAgentExitplanPulse 2.4s ease-in-out infinite;
+}
+@keyframes ocAgentExitplanPulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--tint-info-weak); }
+  50%      { box-shadow: 0 0 0 3px var(--tint-info-weak); }
+}
+${S} .oc-agent-tool-exitplan-approved {
+  border-color: var(--tint-success-border);
+  background: var(--tint-success-weak);
+}
+${S} .oc-agent-tool-exitplan-rejected {
+  border-color: var(--tint-critical-border);
+  background: var(--tint-critical-weak);
+}
+${S} .oc-agent-exitplan-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px;
+  background: transparent; border: 0; width: 100%;
+  text-align: left; cursor: pointer; color: inherit;
+}
+${S} .oc-agent-exitplan-head:hover { background: var(--tint-black-soft); }
+${S} .oc-agent-tool-exitplan .oc-agent-tool-icon {
+  color: var(--text-info);
+}
+${S} .oc-agent-tool-exitplan-approved .oc-agent-tool-icon {
+  color: var(--text-success);
+}
+${S} .oc-agent-tool-exitplan-rejected .oc-agent-tool-icon {
+  color: var(--text-critical);
+}
+${S} .oc-agent-exitplan-title {
+  font-size: 12px; font-weight: 500;
+  color: var(--text-primary);
+}
+${S} .oc-agent-exitplan-status {
+  font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 2px 6px; border-radius: 4px;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+${S} .oc-agent-exitplan-status-pending {
+  background: var(--tint-info-strong); color: var(--text-info);
+}
+${S} .oc-agent-exitplan-status-approved {
+  background: var(--tint-success-weak); color: var(--text-success);
+}
+${S} .oc-agent-exitplan-status-rejected {
+  background: var(--tint-critical-weak); color: var(--text-critical);
+}
+${S} .oc-agent-exitplan-content {
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface-1);
+}
+${S} .oc-agent-exitplan-plan {
+  padding: 12px 14px;
+  font-size: 12.5px;
+  color: var(--text-primary);
+  max-height: 480px; overflow: auto;
+}
+${S} .oc-agent-exitplan-empty {
+  padding: 12px 14px;
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 11px;
+}
+${S} .oc-agent-exitplan-decision {
+  border-top: 1px solid var(--border-subtle);
+  padding: 10px 12px 12px;
+  background: var(--surface-2);
+}
+${S} .oc-agent-exitplan-decision-head {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11.5px; font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+${S} .oc-agent-exitplan-decision-head svg {
+  color: var(--text-info);
+  flex-shrink: 0;
+}
+${S} .oc-agent-exitplan-modes {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+@container (min-width: 520px) {
+  ${S} .oc-agent-exitplan-modes {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+${S} .oc-agent-exitplan-mode {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 8px 10px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: 7px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: background 120ms ease, border-color 120ms ease,
+              transform 120ms ease;
+}
+${S} .oc-agent-exitplan-mode:hover {
+  background: var(--tint-info-weak);
+  border-color: var(--tint-info-border);
+  transform: translateY(-1px);
+}
+${S} .oc-agent-exitplan-mode-label {
+  font-size: 12px; font-weight: 500;
+  color: var(--text-primary);
+}
+${S} .oc-agent-exitplan-mode-desc {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+${S} .oc-agent-exitplan-reject-row {
+  margin-top: 8px;
+  display: flex; justify-content: flex-end;
+}
+${S} .oc-agent-exitplan-reject {
+  padding: 5px 11px;
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 120ms ease, color 120ms ease;
+}
+${S} .oc-agent-exitplan-reject:hover {
+  background: var(--tint-critical-weak);
+  border-color: var(--tint-critical-border);
+  color: var(--text-critical);
+}
+
 /* ── Stage 6.2: Auto-decision attribution chip ─────────── */
 ${S} .oc-agent-auto-decision {
   display: flex; align-items: center; gap: 6px;
