@@ -24,11 +24,12 @@
 //     reasoning as it grows during a long turn.
 // ──────────────────────────────────────────────────────────
 
-import { memo, useEffect, useState } from "react";
+import { memo, useState } from "react";
 import { Brain, ChevronDown, ChevronRight } from "lucide-react";
 
 import type { AgentTextMessage } from "../use-agent-session";
 import type { Renderer } from "./types";
+import { LiveDuration } from "./live-duration";
 
 export const ThinkingBlock: Renderer<AgentTextMessage> = memo(
   function ThinkingBlock({ message, ctx }) {
@@ -62,7 +63,10 @@ export const ThinkingBlock: Renderer<AgentTextMessage> = memo(
           {isInFlight ? (
             <>
               <span className="oc-agent-thinking-shimmer">Thinking</span>
-              <LiveDuration startedAt={message.createdAt} />
+              <LiveDuration
+                startedAt={message.createdAt}
+                className="oc-agent-thinking-elapsed"
+              />
             </>
           ) : (
             <>
@@ -80,22 +84,6 @@ export const ThinkingBlock: Renderer<AgentTextMessage> = memo(
     );
   },
 );
-
-function LiveDuration({ startedAt }: { startedAt: number }) {
-  // Tick once per second. Keeps the in-flight affordance honest
-  // without flooding React with sub-second updates.
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    const id = window.setInterval(() => setTick((t) => t + 1), 1000);
-    return () => window.clearInterval(id);
-  }, []);
-  // `tick` is unused beyond triggering re-render; reading it once
-  // satisfies React's exhaustive-deps style without leaving an unused
-  // variable warning at the linter's mercy.
-  void tick;
-  const elapsed = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
-  return <span className="oc-agent-thinking-elapsed">· {elapsed}s</span>;
-}
 
 function formatCharCount(n: number): string {
   if (n < 1000) return `${n} chars`;

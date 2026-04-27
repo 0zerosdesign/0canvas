@@ -4053,6 +4053,82 @@ ${S} .oc-agent-thinking-elapsed {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
+${S} .oc-agent-thinking-elapsed::before {
+  content: "· ";
+  color: var(--text-placeholder);
+}
+
+/* ── Stage 5.1: duration chips ─────────────────────────── */
+/* Final / completed: dim, tabular-nums. */
+${S} .oc-agent-final-duration,
+${S} .oc-agent-shell-duration,
+${S} .oc-agent-edit-duration,
+${S} .oc-agent-read-duration,
+${S} .oc-agent-search-duration,
+${S} .oc-agent-fetch-duration,
+${S} .oc-agent-mcp-duration,
+${S} .oc-agent-subagent-duration {
+  font-size: 10px; color: var(--text-placeholder);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+/* Live (only renders while in_progress per DurationChip): tint info-
+ * color and pulse subtly so the running state is unmissable. */
+${S} .oc-agent-live-duration {
+  font-size: 10px; color: var(--text-info);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  animation: ocAgentLiveDurationPulse 1.6s ease-in-out infinite;
+}
+@keyframes ocAgentLiveDurationPulse {
+  0%, 100% { opacity: 0.65; }
+  50%      { opacity: 1; }
+}
+
+/* ── Stage 5.1: Activity HUD (composer header) ──────────── */
+${S} .oc-agent-hud {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 12px;
+  margin: 0 8px 4px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--surface-2);
+  font-size: 11px;
+  color: var(--text-muted);
+  /* Subtle running-state breathing so a long quiet phase
+   * (e.g. agent thinking) still feels alive. */
+  animation: ocAgentHudBreathe 3s ease-in-out infinite;
+}
+@keyframes ocAgentHudBreathe {
+  0%, 100% { border-color: var(--border-subtle); }
+  50%      { border-color: var(--text-info); }
+}
+${S} .oc-agent-hud[data-tone="thinking"] { background: var(--tint-black-soft); }
+${S} .oc-agent-hud[data-tone="shell"]    { background: var(--surface-1); }
+${S} .oc-agent-hud-icon {
+  flex-shrink: 0;
+  color: var(--text-info);
+}
+${S} .oc-agent-hud[data-tone="shell"]    .oc-agent-hud-icon { color: var(--text-success); }
+${S} .oc-agent-hud[data-tone="edit"]     .oc-agent-hud-icon { color: var(--text-warning); }
+${S} .oc-agent-hud[data-tone="search"]   .oc-agent-hud-icon { color: var(--text-info); }
+${S} .oc-agent-hud[data-tone="fetch"]    .oc-agent-hud-icon { color: var(--text-info); }
+${S} .oc-agent-hud[data-tone="subagent"] .oc-agent-hud-icon { color: var(--text-info); }
+${S} .oc-agent-hud[data-tone="thinking"] .oc-agent-hud-icon { color: var(--text-muted); }
+${S} .oc-agent-hud-label {
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+${S} .oc-agent-hud-spacer { flex: 1; }
+${S} .oc-agent-hud-time {
+  flex-shrink: 0;
+  /* The shared .oc-agent-live-duration class already pulses the
+   * color/opacity — override to a higher-contrast color in HUD
+   * context so it reads as "live counter" rather than "incidental
+   * meta chip". */
+  color: var(--text-info);
+}
 ${S} .oc-agent-thinking-body {
   padding: 0 12px 10px 32px;
   font-size: 11.5px;

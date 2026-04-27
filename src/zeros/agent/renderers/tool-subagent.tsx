@@ -20,6 +20,7 @@ import { ChevronDown, ChevronRight, GitBranch } from "lucide-react";
 import type { Renderer } from "./types";
 import type { AgentToolMessage } from "../use-agent-session";
 import { matchSubagent } from "./subagent";
+import { DurationChip } from "./live-duration";
 
 export const SubagentCard: Renderer<AgentToolMessage> = memo(
   function SubagentCard({ message }) {
@@ -58,11 +59,12 @@ export const SubagentCard: Renderer<AgentToolMessage> = memo(
             )}
           </div>
           <div className="oc-agent-subagent-meta">
-            {durationMs > 250 && tool.status !== "in_progress" && (
-              <span className="oc-agent-subagent-duration">
-                {formatDuration(durationMs)}
-              </span>
-            )}
+            <DurationChip
+              status={tool.status}
+              startedAt={tool.createdAt}
+              durationMs={durationMs}
+              className="oc-agent-subagent-duration"
+            />
             <SubagentStatusBadge status={tool.status} />
           </div>
         </button>
@@ -137,10 +139,3 @@ function isObj(x: unknown): x is Record<string, unknown> {
   return !!x && typeof x === "object" && !Array.isArray(x);
 }
 
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
-  const m = Math.floor(ms / 60_000);
-  const s = Math.floor((ms % 60_000) / 1000);
-  return `${m}m ${s}s`;
-}

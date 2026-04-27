@@ -37,6 +37,7 @@ import {
 
 import type { Renderer } from "./types";
 import type { AgentToolMessage } from "../use-agent-session";
+import { DurationChip } from "./live-duration";
 
 export const FetchCard: Renderer<AgentToolMessage> = memo(function FetchCard({
   message,
@@ -112,11 +113,12 @@ function FetchURLCard({
           </div>
         </div>
         <div className="oc-agent-fetch-meta">
-          {durationMs > 250 && tool.status !== "in_progress" && (
-            <span className="oc-agent-fetch-duration">
-              {formatDuration(durationMs)}
-            </span>
-          )}
+          <DurationChip
+            status={tool.status}
+            startedAt={tool.createdAt}
+            durationMs={durationMs}
+            className="oc-agent-fetch-duration"
+          />
           <FetchStatusBadge status={tool.status} variant="fetch" />
         </div>
       </button>
@@ -193,11 +195,12 @@ function WebSearchCard({
               ? "0 hits"
               : `${hits.length} ${hits.length === 1 ? "hit" : "hits"}`}
           </span>
-          {durationMs > 250 && tool.status !== "in_progress" && (
-            <span className="oc-agent-fetch-duration">
-              {formatDuration(durationMs)}
-            </span>
-          )}
+          <DurationChip
+            status={tool.status}
+            startedAt={tool.createdAt}
+            durationMs={durationMs}
+            className="oc-agent-fetch-duration"
+          />
           <FetchStatusBadge status={tool.status} variant="search" />
         </div>
       </button>
@@ -363,10 +366,3 @@ function isObj(x: unknown): x is Record<string, unknown> {
   return !!x && typeof x === "object" && !Array.isArray(x);
 }
 
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
-  const m = Math.floor(ms / 60_000);
-  const s = Math.floor((ms % 60_000) / 1000);
-  return `${m}m ${s}s`;
-}

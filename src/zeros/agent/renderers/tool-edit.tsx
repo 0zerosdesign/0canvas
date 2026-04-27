@@ -33,6 +33,7 @@ import { diffLines, structuredPatch } from "diff";
 import type { Renderer } from "./types";
 import type { AgentToolMessage } from "../use-agent-session";
 import { highlightCode, getLang } from "./syntax";
+import { DurationChip } from "./live-duration";
 
 interface DiffSource {
   /** File path the diff applies to. */
@@ -93,11 +94,12 @@ export const EditCard: Renderer<AgentToolMessage> = memo(function EditCard({
               <span className="oc-agent-edit-rem">−{counts.removed}</span>
             </span>
           )}
-          {durationMs > 250 && tool.status !== "in_progress" && (
-            <span className="oc-agent-edit-duration">
-              {formatDuration(durationMs)}
-            </span>
-          )}
+          <DurationChip
+            status={tool.status}
+            startedAt={tool.createdAt}
+            durationMs={durationMs}
+            className="oc-agent-edit-duration"
+          />
           <EditStatusBadge status={tool.status} />
         </div>
       </button>
@@ -506,12 +508,4 @@ function readPath(input: unknown): string | null {
 
 function isObj(x: unknown): x is Record<string, unknown> {
   return !!x && typeof x === "object" && !Array.isArray(x);
-}
-
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
-  const m = Math.floor(ms / 60_000);
-  const s = Math.floor((ms % 60_000) / 1000);
-  return `${m}m ${s}s`;
 }

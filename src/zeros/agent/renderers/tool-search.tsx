@@ -28,6 +28,7 @@ import { ChevronDown, ChevronRight, Search } from "lucide-react";
 
 import type { Renderer } from "./types";
 import type { AgentToolMessage } from "../use-agent-session";
+import { DurationChip } from "./live-duration";
 
 interface ParsedHit {
   path: string;
@@ -92,11 +93,12 @@ export const SearchCard: Renderer<AgentToolMessage> = memo(function SearchCard({
               ? "0 matches"
               : `${matchCount} ${matchCount === 1 ? "match" : "matches"}`}
           </span>
-          {durationMs > 250 && tool.status !== "in_progress" && (
-            <span className="oc-agent-search-duration">
-              {formatDuration(durationMs)}
-            </span>
-          )}
+          <DurationChip
+            status={tool.status}
+            startedAt={tool.createdAt}
+            durationMs={durationMs}
+            className="oc-agent-search-duration"
+          />
           <SearchStatusBadge status={tool.status} />
         </div>
       </button>
@@ -332,10 +334,3 @@ function isObj(x: unknown): x is Record<string, unknown> {
   return !!x && typeof x === "object" && !Array.isArray(x);
 }
 
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
-  const m = Math.floor(ms / 60_000);
-  const s = Math.floor((ms % 60_000) / 1000);
-  return `${m}m ${s}s`;
-}

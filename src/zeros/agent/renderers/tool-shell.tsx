@@ -41,6 +41,7 @@ import "@xterm/xterm/css/xterm.css";
 
 import type { Renderer } from "./types";
 import type { AgentToolMessage } from "../use-agent-session";
+import { DurationChip } from "./live-duration";
 
 const LARGE_OUTPUT_LINE_THRESHOLD = 5000;
 
@@ -93,11 +94,12 @@ export const ShellCard: Renderer<AgentToolMessage> = memo(function ShellCard({
           ) : null}
         </div>
         <div className="oc-agent-shell-meta">
-          {durationMs > 250 && tool.status !== "in_progress" && (
-            <span className="oc-agent-shell-duration">
-              {formatDuration(durationMs)}
-            </span>
-          )}
+          <DurationChip
+            status={tool.status}
+            startedAt={tool.createdAt}
+            durationMs={durationMs}
+            className="oc-agent-shell-duration"
+          />
           <ShellStatusBadge status={tool.status} />
         </div>
       </button>
@@ -285,14 +287,6 @@ function lastLine(text: string): string {
   if (!trimmed) return "";
   const idx = trimmed.lastIndexOf("\n");
   return idx >= 0 ? trimmed.slice(idx + 1) : trimmed;
-}
-
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
-  const m = Math.floor(ms / 60_000);
-  const s = Math.floor((ms % 60_000) / 1000);
-  return `${m}m ${s}s`;
 }
 
 function isObj(x: unknown): x is Record<string, unknown> {

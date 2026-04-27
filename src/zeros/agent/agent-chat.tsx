@@ -53,6 +53,7 @@ import {
   type ApplyReceipt,
   type RendererContext,
 } from "./renderers";
+import { ActivityHUD } from "./activity-hud";
 import { Button, Textarea } from "../ui";
 import {
   ModelPill,
@@ -912,6 +913,11 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
           }
         />
       )}
+
+      <ActivityHUD
+        messages={session.messages}
+        isStreaming={session.status === "streaming"}
+      />
 
       <div className="oc-agent-composer">
         {slashPickerOpen && (

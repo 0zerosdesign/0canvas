@@ -21,6 +21,7 @@ import { ChevronDown, ChevronRight, Plug } from "lucide-react";
 
 import type { Renderer } from "./types";
 import type { AgentToolMessage } from "../use-agent-session";
+import { DurationChip } from "./live-duration";
 
 export const MCPCard: Renderer<AgentToolMessage> = memo(function MCPCard({
   message,
@@ -56,11 +57,12 @@ export const MCPCard: Renderer<AgentToolMessage> = memo(function MCPCard({
           </div>
         </div>
         <div className="oc-agent-mcp-meta">
-          {durationMs > 250 && tool.status !== "in_progress" && (
-            <span className="oc-agent-mcp-duration">
-              {formatDuration(durationMs)}
-            </span>
-          )}
+          <DurationChip
+            status={tool.status}
+            startedAt={tool.createdAt}
+            durationMs={durationMs}
+            className="oc-agent-mcp-duration"
+          />
           <MCPStatusBadge status={tool.status} />
         </div>
       </button>
@@ -145,10 +147,3 @@ function readOutputText(tool: AgentToolMessage): string {
   return parts.join("");
 }
 
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
-  const m = Math.floor(ms / 60_000);
-  const s = Math.floor((ms % 60_000) / 1000);
-  return `${m}m ${s}s`;
-}

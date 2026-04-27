@@ -26,6 +26,7 @@ import { ChevronDown, ChevronRight, FileText } from "lucide-react";
 import type { Renderer } from "./types";
 import type { AgentToolMessage } from "../use-agent-session";
 import { highlightCode, getLang } from "./syntax";
+import { DurationChip } from "./live-duration";
 
 const MAX_PREVIEW_LINES = 200;
 
@@ -74,11 +75,12 @@ export const ReadCard: Renderer<AgentToolMessage> = memo(function ReadCard({
           {!range && totalLines > 1 && (
             <span className="oc-agent-read-range">{totalLines} lines</span>
           )}
-          {durationMs > 250 && tool.status !== "in_progress" && (
-            <span className="oc-agent-read-duration">
-              {formatDuration(durationMs)}
-            </span>
-          )}
+          <DurationChip
+            status={tool.status}
+            startedAt={tool.createdAt}
+            durationMs={durationMs}
+            className="oc-agent-read-duration"
+          />
           <ReadStatusBadge status={tool.status} />
         </div>
       </button>
@@ -249,10 +251,3 @@ function isObj(x: unknown): x is Record<string, unknown> {
   return !!x && typeof x === "object" && !Array.isArray(x);
 }
 
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
-  const m = Math.floor(ms / 60_000);
-  const s = Math.floor((ms % 60_000) / 1000);
-  return `${m}m ${s}s`;
-}
