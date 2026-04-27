@@ -76,36 +76,8 @@ function open(): Database.Database {
     );
   `);
 
-  // One-shot migration: pre-rename agent ids → canonical. Runs each
-  // boot but the WHERE clause keeps it idempotent — once the rows
-  // are migrated, subsequent runs UPDATE zero rows. Keeps existing
-  // chats bound to their adapter after the agent-id rename.
-  migrateLegacyAgentIds(handle);
-
   db = handle;
   return handle;
-}
-
-function migrateLegacyAgentIds(handle: Database.Database): void {
-  const aliases: Array<[string, string]> = [
-    ["claude-acp", "claude"],
-    ["codex-acp", "codex"],
-    ["amp-acp", "amp"],
-  ];
-  const stmt = handle.prepare(
-    `UPDATE agent_chat_meta SET agent_id = ? WHERE agent_id = ?`,
-  );
-  const txn = handle.transaction(() => {
-    for (const [legacy, canonical] of aliases) {
-      stmt.run(canonical, legacy);
-    }
-  });
-  try {
-    txn();
-  } catch {
-    /* migration is best-effort — failure leaves the legacy id which
-     *  the engine resolves via findAgent's alias map anyway. */
-  }
 }
 
 /** Close at process exit. Caller is electron `before-quit`. */

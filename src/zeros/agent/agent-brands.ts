@@ -14,8 +14,6 @@
 // foreground color — same as today.
 // ──────────────────────────────────────────────────────────
 
-import { canonicalAgentId } from "./agent-id-aliases";
-
 export interface AgentBrand {
   /** CSS color string. Used as the fill replacement for the
    *  CDN-served SVG's `currentColor` references. */
@@ -33,7 +31,6 @@ export const AGENT_BRANDS: Record<string, AgentBrand> = {
 };
 
 export function brandColor(agentId: string | null | undefined): string | null {
-  const id = canonicalAgentId(agentId);
-  if (!id) return null;
-  return AGENT_BRANDS[id]?.color ?? null;
+  if (!agentId) return null;
+  return AGENT_BRANDS[agentId]?.color ?? null;
 }

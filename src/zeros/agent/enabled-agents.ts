@@ -20,29 +20,12 @@
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 
 const STORAGE_KEY = "zeros.agent.enabledAgents";
-/** Pre-rename key. Read once on first hit and migrated forward;
- *  removed from localStorage afterwards so we don't keep two copies. */
-const LEGACY_STORAGE_KEY = "zeros.acp.enabledAgents";
 
 type PersistedShape = { ids: string[] } | null;
 
 function readPersisted(): PersistedShape {
   try {
-    let raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      // Backward-compat: migrate any pre-rename data forward, then
-      // drop the legacy key so subsequent reads stay on the new key.
-      const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
-      if (legacy) {
-        try {
-          localStorage.setItem(STORAGE_KEY, legacy);
-          localStorage.removeItem(LEGACY_STORAGE_KEY);
-        } catch {
-          /* storage quota / private mode — fall back to read-only */
-        }
-        raw = legacy;
-      }
-    }
+    const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as unknown;
     if (
@@ -95,12 +78,10 @@ function getSnapshot(): PersistedShape {
 }
 
 // Cross-tab sync — in Electron this covers devtools-in-a-separate-
-// window and any future multi-window setup. Watches both the new key
-// and the legacy one so a stale tab writing the old key still
-// triggers a refresh while migration is in progress.
+// window and any future multi-window setup.
 if (typeof window !== "undefined") {
   window.addEventListener("storage", (e) => {
-    if (e.key !== STORAGE_KEY && e.key !== LEGACY_STORAGE_KEY) return;
+    if (e.key !== STORAGE_KEY) return;
     setState(readPersisted());
   });
 }

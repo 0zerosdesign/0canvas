@@ -4,8 +4,7 @@
 //
 // Reads `initialize.authMethods` advertised by the agent and renders
 // each one faithfully. Env-var methods get a password input per secret
-// var (persisted to the OS keychain under `agent::<canonicalId>::<var>`,
-// with backward-compat reads from the legacy `acp::*` prefix).
+// var (persisted to the OS keychain under `agent::<id>::<var>`).
 // Terminal methods show the "uses your installed CLI" disclaimer.
 // Agent-kind methods render a "the agent handles auth itself" hint
 // and start directly.
@@ -34,7 +33,6 @@ import type { BridgeRegistryAgent } from "../bridge/messages";
 import type { AuthMethod, InitializeResponse } from "../bridge/agent-events";
 import { getSecret, setSecret, SECRET_ACCOUNTS } from "../../native/secrets";
 import { Button, Input } from "../ui";
-import { canonicalAgentId } from "./agent-id-aliases";
 
 export type AuthMethodKind = "env_var" | "terminal" | "agent";
 
@@ -143,7 +141,7 @@ type Option = OptionEnvVars | OptionTerminal | OptionAgentKind;
 // ───────────────────────────────────────────────────────────
 
 export function AuthModal({ agent, initialize, onConfirm, onBack }: AuthModalProps) {
-  const config = AGENT_AUTH_CONFIG[canonicalAgentId(agent.id) ?? agent.id];
+  const config = AGENT_AUTH_CONFIG[agent.id];
 
   const options = useMemo(
     () => buildOptions(agent.id, initialize, config),
@@ -181,11 +179,7 @@ export function AuthModal({ agent, initialize, onConfirm, onBack }: AuthModalPro
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Prefill env-var options from the keychain (per-var). Reads the
-  // canonical slot first; if empty, also tries the legacy `acp::*`
-  // prefix so users who saved API keys before the rename keep their
-  // values without re-entering. When the legacy slot wins, we copy
-  // forward into the canonical slot so the next read is direct.
+  // Prefill env-var options from the keychain (per-var).
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -196,30 +190,7 @@ export function AuthModal({ agent, initialize, onConfirm, onBack }: AuthModalPro
         for (const v of opt.vars) {
           if (!v.keychain) continue;
           try {
-            let val = await getSecret(v.keychain);
-            if (!val && v.keychain.startsWith("agent::")) {
-              const legacy = v.keychain.replace(
-                /^agent::([^:]+)::/,
-                (_m, canonical: string) => {
-                  const legacyId =
-                    canonical === "claude"
-                      ? "claude-acp"
-                      : canonical === "codex"
-                      ? "codex-acp"
-                      : canonical === "amp"
-                      ? "amp-acp"
-                      : canonical;
-                  return `acp::${legacyId}::`;
-                },
-              );
-              if (legacy !== v.keychain) {
-                val = await getSecret(legacy);
-                if (val) {
-                  // Forward-migrate so subsequent reads skip the fallback.
-                  void setSecret(v.keychain, val).catch(() => {});
-                }
-              }
-            }
+            const val = await getSecret(v.keychain);
             if (val) values[v.name] = val;
           } catch {
             /* keychain miss — leave blank */
@@ -483,11 +454,7 @@ function buildOptions(
   }
 
   // 3. Claude-specific Gateway option, always offered for Claude.
-  if (
-    canonicalAgentId(agentId) === "claude" &&
-    config?.supportsGateway &&
-    config.gatewayVars
-  ) {
+  if (agentId === "claude" && config?.supportsGateway && config.gatewayVars) {
     out.push(buildGatewayOption(config));
   }
 
@@ -548,12 +515,6 @@ function methodToOption(
  * centralised SECRET_ACCOUNTS slots; everything else gets a namespaced
  * fallback keyed by agent id + var name so two agents can share a slot name
  * without collision.
- *
- * The slot name uses the canonical agent id so a single keychain entry
- * spans both pre- and post-rename invocations. `secrets.getSecret` does
- * a backward-compat read of the legacy `acp::<legacyId>::*` slot when
- * the canonical one isn't found, so users who saved keys under the
- * old prefix continue to authenticate without re-entering them.
  */
 function keychainFor(
   agentId: string,
@@ -563,7 +524,7 @@ function keychainFor(
   if (config?.envVar && config?.secretAccount && varName === config.envVar) {
     return config.secretAccount;
   }
-  return `agent::${canonicalAgentId(agentId)}::${varName}`;
+  return `agent::${agentId}::${varName}`;
 }
 
 function defaultEnvVarOption(

@@ -1,7 +1,12 @@
 # Chat Rebuild — Forward Roadmap (rev. 2026-04-27)
 
 **Companion to:** [CHAT_REBUILD_PHASE_0.md](./CHAT_REBUILD_PHASE_0.md) (the retrospective).
-**Status:** Phase 0 shipped in `2be41ae`. This rev replaces the previous draft, removing the Codex API-key parallel track (deferred indefinitely — CLI subscription auth is the only supported flow), expanding Phase 1 with the unified-renderer + long-run UX work the user asked for, and folding the original Phase 2 + Phase 3 into a single performance/architecture phase merged with the 360-degree migration audit.
+**Status:** Phase 0 shipped in `2be41ae`. Phase 1 is in flight — Stage 1A (ACP type-system removal) shipped in `1f85761`, Stage 1B (CSS prefix + agent IDs + UI strings + comment sweep + persisted-data migrations) shipped in `71f7f66`/`828f0a7`, Stage 1A.8 (canonical message kinds declared) shipped in `0a2dcbb`, Stage 1C (clean ACP break — all backward-compat code removed) shipped in this revision.
+
+This rev replaces the previous draft, removes the Codex API-key parallel track (deferred indefinitely — CLI subscription auth is the only supported flow today), folds the original Phase 2 + Phase 3 into a single performance/architecture phase merged with the 360-degree migration audit, and adds:
+
+- **Stage 1C** — clean ACP break with no backward-compat aliases. Decided 2026-04-27 because half-here ACP residue (alias maps, migration shims, legacy keychain fallbacks) was creating cognitive load. All paths now expect canonical IDs (`claude`, `codex`, `amp`); persisted user data referencing legacy IDs is treated as invalid (chats need recreating, API keys need re-entering, enabled-agents need re-toggling).
+- **§2.8 CLI vs API agent adapters** — the architectural model for handling both consumer-CLI agents (today's path) and future direct-API agents in the same renderer pipeline.
 
 ---
 
@@ -16,6 +21,7 @@
    - 2.5 [Long-run UX — scroll, prompt pinning, compactness](#25-long-run-ux--scroll-prompt-pinning-compactness)
    - 2.6 [Inline permissions with sticky decisions](#26-inline-permissions-with-sticky-decisions)
    - 2.7 [Agent-specific affordances (where unification breaks)](#27-agent-specific-affordances-where-unification-breaks)
+   - 2.8 [CLI vs API agent adapters (the parallel-adapter model)](#28-cli-vs-api-agent-adapters-the-parallel-adapter-model)
 3. [Phase 2 — Performance + architecture (merged with 360-degree audit)](#3-phase-2--performance--architecture-merged-with-360-degree-audit)
    - 3.1 [Workspace store: Zustand migration](#31-workspace-store-zustand-migration)
    - 3.2 [Message-list virtualization (react-virtuoso)](#32-message-list-virtualization-react-virtuoso)
@@ -527,6 +533,41 @@ A few cases that don't unify cleanly and need agent-aware rendering inside the u
 
 These are the only places agent identity surfaces in the renderer. Everywhere else, the rule is: same card, same chrome, regardless of which agent emitted it.
 
+### 2.8 CLI vs API agent adapters (the parallel-adapter model)
+
+**The architectural commitment:** the frontend never distinguishes between agents that run as a CLI subprocess (today's path) and agents that run as a direct API client (future). They are both adapters in the engine registry; both emit canonical events; the renderer is identical.
+
+**Today's adapters all wrap CLIs.** The user's installed CLI is detected, its login state is probed (existence-only — we never read credentials), its `stream-json` (or PTY for Gemini/Copilot) output is consumed by a per-CLI translator, and that translator emits canonical `SessionUpdate` events into the bridge. The user's subscription / API-key auth lives entirely in the CLI's own config files and keychain entries.
+
+**Future API adapters fit the same shape.** When (if) we add a `claude-api` adapter that talks to the Anthropic SDK directly:
+
+- It registers in `AGENT_MANIFEST` with `id: "claude-api"`, parallel to the existing `claude` (CLI) entry.
+- Its `createAdapter()` returns an `AgentAdapter` that, instead of spawning a subprocess, opens a streaming Anthropic API session.
+- Its translator converts Anthropic streaming events (`content_block_delta` etc.) into the same canonical `SessionUpdate` shapes the Claude CLI translator already produces.
+- Its `authMethods` advertise an env-var auth method requiring `ANTHROPIC_API_KEY` — the existing AuthModal renders it without modification.
+- The renderer registry doesn't change. Tool cards, thinking blocks, plans, questions — all dispatch the same way.
+
+**What this means for the user:** they may see two Claude entries in the agent picker (`Claude Code` from CLI + `Claude API` direct), each with its own auth flow + login state. Both produce identical chat output because both feed the same canonical event vocabulary.
+
+**What it means architecturally:** the boundary between "CLI" and "API" lives entirely in `src/engine/agents/adapters/<agent>/`. Adding an API adapter is a self-contained operation — new spec, new translator, new registry entry. Zero changes to the bridge protocol, the canonical event types, or the renderer registry.
+
+**Direct validation from the field.** The 360-degree analysis the user shared confirms this is exactly what every successful platform does:
+
+> *"None of the analyzed tools attempt to handle this diversity in the frontend UI. Instead, they all implement an Adapter Pattern in their backend/sidecar."* (Comparing t3code's `ProviderAdapterShape`, opencode's `MessageV2` schema, Conductor's normalized event pipeline.)
+
+> *"Whether the agent is Claude (API), Cursor (CLI), or OpenCode (CLI), the specific adapter is responsible for translating the agent's native output into a unified RuntimeEventRaw schema."* — t3code
+
+We are explicitly building toward this convergence. Phase 1 Stage 1A defined the canonical event vocabulary (`src/zeros/bridge/agent-events.ts`). Phase 1 Stage 1A.8 declared the canonical message kinds. Future API adapters slot in without revisiting either.
+
+**Today's scope:** CLI adapters only. The user's wording: *"in the future we may develop the API as well; in that case, what we will be doing? It is a question."* The answer is documented above; the implementation lives in a future phase. No code change to today's bridge / renderer is required to keep the door open — the canonical types already accommodate it.
+
+**Practical guideline for now:** when an adapter has both a CLI and an API path available (Claude, Codex, Gemini), we choose the CLI today because:
+- Auth is simpler (delegate to the CLI's own login flow; no key handling)
+- Subscription billing is the user's existing relationship with the vendor
+- The CLI keeps pace with vendor-specific features (e.g., Claude's MCP integration, Codex's sandboxing) without our needing to track them
+
+We revisit when (a) a real user requests it, or (b) CLI rate limits / model availability cap usage in a way an API key would unlock.
+
 ---
 
 ## 3. Phase 2 — Performance + architecture (merged with 360-degree audit)
@@ -756,6 +797,11 @@ If we revisit this later (a real user asks for it, or codex-cli changes its auth
 | Codex model picker (subscription tier) | Verified — `--model` flag wired through, catalog matches working models. |
 | Live-log diagnostic workflow | Verified across multiple bug-hunt sessions. |
 | Stable `useAgentSessions` reference | Verified — no more init-loop. |
+| ACP type-system removal (Stage 1A) | Shipped 1f85761. `@agentclientprotocol/sdk` dropped from devDependencies; native types own the wire format. |
+| ACP cosmetic cleanup (Stage 1B.1-3) | Shipped 71f7f66. CSS prefix `oc-acp-*` → `oc-agent-*`, localStorage key migrated, UI strings + comments swept. |
+| Agent ID rename (Stage 1B.4) | Shipped 828f0a7 (with backward-compat); replaced 2026-04-27 by clean break. Canonical IDs `claude` / `codex` / `amp` are now the only accepted values. |
+| Canonical message kinds declared (Stage 1A.8) | Shipped 0a2dcbb. Type union extended; dispatch + renderers land in Stages 3-4. |
+| Clean ACP break (Stage 1C) | Shipped this rev. All backward-compat paths deleted: `agent-id-aliases.ts` removed, registry alias map removed, SQLite migration removed, workspace state migration removed, keychain prefix fallback removed, legacy localStorage key removed, `canonicalAgentId()` lookups stripped. The codebase no longer carries any ACP shape. **Breaking for users carrying forward pre-rename data:** chats with `agentId: "claude-acp"` no longer match an adapter; API keys saved under `acp::*` keychain prefix become unreadable; `zeros.acp.enabledAgents` localStorage is ignored. Acceptable per the user's "start fresh, no half-here state" decision. |
 
 ### Will be solid after Phase 1
 
