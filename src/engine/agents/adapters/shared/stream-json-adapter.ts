@@ -240,6 +240,18 @@ export class StreamJsonAdapter<Extra = unknown> implements AgentAdapter {
             `[agents] ${this.agentId} event ${eventCount}: type=${evType}`,
           );
         }
+        // First event = the agent's CLI accepted the spawn and is
+        // emitting on the session-id we passed. From this moment the
+        // session is "in use" from the vendor's perspective; any
+        // future spawn for the same session must use --resume (or
+        // equivalent) instead of --session-id. Without this, a
+        // cancelled-mid-stream prompt would leave primed=false (the
+        // line 327 setter throws past, see comment there) and the
+        // next prompt would re-spawn with --session-id, which Claude
+        // rejects with "Session ID … is already in use." (Pre-stage-2
+        // followup this manifested as a chat that worked once then
+        // permanently failed after a cancel.)
+        if (eventCount === 1) state.primed = true;
         state.translator?.feed(obj);
       },
       onStderrLine: (line) => {
