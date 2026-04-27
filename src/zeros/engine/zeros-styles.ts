@@ -5044,6 +5044,48 @@ ${S} .oc-agent-perm-inline-btn-cancel:hover {
   color: var(--text-primary);
 }
 
+/* ── Stage 6.2: Auto-decision attribution chip ─────────── */
+${S} .oc-agent-auto-decision {
+  display: flex; align-items: center; gap: 6px;
+  margin: -8px 0 12px;
+  padding: 4px 10px;
+  font-size: 10.5px;
+  color: var(--text-muted);
+  background: var(--tint-black-soft);
+  border: 1px solid var(--border-subtle);
+  border-top: 0;
+  border-radius: 0 0 8px 8px;
+  font-family: var(--font-mono);
+}
+${S} .oc-agent-auto-decision-icon {
+  flex-shrink: 0;
+  color: var(--text-success);
+}
+${S} .oc-agent-auto-decision-reject .oc-agent-auto-decision-icon {
+  color: var(--text-critical);
+}
+${S} .oc-agent-auto-decision-text {
+  flex: 1;
+}
+${S} .oc-agent-auto-decision-revoke {
+  display: inline-flex; align-items: center; gap: 3px;
+  flex-shrink: 0;
+  padding: 2px 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--text-placeholder);
+  font-family: inherit;
+  font-size: 10px;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+${S} .oc-agent-auto-decision-revoke:hover {
+  background: var(--surface-2);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
 /* ── Composer (single card: input + toolbar) ──────────── */
 ${S} .oc-agent-composer {
   /* Background stays transparent so it sits on the column's

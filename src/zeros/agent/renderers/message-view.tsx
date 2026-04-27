@@ -18,6 +18,7 @@ import type { AgentMessage, AgentTextMessage } from "../use-agent-session";
 import type { RendererContext, RendererRegistry } from "./types";
 import { defaultRegistry, resolveRenderer } from "./registry";
 import { InlinePermissionCluster } from "./inline-permission";
+import { AutoDecisionChip } from "./auto-decision-chip";
 
 interface MessageViewProps {
   message: AgentMessage;
@@ -39,6 +40,13 @@ export const MessageView = memo(
       ctx.pendingPermission.request.toolCall.toolCallId === message.toolCallId
         ? ctx.pendingPermission.request
         : null;
+    // Stage 6.2 — if a Zeros sticky policy auto-resolved this tool
+    // call's permission, surface a small attribution chip with a
+    // revoke button. Without it the auto-allow looks like the agent
+    // acting without permission, which is surprising and reduces
+    // trust in the policy machinery.
+    const autoDecision =
+      message.kind === "tool" ? ctx.autoDecisions[message.toolCallId] : null;
     return (
       <>
         <Component message={message} ctx={ctx} />
@@ -46,6 +54,14 @@ export const MessageView = memo(
           <InlinePermissionCluster
             request={inlinePermission}
             onRespond={ctx.respondToPermission}
+            onRecordPolicy={ctx.recordPolicy}
+            chatId={ctx.chatId}
+          />
+        )}
+        {autoDecision && (
+          <AutoDecisionChip
+            decision={autoDecision.decision}
+            onRevoke={() => ctx.revokePolicy(autoDecision.policyId)}
           />
         )}
       </>
@@ -91,6 +107,11 @@ export const MessageView = memo(
         nextMatched &&
         prev.ctx.pendingPermission !== next.ctx.pendingPermission
       ) {
+        return false;
+      }
+      // Stage 6.2 — re-render when this card's auto-decision attribution
+      // is added or revoked.
+      if (prev.ctx.autoDecisions[id] !== next.ctx.autoDecisions[id]) {
         return false;
       }
       return true;

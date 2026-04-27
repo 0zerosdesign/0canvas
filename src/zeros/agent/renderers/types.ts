@@ -86,6 +86,27 @@ export interface RendererContext {
   respondToPermission: (
     response: import("../../bridge/agent-events").RequestPermissionResponse,
   ) => void;
+  /** Stage 6.2 — record a sticky "Always for X" rule before
+   *  responding. Inline permission cluster fires this when the user
+   *  picks an `allow_always` / `reject_always` option so future
+   *  matching requests in the same chat auto-respond. */
+  recordPolicy: (rule: import("../policies").PolicyRule) => void;
+  /** Stage 6.2 — inverse of recordPolicy. Surfaces on the auto-
+   *  allowed chip so the user can revoke a sticky decision in one
+   *  click. The chip on the matching tool card looks the policyId
+   *  up from `autoDecisions`, then calls this with that id. */
+  revokePolicy: (ruleId: string) => void;
+  /** Stage 6.2 — toolCallId → auto-decision metadata, drives the
+   *  "auto-allowed by policy" chip on tool cards. Empty record when
+   *  no policies have fired yet in this session. */
+  autoDecisions: Record<
+    string,
+    { policyId: string; decision: "allow" | "reject" }
+  >;
+  /** Stage 6.2 — active chat id. Used by the inline permission
+   *  cluster to scope an Always-for-X rule to the right chat. Null
+   *  when no chat is active (e.g. the empty-state composer). */
+  chatId: string | null;
 }
 
 export interface ApplyReceipt {

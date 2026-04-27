@@ -70,6 +70,7 @@ import {
   isRecoverable as failureIsRecoverable,
   type AgentFailure,
 } from "../bridge/failure";
+import { findMatchingPolicy } from "./policies";
 
 /** How many messages we hydrate into memory per chat on first mount.
  *  Older messages stay on disk and load on scroll-up. 200 covers a
@@ -247,6 +248,52 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
       const store = useSessionsStore.getState();
 
       for (const p of perms) {
+        // Stage 6.2 — auto-respond if a chat policy matches the
+        // incoming request. We need the chatId to look up policies,
+        // which the store derives from request.sessionId. Mirror that
+        // lookup here so we can intercept before the prompt UI lands.
+        const sid = (p.request as { sessionId?: string }).sessionId;
+        const chatId = sid ? store.sessionToChatId[sid] : undefined;
+        const policies = chatId ? store.chatPolicies[chatId] ?? [] : [];
+        const tool = p.request.toolCall;
+        const match = chatId
+          ? findMatchingPolicy(policies, tool.kind ?? undefined, tool.title)
+          : null;
+        if (match) {
+          // Map decision → wire option. Prefer allow_always /
+          // reject_always (sticky on the engine side too); fall back
+          // to the once-variants if the agent didn't expose the
+          // always option for this request.
+          const wantedKinds =
+            match.decision === "allow"
+              ? ["allow_always", "allow_once"]
+              : ["reject_always", "reject_once"];
+          let optionId: string | null = null;
+          for (const k of wantedKinds) {
+            const opt = p.request.options.find((o) => o.kind === k);
+            if (opt) {
+              optionId = opt.optionId;
+              break;
+            }
+          }
+          if (optionId) {
+            bridge.send({
+              type: "AGENT_PERMISSION_RESPONSE",
+              permissionId: p.permissionId,
+              response: {
+                outcome: { outcome: "selected", optionId },
+              },
+            });
+            store.recordAutoDecision(
+              tool.toolCallId,
+              match.id,
+              match.decision,
+            );
+            // Skip the regular set-pendingPermission path so the UI
+            // never blinks the prompt.
+            continue;
+          }
+        }
         store.applyBridgePermissionRequest(
           p.agentId,
           p.permissionId,

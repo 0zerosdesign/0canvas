@@ -196,6 +196,25 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
     },
     [session],
   );
+  // Stage 6.2 — sticky-policy mutators. Bound to the active chatId so
+  // the InlinePermissionCluster can fire-and-forget without knowing
+  // which chat it's in.
+  const policyChatId = chatId;
+  const recordPolicy = useCallback(
+    (rule: import("./policies").PolicyRule) => {
+      if (!policyChatId) return;
+      useSessionsStore.getState().addPolicy(policyChatId, rule);
+    },
+    [policyChatId],
+  );
+  const revokePolicy = useCallback(
+    (ruleId: string) => {
+      if (!policyChatId) return;
+      useSessionsStore.getState().removePolicy(policyChatId, ruleId);
+    },
+    [policyChatId],
+  );
+  const autoDecisions = useSessionsStore((s) => s.autoDecisions);
   const messageCtx: RendererContext = useMemo(
     () => ({
       applyReceipts,
@@ -206,6 +225,10 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
       respondToQuestion,
       pendingPermission: session.pendingPermission,
       respondToPermission,
+      recordPolicy,
+      revokePolicy,
+      autoDecisions,
+      chatId: chatId ?? null,
     }),
     [
       applyReceipts,
@@ -216,6 +239,10 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
       respondToQuestion,
       session.pendingPermission,
       respondToPermission,
+      recordPolicy,
+      revokePolicy,
+      autoDecisions,
+      chatId,
     ],
   );
   // Scroll + active-prompt elements tracked via state so the

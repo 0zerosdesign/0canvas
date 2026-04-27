@@ -35,15 +35,28 @@ import type {
 } from "../../bridge/agent-events";
 import { Button } from "../../ui";
 import { matchDesignTool } from "./design-tools";
+import { newPolicyId, type PolicyRule } from "../policies";
 
 interface InlinePermissionClusterProps {
   request: RequestPermissionRequest;
   onRespond: (response: RequestPermissionResponse) => void;
+  /** Stage 6.2 — when the user picks an allow_always / reject_always
+   *  option, record a sticky policy here BEFORE submitting the wire
+   *  response. Future matching requests in the same chat auto-
+   *  respond and never blink the prompt UI. */
+  onRecordPolicy?: (rule: PolicyRule) => void;
+  /** Active chat id — needed to scope the policy. Null on the rare
+   *  permission-pre-chat-bound path, in which case Always-for-X
+   *  buttons still respond via the wire but no Zeros policy is
+   *  written. */
+  chatId?: string | null;
 }
 
 export const InlinePermissionCluster = memo(function InlinePermissionCluster({
   request,
   onRespond,
+  onRecordPolicy,
+  chatId,
 }: InlinePermissionClusterProps) {
   const rawTitle = request.toolCall.title ?? request.toolCall.kind ?? "Tool call";
   const matched = matchDesignTool(rawTitle);
@@ -79,11 +92,28 @@ export const InlinePermissionCluster = memo(function InlinePermissionCluster({
           <PermissionButton
             key={opt.optionId}
             option={opt}
-            onClick={() =>
+            onClick={() => {
+              // Stage 6.2 — sticky policy capture. allow_always /
+              // reject_always sticks for the chat; once-variants
+              // don't.
+              if (
+                onRecordPolicy &&
+                chatId &&
+                (opt.kind === "allow_always" || opt.kind === "reject_always")
+              ) {
+                onRecordPolicy({
+                  id: newPolicyId(),
+                  chatId,
+                  toolKind: request.toolCall.kind ?? undefined,
+                  toolTitle: request.toolCall.title,
+                  decision: opt.kind === "allow_always" ? "allow" : "reject",
+                  createdAt: Date.now(),
+                });
+              }
               onRespond({
                 outcome: { outcome: "selected", optionId: opt.optionId },
-              })
-            }
+              });
+            }}
           />
         ))}
         <Button

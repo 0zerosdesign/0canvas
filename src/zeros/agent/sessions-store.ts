@@ -45,6 +45,11 @@ import {
   type AgentUsage,
   type SessionStatus,
 } from "./use-agent-session";
+import {
+  loadPolicies,
+  savePolicies,
+  type PolicyRule,
+} from "./policies";
 
 const MAX_STDERR_LINES = 200;
 
@@ -119,6 +124,20 @@ export interface SessionsStoreState {
    *  inside the prompt-failure handler when the expected exit arrives. */
   cancellingChats: Set<string>;
 
+  /** Stage 6.2 — per-chat permission policies ("Always allow Bash",
+   *  etc.). Loaded from localStorage at boot; kept in memory and
+   *  persisted on every mutation. Keys are chat ids; values are
+   *  ordered lists (newest last). */
+  chatPolicies: Record<string, PolicyRule[]>;
+
+  /** Stage 6.2 — toolCallIds whose permission was auto-allowed (or
+   *  auto-rejected) by a Zeros policy rather than the user clicking
+   *  through. Drives the "auto-allowed by policy" chip rendered on
+   *  the matching tool card. Transient — cleared when the chat slot
+   *  resets. Each entry maps to the policy id that fired so the
+   *  chip can offer click-to-revoke. */
+  autoDecisions: Record<string, { policyId: string; decision: "allow" | "reject" }>;
+
   // ── Pure mutators ───────────────────────────────────────
   setSession: (chatId: string, slot: AgentSessionState) => void;
   patchSession: (chatId: string, patch: Partial<AgentSessionState>) => void;
@@ -128,6 +147,15 @@ export interface SessionsStoreState {
   setScrollPosition: (chatId: string, top: number) => void;
   setCancelling: (chatId: string, value: boolean) => void;
   clearAll: () => void;
+
+  // Stage 6.2 — policy mutators.
+  addPolicy: (chatId: string, rule: PolicyRule) => void;
+  removePolicy: (chatId: string, ruleId: string) => void;
+  recordAutoDecision: (
+    toolCallId: string,
+    policyId: string,
+    decision: "allow" | "reject",
+  ) => void;
 
   // ── Bridge-notification reducers ────────────────────────
   /** Dispatch a SessionNotification to its chat's slot. Splits on
@@ -161,6 +189,11 @@ export const useSessionsStore = create<SessionsStoreState>((set, get) => ({
   loadInProgress: new Set(),
   scrollPositions: {},
   cancellingChats: new Set(),
+  // Stage 6.2 — load existing policies eagerly so the first permission
+  // request after boot can already auto-respond. The doc is small
+  // (a few rules per chat) so eager load has no measurable cost.
+  chatPolicies: loadPolicies().byChat,
+  autoDecisions: {},
 
   setScrollPosition: (chatId, top) => {
     // Identity-stable when value unchanged so subscribers (e.g. the
@@ -182,6 +215,40 @@ export const useSessionsStore = create<SessionsStoreState>((set, get) => ({
       else next.delete(chatId);
       return { cancellingChats: next };
     });
+  },
+
+  // ── Stage 6.2: policies ─────────────────────────────────
+  addPolicy: (chatId, rule) => {
+    set((state) => {
+      const existing = state.chatPolicies[chatId] ?? [];
+      const nextRules = [...existing, rule];
+      const nextByChat = { ...state.chatPolicies, [chatId]: nextRules };
+      // Persist on every mutation. Doc is tiny (a few rules per chat)
+      // so the localStorage write is cheap enough to skip debouncing.
+      savePolicies({ byChat: nextByChat });
+      return { chatPolicies: nextByChat };
+    });
+  },
+  removePolicy: (chatId, ruleId) => {
+    set((state) => {
+      const existing = state.chatPolicies[chatId];
+      if (!existing) return state;
+      const nextRules = existing.filter((r) => r.id !== ruleId);
+      if (nextRules.length === existing.length) return state;
+      const nextByChat = { ...state.chatPolicies };
+      if (nextRules.length === 0) delete nextByChat[chatId];
+      else nextByChat[chatId] = nextRules;
+      savePolicies({ byChat: nextByChat });
+      return { chatPolicies: nextByChat };
+    });
+  },
+  recordAutoDecision: (toolCallId, policyId, decision) => {
+    set((state) => ({
+      autoDecisions: {
+        ...state.autoDecisions,
+        [toolCallId]: { policyId, decision },
+      },
+    }));
   },
 
   setSession: (chatId, slot) => {
