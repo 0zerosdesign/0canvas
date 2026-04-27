@@ -98,12 +98,23 @@ export interface SessionsStoreState {
    *  — they reflect the latest server state and need to land. */
   loadInProgress: Set<string>;
 
+  /** Per-chat scroll position (scrollTop in px). Phase 1 §2.5.8:
+   *  when the user swaps between parallel agent chats in the sidebar,
+   *  each chat restores its last scroll position rather than snapping
+   *  to bottom. Conductor 0.49 ships this; without it, the long-run UX
+   *  loses the "I was reading mid-transcript" state on every chat
+   *  swap. In-memory only for now — survives chat-switch within a
+   *  session, resets at app restart. SQLite persistence is a
+   *  Phase 2.11 polish item. */
+  scrollPositions: Record<string, number>;
+
   // ── Pure mutators ───────────────────────────────────────
   setSession: (chatId: string, slot: AgentSessionState) => void;
   patchSession: (chatId: string, patch: Partial<AgentSessionState>) => void;
   removeSession: (chatId: string) => void;
   setWarmAgent: (agentId: string, warm: boolean) => void;
   setLoadInProgress: (chatId: string, value: boolean) => void;
+  setScrollPosition: (chatId: string, top: number) => void;
   clearAll: () => void;
 
   // ── Bridge-notification reducers ────────────────────────
@@ -136,6 +147,18 @@ export const useSessionsStore = create<SessionsStoreState>((set, get) => ({
   warmAgentIds: new Set(),
   sessionToChatId: {},
   loadInProgress: new Set(),
+  scrollPositions: {},
+
+  setScrollPosition: (chatId, top) => {
+    // Identity-stable when value unchanged so subscribers (e.g. the
+    // sidebar reading the map) don't re-render on every scroll tick.
+    set((state) => {
+      if (state.scrollPositions[chatId] === top) return state;
+      return {
+        scrollPositions: { ...state.scrollPositions, [chatId]: top },
+      };
+    });
+  },
 
   setSession: (chatId, slot) => {
     set((state) => {
@@ -170,9 +193,12 @@ export const useSessionsStore = create<SessionsStoreState>((set, get) => ({
       if (!(chatId in state.sessions)) return state;
       const next = { ...state.sessions };
       delete next[chatId];
+      const nextScroll = { ...state.scrollPositions };
+      delete nextScroll[chatId];
       return {
         sessions: next,
         sessionToChatId: rebuildIndex(next),
+        scrollPositions: nextScroll,
       };
     });
   },
@@ -205,6 +231,7 @@ export const useSessionsStore = create<SessionsStoreState>((set, get) => ({
       warmAgentIds: new Set(),
       sessionToChatId: {},
       loadInProgress: new Set(),
+      scrollPositions: {},
     });
   },
 

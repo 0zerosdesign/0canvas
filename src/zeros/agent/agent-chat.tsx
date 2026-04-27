@@ -9,7 +9,7 @@
 //
 // ──────────────────────────────────────────────────────────
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useWorkspace, findBySelector, type ChatThread } from "../store/store";
 import { flashElement } from "../inspector";
 import {
@@ -74,6 +74,7 @@ import {
   turnKey,
 } from "./turn-container";
 import { JumpPills } from "./jump-pills";
+import { useSessionsStore } from "./sessions-store";
 
 // Error classification is handled by sessions-provider's AgentFailure
 // pipeline; the UI now branches on session.status directly (warming /
@@ -310,9 +311,47 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
     });
   };
 
+  // Per-chat scroll memory (Phase 1 §2.5.8). The consumer owns
+  // initial scroll position on mount: snap to bottom by default
+  // (chat convention — "open chat, see latest"), OR restore the
+  // saved position when the user is swapping back into a chat
+  // they were reading mid-transcript. AgentChat is remounted per
+  // chatId at the parent (column2-chat-view via key=chatId), so
+  // a layout-effect on [scrollEl, chatId] runs once at mount and
+  // never re-fires for the same chat.
+  //
+  // useLayoutEffect (not useEffect) so the initial position is set
+  // before paint — no flicker from "render at scrollTop=0, then jump
+  // to saved or bottom on next frame." The sticky-bottom hook below
+  // explicitly skips its first content-run for the same reason.
+  const setScrollPosition = useSessionsStore((s) => s.setScrollPosition);
+  useLayoutEffect(() => {
+    if (!scrollEl) return;
+    if (chatId) {
+      const saved = useSessionsStore.getState().scrollPositions[chatId];
+      if (saved !== undefined && saved >= 0) {
+        scrollEl.scrollTop = saved;
+        return;
+      }
+    }
+    // No saved position OR no chatId (picker/beta flows) → snap to
+    // bottom so the user sees the latest message immediately.
+    scrollEl.scrollTop = scrollEl.scrollHeight;
+  }, [scrollEl, chatId]);
+  // Save on scroll — the store's identity-stable setter no-ops when
+  // the value is unchanged. Scroll events are already throttled by
+  // the browser; no extra rAF needed.
+  useEffect(() => {
+    if (!scrollEl || !chatId) return;
+    const onScroll = () => setScrollPosition(chatId, scrollEl.scrollTop);
+    scrollEl.addEventListener("scroll", onScroll, { passive: true });
+    return () => scrollEl.removeEventListener("scroll", onScroll);
+  }, [scrollEl, chatId, setScrollPosition]);
+
   // Sticky-bottom auto-scroll with unstick-on-user-scroll. Replaces
   // the Phase 0 "snap to bottom on every change" reflex. See
-  // use-sticky-bottom.ts for the rationale.
+  // use-sticky-bottom.ts for the rationale. The hook skips its first
+  // content-run so the restore effect above takes precedence on mount.
   const { isAtBottom, jumpToBottom } = useStickyBottom(
     scrollEl,
     [session.messages, session.pendingPermission, session.status],

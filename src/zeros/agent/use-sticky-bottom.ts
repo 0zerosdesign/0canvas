@@ -100,7 +100,20 @@ export function useStickyBottom(
   // already there before the change. useLayoutEffect runs after
   // DOM mutation but before paint, so the user never sees the
   // intermediate "stuck above the new bottom" frame.
+  //
+  // First run is skipped — initial scroll position is the consumer's
+  // responsibility (snap-to-bottom on chat-open OR restore from
+  // per-chat scroll memory). Without this guard, mounting on a chat
+  // with saved-scroll above bottom would cause a one-frame flash:
+  // hook snaps to bottom → consumer's restore effect then jumps to
+  // saved. Let the consumer own the initial position; the hook only
+  // handles ongoing content-arrival.
+  const firstContentRunRef = useRef(true);
   useLayoutEffect(() => {
+    if (firstContentRunRef.current) {
+      firstContentRunRef.current = false;
+      return;
+    }
     if (!stickRef.current) return;
     if (!scrollEl) return;
     scrollEl.scrollTop = scrollEl.scrollHeight;
