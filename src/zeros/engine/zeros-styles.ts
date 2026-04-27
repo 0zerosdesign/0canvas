@@ -3638,6 +3638,38 @@ ${S} .oc-agent-edit-text code {
   display: inline;
 }
 
+/* ── Stage 4.2: Merged-edit history (+N more changes) ──── */
+${S} .oc-agent-edit-history {
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface-2);
+}
+${S} .oc-agent-edit-history-head {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 10px;
+  background: transparent; border: 0; width: 100%;
+  text-align: left; cursor: pointer; color: var(--text-muted);
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+}
+${S} .oc-agent-edit-history-head:hover {
+  background: var(--tint-black-soft);
+  color: var(--text-primary);
+}
+${S} .oc-agent-edit-history-list {
+  list-style: none; margin: 0; padding: 0 0 4px;
+}
+${S} .oc-agent-edit-history-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 12px 4px 24px;
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+}
+${S} .oc-agent-edit-history-time {
+  color: var(--text-placeholder);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── Stage 3: Read card ───────────────────────────────── */
 ${S} .oc-agent-tool-read { container-type: inline-size; }
 ${S} .oc-agent-read-head {

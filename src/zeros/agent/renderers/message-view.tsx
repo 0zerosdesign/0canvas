@@ -43,7 +43,19 @@ export const MessageView = memo(
     if (prev.registry !== next.registry) return false;
     if (prev.message.kind === "tool") {
       const id = prev.message.toolCallId;
-      return prev.ctx.applyReceipts[id] === next.ctx.applyReceipts[id];
+      if (prev.ctx.applyReceipts[id] !== next.ctx.applyReceipts[id]) {
+        return false;
+      }
+      // Stage 4.2 — when a new sibling lands in the same merge group,
+      // the primary's "+N more" history needs to re-render. Compare the
+      // two siblings arrays by reference (mergeSiblings is rebuilt only
+      // when session.messages changes, so reference equality is safe).
+      if (
+        prev.ctx.mergeSiblings.get(id) !== next.ctx.mergeSiblings.get(id)
+      ) {
+        return false;
+      }
+      return true;
     }
     if (prev.message.kind === "text") {
       const role = (prev.message as AgentTextMessage).role;

@@ -135,6 +135,12 @@ export interface ToolCall {
   locations?: ToolCallLocation[] | null;
   rawInput?: unknown;
   rawOutput?: unknown;
+  /** Optional grouping key. Tool calls sharing a mergeKey collapse
+   *  in the renderer — the most recent renders normally, predecessors
+   *  surface as "+N more changes" history under it. Currently used
+   *  for `edit:<path>` so multiple Edit/Write calls to the same file
+   *  collapse into one card per file. */
+  mergeKey?: string | null;
 }
 
 export interface ToolCallUpdate {
@@ -146,6 +152,7 @@ export interface ToolCallUpdate {
   locations?: ToolCallLocation[] | null;
   rawInput?: unknown;
   rawOutput?: unknown;
+  mergeKey?: string | null;
 }
 
 export interface ToolCallLocation {

@@ -111,6 +111,15 @@ export class ClaudeStreamTranslator {
    *  tool_call_update can cross-reference a prior tool_call. */
   private readonly toolCallIds = new Map<string, string>();
 
+  /** Stage 4.2: Claude tool_use_ids whose corresponding tool_result
+   *  should be swallowed instead of emitted as a tool_call_update.
+   *
+   *  Currently this is the TodoWrite path — the tool_use is intercepted
+   *  and routed to a canonical `plan` notification, so emitting the
+   *  matching tool_result as a regular update would create an orphan
+   *  tool message in the UI. */
+  private readonly suppressedToolUseIds = new Set<string>();
+
   /** Messages emitted in this turn get stable IDs so the UI can
    *  merge chunks. Claude doesn't send a messageId today — we
    *  synthesize one and share it across consecutive text-only
@@ -224,9 +233,16 @@ export class ClaudeStreamTranslator {
     }
 
     // Tool results — emit as tool_call_update with completed status.
+    // Suppressed tool_use_ids (currently TodoWrite — its tool_use was
+    // already routed to a canonical `plan` notification) get skipped so
+    // we don't leave an orphan tool message in the UI.
     for (const b of blocks) {
       if (b.type !== "tool_result") continue;
       const tool = b as unknown as ClaudeToolResultBlock;
+      if (this.suppressedToolUseIds.has(tool.tool_use_id)) {
+        this.suppressedToolUseIds.delete(tool.tool_use_id);
+        continue;
+      }
       const toolCallId = this.toolCallIds.get(tool.tool_use_id)
         ?? tool.tool_use_id;
       const text = toolResultText(tool);
@@ -318,8 +334,33 @@ export class ClaudeStreamTranslator {
         // is a separate reply.
         this.currentAssistantMessageId = null;
         this.emittedAssistantText = "";
+
+        // Stage 4.2: intercept TodoWrite. Claude's TodoWrite gives the
+        // FULL todo list on each call (replace semantics), which maps
+        // 1:1 onto the canonical `plan` notification feeding session.plan
+        // and the existing PlanPanel. Suppress the matching tool_result
+        // so the UI doesn't end up with an orphan tool message.
+        if (/^TodoWrite$/i.test(block.name)) {
+          this.suppressedToolUseIds.add(block.id);
+          const entries = parseTodoWriteEntries(block.input);
+          if (entries.length > 0 || isTodoWriteShape(block.input)) {
+            this.emit({
+              sessionId: this.sessionId,
+              update: {
+                sessionUpdate: "plan",
+                entries,
+              },
+            });
+          }
+          continue;
+        }
+
         const toolCallId = randomUUID();
         this.toolCallIds.set(block.id, toolCallId);
+        // Stage 4.2: mergeKey collapses consecutive Edit/Write calls
+        // against the same file into one card with "+N more changes"
+        // history. Path is the only stable group key the renderer needs.
+        const mergeKey = computeMergeKey(block.name, block.input);
         this.emit({
           sessionId: this.sessionId,
           update: {
@@ -329,6 +370,7 @@ export class ClaudeStreamTranslator {
             kind: mapToolKind(block.name),
             status: "in_progress",
             rawInput: block.input,
+            ...(mergeKey ? { mergeKey } : {}),
           },
         });
       }
@@ -429,6 +471,67 @@ function describeTool(name: string, input: unknown): string {
     default:
       return name;
   }
+}
+
+/** Stage 4.2 — TodoWrite shape coercion.
+ *
+ *  Claude's TodoWrite input is `{ todos: [{ content, status, activeForm? }, …] }`.
+ *  We flatten it to `PlanEntry[]` for the canonical `plan` notification.
+ *  Status maps 1:1 (`pending` / `in_progress` / `completed`); priority
+ *  isn't part of TodoWrite, so we hardcode "medium" until an adapter
+ *  surfaces priority natively. */
+function parseTodoWriteEntries(input: unknown): Array<{
+  content: string;
+  status: "pending" | "in_progress" | "completed";
+  priority: "high" | "medium" | "low";
+}> {
+  if (!isObj(input)) return [];
+  const todos = Array.isArray(input.todos) ? input.todos : [];
+  const out: Array<{
+    content: string;
+    status: "pending" | "in_progress" | "completed";
+    priority: "high" | "medium" | "low";
+  }> = [];
+  for (const t of todos) {
+    if (!isObj(t)) continue;
+    const content =
+      typeof t.content === "string"
+        ? t.content
+        : typeof t.activeForm === "string"
+        ? t.activeForm
+        : null;
+    if (!content) continue;
+    const rawStatus = typeof t.status === "string" ? t.status : "pending";
+    const status: "pending" | "in_progress" | "completed" =
+      rawStatus === "in_progress" || rawStatus === "completed"
+        ? rawStatus
+        : "pending";
+    out.push({ content, status, priority: "medium" });
+  }
+  return out;
+}
+
+/** Whether the input "looks like" a TodoWrite payload, even if it's
+ *  empty. Used to emit a `plan` notification with `entries: []` so the
+ *  UI clears the panel when the agent intentionally empties its plan. */
+function isTodoWriteShape(input: unknown): boolean {
+  return isObj(input) && Array.isArray(input.todos);
+}
+
+/** Stage 4.2 — mergeKey for collapsing repeated edits to one file
+ *  into a single card with "+N more changes" history. Returns null
+ *  for tools that shouldn't merge. */
+function computeMergeKey(name: string, input: unknown): string | null {
+  if (!/^(Edit|Write)$/i.test(name)) return null;
+  const path = isObj(input)
+    ? typeof input.file_path === "string"
+      ? input.file_path
+      : typeof input.path === "string"
+      ? input.path
+      : null
+    : null;
+  if (!path) return null;
+  return `edit:${path}`;
 }
 
 /** Coarse ToolKind categorization. */

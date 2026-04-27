@@ -141,10 +141,53 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
     }
     return 0;
   }, [session.messages]);
+  // Stage 4.2 mergeKey collapse — for each mergeKey group, the latest
+  // message renders as the primary card; predecessors get filtered out
+  // of the timeline and surface as "+N more" history under the primary.
+  // The store keeps every message; shadowing is purely render-time.
+  const { visibleMessages, mergeSiblings } = useMemo(() => {
+    const groups = new Map<string, import("./use-agent-session").AgentToolMessage[]>();
+    for (const m of session.messages) {
+      if (m.kind !== "tool") continue;
+      const tool = m as import("./use-agent-session").AgentToolMessage;
+      if (!tool.mergeKey) continue;
+      const arr = groups.get(tool.mergeKey) ?? [];
+      arr.push(tool);
+      groups.set(tool.mergeKey, arr);
+    }
+    const shadowed = new Set<string>();
+    const siblingsByPrimaryId = new Map<
+      string,
+      import("./use-agent-session").AgentToolMessage[]
+    >();
+    for (const arr of groups.values()) {
+      if (arr.length < 2) continue;
+      const primary = arr[arr.length - 1];
+      siblingsByPrimaryId.set(primary.toolCallId, arr.slice(0, -1));
+      for (let i = 0; i < arr.length - 1; i++) shadowed.add(arr[i].id);
+    }
+    const visible =
+      shadowed.size === 0
+        ? session.messages
+        : session.messages.filter((m) => !shadowed.has(m.id));
+    return { visibleMessages: visible, mergeSiblings: siblingsByPrimaryId };
+  }, [session.messages]);
   const isStreaming = session.status === "streaming";
   const messageCtx: RendererContext = useMemo(
-    () => ({ applyReceipts, isStreaming, lastMessageId, activeTurnStartedAt }),
-    [applyReceipts, isStreaming, lastMessageId, activeTurnStartedAt],
+    () => ({
+      applyReceipts,
+      isStreaming,
+      lastMessageId,
+      activeTurnStartedAt,
+      mergeSiblings,
+    }),
+    [
+      applyReceipts,
+      isStreaming,
+      lastMessageId,
+      activeTurnStartedAt,
+      mergeSiblings,
+    ],
   );
   // Scroll + active-prompt elements tracked via state so the
   // sticky-bottom hook + JumpPills re-run when they mount. Plain
@@ -386,8 +429,8 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
   // the next user prompt. Memoized so unrelated state changes
   // (composer typing, etc.) don't re-group.
   const turns = useMemo(
-    () => groupMessagesIntoTurns(session.messages),
-    [session.messages],
+    () => groupMessagesIntoTurns(visibleMessages),
+    [visibleMessages],
   );
 
   // Callback ref factory for the scroll container — sets both the

@@ -49,12 +49,17 @@ interface DiffSource {
 
 export const EditCard: Renderer<AgentToolMessage> = memo(function EditCard({
   message,
+  ctx,
 }) {
   const tool = message;
   const source = useMemo(() => extractDiffSource(tool), [tool]);
   const counts = useMemo(() => countLineDelta(source), [source]);
   const durationMs = tool.updatedAt - tool.createdAt;
   const [expanded, setExpanded] = useState(() => tool.status === "failed");
+  // Stage 4.2 — predecessors with the same mergeKey collapse into this
+  // primary card; user can expand "+N more changes" to see history.
+  const predecessors = ctx.mergeSiblings.get(tool.toolCallId) ?? [];
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const path = source?.path ?? readPath(tool.rawInput) ?? tool.title;
   const isNewFile = source?.before === "";
@@ -76,7 +81,7 @@ export const EditCard: Renderer<AgentToolMessage> = memo(function EditCard({
         <div className="oc-agent-tool-body">
           <div className="oc-agent-edit-path" title={path}>
             {path}
-            {isNewFile && (
+            {isNewFile && predecessors.length === 0 && (
               <span className="oc-agent-edit-newfile">new file</span>
             )}
           </div>
@@ -107,9 +112,82 @@ export const EditCard: Renderer<AgentToolMessage> = memo(function EditCard({
           )}
         </div>
       )}
+      {predecessors.length > 0 && (
+        <EditHistory
+          predecessors={predecessors}
+          open={historyOpen}
+          onToggle={() => setHistoryOpen((v) => !v)}
+        />
+      )}
     </div>
   );
 });
+
+// ──────────────────────────────────────────────────────────
+// Merged-edit history: "+N more changes" chevron + per-edit list.
+// Each predecessor renders as a single line: timestamp + +N/-M counts.
+// Click on an item later to expand its individual diff (deferred —
+// for now we keep this list compact; full per-edit diffs would
+// rebuild the cumulative card stack we just collapsed).
+// ──────────────────────────────────────────────────────────
+
+function EditHistory({
+  predecessors,
+  open,
+  onToggle,
+}: {
+  predecessors: AgentToolMessage[];
+  open: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="oc-agent-edit-history">
+      <button
+        type="button"
+        className="oc-agent-edit-history-head"
+        onClick={onToggle}
+        aria-expanded={open}
+      >
+        {open ? (
+          <ChevronDown className="w-3 h-3" />
+        ) : (
+          <ChevronRight className="w-3 h-3" />
+        )}
+        <span>
+          +{predecessors.length} more change{predecessors.length === 1 ? "" : "s"}
+        </span>
+      </button>
+      {open && (
+        <ul className="oc-agent-edit-history-list">
+          {predecessors.map((p) => {
+            const src = extractDiffSource(p);
+            const cnt = countLineDelta(src);
+            const ago = relativeTime(p.createdAt);
+            return (
+              <li key={p.id} className="oc-agent-edit-history-item">
+                <span className="oc-agent-edit-history-time">{ago}</span>
+                {cnt && (
+                  <span className="oc-agent-edit-counts">
+                    <span className="oc-agent-edit-add">+{cnt.added}</span>
+                    <span className="oc-agent-edit-rem">−{cnt.removed}</span>
+                  </span>
+                )}
+                <EditStatusBadge status={p.status} />
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function relativeTime(ms: number): string {
+  const diff = Date.now() - ms;
+  if (diff < 60_000) return `${Math.floor(diff / 1000)}s ago`;
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
+  return `${Math.floor(diff / 3_600_000)}h ago`;
+}
 
 function EditStatusBadge({ status }: { status: AgentToolMessage["status"] }) {
   const cls =

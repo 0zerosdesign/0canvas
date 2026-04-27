@@ -56,6 +56,15 @@ export interface RendererContext {
    *  literal last message). Old thoughts from prior turns sit below
    *  this threshold and stay calm. */
   activeTurnStartedAt: number;
+  /** Stage 4.2 — predecessors keyed by primary toolCallId. EditCard
+   *  reads this for its own toolCallId to render "+N more changes"
+   *  history without each renderer having to scan the full message
+   *  array.
+   *
+   *  Empty for tool calls that didn't get merged (i.e. the only one
+   *  in their mergeKey group). The host computes this once per
+   *  session.messages change. */
+  mergeSiblings: Map<string, import("../use-agent-session").AgentToolMessage[]>;
 }
 
 export interface ApplyReceipt {

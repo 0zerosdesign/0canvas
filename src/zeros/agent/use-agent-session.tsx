@@ -66,6 +66,11 @@ export interface AgentToolMessage {
   locations?: ToolCall["locations"];
   rawInput?: unknown;
   rawOutput?: unknown;
+  /** Optional grouping key (Stage 4.2). Tool calls sharing a mergeKey
+   *  collapse at render time — the most recent renders, predecessors
+   *  surface as "+N more" history under it. The store keeps every
+   *  message; shadowing is a render-time concern only. */
+  mergeKey?: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -712,6 +717,7 @@ export function applyUpdate(
         locations: tc.locations ?? undefined,
         rawInput: tc.rawInput,
         rawOutput: tc.rawOutput,
+        mergeKey: tc.mergeKey ?? undefined,
         createdAt: Date.now(),
         updatedAt: Date.now(),
       };
@@ -732,6 +738,7 @@ export function applyUpdate(
           locations: upd2.locations ?? m.locations,
           rawInput: upd2.rawInput ?? m.rawInput,
           rawOutput: upd2.rawOutput ?? m.rawOutput,
+          mergeKey: upd2.mergeKey ?? m.mergeKey,
           updatedAt: Date.now(),
         };
       });
