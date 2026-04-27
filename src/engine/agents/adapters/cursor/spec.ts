@@ -2,16 +2,12 @@
 // Cursor Agent spec
 // ──────────────────────────────────────────────────────────
 //
-// Cursor's stream-json schema is close enough to Claude's that we
-// reuse ClaudeStreamTranslator. The envelope (system/user/assistant/
-// result) and the `tool_use` content-block shape match; only the tool
-// names diverge — Cursor emits `shellToolCall` / `readToolCall` /
-// `editToolCall` / `writeToolCall` / `grepToolCall` / `globToolCall` /
-// `todoToolCall` / `updateTodosToolCall` instead of Claude's `Bash` /
-// `Read` / etc. The shared `mapToolKind` / `describeTool` /
-// `computeMergeKey` helpers in claude/translator.ts (Stage 7.2)
-// recognize both name sets, so Cursor tool calls render through the
-// same Shell / Read / Edit / Search / Plan cards as Claude's.
+// Cursor's stream-json schema is structurally different from Claude's
+// (Stage 7.3 verified against real cursor-agent 2026.04.17 output):
+// top-level `tool_call` events instead of inline `tool_use` content
+// blocks, top-level `thinking` events, no message ids on text deltas.
+// The dedicated `CursorStreamTranslator` handles all of those — see
+// translator.ts for the schema notes.
 //
 // Auth: ~/.cursor/cli-config.json (probed in registry). Permissions
 // are not routed through hooks — Cursor has its own approval config.
@@ -20,7 +16,7 @@
 import type { StreamJsonAgentSpec } from "../shared";
 import type { ContentBlock, InitializeResponse } from "../../../../zeros/bridge/agent-events";
 
-import { ClaudeStreamTranslator } from "../claude/translator";
+import { CursorStreamTranslator } from "./translator";
 
 interface CursorExtra {
   /** Cursor-side session id captured from stream-json init. */
@@ -55,12 +51,18 @@ export const cursorSpec: StreamJsonAgentSpec<CursorExtra> = {
     // that surfaces in the chat as a generic CLI-exit failure. We pin
     // to "auto" so first-run works for everyone; users who want a
     // specific model can switch via the model picker once we wire it.
+    //
+    // We *do not* pass `--stream-partial-output`. Stage 7.3 verified
+    // that flag causes cursor-agent to emit each text segment twice —
+    // once as the streaming draft, once as the finalized chunk — which
+    // surfaced in the chat as duplicated paragraphs. Without the flag,
+    // text still streams in chunks (one chunk per logical segment of
+    // the reply); we just lose token-level streaming, which is fine.
     const args = [
       "-p",
       promptText,
       "--output-format",
       "stream-json",
-      "--stream-partial-output",
       "--trust",
       "--model",
       "auto",
@@ -83,18 +85,18 @@ export const cursorSpec: StreamJsonAgentSpec<CursorExtra> = {
   },
 
   createTranslator({ sessionId, emit, state }) {
-    const inner = new ClaudeStreamTranslator({
+    const inner = new CursorStreamTranslator({
       sessionId,
       emit,
       onUnknown: () => {
         /* benign */
       },
     });
-    (state.extra as CursorExtra & { _t?: ClaudeStreamTranslator })._t = inner;
+    (state.extra as CursorExtra & { _t?: CursorStreamTranslator })._t = inner;
     return {
       feed: (obj) => inner.feed(obj),
       get sawTerminal() {
-        return inner.sawResult;
+        return inner.sawTerminal;
       },
       get stopReason() {
         return inner.stopReason;
@@ -103,8 +105,8 @@ export const cursorSpec: StreamJsonAgentSpec<CursorExtra> = {
   },
 
   captureAfterPrompt({ state }) {
-    const t = (state.extra as CursorExtra & { _t?: ClaudeStreamTranslator })._t;
-    const sid = t?.claudeSessionId ?? null;
+    const t = (state.extra as CursorExtra & { _t?: CursorStreamTranslator })._t;
+    const sid = t?.cursorSessionId ?? null;
     if (sid && !state.extra.cursorSessionId) {
       state.extra.cursorSessionId = sid;
     }
