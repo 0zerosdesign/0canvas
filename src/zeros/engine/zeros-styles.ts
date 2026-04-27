@@ -4063,6 +4063,425 @@ ${S} .oc-agent-thinking-body {
   word-break: break-word;
 }
 
+/* ── Stage 4.3: Question card ─────────────────────────── */
+${S} .oc-agent-tool-question {
+  border: 1px solid var(--tint-info-border);
+  background: var(--tint-info-weak);
+  border-radius: 10px;
+  overflow: hidden;
+}
+${S} .oc-agent-question-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px;
+  background: transparent;
+}
+${S} .oc-agent-question-title {
+  font-size: 11.5px; font-weight: 500;
+  color: var(--text-primary);
+}
+${S} .oc-agent-question-hint {
+  margin-left: auto;
+  font-size: 9.5px; color: var(--text-placeholder);
+  font-style: italic;
+}
+${S} .oc-agent-tool-question .oc-agent-tool-icon {
+  color: var(--text-info);
+}
+${S} .oc-agent-question-empty {
+  padding: 8px 12px;
+  font-size: 11px; color: var(--text-muted);
+  border-top: 1px solid var(--border-subtle);
+}
+${S} .oc-agent-question-form {
+  padding: 4px 12px 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+${S} .oc-agent-question-field + .oc-agent-question-field {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+${S} .oc-agent-question-fieldhead {
+  font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--text-placeholder);
+  font-family: var(--font-mono);
+  margin: 4px 0 4px;
+}
+${S} .oc-agent-question-prompt {
+  font-size: 12px;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+${S} .oc-agent-question-options {
+  display: flex; flex-direction: column;
+  gap: 6px;
+}
+${S} .oc-agent-question-option {
+  display: flex; gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  cursor: pointer;
+  background: var(--surface-2);
+}
+${S} .oc-agent-question-option:hover { background: var(--surface-1); }
+${S} .oc-agent-question-option input[type="radio"],
+${S} .oc-agent-question-option input[type="checkbox"] {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+${S} .oc-agent-question-option-body {
+  display: flex; flex-direction: column;
+  min-width: 0;
+}
+${S} .oc-agent-question-option-label {
+  font-size: 11.5px;
+  color: var(--text-primary);
+}
+${S} .oc-agent-question-option-desc {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+${S} .oc-agent-question-yesno {
+  display: flex; gap: 6px;
+}
+${S} .oc-agent-question-yesno-btn {
+  flex: 1;
+  padding: 6px 12px;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 11.5px;
+}
+${S} .oc-agent-question-yesno-btn:hover { background: var(--surface-1); }
+${S} .oc-agent-question-yesno-btn-active {
+  background: var(--tint-info-weak);
+  border-color: var(--tint-info-border);
+  color: var(--text-primary);
+}
+${S} .oc-agent-question-textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-size: 11.5px;
+  font-family: var(--font-base);
+  resize: vertical;
+}
+${S} .oc-agent-question-textarea:focus {
+  outline: 0;
+  border-color: var(--tint-info-border);
+}
+${S} .oc-agent-question-submit {
+  margin-top: 12px;
+  padding: 6px 14px;
+  background: var(--tint-info-weak);
+  border: 1px solid var(--tint-info-border);
+  color: var(--text-primary);
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+${S} .oc-agent-question-submit:hover { background: var(--tint-info-strong); }
+${S} .oc-agent-question-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+${S} .oc-agent-question-sent {
+  display: flex; gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 11px;
+}
+${S} .oc-agent-question-sent-label {
+  color: var(--text-placeholder);
+  text-transform: uppercase; letter-spacing: 0.04em;
+  font-size: 9.5px;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+${S} .oc-agent-question-sent-text {
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── Stage 4.3: MCP card ──────────────────────────────── */
+${S} .oc-agent-tool-mcp { container-type: inline-size; }
+${S} .oc-agent-mcp-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px;
+  background: transparent; border: 0; width: 100%;
+  text-align: left; cursor: pointer; color: inherit;
+}
+${S} .oc-agent-mcp-head:hover { background: var(--tint-black-soft); }
+${S} .oc-agent-mcp-id {
+  font-family: var(--font-mono); font-size: 11.5px;
+  display: flex; gap: 1px; align-items: baseline;
+  overflow: hidden; min-width: 0;
+}
+${S} .oc-agent-mcp-server {
+  color: var(--text-info);
+  flex-shrink: 0;
+}
+${S} .oc-agent-mcp-dot {
+  color: var(--text-placeholder);
+  flex-shrink: 0;
+}
+${S} .oc-agent-mcp-tool {
+  color: var(--text-primary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+${S} .oc-agent-mcp-meta {
+  display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0;
+}
+${S} .oc-agent-mcp-duration {
+  font-size: 10px; color: var(--text-placeholder);
+  font-variant-numeric: tabular-nums;
+}
+${S} .oc-agent-mcp-status {
+  font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 2px 6px; border-radius: 4px;
+  font-family: var(--font-mono);
+}
+${S} .oc-agent-mcp-status-ok {
+  background: var(--tint-success-weak); color: var(--text-success);
+}
+${S} .oc-agent-mcp-status-fail {
+  background: var(--tint-critical-weak); color: var(--text-critical);
+}
+${S} .oc-agent-mcp-status-run {
+  background: var(--tint-info-weak); color: var(--text-info);
+}
+${S} .oc-agent-mcp-content {
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface-1);
+  max-height: 480px; overflow: auto;
+}
+${S} .oc-agent-mcp-empty {
+  padding: 10px 12px;
+  font-size: 11px; color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+${S} .oc-agent-mcp-section + .oc-agent-mcp-section {
+  border-top: 1px solid var(--border-subtle);
+}
+${S} .oc-agent-mcp-section-label {
+  padding: 4px 12px;
+  font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--text-placeholder);
+  font-family: var(--font-mono);
+  background: var(--tint-black-soft);
+}
+${S} .oc-agent-mcp-json {
+  margin: 0;
+  padding: 8px 12px;
+  font-family: var(--font-mono); font-size: 10.5px;
+  color: var(--text-muted);
+  white-space: pre-wrap; word-break: break-word;
+}
+
+/* ── Stage 4.3: Subagent card ─────────────────────────── */
+${S} .oc-agent-tool-subagent2 {
+  border: 1px solid var(--tint-accent-border);
+  background: var(--tint-accent-weak);
+  border-radius: 10px;
+  overflow: hidden;
+}
+${S} .oc-agent-subagent-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px;
+  background: transparent; border: 0; width: 100%;
+  text-align: left; cursor: pointer; color: inherit;
+}
+${S} .oc-agent-subagent-head:hover { background: var(--tint-black-soft); }
+${S} .oc-agent-tool-subagent2 .oc-agent-tool-icon {
+  color: var(--text-info);
+}
+${S} .oc-agent-subagent-title {
+  display: flex; align-items: baseline; gap: 6px;
+  overflow: hidden; min-width: 0;
+}
+${S} .oc-agent-subagent-tag {
+  font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--text-info);
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+${S} .oc-agent-subagent-type {
+  font-size: 11.5px; font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+${S} .oc-agent-subagent-desc {
+  font-size: 11px; color: var(--text-muted);
+  margin-top: 3px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+${S} .oc-agent-subagent-meta {
+  display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0;
+}
+${S} .oc-agent-subagent-duration {
+  font-size: 10px; color: var(--text-placeholder);
+  font-variant-numeric: tabular-nums;
+}
+${S} .oc-agent-subagent-status {
+  font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 2px 6px; border-radius: 4px;
+  font-family: var(--font-mono);
+}
+${S} .oc-agent-subagent-status-ok {
+  background: var(--tint-success-weak); color: var(--text-success);
+}
+${S} .oc-agent-subagent-status-fail {
+  background: var(--tint-critical-weak); color: var(--text-critical);
+}
+${S} .oc-agent-subagent-status-run {
+  background: var(--tint-info-weak); color: var(--text-info);
+}
+${S} .oc-agent-subagent-content {
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface-1);
+}
+${S} .oc-agent-subagent-section + .oc-agent-subagent-section {
+  border-top: 1px solid var(--border-subtle);
+}
+${S} .oc-agent-subagent-section-label {
+  padding: 4px 12px;
+  font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--text-placeholder);
+  font-family: var(--font-mono);
+  background: var(--tint-black-soft);
+}
+${S} .oc-agent-subagent-task {
+  padding: 8px 12px;
+  font-size: 11px; color: var(--text-primary);
+  white-space: pre-wrap; word-break: break-word;
+}
+${S} .oc-agent-subagent-result {
+  margin: 0;
+  padding: 8px 12px;
+  font-family: var(--font-mono); font-size: 10.5px;
+  color: var(--text-muted);
+  white-space: pre-wrap; word-break: break-word;
+  max-height: 360px; overflow: auto;
+}
+${S} .oc-agent-subagent-empty {
+  padding: 10px 12px;
+  font-size: 11px; color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+/* ── Stage 4.3: Error card ────────────────────────────── */
+${S} .oc-agent-errorcard {
+  margin: 8px;
+  border: 1px solid var(--tint-critical-border);
+  background: var(--tint-critical-weak);
+  border-radius: 10px;
+  overflow: hidden;
+}
+${S} .oc-agent-errorcard-head {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 10px 12px;
+}
+${S} .oc-agent-errorcard-icon {
+  color: var(--text-critical);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+${S} .oc-agent-errorcard-body {
+  flex: 1;
+  min-width: 0;
+}
+${S} .oc-agent-errorcard-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11.5px; font-weight: 500;
+  color: var(--text-critical);
+}
+${S} .oc-agent-errorcard-code {
+  font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--text-critical);
+  font-family: var(--font-mono);
+  background: var(--tint-critical-strong);
+  padding: 1px 5px; border-radius: 3px;
+}
+${S} .oc-agent-errorcard-message {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-primary);
+  white-space: pre-wrap; word-break: break-word;
+}
+${S} .oc-agent-errorcard-dismiss {
+  flex-shrink: 0;
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  border: 0; background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 4px;
+}
+${S} .oc-agent-errorcard-dismiss:hover {
+  background: var(--tint-critical-strong);
+  color: var(--text-primary);
+}
+${S} .oc-agent-errorcard-details {
+  border-top: 1px solid var(--tint-critical-border);
+  background: var(--surface-1);
+}
+${S} .oc-agent-errorcard-detailtoggle {
+  width: 100%;
+  padding: 6px 12px;
+  text-align: left;
+  background: transparent; border: 0;
+  color: var(--text-muted);
+  font-size: 10.5px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+}
+${S} .oc-agent-errorcard-detailtoggle:hover {
+  background: var(--tint-black-soft);
+  color: var(--text-primary);
+}
+${S} .oc-agent-errorcard-detailbody {
+  margin: 0;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border-subtle);
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--text-muted);
+  white-space: pre-wrap; word-break: break-word;
+  max-height: 240px; overflow: auto;
+}
+${S} .oc-agent-errorcard-actions {
+  display: flex; gap: 6px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--tint-critical-border);
+  background: var(--surface-1);
+}
+${S} .oc-agent-errorcard-action {
+  display: flex; align-items: center; gap: 4px;
+  padding: 5px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+  color: var(--text-primary);
+  font-size: 10.5px;
+  cursor: pointer;
+  font-family: var(--font-base);
+}
+${S} .oc-agent-errorcard-action:hover {
+  background: var(--surface-1);
+  border-color: var(--text-muted);
+}
+
 /* ── Permission bar (low / high risk) ──────────────────── */
 ${S} .oc-agent-perm {
   border-top: 1px solid var(--border-subtle);

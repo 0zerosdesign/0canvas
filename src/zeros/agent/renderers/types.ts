@@ -65,6 +65,13 @@ export interface RendererContext {
    *  in their mergeKey group). The host computes this once per
    *  session.messages change. */
   mergeSiblings: Map<string, import("../use-agent-session").AgentToolMessage[]>;
+  /** Stage 4.3 — submit handler for QuestionCard. Today this dispatches
+   *  the answer as a normal next-turn user prompt (the "inferred" path
+   *  in §2.4.9), since our adapters close stdin after spawn and can't
+   *  write a tool_result back to the running Claude process. Native
+   *  blocking AskUserQuestion is a Stage 4.4+ adapter capability —
+   *  same hook, different routing under the hood when it ships. */
+  respondToQuestion: (text: string) => void;
 }
 
 export interface ApplyReceipt {

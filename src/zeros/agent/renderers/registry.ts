@@ -27,6 +27,9 @@ import { ReadCard } from "./tool-read";
 import { SearchCard } from "./tool-search";
 import { FetchCard } from "./tool-fetch";
 import { ThinkingBlock } from "./thinking-block";
+import { QuestionCard } from "./question-card";
+import { MCPCard } from "./tool-mcp";
+import { SubagentCard } from "./tool-subagent";
 
 /** The default registry. New renderers register here; this is the single
  *  point of composition for the chat. */
@@ -42,12 +45,16 @@ export const defaultRegistry: RendererRegistry = {
   },
   textFallback: TextMessage,
   toolMatchers: [
-    // Phase 0: design tools and subagent calls share the unified ToolCard
-    // (which already branches internally on those matchers). Phase 1 may
-    // split them into dedicated renderers; until then a single shared
-    // implementation keeps behavior identical to the pre-refactor code.
+    // Design tools still share the unified ToolCard — they're Zeros's
+    // own tool surface, not a generic kind. Stage 4 keeps them on the
+    // bespoke ToolCard branch.
     { match: (t) => matchDesignTool(t.title) !== null, render: ToolCard },
-    { match: (t) => matchSubagent(t) !== null, render: ToolCard },
+    // Stage 4.3 — subagent custom matcher catches agents whose
+    // translator hasn't been taught to emit kind="subagent" yet
+    // (Amp, Droid, etc. before Stage 8 lands). Routes to the dedicated
+    // SubagentCard so all subagent calls render uniformly regardless
+    // of which path tagged them.
+    { match: (t) => matchSubagent(t) !== null, render: SubagentCard },
   ],
   toolByKind: {
     // Stage 3: high-volume cards — Shell, Edit, Read.
@@ -58,6 +65,10 @@ export const defaultRegistry: RendererRegistry = {
     search: SearchCard,
     fetch: FetchCard,
     web_search: FetchCard,
+    // Stage 4.3: Question + MCP + Subagent.
+    question: QuestionCard,
+    mcp: MCPCard,
+    subagent: SubagentCard,
   },
   toolFallback: ToolCard,
   unknown: UnknownMessage,

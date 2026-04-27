@@ -49,6 +49,7 @@ import {
   MessageView,
   matchDesignTool,
   lookupCurrentValue,
+  ErrorCard,
   type ApplyReceipt,
   type RendererContext,
 } from "./renderers";
@@ -173,6 +174,17 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
     return { visibleMessages: visible, mergeSiblings: siblingsByPrimaryId };
   }, [session.messages]);
   const isStreaming = session.status === "streaming";
+  // Stage 4.3 — QuestionCard's submit hook. Routes through
+  // session.sendPrompt today (see RendererContext doc); same callsite
+  // when adapters gain a native tool_result write-back path.
+  const respondToQuestion = useCallback(
+    (text: string) => {
+      session.sendPrompt(text, text).catch(() => {
+        /* error surfaces via session.error */
+      });
+    },
+    [session],
+  );
   const messageCtx: RendererContext = useMemo(
     () => ({
       applyReceipts,
@@ -180,6 +192,7 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
       lastMessageId,
       activeTurnStartedAt,
       mergeSiblings,
+      respondToQuestion,
     }),
     [
       applyReceipts,
@@ -187,6 +200,7 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
       lastMessageId,
       activeTurnStartedAt,
       mergeSiblings,
+      respondToQuestion,
     ],
   );
   // Scroll + active-prompt elements tracked via state so the
@@ -816,14 +830,11 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
       </header>
 
       {session.status === "failed" && session.error && (
-        <div className="oc-agent-error">
-          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-          <div className="min-w-0" style={{ flex: 1 }}>
-            <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-              {session.error}
-            </div>
-          </div>
-        </div>
+        <ErrorCard
+          error={session.error}
+          failure={session.failure}
+          onReset={() => session.reset()}
+        />
       )}
 
       {session.plan.length > 0 && <PlanPanel entries={session.plan} />}

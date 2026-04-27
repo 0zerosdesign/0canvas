@@ -23,3 +23,4 @@ export {
 export type { DesignToolEntry, PermissionPrompt } from "./design-tools";
 export { matchSubagent } from "./subagent";
 export type { SubagentInfo } from "./subagent";
+export { ErrorCard } from "./error-card";
