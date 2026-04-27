@@ -3949,16 +3949,12 @@ ${S} .oc-agent-thinking {
   border: 1px solid transparent;
   transition: border-color 0.2s ease, background 0.2s ease;
 }
-/* In-flight wrapper — animated border ring + tinted background so
- * the block remains unmissable even when scrolled away from focus. */
+/* In-flight wrapper — same chrome as the resting state, no border /
+ * no background tint / no glow. The shimmer + icon pulse + ticking
+ * duration carry the "thinking right now" signal on their own. */
 ${S} .oc-agent-thinking-flight {
-  border-color: var(--tint-info-border);
-  background: var(--tint-info-weak);
-  animation: ocAgentThinkingPulse 2.4s ease-in-out infinite;
-}
-@keyframes ocAgentThinkingPulse {
-  0%, 100% { box-shadow: 0 0 0 0 var(--tint-info-weak); }
-  50%      { box-shadow: 0 0 0 3px var(--tint-info-weak); }
+  border-color: transparent;
+  background: var(--tint-black-soft);
 }
 ${S} .oc-agent-thinking-head {
   display: flex; align-items: center; gap: 6px;
@@ -3981,7 +3977,7 @@ ${S} .oc-agent-thinking-icon {
   flex-shrink: 0;
 }
 ${S} .oc-agent-thinking-flight .oc-agent-thinking-icon {
-  color: var(--text-info);
+  color: var(--text-muted);
   animation: ocAgentThinkingIconPulse 1.6s ease-in-out infinite;
 }
 @keyframes ocAgentThinkingIconPulse {
@@ -3997,9 +3993,9 @@ ${S} .oc-agent-thinking-shimmer {
   font-weight: 500;
   background: linear-gradient(
     90deg,
-    var(--text-info) 0%,
+    var(--text-muted) 0%,
     var(--text-primary) 50%,
-    var(--text-info) 100%
+    var(--text-muted) 100%
   );
   background-size: 200% 100%;
   -webkit-background-clip: text;
@@ -4021,10 +4017,9 @@ ${S} .oc-agent-thinking-count {
 ${S} .oc-agent-thinking-elapsed {
   margin-left: auto;
   font-size: 10px;
-  color: var(--text-info);
+  color: var(--text-muted);
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-weight: 500;
 }
 ${S} .oc-agent-thinking-body {
   padding: 0 12px 10px 32px;
