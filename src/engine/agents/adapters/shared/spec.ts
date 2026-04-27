@@ -34,7 +34,7 @@ import type {
   SessionMode,
   SessionNotification,
   StopReason,
-} from "@agentclientprotocol/sdk";
+} from "../../../../zeros/bridge/agent-events";
 
 import type { AgentAdapterContext, HookEvent, HookResponse } from "../../types";
 

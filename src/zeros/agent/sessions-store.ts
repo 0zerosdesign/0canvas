@@ -36,7 +36,7 @@ import type {
   PlanEntry,
   RequestPermissionRequest,
   SessionNotification,
-} from "@agentclientprotocol/sdk";
+} from "../bridge/agent-events";
 import {
   applyUpdate,
   BLANK_USAGE,

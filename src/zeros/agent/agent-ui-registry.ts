@@ -1,4 +1,4 @@
-import type { InitializeResponse } from "@agentclientprotocol/sdk";
+import type { InitializeResponse } from "../bridge/agent-events";
 import { agentFamily } from "./model-catalog";
 
 export interface AgentUiEntry {

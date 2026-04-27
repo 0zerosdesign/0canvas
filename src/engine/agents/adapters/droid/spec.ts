@@ -14,7 +14,7 @@ import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 
 import type { StreamJsonAgentSpec } from "../shared";
-import type { ContentBlock, InitializeResponse } from "@agentclientprotocol/sdk";
+import type { ContentBlock, InitializeResponse } from "../../../../zeros/bridge/agent-events";
 import type { HookResponse } from "../../types";
 import { ClaudeStreamTranslator } from "../claude/translator";
 import { installDroidHooks } from "./hooks";

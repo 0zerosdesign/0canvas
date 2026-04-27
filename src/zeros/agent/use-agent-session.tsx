@@ -27,7 +27,7 @@ import type {
   StopReason,
   ToolCall,
   ToolCallUpdate,
-} from "@agentclientprotocol/sdk";
+} from "../bridge/agent-events";
 import type {
   AgentAgentsListMessage,
   AgentAgentInitializedMessage,
@@ -557,10 +557,10 @@ export function applyUpdate(
         kind: "tool",
         toolCallId: tc.toolCallId,
         title: tc.title ?? tc.toolCallId,
-        toolKind: tc.kind,
+        toolKind: tc.kind ?? undefined,
         status: tc.status ?? "pending",
-        content: tc.content,
-        locations: tc.locations,
+        content: tc.content ?? undefined,
+        locations: tc.locations ?? undefined,
         rawInput: tc.rawInput,
         rawOutput: tc.rawOutput,
         createdAt: Date.now(),

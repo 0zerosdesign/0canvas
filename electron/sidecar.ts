@@ -60,10 +60,9 @@ function archTriple(): string {
  *    no Node runtime needed.
  *
  *  DEV (pnpm electron:dev): spawn `bun src/cli.ts serve …` directly.
- *    bun handles TS + ESM/CJS interop natively (the agentclientprotocol
- *    sdk is ESM-only; node-run tsup CJS output hits ERR_REQUIRE_ESM).
- *    No build step; edits in src/engine/** take effect on the next
- *    engine respawn triggered by startEngineCodeWatcher() below.
+ *    bun handles TS + ESM/CJS interop natively. No build step; edits
+ *    in src/engine/** take effect on the next engine respawn triggered
+ *    by startEngineCodeWatcher() below.
  *
  *    Falls back to the pre-built bun binary at
  *    binaries/zeros-engine-<triple> if bun isn't on PATH. */

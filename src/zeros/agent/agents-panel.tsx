@@ -268,11 +268,8 @@ export function AgentsPanel({ listAgents, onSelect, activeAgentId, onPreWarm, re
       {agents && (
         <div className="oc-acp-reg-footer">
           <span>
-            {agents.length} agent{agents.length === 1 ? "" : "s"} · shared ACP registry
+            {agents.length} agent{agents.length === 1 ? "" : "s"}
           </span>
-          <a href="https://agentclientprotocol.com" target="_blank" rel="noreferrer">
-            docs <ExternalLink className="w-3 h-3" />
-          </a>
         </div>
       )}
     </div>

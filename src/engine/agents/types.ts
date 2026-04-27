@@ -3,13 +3,11 @@
 // ──────────────────────────────────────────────────────────
 //
 // AgentAdapter is the contract every per-CLI adapter implements. The
-// gateway multiplexes adapters behind a single surface that looks
-// identical to the old AgentSessionManager, so the WebSocket wire
-// protocol stays unchanged during the migration.
+// gateway multiplexes adapters behind a single surface so the
+// WebSocket wire protocol is consistent across every CLI.
 //
-// Types still reuse @agentclientprotocol/sdk shapes for ContentBlock,
-// SessionNotification, etc. — forking those types is Phase 9 cleanup.
-// Today we just stop using the SDK *runtime* (client.ts, stdio JSON-RPC).
+// Wire shapes are owned in src/zeros/bridge/agent-events.ts and
+// shared by both processes (type-only — erased at compile time).
 //
 // ──────────────────────────────────────────────────────────
 
@@ -26,7 +24,7 @@ import type {
   SessionMode,
   SessionNotification,
   StopReason,
-} from "@agentclientprotocol/sdk";
+} from "../../zeros/bridge/agent-events";
 
 // ── Failure taxonomy ─────────────────────────────────────
 //
@@ -72,8 +70,7 @@ export class AgentFailureError extends Error {
 // ── Gateway-facing event channel ─────────────────────────
 //
 // Every adapter emits into this channel. The gateway translates to
-// ACP_* wire messages (for now) and broadcasts over the WebSocket.
-// When Phase 9 renames the wire, the translator goes away.
+// AGENT_* wire messages and broadcasts over the WebSocket.
 
 export interface AgentGatewayEvents {
   onSessionUpdate: (agentId: string, notification: SessionNotification) => void;

@@ -84,9 +84,6 @@ importers:
         specifier: ^5.0.12
         version: 5.0.12(@types/react@18.3.28)(react@18.3.1)(use-sync-external-store@1.6.0(react@18.3.1))
     devDependencies:
-      '@agentclientprotocol/sdk':
-        specifier: ^0.19.0
-        version: 0.19.0(zod@4.3.6)
       '@electron/rebuild':
         specifier: ^4.0.4
         version: 4.0.4
@@ -146,11 +143,6 @@ packages:
 
   7zip-bin@5.2.0:
     resolution: {integrity: sha512-ukTPVhqG4jNzMro2qA9HSCSSVJN3aN7tlb+hfqYCt3ER0yWroeA2VR38MNrOHLQ/cVj+DaIMad0kFCtWWowh/A==}
-
-  '@agentclientprotocol/sdk@0.19.0':
-    resolution: {integrity: sha512-U9I8ws9WTOk6jCBAWpXefGSDgVXn14/kV6HFzwWGcstQ02mOQgClMAROHmoIn9GqZbDBDEOkdIbP4P4TEMQdug==}
-    peerDependencies:
-      zod: ^3.25.0 || ^4.0.0
 
   '@babel/code-frame@7.29.0':
     resolution: {integrity: sha512-9NhCeYjq9+3uxgdtp20LSiJXJvN0FeCtNGpJxuMFZ1Kv3cWUNb6DOhJwUvcVCzKGR66cw4njwM6hrJLqgOwbcw==}
@@ -3175,10 +3167,6 @@ packages:
 snapshots:
 
   7zip-bin@5.2.0: {}
-
-  '@agentclientprotocol/sdk@0.19.0(zod@4.3.6)':
-    dependencies:
-      zod: 4.3.6
 
   '@babel/code-frame@7.29.0':
     dependencies:

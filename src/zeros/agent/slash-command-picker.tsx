@@ -15,7 +15,7 @@
 
 import React, { useEffect, useRef } from "react";
 import { Terminal } from "lucide-react";
-import type { AvailableCommand } from "@agentclientprotocol/sdk";
+import type { AvailableCommand } from "../bridge/agent-events";
 import { Button } from "../ui";
 
 // ──────────────────────────────────────────────────────────

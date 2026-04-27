@@ -45,7 +45,7 @@ import {
 import { useAgentSessions } from "../zeros/agent/sessions-provider";
 import { useBridgeStatus } from "../zeros/bridge/use-bridge";
 import { getDefaultAgentId } from "../zeros/panels/settings-page";
-import type { InitializeResponse } from "@agentclientprotocol/sdk";
+import type { InitializeResponse } from "../zeros/bridge/agent-events";
 import type { BridgeRegistryAgent } from "../zeros/bridge/messages";
 import {
   BranchPill,
@@ -56,7 +56,7 @@ import {
 import { AgentPill } from "../zeros/agent/agent-pill";
 import { ComposerStateChip } from "../zeros/agent/composer-state-chip";
 import { envForChatSettings } from "../zeros/agent/model-catalog";
-import type { ContentBlock } from "@agentclientprotocol/sdk";
+import type { ContentBlock } from "../zeros/bridge/agent-events";
 import {
   loadRecentProjects,
   type RecentProject,

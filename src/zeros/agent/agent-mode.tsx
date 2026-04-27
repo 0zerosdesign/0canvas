@@ -20,7 +20,7 @@
 
 import React, { useCallback, useState } from "react";
 import { Loader2 } from "lucide-react";
-import type { InitializeResponse } from "@agentclientprotocol/sdk";
+import type { InitializeResponse } from "../bridge/agent-events";
 import { useAgentSession } from "./use-agent-session";
 import { AgentsPanel } from "./agents-panel";
 import { AgentChat } from "./agent-chat";

@@ -9,7 +9,7 @@
 // ──────────────────────────────────────────────────────────
 
 import type { StreamJsonAgentSpec } from "../shared";
-import type { ContentBlock, InitializeResponse } from "@agentclientprotocol/sdk";
+import type { ContentBlock, InitializeResponse } from "../../../../zeros/bridge/agent-events";
 
 import { ClaudeStreamTranslator } from "../claude/translator";
 

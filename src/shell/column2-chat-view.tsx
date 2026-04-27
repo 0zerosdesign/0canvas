@@ -29,7 +29,7 @@ import { AgentsPanel } from "../zeros/agent/agents-panel";
 import { envForChat } from "../zeros/agent/composer-pills";
 import { uiEntryForAgent } from "../zeros/agent/agent-ui-registry";
 import { useEnabledAgents } from "../zeros/agent/enabled-agents";
-import type { SessionInfo } from "@agentclientprotocol/sdk";
+import type { SessionInfo } from "../zeros/bridge/agent-events";
 import type { BridgeRegistryAgent } from "../zeros/bridge/messages";
 import { isNativeRuntime, nativeInvoke } from "../native/runtime";
 import { EmptyComposer } from "./empty-composer";

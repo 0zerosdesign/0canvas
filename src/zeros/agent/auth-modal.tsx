@@ -29,7 +29,7 @@ import {
   Radio,
 } from "lucide-react";
 import type { BridgeRegistryAgent } from "../bridge/messages";
-import type { AuthMethod, InitializeResponse } from "@agentclientprotocol/sdk";
+import type { AuthMethod, InitializeResponse } from "../bridge/agent-events";
 import { getSecret, setSecret, SECRET_ACCOUNTS } from "../../native/secrets";
 import { Button, Input } from "../ui";
 

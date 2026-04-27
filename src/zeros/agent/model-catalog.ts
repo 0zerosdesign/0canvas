@@ -23,7 +23,7 @@
 //     a sane default on day zero.
 // ──────────────────────────────────────────────────────────
 
-import type { InitializeResponse } from "@agentclientprotocol/sdk";
+import type { InitializeResponse } from "../bridge/agent-events";
 import bundledCatalog from "../../../catalogs/models-v1.json";
 
 export type ModelOption = {

@@ -29,8 +29,8 @@ import type {
   ContentBlock,
   InitializeResponse,
   RequestPermissionResponse,
-} from "@agentclientprotocol/sdk";
-import type { ListSessionsResponse } from "@agentclientprotocol/sdk";
+} from "../bridge/agent-events";
+import type { ListSessionsResponse } from "../bridge/agent-events";
 import type {
   AgentAgentsListMessage,
   AgentAgentInitializedMessage,
@@ -203,9 +203,9 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
     if (!bridge) return;
 
     type SessionNotification =
-      import("@agentclientprotocol/sdk").SessionNotification;
+      import("../bridge/agent-events").SessionNotification;
     type PermissionReq =
-      import("@agentclientprotocol/sdk").RequestPermissionRequest;
+      import("../bridge/agent-events").RequestPermissionRequest;
 
     const updateBuffer: SessionNotification[] = [];
     const permBuffer: Array<{

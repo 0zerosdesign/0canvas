@@ -22,11 +22,10 @@ import type {
   RequestPermissionResponse,
   SessionNotification,
   StopReason,
-} from "@agentclientprotocol/sdk";
+} from "../zeros/bridge/agent-events";
 
-// Registry-agent shape emitted on AGENT_AGENTS_LIST. Inlined here after
-// the ACP subdirectory was deleted — this is the engine's internal
-// mirror of the browser-side `BridgeRegistryAgent` (in
+// Registry-agent shape emitted on AGENT_AGENTS_LIST. The engine's
+// internal mirror of the browser-side `BridgeRegistryAgent` (in
 // src/zeros/bridge/messages.ts). Fields with `installed`/`launchKind`
 // are required so the broadcast payload always has them populated.
 
@@ -211,16 +210,13 @@ export interface ConnectedMessage extends BaseMessage {
   capabilities: string[];
 }
 
-// ── ACP (Agent Client Protocol) ──────────────────────────
+// ── Agent runtime ────────────────────────────────────────
 //
-// Zeros is an ACP *client*: it spawns the vendor's own published CLI
-// (claude-agent-acp, codex-acp, gemini, etc.) as a subprocess and drives
-// it via the shared ACP spec. The browser never talks to the agent
-// directly — every message below rides the engine's existing WebSocket.
-// See docs/AGENT_RUNTIME.md for the end-to-end plan.
-//
-// Wire shapes reuse ACP SDK types where possible; we only declare the
-// browser ↔ engine envelope, not the agent-side protocol.
+// Zeros spawns each vendor's own native CLI (claude, codex, cursor-agent,
+// gemini, amp, droid, copilot) as a subprocess and drives it directly.
+// The browser never talks to the agent — every message below rides the
+// engine's existing WebSocket. See docs/AGENT_RUNTIME.md for the
+// end-to-end plan. Wire shapes are owned in src/zeros/bridge/agent-events.ts.
 
 // ── Browser → Engine
 
@@ -451,7 +447,7 @@ export type EngineMessage =
   | EngineReadyMessage
   | CSSFileChangedMessage
   | OCFileChangedMessage
-  // ACP (browser → engine)
+  // Agent (browser → engine)
   | AgentListAgentsMessage
   | AgentNewSessionMessage
   | AgentInitAgentMessage
@@ -462,7 +458,7 @@ export type EngineMessage =
   | AgentSetModeMessage
   | AgentListSessionsMessage
   | AgentLoadSessionMessage
-  // ACP (engine → browser)
+  // Agent (engine → browser)
   | AgentAgentsListMessage
   | AgentSessionCreatedMessage
   | AgentAgentInitializedMessage

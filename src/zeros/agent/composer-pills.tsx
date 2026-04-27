@@ -27,7 +27,7 @@ import type {
   ChatPermissionMode,
   ChatThread,
 } from "../store/store";
-import type { InitializeResponse, SessionMode } from "@agentclientprotocol/sdk";
+import type { InitializeResponse, SessionMode } from "../bridge/agent-events";
 import type { AgentUsage } from "./use-agent-session";
 import {
   modelsForAgent as catalogModelsForAgent,

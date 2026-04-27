@@ -39,7 +39,7 @@ import type {
   PlanEntry,
   RequestPermissionRequest,
   RequestPermissionOutcome,
-} from "@agentclientprotocol/sdk";
+} from "../bridge/agent-events";
 import type {
   AgentSessionControls,
   AgentSessionState,

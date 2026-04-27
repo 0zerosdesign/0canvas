@@ -19,7 +19,7 @@ import type {
   RequestPermissionResponse,
   SessionNotification,
   StopReason,
-} from "@agentclientprotocol/sdk";
+} from "./agent-events";
 
 export type MessageSource = "browser" | "engine";
 
@@ -202,7 +202,7 @@ export interface ErrorMessage extends BaseMessage {
   requestId?: string;
 }
 
-// ── ACP (Agent Client Protocol) ──────────────────────────
+// ── Agent runtime ────────────────────────────────────────
 //
 // See docs/AGENT_RUNTIME.md for the architecture. These wire types
 // mirror src/engine/types.ts — keep them in sync or the union breaks.
@@ -428,7 +428,7 @@ export type BridgeMessage =
   | EngineReadyMessage
   | CSSFileChangedMessage
   | OCFileChangedMessage
-  // ACP (browser → engine)
+  // Agent (browser → engine)
   | AgentListAgentsMessage
   | AgentNewSessionMessage
   | AgentInitAgentMessage
@@ -439,7 +439,7 @@ export type BridgeMessage =
   | AgentSetModeMessage
   | AgentListSessionsMessage
   | AgentLoadSessionMessage
-  // ACP (engine → browser)
+  // Agent (engine → browser)
   | AgentAgentsListMessage
   | AgentSessionCreatedMessage
   | AgentAgentInitializedMessage

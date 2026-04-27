@@ -22,7 +22,7 @@
 // ──────────────────────────────────────────────────────────
 
 import type { ComponentType } from "react";
-import type { ToolKind } from "@agentclientprotocol/sdk";
+import type { ToolKind } from "../../bridge/agent-events";
 import type {
   AgentMessage,
   AgentMessageRole,
