@@ -21,6 +21,9 @@ import { ToolCard } from "./tool-card";
 import { UnknownMessage } from "./unknown-message";
 import { matchDesignTool } from "./design-tools";
 import { matchSubagent } from "./subagent";
+import { ShellCard } from "./tool-shell";
+import { EditCard } from "./tool-edit";
+import { ReadCard } from "./tool-read";
 
 /** The default registry. New renderers register here; this is the single
  *  point of composition for the chat. */
@@ -41,15 +44,11 @@ export const defaultRegistry: RendererRegistry = {
     { match: (t) => matchSubagent(t) !== null, render: ToolCard },
   ],
   toolByKind: {
-    // Phase 0 leaves these blank — every tool falls through to ToolCard.
-    // Phase 1 fills them in:
-    //   execute: BashCard,
-    //   edit:    EditCard,
-    //   read:    ReadCard,
-    //   search:  SearchCard,
-    //   fetch:   FetchCard,
-    //   think:   ThinkCard,
-    //   …
+    // Stage 3: high-volume cards — Shell, Edit, Read.
+    // Stage 4 fills in the rest (search / fetch / think / question / …).
+    execute: ShellCard,
+    edit: EditCard,
+    read: ReadCard,
   },
   toolFallback: ToolCard,
   unknown: UnknownMessage,

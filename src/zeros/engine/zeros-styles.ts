@@ -3423,6 +3423,299 @@ ${S} .oc-agent-receipt-source {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
+/* ── Stage 3: Shell card ──────────────────────────────── */
+${S} .oc-agent-tool-shell {
+  container-type: inline-size;
+}
+${S} .oc-agent-shell-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px;
+  background: transparent; border: 0; width: 100%;
+  text-align: left; cursor: pointer;
+  color: inherit;
+}
+${S} .oc-agent-shell-head:hover { background: var(--tint-black-soft); }
+${S} .oc-agent-tool-shell .oc-agent-tool-icon { color: var(--text-muted); }
+${S} .oc-agent-shell-cmd {
+  font-family: var(--font-mono); font-size: 11.5px;
+  color: var(--text-primary);
+  display: flex; align-items: center; gap: 6px;
+  overflow: hidden; min-width: 0;
+}
+${S} .oc-agent-shell-prompt {
+  color: var(--text-placeholder); flex-shrink: 0;
+}
+${S} .oc-agent-shell-cmd-text {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+${S} .oc-agent-shell-preview {
+  font-family: var(--font-mono); font-size: 10.5px;
+  color: var(--text-muted);
+  margin-top: 3px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+${S} .oc-agent-shell-meta {
+  display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0;
+}
+${S} .oc-agent-shell-duration {
+  font-size: 10px; color: var(--text-placeholder);
+  font-variant-numeric: tabular-nums;
+}
+${S} .oc-agent-shell-status {
+  font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 2px 6px; border-radius: 4px;
+  font-family: var(--font-mono);
+}
+${S} .oc-agent-shell-status-ok {
+  background: var(--tint-success-weak); color: var(--text-success);
+}
+${S} .oc-agent-shell-status-fail {
+  background: var(--tint-critical-weak); color: var(--text-critical);
+}
+${S} .oc-agent-shell-status-run {
+  background: var(--tint-info-weak); color: var(--text-info);
+}
+${S} .oc-agent-shell-content {
+  border-top: 1px solid var(--border-subtle);
+  background: #0d1117;
+}
+${S} .oc-agent-shell-cwd {
+  display: flex; gap: 6px; align-items: center;
+  padding: 4px 10px;
+  font-size: 9.5px; font-family: var(--font-mono);
+  color: rgba(230, 237, 243, 0.5);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+${S} .oc-agent-shell-cwd-label {
+  text-transform: uppercase; letter-spacing: 0.04em;
+  opacity: 0.7;
+}
+${S} .oc-agent-shell-cwd-path {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+${S} .oc-agent-shell-empty {
+  padding: 10px 12px;
+  color: rgba(230, 237, 243, 0.5);
+  font-family: var(--font-mono); font-size: 11px;
+}
+${S} .oc-agent-shell-large {
+  display: block; width: 100%;
+  padding: 12px; background: transparent; border: 0;
+  color: rgba(230, 237, 243, 0.7);
+  font-family: var(--font-mono); font-size: 11px;
+  cursor: pointer; text-align: center;
+}
+${S} .oc-agent-shell-large:hover { background: rgba(255, 255, 255, 0.04); }
+${S} .oc-agent-shell-xterm {
+  padding: 6px 8px;
+}
+
+/* ── Stage 3: Edit card ───────────────────────────────── */
+${S} .oc-agent-tool-edit {
+  container-type: inline-size;
+}
+${S} .oc-agent-edit-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px;
+  background: transparent; border: 0; width: 100%;
+  text-align: left; cursor: pointer;
+  color: inherit;
+}
+${S} .oc-agent-edit-head:hover { background: var(--tint-black-soft); }
+${S} .oc-agent-edit-path {
+  font-family: var(--font-mono); font-size: 11.5px;
+  color: var(--text-primary);
+  display: flex; align-items: center; gap: 6px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+${S} .oc-agent-edit-newfile {
+  font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--text-success);
+  padding: 1px 5px; border-radius: 3px;
+  background: var(--tint-success-weak);
+  flex-shrink: 0;
+}
+${S} .oc-agent-edit-meta {
+  display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0;
+}
+${S} .oc-agent-edit-counts {
+  display: flex; gap: 4px;
+  font-family: var(--font-mono); font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+${S} .oc-agent-edit-add { color: var(--text-success); }
+${S} .oc-agent-edit-rem { color: var(--text-critical); }
+${S} .oc-agent-edit-duration {
+  font-size: 10px; color: var(--text-placeholder);
+  font-variant-numeric: tabular-nums;
+}
+${S} .oc-agent-edit-status {
+  font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 2px 6px; border-radius: 4px;
+  font-family: var(--font-mono);
+}
+${S} .oc-agent-edit-status-ok {
+  background: var(--tint-success-weak); color: var(--text-success);
+}
+${S} .oc-agent-edit-status-fail {
+  background: var(--tint-critical-weak); color: var(--text-critical);
+}
+${S} .oc-agent-edit-status-run {
+  background: var(--tint-info-weak); color: var(--text-info);
+}
+${S} .oc-agent-edit-content {
+  border-top: 1px solid var(--border-subtle);
+  background: #0d1117;
+}
+${S} .oc-agent-edit-empty {
+  padding: 10px 12px;
+  color: rgba(230, 237, 243, 0.5);
+  font-family: var(--font-mono); font-size: 11px;
+}
+${S} .oc-agent-edit-diffroot {
+  font-family: var(--font-mono); font-size: 11px;
+  color: #e6edf3;
+  max-height: 480px; overflow: auto;
+}
+${S} .oc-agent-edit-diffroot-empty {
+  padding: 12px; color: rgba(230, 237, 243, 0.5);
+}
+${S} .oc-agent-edit-hunk + .oc-agent-edit-hunk {
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+${S} .oc-agent-edit-hunk-head {
+  padding: 4px 12px;
+  font-size: 10px; color: rgba(139, 148, 158, 0.9);
+  background: rgba(255, 255, 255, 0.02);
+}
+${S} .oc-agent-edit-line {
+  display: flex; align-items: stretch;
+  white-space: pre;
+}
+${S} .oc-agent-edit-line-ctx { color: rgba(230, 237, 243, 0.7); }
+${S} .oc-agent-edit-line-add {
+  background: rgba(46, 160, 67, 0.18);
+}
+${S} .oc-agent-edit-line-rem {
+  background: rgba(248, 81, 73, 0.18);
+}
+${S} .oc-agent-edit-gutter {
+  flex-shrink: 0;
+  display: inline-block;
+  width: 38px; padding: 0 6px;
+  text-align: right;
+  color: rgba(139, 148, 158, 0.5);
+  font-size: 10px;
+  user-select: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
+}
+${S} .oc-agent-edit-line-add .oc-agent-edit-gutter:first-child {
+  background: rgba(46, 160, 67, 0.10);
+}
+${S} .oc-agent-edit-line-rem .oc-agent-edit-gutter:first-child {
+  background: rgba(248, 81, 73, 0.10);
+}
+${S} .oc-agent-edit-sign {
+  flex-shrink: 0;
+  display: inline-block;
+  width: 14px; text-align: center;
+  color: rgba(139, 148, 158, 0.7);
+}
+${S} .oc-agent-edit-line-add .oc-agent-edit-sign { color: rgba(46, 160, 67, 1); }
+${S} .oc-agent-edit-line-rem .oc-agent-edit-sign { color: rgba(248, 81, 73, 1); }
+${S} .oc-agent-edit-text {
+  flex: 1;
+  padding: 0 8px;
+  overflow-wrap: anywhere;
+}
+${S} .oc-agent-edit-text .shiki,
+${S} .oc-agent-edit-text pre,
+${S} .oc-agent-edit-text code {
+  background: transparent !important;
+  margin: 0; padding: 0;
+  display: inline;
+}
+
+/* ── Stage 3: Read card ───────────────────────────────── */
+${S} .oc-agent-tool-read { container-type: inline-size; }
+${S} .oc-agent-read-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px;
+  background: transparent; border: 0; width: 100%;
+  text-align: left; cursor: pointer;
+  color: inherit;
+}
+${S} .oc-agent-read-head:hover { background: var(--tint-black-soft); }
+${S} .oc-agent-read-path {
+  font-family: var(--font-mono); font-size: 11.5px;
+  color: var(--text-primary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+${S} .oc-agent-read-meta {
+  display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0;
+}
+${S} .oc-agent-read-range {
+  font-size: 10px; color: var(--text-placeholder);
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+}
+${S} .oc-agent-read-duration {
+  font-size: 10px; color: var(--text-placeholder);
+  font-variant-numeric: tabular-nums;
+}
+${S} .oc-agent-read-status {
+  font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 2px 6px; border-radius: 4px;
+  font-family: var(--font-mono);
+}
+${S} .oc-agent-read-status-ok {
+  background: var(--tint-success-weak); color: var(--text-success);
+}
+${S} .oc-agent-read-status-fail {
+  background: var(--tint-critical-weak); color: var(--text-critical);
+}
+${S} .oc-agent-read-status-run {
+  background: var(--tint-info-weak); color: var(--text-info);
+}
+${S} .oc-agent-read-content {
+  border-top: 1px solid var(--border-subtle);
+  background: #0d1117;
+}
+${S} .oc-agent-read-empty {
+  padding: 10px 12px;
+  color: rgba(230, 237, 243, 0.5);
+  font-family: var(--font-mono); font-size: 11px;
+}
+${S} .oc-agent-read-preview {
+  max-height: 480px; overflow: auto;
+}
+${S} .oc-agent-read-code,
+${S} .oc-agent-read-code-fallback {
+  margin: 0;
+  font-family: var(--font-mono); font-size: 11px;
+}
+${S} .oc-agent-read-code .shiki {
+  margin: 0; padding: 8px 12px;
+  background: transparent !important;
+}
+${S} .oc-agent-read-code-fallback {
+  padding: 8px 12px;
+  color: #e6edf3;
+  white-space: pre;
+}
+${S} .oc-agent-read-more {
+  display: block; width: 100%;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 0; border-top: 1px solid rgba(255, 255, 255, 0.05);
+  color: rgba(230, 237, 243, 0.7);
+  font-family: var(--font-mono); font-size: 10.5px;
+  cursor: pointer;
+}
+${S} .oc-agent-read-more:hover { background: rgba(255, 255, 255, 0.05); }
+
 /* ── Permission bar (low / high risk) ──────────────────── */
 ${S} .oc-agent-perm {
   border-top: 1px solid var(--border-subtle);

@@ -327,6 +327,12 @@ Already wired in `session.usage`. Phase 1 makes it canonical-event driven and ad
 - Cumulative tokens / cost in the chat header
 - Cost calculation when adapter provides per-token pricing (Phase 2 polish)
 
+**Bug carryover from Stage 3 testing (fix in Stage 5):** the current display reads `Window 291.4k / 200.0k · 100%` after just three Claude prompts because two things are wrong:
+1. **Hardcoded 200k window for all Claude variants** — `src/engine/agents/adapters/claude/translator.ts:381` sets `CLAUDE_DEFAULT_CONTEXT_WINDOW = 200_000` for every model. Opus 4.7[1m] is 1M; Haiku/Sonnet 4.5 are 200k. Detect from the `system` init event's `model` field and pick per-model.
+2. **`used / window · %` is the wrong ratio** — `usage.input_tokens + cache_read + cache_creation` from the `result` event reports tokens billed across that turn's tool-use loop (Claude Code makes multiple internal API calls per user prompt; each can carry up to 200k). It is *not* the current window fill, so comparing it to the window cap and showing a percentage produces nonsense >100% values.
+
+**Stage 5 fix:** drop the percentage; show **`◷ 291.4k tokens this turn · $0.04`** matching Claude Code's own UX. Or, if we want a window-fill estimate (harder — no API exposes it directly), reconstruct from the latest sub-call's prompt size only. Either way, kill the misleading "100%" alarm.
+
 #### 2.4.12 MCP card — `tool-mcp.tsx`
 
 Generic card for any tool with `kind: "mcp"`. Header: `<server>.<tool>`, body: collapsible JSON for arguments + result. Goose-style: when the result is a `ui` content payload (rich MCP-UI components), render as the embedded widget instead of JSON. (Source: [github.com/block/goose](https://github.com/block/goose).)
@@ -1215,7 +1221,7 @@ If we revisit this later (a real user asks for it, or codex-cli changes its auth
 | **1** | **Stage 2 — Long-run UX foundation** | ~2d | Sticky-bottom auto-scroll with unstick; per-turn `<TurnContainer>`; sticky user prompt at top of active turn; "Jump to my prompt" + "Jump to latest" pills; `Cmd+Up/Down` jump-by-text-message keybind; per-chat scroll memory in Zustand+SQLite. Highest-impact UX delta. |
 | **2** | **Stage 3 — Card system part 1: Shell, Edit, Read** | ~2d | `tool-shell.tsx` (xterm DOM renderer), `tool-edit.tsx` (diff with patch + replacement modes), `tool-read.tsx` (collapsed preview). Default-collapsed; status badges; width-adaptive diffs. Highest-volume cards ship first. |
 | **3** | **Stage 4 — Card system part 2** | ~2.5d | Search + Plan + Thinking + Question + Error + Usage + Subagent + Fetch + MCP. State-merging via `mergeKey` (TodoWrite as one live block). Includes the §2.4.13 mode pill + auto-switch banner. |
-| **4** | **Stage 5 — Long-run UX completion** | ~1.5d | Run-summary roll-up after turn ends; vertical timeline rail (left gutter); long-turn windowing (last K=20 + chevron for older); activity HUD pinned to composer footer; global Stop replaces Send during run; streaming markdown chunking. |
+| **4** | **Stage 5 — Long-run UX completion** | ~1.5d | Run-summary roll-up after turn ends; vertical timeline rail (left gutter); long-turn windowing (last K=20 + chevron for older); activity HUD pinned to composer footer; global Stop replaces Send during run; streaming markdown chunking. **Plus context-usage display fix (carryover from Stage 3 testing — see §2.4.x below).** |
 | **5** | **Stage 6 — Inline permissions + mode controls** | ~1.5d | Move permission UI from global bar to per-tool-card cluster; "Always for X" sticky decisions persisted per chat; mode pill in composer (Phase / Permission / Tier axes); auto-switch banner; ExitPlanMode special permission card. |
 | **6** | **Stage 7 — Codex + Cursor normalizers** (Track 4.A) | ~1.5d | `codex/normalizer.ts` translates `item.*` events → canonical. `cursor/normalizer.ts` translates Cursor's `tool_call` events → canonical (closes the long-standing Cursor-no-tool-calls gap). |
 | **7** | **Stage 8 — Gemini + Copilot + Amp + Droid normalizers** | ~2d | Remaining stream-json/PTY adapters. Gemini's `enter_plan_mode`/`exit_plan_mode` autonomous switching surfaces as canonical `mode.switch` events. Copilot ACP `current_mode_update` notifications. |
