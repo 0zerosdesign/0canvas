@@ -104,6 +104,15 @@ export interface RendererRegistry {
   toolByKind: Partial<Record<ToolKind, Renderer<AgentToolMessage>>>;
   /** Final fallback for tools that match no rule above. */
   toolFallback: Renderer<AgentToolMessage>;
+  /** Stage 4.4 — non-text/non-tool message kinds (mode_switch, plan,
+   *  subagent, error_notice, …). Looked up by `message.kind` after the
+   *  text + tool branches fail. */
+  byKind: Partial<
+    Record<
+      Exclude<AgentMessage["kind"], "text" | "tool">,
+      ComponentType<{ message: AgentMessage; ctx: RendererContext }>
+    >
+  >;
   /** Renderer for messages whose `kind` is not in our union. Phase 0
    *  added this so future engine events never silently drop. */
   unknown: ComponentType<{ message: AgentMessage; ctx: RendererContext }>;

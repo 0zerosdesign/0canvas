@@ -748,6 +748,25 @@ export function applyUpdate(
     case "plan":
     case "current_mode_update":
     case "available_commands_update":
+      return messages;
+    case "mode_switch": {
+      // Stage 4.4 — append a banner message to the timeline. Distinct
+      // from current_mode_update (which patches session.currentModeId);
+      // the banner is what the user sees as a transcript record.
+      const m = upd as unknown as import("../bridge/agent-events").ModeSwitchUpdate;
+      const at = typeof m.at === "number" ? m.at : Date.now();
+      const banner: AgentModeSwitchMessage = {
+        id: `mode-${at}-${m.to}`,
+        kind: "mode_switch",
+        axis: m.axis,
+        from: m.from ?? "",
+        to: m.to,
+        source: m.source,
+        reason: m.reason,
+        createdAt: at,
+      };
+      return [...messages, banner];
+    }
     default:
       return messages;
   }

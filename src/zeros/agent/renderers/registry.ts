@@ -30,6 +30,7 @@ import { ThinkingBlock } from "./thinking-block";
 import { QuestionCard } from "./question-card";
 import { MCPCard } from "./tool-mcp";
 import { SubagentCard } from "./tool-subagent";
+import { ModeSwitchBanner } from "./mode-switch-banner";
 
 /** The default registry. New renderers register here; this is the single
  *  point of composition for the chat. */
@@ -71,6 +72,10 @@ export const defaultRegistry: RendererRegistry = {
     subagent: SubagentCard,
   },
   toolFallback: ToolCard,
+  byKind: {
+    // Stage 4.4: mode-switch banner (user toggle + agent autonomous switch).
+    mode_switch: ModeSwitchBanner,
+  },
   unknown: UnknownMessage,
 };
 
@@ -123,8 +128,24 @@ export function resolveRenderer(
     };
   }
 
-  // Future: kinds added to the union land here. The unknown renderer
-  // surfaces them visibly (collapsed JSON) instead of silently dropping
-  // — drift between engine and UI gets caught at runtime.
+  // Stage 4.4 — non-text/non-tool message kinds dispatch via byKind
+  // (mode_switch banner today; plan / question / subagent / error_notice
+  // arrive in later slices).
+  const byKind = (
+    registry.byKind as Record<
+      string,
+      | React.ComponentType<{
+          message: AgentMessage;
+          ctx: import("./types").RendererContext;
+        }>
+      | undefined
+    >
+  )[message.kind];
+  if (byKind) {
+    return { Component: byKind };
+  }
+
+  // Drift fallback: unknown renderer surfaces them visibly (collapsed JSON)
+  // instead of silently dropping — engine/UI drift gets caught at runtime.
   return { Component: registry.unknown };
 }

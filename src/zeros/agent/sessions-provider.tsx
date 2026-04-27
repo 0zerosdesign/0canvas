@@ -772,6 +772,21 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
       // Optimistic flip; engine echoes back via AGENT_MODE_CHANGED or AGENT_ERROR.
       const previousModeId = current.currentModeId;
       getStore().patchSession(chatId, { currentModeId: modeId });
+      // Stage 4.4 — drop a banner into the timeline so the user has a
+      // transcript record of when they switched. Synthesised here (rather
+      // than from the engine) because user-initiated toggles never round-
+      // trip through a SessionNotification.
+      getStore().applyBridgeUpdate({
+        sessionId: current.sessionId,
+        update: {
+          sessionUpdate: "mode_switch",
+          source: "user",
+          axis: "permission",
+          from: previousModeId ?? undefined,
+          to: modeId,
+          at: Date.now(),
+        },
+      });
       try {
         const resp = await bridge.request<
           AgentModeChangedMessage | AgentErrorMessage

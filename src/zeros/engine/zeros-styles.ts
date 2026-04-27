@@ -4381,6 +4381,63 @@ ${S} .oc-agent-subagent-empty {
   font-family: var(--font-mono);
 }
 
+/* ── Stage 4.4: Mode-switch banner ─────────────────────── */
+${S} .oc-agent-mode-banner {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto auto 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  margin: 6px 0;
+  font-size: 10.5px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+${S} .oc-agent-mode-rule {
+  height: 1px;
+  background: var(--border-subtle);
+  display: block;
+}
+${S} .oc-agent-mode-icon {
+  color: var(--text-placeholder);
+  flex-shrink: 0;
+}
+${S} .oc-agent-mode-text {
+  color: var(--text-muted);
+  font-family: var(--font-base);
+}
+${S} .oc-agent-mode-text strong {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+${S} .oc-agent-mode-time {
+  color: var(--text-placeholder);
+  font-variant-numeric: tabular-nums;
+  font-size: 9.5px;
+}
+${S} .oc-agent-mode-banner-agent .oc-agent-mode-icon {
+  color: var(--text-info);
+}
+${S} .oc-agent-mode-banner-agent .oc-agent-mode-rule {
+  background: var(--tint-info-border);
+}
+${S} .oc-agent-mode-banner-permission .oc-agent-mode-icon {
+  color: var(--text-warning);
+}
+${S} .oc-agent-mode-banner-tier .oc-agent-mode-icon {
+  color: var(--text-success);
+}
+${S} .oc-agent-mode-reason {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+  padding: 0 12px;
+  text-align: center;
+  font-style: italic;
+  color: var(--text-placeholder);
+  font-size: 10.5px;
+  font-family: var(--font-base);
+}
+
 /* ── Stage 4.3: Error card ────────────────────────────── */
 ${S} .oc-agent-errorcard {
   margin: 8px;

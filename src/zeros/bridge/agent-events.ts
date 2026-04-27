@@ -232,6 +232,7 @@ export type SessionUpdate =
   | PlanUpdate
   | AvailableCommandsUpdate
   | CurrentModeUpdate
+  | ModeSwitchUpdate
   | UsageUpdateNotification
   | SessionInfoUpdateNotification;
 
@@ -274,6 +275,39 @@ export interface AvailableCommandsUpdate {
 export interface CurrentModeUpdate {
   sessionUpdate: "current_mode_update";
   currentModeId: SessionModeId;
+}
+
+/** Stage 4.4 — timeline-visible record of a mode change. Distinct from
+ *  CurrentModeUpdate (which patches session state). The banner emitted
+ *  for this event is what the user actually sees in their transcript:
+ *  "─── Switched to Plan mode ──── 14:32 ───".
+ *
+ *  Sources we expect to fire this:
+ *    - User toggles the PermissionsPill → source: "user"
+ *    - Agent autonomously switches (Gemini enter_plan_mode, Claude
+ *      ExitPlanMode after user approval, Copilot ACP current_mode_update
+ *      notifications driven by the agent) → source: "agent"
+ *
+ *  axis discriminates phase (plan / execute / explore) from permission
+ *  (manual / accept-edits / auto / bypass) from tier (Amp's smart /
+ *  rush / deep). Renderer uses it to pick the right verb. */
+export interface ModeSwitchUpdate {
+  sessionUpdate: "mode_switch";
+  source: "user" | "agent";
+  axis: "phase" | "permission" | "tier";
+  /** Mode id you switched FROM. Optional because some agents only know
+   *  the new state, not the previous one. */
+  from?: string;
+  /** Mode id you switched TO. Required. */
+  to: string;
+  /** Optional rationale (e.g. Claude ExitPlanMode plan summary, Gemini
+   *  auto-entry justification). Rendered as a secondary line under the
+   *  banner. */
+  reason?: string;
+  /** Wallclock ms — adapter sets this so the banner shows when the
+   *  switch actually happened, not when our store ingested it. Defaults
+   *  to Date.now() in the reducer if absent. */
+  at?: number;
 }
 
 export interface UsageUpdateNotification {
