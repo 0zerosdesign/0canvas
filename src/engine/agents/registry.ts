@@ -197,21 +197,24 @@ export const AGENT_MANIFEST: AgentManifestEntry[] = [
     description: "GitHub's Copilot CLI agent.",
     cliBinary: "copilot",
     installHint: {
-      command: "gh extension install github/gh-copilot",
+      // Modern Copilot CLI is `@github/copilot` on npm — the older
+      // `gh extension install github/gh-copilot` is a different tool
+      // (the gh subcommand) and doesn't ship the agent we drive.
+      command: "npm install -g @github/copilot",
       docsUrl:
-        "https://docs.github.com/en/copilot/how-tos/copilot-cli/set-up-copilot-cli",
+        "https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli",
     },
     authProbe: {
-      kind: "any-of",
-      probes: [
-        {
-          kind: "file",
-          paths: ["~/.copilot/config.json", "~/.copilot/mcp-config.json"],
-        },
-        { kind: "command", binary: "copilot", args: ["auth", "status"] },
-      ],
+      // Copilot CLI authenticates via /login inside the TUI which
+      // writes credentials under ~/.copilot/. The `auth status`
+      // subcommand the previous probe used doesn't exist on v1.0+.
+      kind: "file",
+      paths: ["~/.copilot/config.json", "~/.copilot/mcp-config.json"],
     },
-    loginCommand: { binary: "copilot", args: ["auth", "login"] },
+    // Auth happens inside the interactive TUI via the /login slash
+    // command (no headless equivalent). Pointing at the bare binary
+    // matches Gemini's posture — first-run triggers the OAuth flow.
+    loginCommand: { binary: "copilot", args: [] },
     createAdapter: (ctx) => createCopilotAdapter(ctx),
   },
   {
