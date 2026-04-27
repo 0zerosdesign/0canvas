@@ -216,6 +216,7 @@ export class CodexStreamTranslator {
       case "mcp_tool_call":
       case "web_search": {
         const toolCallId = this.ensureToolCallId(item.id);
+        const mergeKey = computeMergeKey(item);
         this.emit({
           sessionId: this.sessionId,
           update: {
@@ -225,6 +226,7 @@ export class CodexStreamTranslator {
             kind: mapToolKind(kind),
             status: "in_progress",
             rawInput: toolInput(item),
+            ...(mergeKey ? { mergeKey } : {}),
           },
         });
         break;
@@ -483,12 +485,41 @@ function mapToolKind(kind: string): ToolKind {
     case "patch_apply":
       return "edit";
     case "web_search":
-      return "search";
+      // Codex's `web_search` is conceptually the same as Claude's
+      // WebSearch — a query → list-of-hits surface. Routes to the
+      // canonical FetchCard's web_search sub-mode (§2.4.5) instead
+      // of the SearchCard, which is for filesystem searches.
+      return "web_search";
     case "mcp_tool_call":
-      return "other";
+      // Stage 7.1 — was "other"; the dedicated MCPCard renders
+      // server name + tool name + structured input/output much
+      // better than the generic ToolCard fallback.
+      return "mcp";
     default:
       return "other";
   }
+}
+
+/** Stage 7.1 — mergeKey for Codex edits, mirrors the Claude rule.
+ *  Returns `edit:<path>` for file_change / patch_apply items so
+ *  consecutive edits to the same file collapse into one card with
+ *  "+N more changes" history. Returns null for everything else. */
+function computeMergeKey(item: CodexItem): string | null {
+  const kind = item.type ?? "";
+  if (kind !== "file_change" && kind !== "patch_apply") return null;
+  if (typeof item.path === "string" && item.path.length > 0) {
+    return `edit:${item.path}`;
+  }
+  // patch_apply sometimes carries `changes: [{ path }]` instead of
+  // a top-level path. Use the first changed path as the merge key —
+  // a single apply_patch usually targets one file in our flow.
+  const first = Array.isArray(item.changes)
+    ? item.changes.find(
+        (c): c is { path: string } => typeof c?.path === "string",
+      )
+    : undefined;
+  if (first) return `edit:${first.path}`;
+  return null;
 }
 
 function toolInput(item: CodexItem): unknown {
