@@ -46,7 +46,7 @@ Build tooling:
 
 ### `catalogs/models-v1.json`
 
-Bundled model catalog for agent model pickers. It lists models for Claude, Codex/OpenAI, Gemini, Cursor, Amp, and Augment-like families. The app can hot-update this catalog through GitHub Pages.
+Bundled model catalog for agent model pickers. It lists models for Claude, Codex/OpenAI, Gemini, Cursor, and Augment-like families. The app can hot-update this catalog through GitHub Pages.
 
 ## Main Product Code
 

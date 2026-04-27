@@ -3,7 +3,7 @@
 // ──────────────────────────────────────────────────────────
 //
 // Owns the full per-agent lifecycle that previously lived duplicated
-// across 5 adapter files (Claude/Codex/Cursor/Amp/Droid):
+// across 5 adapter files (Claude/Codex/Cursor/Droid/Copilot):
 //
 //   - sessions Map<sessionId, SessionState>
 //   - cachedInitialize
@@ -128,7 +128,7 @@ export class StreamJsonAdapter<Extra = unknown> implements AgentAdapter {
       // Register hook routing FIRST so the spec can install settings.json
       // with the right token. registerHookSession wires this.handleHook,
       // which then delegates to spec.handleHook. Specs that don't speak
-      // hooks (Codex, Cursor, Amp) just ignore the token.
+      // hooks (Codex, Cursor) just ignore the token.
       const { token: hookToken, url: hookUrl } =
         this.registerHookSession(sessionId);
 
@@ -587,7 +587,7 @@ export class StreamJsonAdapter<Extra = unknown> implements AgentAdapter {
 
 /** Pattern an agent uses to tell the user it's not signed in.
  *  Matches Claude's "Not logged in · Please run /login", Codex's
- *  similar phrasing, and Cursor / Amp variants. We're conservative —
+ *  similar phrasing, and Cursor variants. We're conservative —
  *  the bare `run /login` alternative was removed because agents
  *  routinely *explain* the login flow inside chats and we'd flip the
  *  green dot to gray on a benign sentence. */

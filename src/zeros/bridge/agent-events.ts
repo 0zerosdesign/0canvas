@@ -13,7 +13,7 @@
 //   - renderer (src/zeros/agent/**) folds them into the chat UI
 //
 // Shapes intentionally mirror what the engine adapters already
-// emit — translators (Claude, Codex, Cursor, Amp, Droid, Gemini,
+// emit — translators (Claude, Codex, Cursor, Droid, Gemini,
 // Copilot) keep producing the same JSON; this module just gives
 // us a type vocabulary we own.
 //
@@ -289,8 +289,9 @@ export interface CurrentModeUpdate {
  *      notifications driven by the agent) → source: "agent"
  *
  *  axis discriminates phase (plan / execute / explore) from permission
- *  (manual / accept-edits / auto / bypass) from tier (Amp's smart /
- *  rush / deep). Renderer uses it to pick the right verb. */
+ *  (manual / accept-edits / auto / bypass) from tier (reserved for
+ *  future agents that expose a capability tier). Renderer uses it to
+ *  pick the right verb. */
 export interface ModeSwitchUpdate {
   sessionUpdate: "mode_switch";
   source: "user" | "agent";

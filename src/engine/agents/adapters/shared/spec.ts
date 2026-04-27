@@ -3,7 +3,7 @@
 // ──────────────────────────────────────────────────────────
 //
 // Every per-CLI adapter that streams NDJSON output (Claude, Codex,
-// Cursor, Amp, Droid) is now a thin spec object consumed by the shared
+// Cursor, Droid, Copilot) is now a thin spec object consumed by the shared
 // `StreamJsonAdapter` base class. Per-agent files dropped from
 // ~300-580 lines to ~100-200 — they capture only what's actually
 // different (CLI args, env, translator, optional hook handler).

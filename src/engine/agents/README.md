@@ -29,7 +29,6 @@ src/engine/agents/
 │   ├── claude/            — (Phase 1)
 │   ├── codex/             — (Phase 2)
 │   ├── cursor/            — (Phase 3)
-│   ├── amp/               — (Phase 3)
 │   ├── droid/             — (Phase 4)
 │   ├── copilot/           — (Phase 5)
 │   └── gemini/            — (Phase 6)
@@ -52,8 +51,7 @@ Transport per agent:
 | Claude Code | child_process + `--output-format stream-json --include-hook-events` | stdout NDJSON + localhost HTTP hooks + ~/.claude/projects JSONL tail |
 | Codex | child_process + `codex exec --json` | stdout NDJSON + ~/.codex/sessions rollout JSONL |
 | Cursor | child_process + `cursor-agent -p --output-format stream-json` | stdout NDJSON |
-| Amp | child_process + `amp -x --stream-json` | stdout NDJSON (Claude-schema-compatible) |
-| Factory Droid | child_process + `droid exec --output-format json` | stdout JSON + HTTP hooks via .factory/settings.json |
+| Factory Droid | child_process + `droid exec --output-format stream-json --auto medium` | stdout NDJSON + HTTP hooks via .factory/settings.json |
 | Copilot CLI | PTY + HTTP hooks | hooks (preToolUse/postToolUse/sessionStart/sessionEnd) |
 | Gemini CLI | PTY + regex busy/idle + OTel telemetry file | `GEMINI_TELEMETRY_OUTFILE` + ANSI-stripped stdout |
 

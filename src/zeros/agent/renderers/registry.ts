@@ -53,7 +53,7 @@ export const defaultRegistry: RendererRegistry = {
     { match: (t) => matchDesignTool(t.title) !== null, render: ToolCard },
     // Stage 4.3 — subagent custom matcher catches agents whose
     // translator hasn't been taught to emit kind="subagent" yet
-    // (Amp, Droid, etc. before Stage 8 lands). Routes to the dedicated
+    // (Droid, etc. before Stage 8 lands). Routes to the dedicated
     // SubagentCard so all subagent calls render uniformly regardless
     // of which path tagged them.
     { match: (t) => matchSubagent(t) !== null, render: SubagentCard },

@@ -105,7 +105,7 @@ export interface AgentThinkingMessage {
    *  on the final chunk for the duration badge. */
   durationMs?: number;
   /** True for agents that emit `redacted_thinking` content blocks
-   *  (Anthropic + Amp). Renderer shows a stub. */
+   *  (Anthropic). Renderer shows a stub. */
   redacted?: boolean;
 }
 
@@ -182,7 +182,7 @@ export interface AgentModeSwitchMessage {
   createdAt: number;
 }
 
-/** Boundary marker for a subagent block (Claude Task, Amp Task).
+/** Boundary marker for a subagent block (Claude Task, Droid Task).
  *  The matching tool call still appears as AgentToolMessage; this
  *  message anchors the start/end of the nested transcript so the
  *  renderer can indent or fold it as one unit. */

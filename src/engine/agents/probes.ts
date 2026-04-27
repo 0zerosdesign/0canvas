@@ -65,7 +65,7 @@ export async function probeCliInstalled(binaries: string[]): Promise<Set<string>
 // `<bin> --version` is the near-universal convention. Two hard-won
 // defaults below:
 //
-//   1. `killSignal: 'SIGKILL'`. Heavy Node-based CLIs (Droid, Amp,
+//   1. `killSignal: 'SIGKILL'`. Heavy Node-based CLIs (Droid,
 //      Gemini, Cursor Agent) take 5–15s on first run because they
 //      eagerly import their full runtime even for `--version`. The
 //      previous SIGTERM was being IGNORED during the Node import

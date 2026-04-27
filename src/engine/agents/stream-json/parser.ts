@@ -3,8 +3,8 @@
 // ──────────────────────────────────────────────────────────
 //
 // Claude (`--output-format stream-json`), Codex (`exec --json`),
-// Cursor (`--output-format stream-json`), Amp (`--stream-json`) and
-// Droid (`exec --output-format json`) all emit one JSON object per
+// Cursor (`--output-format stream-json`) and Droid
+// (`exec --output-format stream-json`) all emit one JSON object per
 // newline. This parser buffers stdout, splits on '\n', and surfaces
 // each parsed object.
 //

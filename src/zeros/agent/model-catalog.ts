@@ -82,7 +82,6 @@ export function agentFamily(agentId: string | null): string {
   if (id.includes("claude")) return "claude";
   if (id.includes("codex") || id.includes("openai")) return "codex";
   if (id.includes("gemini")) return "gemini";
-  if (id.includes("amp")) return "amp";
   if (id.includes("auggie") || id.includes("augment")) return "augment";
   return "";
 }

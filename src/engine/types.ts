@@ -213,7 +213,7 @@ export interface ConnectedMessage extends BaseMessage {
 // ── Agent runtime ────────────────────────────────────────
 //
 // Zeros spawns each vendor's own native CLI (claude, codex, cursor-agent,
-// gemini, amp, droid, copilot) as a subprocess and drives it directly.
+// gemini, droid, copilot) as a subprocess and drives it directly.
 // The browser never talks to the agent — every message below rides the
 // engine's existing WebSocket. See docs/AGENT_RUNTIME.md for the
 // end-to-end plan. Wire shapes are owned in src/zeros/bridge/agent-events.ts.

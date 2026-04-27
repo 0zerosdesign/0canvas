@@ -13,7 +13,6 @@ Supported agent families are defined in `src/engine/agents/registry.ts`:
 - Claude Code
 - Codex
 - Cursor Agent
-- Amp
 - Factory Droid
 - GitHub Copilot CLI
 - Gemini CLI

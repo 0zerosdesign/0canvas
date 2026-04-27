@@ -63,16 +63,6 @@ const BY_FAMILY: Record<string, AgentUiEntry> = {
     },
     expectedFirstSessionMs: 2_500,
   },
-  amp: {
-    ui: {
-      hasPlanPanel: false,
-      hasSlashCommands: false,
-      hasModes: false,
-      hasSubagentTree: false,
-      hasThreadHistory: false,
-    },
-    expectedFirstSessionMs: 3_000,
-  },
   augment: {
     ui: {
       hasPlanPanel: false,

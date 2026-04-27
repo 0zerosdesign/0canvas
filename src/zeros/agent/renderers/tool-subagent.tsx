@@ -3,7 +3,8 @@
 // ──────────────────────────────────────────────────────────
 //
 // Renders any tool with kind="subagent". Today: Claude Task.
-// Stage 8 wires Amp Task to the same kind.
+// Droid Task and OpenCode task wire to the same kind in their
+// respective stages.
 //
 // Roadmap §2.4.7 calls for an indented nested transcript driven
 // by parent_tool_id — that requires the canonical event taxonomy

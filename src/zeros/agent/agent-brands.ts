@@ -21,7 +21,6 @@ export interface AgentBrand {
 }
 
 export const AGENT_BRANDS: Record<string, AgentBrand> = {
-  amp: { color: "#FF6B35" },
   claude: { color: "#D97757" },
   codex: { color: "#10A37F" },
   cursor: { color: "#E8E8E8" },

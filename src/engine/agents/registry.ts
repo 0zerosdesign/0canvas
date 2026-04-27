@@ -23,7 +23,6 @@ import type { EnrichedRegistryAgent } from "../types";
 import { createClaudeAdapter } from "./adapters/claude";
 import { createCodexAdapter } from "./adapters/codex";
 import { createCursorAdapter } from "./adapters/cursor";
-import { createAmpAdapter } from "./adapters/amp";
 import { createDroidAdapter } from "./adapters/droid";
 import { createCopilotAdapter } from "./adapters/copilot";
 import { createGeminiAdapter } from "./adapters/gemini";
@@ -175,22 +174,6 @@ export const AGENT_MANIFEST: AgentManifestEntry[] = [
     },
     loginCommand: { binary: "cursor-agent", args: ["login"] },
     createAdapter: (ctx) => createCursorAdapter(ctx),
-  },
-  {
-    id: "amp",
-    name: "Amp",
-    description: "Sourcegraph Amp agent.",
-    cliBinary: "amp",
-    installHint: {
-      command: "npm install -g @sourcegraph/amp",
-      docsUrl: "https://ampcode.com/manual",
-    },
-    authProbe: {
-      kind: "file",
-      paths: ["~/.config/amp/settings.json"],
-    },
-    loginCommand: { binary: "amp", args: ["login"] },
-    createAdapter: (ctx) => createAmpAdapter(ctx),
   },
   {
     id: "factory-droid",

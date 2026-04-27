@@ -130,7 +130,7 @@ SQLite-backed (same choice as Zed and opencode). Each run is a record; each step
 ├──────────────────────────────────────────────────────────┤
 │  ACP backends:                                           │
 │    Claude | Codex | Gemini | opencode | Kimi |           │
-│    Cursor | Factory Droid | Amp | (native, future)       │
+│    Cursor | Factory Droid | (native, future)             │
 │    + MCP servers (Zeros canvas MCP, user's servers)      │
 └──────────────────────────────────────────────────────────┘
 ```

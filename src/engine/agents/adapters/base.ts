@@ -6,9 +6,9 @@
 // stream-json` (or equivalent), read NDJSON from stdout, drain stderr
 // for diagnostics, and translate CLI-native events into the canonical
 // SessionNotification stream. The plumbing below is the same across
-// Claude, Codex, Cursor, Amp, Droid — only the event-translation
-// logic differs. PTY-only adapters (Gemini, Copilot) bypass this and
-// use node-pty directly.
+// Claude, Codex, Cursor, Droid, Copilot — only the event-translation
+// logic differs. PTY-only adapters (Gemini) bypass this and use
+// node-pty directly.
 //
 // ──────────────────────────────────────────────────────────
 

@@ -97,7 +97,7 @@ export function AgentPill({
   const label = selectedName ?? selectedId ?? "Agent";
   // An agent is "runnable" only when it's both installed AND signed in
   // (when sign-in is required). Previously we gated on `installed` alone,
-  // which made Amp / Droid / Gemini show green even when not signed in —
+  // which made Droid / Gemini show green even when not signed in —
   // out of sync with the Settings → Agents panel that uses auth state.
   // Agents with no `authBinary` need no sign-in (none today, but kept
   // for forward compat).

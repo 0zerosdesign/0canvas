@@ -8,7 +8,7 @@ The repo is not one simple app yet. It currently contains several product eras a
 
 - **Zeros Mac app**: the main product now. It is an Electron desktop app with a local engine process.
 - **Zeros design workspace**: the former browser overlay experience, now mounted inside Column 3 of the Mac app.
-- **Agent runtime**: a native CLI adapter layer for Claude Code, Codex, Cursor Agent, Amp, Droid, Copilot, and Gemini.
+- **Agent runtime**: a native CLI adapter layer for Claude Code, Codex, Cursor Agent, Droid, Copilot, and Gemini.
 - **0colors**: a full separate token/color intelligence product vendored under `apps/0colors`.
 - **0accounts**: shared account/auth website, backend, and auth client under `website/0accounts` and `servers/0accounts`.
 - **0research**: learning/research website and internal tooling under `website/0research` and `servers/0research`.

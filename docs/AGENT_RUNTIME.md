@@ -2,7 +2,7 @@
 
 > **Doc label (PR 4):** Current for **native agents**; verify details against `src/engine/agents/`. ACP is discussed below as **history** / motivation. Index: [`Zeros-Structure/12-Doc-Index-And-Labels.md`](Zeros-Structure/12-Doc-Index-And-Labels.md).
 
-Zeros spawns coding-agent CLIs (Claude Code, Codex, Cursor, Amp,
+Zeros spawns coding-agent CLIs (Claude Code, Codex, Cursor,
 Factory Droid, GitHub Copilot CLI, Gemini) and brokers their
 conversations back to the chat UI. Every agent runs directly against
 its vendor's CLI — no Agent Client Protocol, no npx adapter chain,
@@ -86,7 +86,6 @@ name change, not a behavior change.
 | Claude Code   | child_process + `claude -p --output-format stream-json --include-hook-events` | stdout NDJSON + localhost HTTP hooks + `~/.claude/projects/**/*.jsonl` |
 | Codex         | child_process + `codex exec --json`                                           | stdout NDJSON + `~/.codex/sessions/**/rollout-*.jsonl` + `-c notify=`  |
 | Cursor        | child_process + `cursor-agent -p --output-format stream-json`                 | stdout NDJSON                                                          |
-| Amp           | child_process + `amp -x --stream-json` (Claude-schema-compatible)             | stdout NDJSON                                                          |
 | Factory Droid | child_process + `droid exec --output-format json`                             | stdout JSON + HTTP hooks (`.factory/settings.json`)                    |
 | Copilot CLI   | PTY + HTTP hooks                                                              | hooks (`sessionStart`, `preToolUse`, `postToolUse`, `sessionEnd`)      |
 | Gemini CLI    | PTY + ANSI regex + `GEMINI_TELEMETRY_OUTFILE`                                 | telemetry JSONL + stdout markers                                       |

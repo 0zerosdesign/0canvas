@@ -18,7 +18,7 @@
 //     adapter feeds the unified diff directly via tool.content
 //     (`{ type: "diff", path, oldText, newText }`).
 //   - **Replacement mode** (Claude Edit/Write, Cursor editTool,
-//     Gemini replace/write_file, Amp Edit): adapter feeds raw
+//     Gemini replace/write_file, Droid Edit): adapter feeds raw
 //     before+after via rawInput; renderer computes a diff.
 //
 // Default-collapsed (matches Stage 3 §2.4 "highest-volume cards

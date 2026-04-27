@@ -432,7 +432,7 @@ export function EmptyComposer() {
         setAllAgents(list);
         // Default-agent selection must require BOTH installed and
         // signed in — otherwise the empty composer auto-picks an agent
-        // the user can't actually talk to (e.g. Amp installed but no
+        // the user can't actually talk to (e.g. Cursor installed but no
         // login), then ensureSession fails with auth-required.
         const runnable = list.filter(
           (a) =>
