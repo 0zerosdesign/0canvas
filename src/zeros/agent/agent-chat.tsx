@@ -66,6 +66,7 @@ import { useAgentsSnapshot } from "./agents-cache";
 import { FolderOpen } from "lucide-react";
 import { Image as ImageIcon } from "lucide-react";
 import type { BridgeRegistryAgent } from "../bridge/messages";
+import { useStickyBottom, nextTextMessageTarget } from "./use-sticky-bottom";
 
 // Error classification is handled by sessions-provider's AgentFailure
 // pipeline; the UI now branches on session.status directly (warming /
@@ -293,21 +294,67 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
     });
   };
 
-  // Auto-scroll on new messages.
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [session.messages, session.pendingPermission, session.status]);
+  // Sticky-bottom auto-scroll with unstick-on-user-scroll. Replaces
+  // the Phase 0 "snap to bottom on every change" reflex. See
+  // use-sticky-bottom.ts for the rationale.
+  useStickyBottom(
+    scrollRef,
+    [session.messages, session.pendingPermission, session.status],
+  );
 
   // ⌘K — focus the composer from anywhere in the app. Cursor-style
   // shortcut; scoped to avoid clobbering ⌘K inside native inputs.
+  // ⌘↑ / ⌘↓ — jump-by-text-message: walks user prompts and final
+  // assistant text, skipping tool-call + thinking chunks. Solves the
+  // "where did I ask?" problem during long Claude runs (roadmap §2.5.7).
+  // ⌘Home / ⌘End — first/last message. All gated on the textarea
+  // not being focused so plain typing keeps native behavior.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey) || e.shiftKey || e.altKey) return;
-      if (e.key.toLowerCase() !== "k") return;
-      e.preventDefault();
-      textareaRef.current?.focus();
+
+      // ⌘K is composer-focus; allowed even when in an input
+      if (e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        textareaRef.current?.focus();
+        return;
+      }
+
+      // Skip jump-by-message bindings while typing — preserves
+      // native cursor/selection behavior in the textarea.
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "TEXTAREA" || tag === "INPUT") return;
+
+      const el = scrollRef.current;
+      if (!el) return;
+
+      if (e.key === "ArrowUp") {
+        const top = nextTextMessageTarget(el, { direction: "up" });
+        if (top !== null) {
+          e.preventDefault();
+          el.scrollTo({ top, behavior: "smooth" });
+        }
+        return;
+      }
+      if (e.key === "ArrowDown") {
+        const top = nextTextMessageTarget(el, { direction: "down" });
+        if (top !== null) {
+          e.preventDefault();
+          el.scrollTo({ top, behavior: "smooth" });
+        }
+        return;
+      }
+      if (e.key === "Home") {
+        e.preventDefault();
+        el.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+      if (e.key === "End") {
+        e.preventDefault();
+        el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+        return;
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
