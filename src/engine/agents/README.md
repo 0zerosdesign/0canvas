@@ -1,17 +1,17 @@
 # Agent runtime (native)
 
-Per-agent adapters that talk to each coding-CLI directly. Replaces
-`src/engine/acp/` — no more Agent Client Protocol, no more npx adapter
-chain, no more foreign dependencies.
+Per-agent adapters that talk to each coding-CLI directly. No external
+protocol, no npx adapter chain, no foreign dependencies — every wire
+shape is owned in `src/zeros/bridge/agent-events.ts`.
 
 ## Why this exists
 
-See `docs/AGENT_RUNTIME.md` for the full migration rationale. Short
-version: ACP's cost profile (handshake + npx install + JSON-RPC framing
-fragility) outweighs its structured-event benefit for our use case.
-Emdash and Conductor both converged on native CLI adapters for the same
-reason. Our existing `electron/ipc/commands/ai-cli.ts` already proved
-the pattern works for Claude and Codex.
+See `docs/AGENT_RUNTIME.md` for the full rationale. Short version: a
+generic-protocol layer (handshake + npx install + JSON-RPC framing
+fragility) outweighed its structured-event benefit for our use case.
+Emdash and Conductor both converged on native CLI adapters for the
+same reason. Our existing `electron/ipc/commands/ai-cli.ts` already
+proved the pattern works for Claude and Codex.
 
 ## Layout
 

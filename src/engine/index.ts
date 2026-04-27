@@ -283,7 +283,7 @@ export class ZerosEngine {
       case "AGENT_SET_MODE":
       case "AGENT_LIST_SESSIONS":
       case "AGENT_LOAD_SESSION":
-        await this.handleAcpMessage(msg, ws);
+        await this.handleAgentMessage(msg, ws);
         break;
       case "CONNECTED":
         // Browser announced itself — already handled in onConnect
@@ -321,7 +321,7 @@ export class ZerosEngine {
    * Responses fan back out via the shared WebSocket; permission prompts are
    * pushed proactively by the gateway (not via this request path).
    */
-  private async handleAcpMessage(msg: EngineMessage, ws: WebSocket): Promise<void> {
+  private async handleAgentMessage(msg: EngineMessage, ws: WebSocket): Promise<void> {
     // Diagnostic: log every AGENT_* message at the dispatch boundary so
     // we can tell from main.log whether prompts are even reaching the
     // engine. Used to triage "user sent codex prompt, no response" —

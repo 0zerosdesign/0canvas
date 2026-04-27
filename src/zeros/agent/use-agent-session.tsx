@@ -159,7 +159,7 @@ export interface AgentQuestionField {
 /** Banner marking a mode switch in the timeline. Phase / Permission
  *  / Tier are the three orthogonal axes (see roadmap §2.4.13).
  *  Triggered by user toggle, by the agent autonomously (Gemini
- *  enter_plan_mode, Claude ExitPlanMode), or by ACP-style
+ *  enter_plan_mode, Claude ExitPlanMode), or by adapter-emitted
  *  current_mode_update notifications. */
 export interface AgentModeSwitchMessage {
   id: string;

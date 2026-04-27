@@ -903,7 +903,7 @@ export function AIChatPanel() {
   // agent-native surface (useAgentSession + agents-panel + agent-chat).
   // Legacy state below stays mounted so turning it off returns to the
   // exact prior conversation.
-  const [acpMode, setAcpMode] = useState(false);
+  const [agentsBetaMode, setAgentsBetaMode] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -1411,7 +1411,7 @@ Styles:\n${Object.entries(selectedElement.styles)
   // Agents beta surface — swaps the panel body only; header stays so the
   // user can toggle back to the legacy chat in one click. Legacy state
   // above is preserved intact across toggles.
-  if (acpMode) {
+  if (agentsBetaMode) {
     return (
       <div className="oc-panel oc-chat" data-Zeros="ai-chat">
         <div className="oc-chat-header">
@@ -1420,7 +1420,7 @@ Styles:\n${Object.entries(selectedElement.styles)
             <Button
               variant="ghost"
               size="icon-sm"
-              onClick={() => setAcpMode(false)}
+              onClick={() => setAgentsBetaMode(false)}
               title="Back to legacy chat"
             >
               <ArrowRight size={13} style={{ transform: "rotate(180deg)" }} />
@@ -1449,7 +1449,7 @@ Styles:\n${Object.entries(selectedElement.styles)
           <Button
             variant="ghost"
             size="icon-sm"
-            onClick={() => setAcpMode(true)}
+            onClick={() => setAgentsBetaMode(true)}
             title="Switch to Agents (Beta) — drive any agent via the shared registry"
           >
             <Zap size={13} />

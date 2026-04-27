@@ -89,7 +89,7 @@ const ENSURE_SESSION_ATTEMPTS = 1;
 /** Pull the classified failure off an AGENT_ERROR bridge message when
  *  the engine populated it; otherwise classify from the free-form
  *  message so older engine builds still produce the right UI state. */
-function failureFromAcpError(
+function failureFromAgentError(
   msg: AgentErrorMessage,
   fallbackStage: AgentFailure["stage"],
 ): AgentFailure {
@@ -389,7 +389,7 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
       >({ type: "AGENT_INIT_AGENT", agentId }, 5 * 60_000);
       if (resp.type === "AGENT_ERROR") {
         getStore().setWarmAgent(agentId, false);
-        const failure = failureFromAcpError(resp, "initialize");
+        const failure = failureFromAgentError(resp, "initialize");
         const err = new Error(failure.message) as Error & {
           failure?: AgentFailure;
         };
@@ -481,7 +481,7 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
           try {
             const resp = await attemptOnce();
             if (resp.type === "AGENT_ERROR") {
-              lastFailure = failureFromAcpError(resp, "newSession");
+              lastFailure = failureFromAgentError(resp, "newSession");
               console.warn(
                 `[Zeros ensureSession] attempt ${attempt}/${ENSURE_SESSION_ATTEMPTS} for ${agentId}: AGENT_ERROR kind=${lastFailure.kind} message=${lastFailure.message}`,
               );
@@ -644,7 +644,7 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
         }
 
         if (resp.type === "AGENT_PROMPT_FAILED") {
-          const failure = failureFromAcpError(
+          const failure = failureFromAgentError(
             { ...resp, message: resp.error } as unknown as AgentErrorMessage,
             "prompt",
           );
