@@ -14,6 +14,8 @@ This rev replaces the previous draft, removes the Codex API-key parallel track (
 - **Stage 1C** — clean ACP break with no backward-compat aliases. Decided 2026-04-27 because half-here ACP residue (alias maps, migration shims, legacy keychain fallbacks) was creating cognitive load. All paths now expect canonical IDs (`claude`, `codex`, `amp`); persisted user data referencing legacy IDs is treated as invalid (chats need recreating, API keys need re-entering, enabled-agents need re-toggling).
 - **§2.8 CLI vs API agent adapters** — the architectural model for handling both consumer-CLI agents (today's path) and future direct-API agents in the same renderer pipeline.
 - **§2.9 Agent capability transparency** — the architectural commitment that every CLI's native capabilities (memory, skills, subagents, MCP, project context) flow through our wrapper unchanged because we drive the CLI, we don't replace it. Plus the renderer-side affordances we add on top (project-context indicator, memory inspector) and the gotchas (Cursor/Amp cloud-coupled resume, Task→Agent rename, TUI-only capabilities handled out-of-band).
+- **§2.10 Adapter contract refinements (DPCode-inspired)** — the OpenCode adapter joins the lineup as the 8th agent, with a server-first integration pattern (spawn `opencode serve`, attach `@opencode-ai/sdk`, consume SSE bus). Validated against [DPCode](https://github.com/Emanuele-web04/dpcode) (MIT, Electron + Effect-TS) which has already integrated Claude/Codex/Gemini/OpenCode behind a single `ProviderAdapterShape<TError>` contract. Patterns adopted: declarative `capabilities` struct, `raw + providerRefs` fields on every canonical event for free debugging, `OPENCODE_CONFIG_CONTENT={}` env trick to neuter user config without touching it. Patterns deliberately not adopted: their monolithic 2,127-line `MessagesTimeline.tsx` (we keep our renderer registry).
+- **OpenCode** as our 8th agent — opens the cheap-alternative-models story (Kimi K2 via OpenRouter, Qwen3 via local Ollama, GLM 4.5, DeepSeek V3, etc.) without us needing to build per-model adapter logic. OpenCode is provider-agnostic over 75+ model providers via Vercel AI SDK + models.dev.
 
 ---
 
@@ -30,6 +32,7 @@ This rev replaces the previous draft, removes the Codex API-key parallel track (
    - 2.7 [Agent-specific affordances (where unification breaks)](#27-agent-specific-affordances-where-unification-breaks)
    - 2.8 [CLI vs API agent adapters (the parallel-adapter model)](#28-cli-vs-api-agent-adapters-the-parallel-adapter-model)
    - 2.9 [Agent capability transparency — what passes through, what we add](#29-agent-capability-transparency--what-passes-through-what-we-add)
+   - 2.10 [Adapter contract refinements (from DPCode research)](#210-adapter-contract-refinements-from-dpcode-research)
 3. [Phase 2 — Performance + architecture (merged with 360-degree audit)](#3-phase-2--performance--architecture-merged-with-360-degree-audit)
    - 3.1 [Workspace store: Zustand migration](#31-workspace-store-zustand-migration)
    - 3.2 [Message-list virtualization (react-virtuoso)](#32-message-list-virtualization-react-virtuoso)
@@ -82,17 +85,20 @@ Phase 1 closes the visible-UX gap. Phase 2 scales it and rebuilds the surroundin
 
 The user was emphatic on this point: every agent should render through the same UI. A bash command from Codex should look identical to a bash command from Claude. A read from Cursor should look identical to a read from Gemini. A subagent from Amp should look identical to a Task from Claude. New agents added later inherit the renderers for free.
 
-The reason this isn't trivial is that the seven CLIs we support emit seven different shapes:
+The reason this isn't trivial is that the eight CLIs we support emit eight different shapes:
 
 - **Claude Code** wraps Anthropic's streaming API events: `content_block_start` / `content_block_delta` (with `text_delta`, `thinking_delta`, `input_json_delta` subtypes) / `content_block_stop` / `message_delta` / `message_stop` plus `system`, `assistant`, `user`, `result` envelope messages, with `parent_tool_use_id` linking subagent events. ([code.claude.com/docs/en/agent-sdk/streaming-output](https://code.claude.com/docs/en/agent-sdk/streaming-output))
 - **Codex** uses item-types: `thread.started`, `turn.started`, `item.started`, `item.updated`, `item.completed`, `turn.completed`, `turn.failed`, with item subtypes `agent_message`, `reasoning`, `command_execution`, `file_change`, `mcp_tool_call`, `web_search`, `plan_update`. ([developers.openai.com/codex/noninteractive](https://developers.openai.com/codex/noninteractive))
 - **Cursor** emits `system` (init), `user`, `assistant` (one chunk per turn — no token streaming), `tool_call` (with `subtype: "started" | "completed"`), `result`. **Thinking is explicitly suppressed in print mode.** ([cursor.com/docs/cli/reference/output-format](https://cursor.com/docs/cli/reference/output-format))
 - **Gemini** emits `init`, `message`, `tool_use`, `tool_result`, `error`, `result`. Thinking surface is undocumented. ([geminicli.com/docs/cli/headless](https://geminicli.com/docs/cli/headless/))
-- **Copilot** is the structural odd-one-out: it uses bidirectional **JSON-RPC over stdio** via the Agent Client Protocol (`copilot --acp`). Notifications come through `session/update` with variants `agent_message_chunk`, `agent_thought_chunk`, `tool_call`, `tool_call_update`, `plan`. Tool calls have a real `tool_call_update` mid-flight progress event that nobody else has. ([github.blog/changelog/2026-01-28-acp-support-in-copilot-cli-is-now-in-public-preview](https://github.blog/changelog/2026-01-28-acp-support-in-copilot-cli-is-now-in-public-preview/))
+- **Copilot** is the structural odd-one-out among the stream-json crowd: it uses bidirectional **JSON-RPC over stdio** via the Agent Client Protocol (`copilot --acp`). Notifications come through `session/update` with variants `agent_message_chunk`, `agent_thought_chunk`, `tool_call`, `tool_call_update`, `plan`. Tool calls have a real `tool_call_update` mid-flight progress event that nobody else has. ([github.blog/changelog/2026-01-28-acp-support-in-copilot-cli-is-now-in-public-preview](https://github.blog/changelog/2026-01-28-acp-support-in-copilot-cli-is-now-in-public-preview/))
 - **Amp** mirrors Claude's shape (`system`, `user`, `assistant`, `result`) with `--stream-json-thinking` to expose `thinking` / `redacted_thinking` content blocks. ([ampcode.com/manual](https://ampcode.com/manual))
 - **Droid** emits `system`, `message`, `tool_call`, `tool_result`, `assistant_chunk`, `completion`, `exit`. Thinking surface is undocumented. ([docs.factory.ai/guides/building/droid-exec-tutorial](https://docs.factory.ai/guides/building/droid-exec-tutorial))
+- **OpenCode** is the most architecturally different of the eight: it's **server-first**. The CLI binary boots an HTTP server (`opencode serve`) that exposes an OpenAPI 3.1 surface plus an SSE event bus. The official `@opencode-ai/sdk` is the canonical client. Bus events: `message.updated`, `message.part.updated`, `message.part.delta` (token streaming), `permission.asked`/`replied`, `question.asked`/`replied`, `session.status`, `session.compacted`, `session.error`, `mcp.tools.changed`. The narrower `opencode run --format json` (NDJSON to stdout) is a subset for one-shot use; we use `serve` to get the full vocabulary. ([opencode.ai/docs/server](https://opencode.ai/docs/server/), [opencode.ai/docs/sdk](https://opencode.ai/docs/sdk/), [github.com/sst/opencode](https://github.com/sst/opencode))
 
 The unification strategy is the standard one: a canonical event vocabulary in the middle, with adapter-side normalizers that translate native events into the canonical set, and renderers that consume only canonical events. We already have the rough shape of this (the renderer registry resolves by message kind), but the message kinds today are bound to the ACP-ish subset Claude/Amp emit. Phase 1 generalizes the kind system.
+
+**DPCode validates the architecture.** [Emanuele-web04/dpcode](https://github.com/Emanuele-web04/dpcode) is an MIT-licensed Electron-based agentic-coding IDE that has already integrated four of our eight agents (Claude, Codex, Gemini, OpenCode) using exactly this adapter pattern. They prove a single `ProviderAdapterShape<TError>` interface (with declarative `capabilities` struct) handles four wildly different transports: Claude via the official Node SDK, Codex via JSON-RPC over stdio (`codex app-server`), Gemini via PTY+ACP, OpenCode via HTTP+SSE through the SDK. Their canonical event vocabulary (~44 events) is more granular than our v1 taxonomy and is documented in [§2.10 (Adapter contract refinements)](#210-adapter-contract-refinements-from-dpcode-research) below — patterns we adopt and patterns we deliberately don't. Anti-pattern they don't recommend either: their renderer is a 2,127-line monolithic timeline, which is what we're explicitly avoiding with the renderer registry.
 
 ### 2.2 The canonical event taxonomy
 
@@ -119,7 +125,11 @@ Every adapter emits — and every renderer consumes — events drawn from this s
 | `clarifying_question` | `message_id, prompt` | `choices[], input_type` | Distinct from regular text — renders as a form. |
 | `session.end` | `status, duration_ms, num_turns` | `stop_reason, permission_denials` | Terminal event. |
 
-This vocabulary covers every observed event across the seven CLIs. Some agents emit a strict subset (Cursor never emits `thinking.chunk`; Droid never emits `subagent.*`); the renderers handle absence gracefully — a missing thinking block is invisible, not stubbed. This is critical for the user's "unified UI" requirement: the *contract* is unified even when an agent doesn't fill every field.
+This vocabulary covers every observed event across the eight CLIs. Some agents emit a strict subset (Cursor never emits `thinking.chunk`; Droid never emits `subagent.*`; OpenCode in `run --format json` mode skips `tool.input_chunk` and `tool.progress` even though its server bus has them); the renderers handle absence gracefully — a missing thinking block is invisible, not stubbed. This is critical for the user's "unified UI" requirement: the *contract* is unified even when an agent doesn't fill every field.
+
+**Two refinements adopted from DPCode** (see §2.10):
+- Every canonical event carries an optional **`raw: { source, payload }`** field — the original native event verbatim. Free "view raw" debug capability; zero translator complexity.
+- Every canonical event carries an optional **`providerRefs`** struct — `{ providerThreadId?, providerTurnId?, providerItemId?, providerRequestId?, providerParentThreadId?, parentProviderTurnId? }`. Lets us grep server logs by either canonical or native ID without the translator throwing detail away.
 
 ### 2.3 Adapter normalizers — where agent dialects collapse
 
@@ -127,20 +137,23 @@ Each adapter under [src/engine/agents/adapters/](../src/engine/agents/adapters/)
 
 The hard part is the **canonical tool kind**. Every agent has its own tool names (`Bash` vs `shell` vs `run_shell_command` vs `Execute`), and some agents express what other agents call distinct tools as flavors of one tool (Codex routes Read/Grep through `shell`). The mapping table lives in the adapter and is the contract:
 
-| Canonical kind | Claude tools | Codex items | Cursor tools | Gemini tools | Amp tools | Droid tools |
-|---|---|---|---|---|---|---|
-| `shell` | `Bash` | `command_execution` | `shellToolCall` | `run_shell_command` | `Bash` | `Execute` |
-| `read` | `Read` | (via shell `cat`) | `readToolCall` | `read_file`, `read_many_files` | `Read` | `Read` |
-| `edit` | `Edit`, `MultiEdit`, `Write` | `file_change` (apply_patch) | `editToolCall`, `writeToolCall` | `replace`, `write_file` | `Edit` | `ApplyPatch` |
-| `search` | `Grep`, `Glob` | (via shell `rg`/`find`) | `grepToolCall`, `globToolCall` | `grep_search`, `glob`, `list_directory` | `Grep` (+ Glob) | (via shell) |
-| `fetch` | `WebFetch` | `web_search` (live mode) | — | `web_fetch` | web browsing | — |
-| `web_search` | `WebSearch` | `web_search` | — | `google_web_search` | — | — |
-| `todo` | `TodoWrite` | `plan_update` | `todoToolCall`, `updateTodosToolCall` | `write_todos` | `TodoWrite` | — |
-| `subagent` | `Task` | — | — | — | `Task` | — |
-| `mcp` | (any MCP tool) | `mcp_tool_call` | (any MCP tool) | (any MCP tool) | (any MCP tool) | (any MCP tool) |
-| `other` | (anything else) | (anything else) | (anything else) | (anything else) | (anything else) | (anything else) |
+| Canonical kind | Claude tools | Codex items | Cursor tools | Gemini tools | Amp tools | Droid tools | OpenCode tools |
+|---|---|---|---|---|---|---|---|
+| `shell` | `Bash` | `command_execution` | `shellToolCall` | `run_shell_command` | `Bash` | `Execute` | `bash` |
+| `read` | `Read` | (via shell `cat`) | `readToolCall` | `read_file`, `read_many_files` | `Read` | `Read` | `read` |
+| `edit` | `Edit`, `MultiEdit`, `Write` | `file_change` (apply_patch) | `editToolCall`, `writeToolCall` | `replace`, `write_file` | `Edit` | `ApplyPatch` | `edit`, `write`, `apply_patch` (GPT-5/Codex models) |
+| `search` | `Grep`, `Glob` | (via shell `rg`/`find`) | `grepToolCall`, `globToolCall` | `grep_search`, `glob`, `list_directory` | `Grep` (+ Glob) | (via shell) | `grep`, `glob`, `codesearch` (Zen-gated) |
+| `fetch` | `WebFetch` | `web_search` (live mode) | — | `web_fetch` | web browsing | — | `webfetch` |
+| `web_search` | `WebSearch` | `web_search` | — | `google_web_search` | — | — | `websearch` (Exa or Zen gated) |
+| `todo` | `TodoWrite` | `plan_update` | `todoToolCall`, `updateTodosToolCall` | `write_todos` | `TodoWrite` | — | `todowrite` |
+| `subagent` | `Task` (renamed `Agent` v2.1.63) | — | — | — | `Task` | `Task` (`subagent_type:`) | `task` (`subagent_type:` general/explore/custom) |
+| `mcp` | (any MCP tool) | `mcp_tool_call` | (any MCP tool) | (any MCP tool) | (any MCP tool) | (any MCP tool) | (any MCP tool) |
+| `skill` | (slash-command expansion) | (slash-command expansion) | — | `activate_skill` | (skills loaded inline) | — | `skill` (loads `SKILL.md` content into context) |
+| `other` | (anything else) | (anything else) | (anything else) | (anything else) | (anything else) | (anything else) | `lsp`, `plan`, `question`, `invalid` (also: any plugin tool) |
 
 Crucial decision: **for Codex and Droid, we do *not* try to upgrade `shell cat foo.ts` into a `read` card.** That would mean parsing shell strings in the adapter, which fails the moment the user pipes (`cat foo.ts | head -20`) or quotes (`grep "foo bar" file`) or chains (`cat foo && echo done`). The adapter renders those as `shell` cards and trusts the user to read the command. Across-agent unification means *the same canonical kind renders identically*; it does not mean *every agent emits every kind*.
+
+**OpenCode-specific note:** OpenCode auto-swaps the `edit`+`write` tools for `apply_patch` when the model is GPT-5 / Codex-class (registry.ts pattern in their source). The translator must handle both — both produce file edits, the canonical `edit` card renders both via the patch-mode path. The `codesearch` / `websearch` tools are gated behind `OPENCODE_ENABLE_EXA=1` or use of the OpenCode Zen provider; if neither is configured the tools simply don't appear in the model's tool list (they're not errors).
 
 Adapters live at:
 
@@ -151,6 +164,7 @@ Adapters live at:
 - [src/engine/agents/adapters/copilot/normalizer.ts](../src/engine/agents/adapters/copilot/normalizer.ts) (new) — bridges ACP JSON-RPC notifications
 - [src/engine/agents/adapters/amp/normalizer.ts](../src/engine/agents/adapters/amp/normalizer.ts) (new)
 - [src/engine/agents/adapters/droid/normalizer.ts](../src/engine/agents/adapters/droid/normalizer.ts) (new)
+- [src/engine/agents/adapters/opencode/normalizer.ts](../src/engine/agents/adapters/opencode/normalizer.ts) (new) — server-attached: spawns `opencode serve --port <random>`, attaches `@opencode-ai/sdk`, consumes SSE bus events. See §2.10 for the spawn pattern + DPCode-validated config-neutering trick.
 
 The shared canonical event types live at [src/engine/agents/canonical.ts](../src/engine/agents/canonical.ts) (new). The renderer-side `AgentMessage` discriminated union (today defined inline in `agent-chat.tsx`) moves into [src/zeros/agent/canonical-message.ts](../src/zeros/agent/canonical-message.ts) (new) so renderers and engine share the type.
 
@@ -538,6 +552,13 @@ A few cases that don't unify cleanly and need agent-aware rendering inside the u
 9. **MCP UI payloads** — Goose-style, the result content can be a UI fragment; the MCP card renders that instead of JSON.
 10. **Mode primitives differ across agents** — Codex has no phase; Amp has no phase; only Gemini does true model-initiated phase entry. The mode pill (§2.4.13) hides axes the agent doesn't expose. Same canonical mechanism, different visible controls.
 11. **Cursor's "thinking-as-text" case** — Cursor's CLI in `--print` mode does not emit thinking events ([cursor.com/docs/cli/reference/output-format](https://cursor.com/docs/cli/reference/output-format)); any reasoning-style content arrives inside ordinary `assistant` text. The text renderer handles it transparently — no thinking chevron, just text. The user sees prose like *"I'll start by reading the file, then…"* exactly as the agent emitted it. No special handling needed; the absence of thinking events is itself the contract.
+12. **OpenCode's `plan` is an agent, not a mode** — every other agent with a "plan" concept exposes it as a permission-mode flag (Claude `--permission-mode plan`) or as model-initiated tools (Gemini `enter_plan_mode`). OpenCode instead defines plan as a **primary agent** (built-in alongside `build`). Switching is `--agent plan` on `run`, or `Tab` in the TUI, or `default_agent` in `opencode.json`. Our mode pill (§2.4.13) maps a "Plan" UI selection to an `--agent plan` invocation when the active adapter is OpenCode; the canonical `mode.switch` event is still emitted so the timeline banner is unified.
+13. **OpenCode's `question` tool is denied in headless `run` mode** — by design (run.ts installs a session permission rule denying the `question` permission entirely). Clarifying questions cannot fire in `opencode run`. **Workaround:** we use `opencode serve` + SDK as our integration path (not `run`), and the SSE bus exposes `question.asked` events that we render via the canonical question card (§2.4.9). The reply protocol routes through `POST /question/reply` on the server.
+14. **OpenCode's `permission.asked` auto-rejects in `run` mode** unless `--dangerously-skip-permissions`. Server mode is interactive — the SSE bus emits `permission.asked` and we reply via `POST /permission/reply` with `"once" | "always" | "reject"`. This integrates cleanly with our inline permission cluster (§2.6) — same Allow/Deny/Always-for-X buttons, just routing through OpenCode's REST endpoint instead of injected hooks.
+15. **OpenCode's `apply_patch` vs `edit`+`write` swap** for GPT-5/Codex-class models — see §2.3. Adapter normalizes both to canonical `edit`; renderer doesn't need to care.
+16. **OpenCode's model selection is a `provider/model` slug** like `anthropic/claude-sonnet-4-5`, `openrouter/moonshot/kimi-k2`, `ollama/qwen3-coder`. We hydrate the model picker from `client.provider.list()` (or `opencode models <provider>` CLI fallback) at adapter init time. **This is OpenCode's killer feature for our cheap-alternative-models story** — Kimi K2 via OpenRouter, Qwen3 via local Ollama, GLM 4.5, etc.
+17. **OpenCode's auth lives in `~/.local/share/opencode/auth.json`** (XDG data dir, mode 0600). We never read or write it — the user runs `opencode auth login <provider>` interactively in their own terminal, and our spawned subprocess inherits the file. Same posture as the other CLIs.
+18. **OpenCode's session resume is offline-capable** — sessions live in SQLite at `~/.local/share/opencode/opencode.db`. `opencode --continue` (most recent root session) or `--session <id>` (specific) works without network. Cloud session sharing is opt-in via `--share`, not a default.
 
 These are the only places agent identity surfaces in the renderer. Everywhere else, the rule is: same card, same chrome, regardless of which agent emitted it.
 
@@ -596,18 +617,19 @@ Every subprocess we spawn inherits the user's full environment (`HOME`, `PATH`, 
 
 #### 2.9.2 Per-agent capability matrix
 
-| Capability | Claude | Codex | Cursor | Gemini | Copilot | Amp | Droid |
-|---|---|---|---|---|---|---|---|
-| **Project-context file(s)** | `CLAUDE.md` (walks up + per-subdir) + `CLAUDE.local.md` + `.claude/rules/*.md` with `paths:` frontmatter | `AGENTS.md` (walks up) + `~/.codex/AGENTS.md` global | `.cursor/rules/*` + `AGENTS.md` + `CLAUDE.md` (per Cursor docs) + legacy `.cursorrules` | `GEMINI.md` hierarchy + JIT-loaded from any file's parent dirs; configurable via `context.fileName` | `AGENTS.md` + `<name>.agent.md` custom-agent files | `AGENTS.md` (walks up to $HOME) + `$HOME/.config/amp/AGENTS.md`; falls back to `AGENT.md` or `CLAUDE.md` | `AGENTS.md` |
-| **User config dir** | `~/.claude/` | `~/.codex/` | `~/.cursor/` | `~/.gemini/` | `~/.copilot/` (or `$XDG_CONFIG_HOME/copilot/`) | `~/.config/amp/` | `~/.factory/` |
-| **Auto-memory (file-backed)** | `~/.claude/projects/<encoded-cwd>/memory/MEMORY.md` + topic files. First 200 lines / 25 KB injected at session start | `~/.codex/memories/` (auto-injected; opt-in via `[features].memories = true`) | Cloud "Memories" feature (per-project, server-side) | `/memory show\|add\|refresh` writes to `~/.gemini/GEMINI.md` | none formal | AGENTS.md hierarchy fills the role | AGENTS.md fills the role |
-| **Memory tool (model-callable)** | `memory_20250818` API tool — model emits `tool_use` with `name: "memory"` and a `command` field operating on virtual `/memories`. **File backend is the host's responsibility** | n/a | n/a | n/a | n/a | n/a | n/a |
-| **Skills / extensions** | `~/.claude/skills/<name>/SKILL.md` (skill = folder with frontmatter + body). Resolution: enterprise > personal > project > plugin. Live-reloaded within a session | `~/.codex/skills/` (recently added; thin docs) | `~/.cursor/skills-cursor/` | `~/.gemini/extensions/<name>/gemini-extension.json` (each declares MCP servers, commands, hooks, sub-agents) | `<name>.agent.md` custom agents | `amp.skills.path` config + `mcp.json` in skill dirs | (none formal — `~/.factory/droids/` covers the related "custom agent" use case) |
-| **Subagents (model-spawnable)** | `Agent` tool (renamed from `Task` in v2.1.63) + `.claude/agents/` and `~/.claude/agents/` markdown definitions. Stream events carry `parent_tool_use_id` linking children to parent | none documented public | Background Agents (cloud, separate product) + internal composer subagents | declared via extensions | `<name>.agent.md` custom agents (user/repo/org scope) | parallel subagents but not user-defined; final summary returns to parent | `Task` tool with `subagent_type: <droid-name>`; droid markdown files in `.factory/droids/` (project) or `~/.factory/droids/` (personal) |
-| **MCP injection point** | `--settings <file>` (hooks) + `--mcp-config <file>` (servers); OR scope-based in `~/.claude.json` (local) / `.mcp.json` (project) / user-scope | `-c mcp_servers.<name>...` per-invocation flag; `~/.codex/config.toml` global | `.cursor/mcp.json` (project) + `~/.cursor/mcp.json` (global) | `mcpServers` in `settings.json` or in extensions | `--additional-mcp-config <file>` per-session; `~/.copilot/mcp-config.json` global | `amp.mcpServers` in user/workspace settings; `amp mcp add` CLI | per-droid frontmatter; `~/.factory/tools/` |
-| **Session persistence** | Local — `~/.claude/projects/<encoded-cwd>/<session-id>.jsonl` | Local — `~/.codex/sessions/` + SQLite (`logs_2.sqlite`, `state_5.sqlite`) | **Cloud** — Composer threads on Cursor's servers; `~/.cursor/chats/` is local cache | Local — `~/.gemini/history/` | Local — `~/.copilot/`; cloud delegation flow is separate | **Cloud** — `ampcode.com/threads`; `@T-<thread-id>` cross-thread refs need network | Local — `~/.factory/sessions/` |
-| **Resume offline** | ✓ | ✓ | ✗ (cloud-coupled) | ✓ | ✓ (delegation flow excepted) | ✗ (cloud-coupled) | ✓ |
-| **Headless flag we use** | `-p --output-format stream-json --verbose --settings <file> --permission-mode default --session-id <uuid>` | `exec --skip-git-repo-check --json` | `-p --output-format stream-json --stream-partial-output --trust --model auto` | PTY (no headless stream-json — we drive TUI + read OTel telemetry file) | PTY (no headless JSON output) | `-x --stream-json` | `exec --output-format json` |
+| Capability | Claude | Codex | Cursor | Gemini | Copilot | Amp | Droid | OpenCode |
+|---|---|---|---|---|---|---|---|---|
+| **Project-context file(s)** | `CLAUDE.md` (walks up + per-subdir) + `CLAUDE.local.md` + `.claude/rules/*.md` with `paths:` frontmatter | `AGENTS.md` (walks up) + `~/.codex/AGENTS.md` global | `.cursor/rules/*` + `AGENTS.md` + `CLAUDE.md` (per Cursor docs) + legacy `.cursorrules` | `GEMINI.md` hierarchy + JIT-loaded from any file's parent dirs; configurable via `context.fileName` | `AGENTS.md` + `<name>.agent.md` custom-agent files | `AGENTS.md` (walks up to $HOME) + `$HOME/.config/amp/AGENTS.md`; falls back to `AGENT.md` or `CLAUDE.md` | `AGENTS.md` | `AGENTS.md` + `CLAUDE.md` (compat) + `CONTEXT.md` (legacy). Walks up to worktree root; **first match wins**. Plus per-file traversal: when `read` tool reads a file, OpenCode walks its parent dirs and attaches nearby `AGENTS.md`/`CLAUDE.md` once per message |
+| **User config dir** | `~/.claude/` | `~/.codex/` | `~/.cursor/` | `~/.gemini/` | `~/.copilot/` (or `$XDG_CONFIG_HOME/copilot/`) | `~/.config/amp/` | `~/.factory/` | XDG-pure: config `~/.config/opencode/`, data `~/.local/share/opencode/`, cache `~/.cache/opencode/`, state `~/.local/state/opencode/` |
+| **Auto-memory (file-backed)** | `~/.claude/projects/<encoded-cwd>/memory/MEMORY.md` + topic files. First 200 lines / 25 KB injected at session start | `~/.codex/memories/` (auto-injected; opt-in via `[features].memories = true`) | Cloud "Memories" feature (per-project, server-side) | `/memory show\|add\|refresh` writes to `~/.gemini/GEMINI.md` | none formal | AGENTS.md hierarchy fills the role | AGENTS.md fills the role | none formal — AGENTS.md hierarchy + skills fill the role |
+| **Memory tool (model-callable)** | `memory_20250818` API tool — model emits `tool_use` with `name: "memory"` and a `command` field operating on virtual `/memories`. **File backend is the host's responsibility** | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| **Skills / extensions** | `~/.claude/skills/<name>/SKILL.md` (skill = folder with frontmatter + body). Resolution: enterprise > personal > project > plugin. Live-reloaded within a session | `~/.codex/skills/` (recently added; thin docs) | `~/.cursor/skills-cursor/` | `~/.gemini/extensions/<name>/gemini-extension.json` (each declares MCP servers, commands, hooks, sub-agents) | `<name>.agent.md` custom agents | `amp.skills.path` config + `mcp.json` in skill dirs | (none formal — `~/.factory/droids/` covers the related "custom agent" use case) | `.opencode/skills/<name>/SKILL.md` + `~/.config/opencode/skills/`. Also reads `.claude/skills/` (Claude compat) and `.agents/skills/` (cross-tool compat). Loaded on-demand by the `skill` tool. Plus **plugins** in `.opencode/plugins/` + `~/.config/opencode/plugins/` + npm packages listed in `opencode.json` |
+| **Subagents (model-spawnable)** | `Agent` tool (renamed from `Task` in v2.1.63) + `.claude/agents/` and `~/.claude/agents/` markdown definitions. Stream events carry `parent_tool_use_id` linking children to parent | none documented public | Background Agents (cloud, separate product) + internal composer subagents | declared via extensions | `<name>.agent.md` custom agents (user/repo/org scope) | parallel subagents but not user-defined; final summary returns to parent | `Task` tool with `subagent_type: <droid-name>`; droid markdown files in `.factory/droids/` (project) or `~/.factory/droids/` (personal) | `task` tool with `subagent_type:` (built-ins: `general` full-access, `explore` read-only fast). User-defined agents in `opencode.json` `agent.*` or markdown files in `~/.config/opencode/agents/` (global) / `.opencode/agents/` (project). Each agent has `mode: primary\|subagent\|all`, `tools` allow/deny map, `permission`, `model`, `prompt`, `temperature`, `top_p`, `steps` |
+| **MCP injection point** | `--settings <file>` (hooks) + `--mcp-config <file>` (servers); OR scope-based in `~/.claude.json` (local) / `.mcp.json` (project) / user-scope | `-c mcp_servers.<name>...` per-invocation flag; `~/.codex/config.toml` global | `.cursor/mcp.json` (project) + `~/.cursor/mcp.json` (global) | `mcpServers` in `settings.json` or in extensions | `--additional-mcp-config <file>` per-session; `~/.copilot/mcp-config.json` global | `amp.mcpServers` in user/workspace settings; `amp mcp add` CLI | per-droid frontmatter; `~/.factory/tools/` | `mcp` key in `opencode.json` (local stdio or remote HTTP/SSE with OAuth). **Or dynamic per-session via `POST /mcp` on the running server** — cleanest path for our wrapper to inject design-tools MCP without touching user config. Or env: `OPENCODE_CONFIG_CONTENT={"mcp":{...}}` |
+| **Session persistence** | Local — `~/.claude/projects/<encoded-cwd>/<session-id>.jsonl` | Local — `~/.codex/sessions/` + SQLite (`logs_2.sqlite`, `state_5.sqlite`) | **Cloud** — Composer threads on Cursor's servers; `~/.cursor/chats/` is local cache | Local — `~/.gemini/history/` | Local — `~/.copilot/`; cloud delegation flow is separate | **Cloud** — `ampcode.com/threads`; `@T-<thread-id>` cross-thread refs need network | Local — `~/.factory/sessions/` | Local — SQLite at `~/.local/share/opencode/opencode.db` (Drizzle schemas; tables: `Session`, `Message`, `Part`, `Todo`, `Permission`). Cloud sharing is opt-in via `--share` flag |
+| **Resume offline** | ✓ | ✓ | ✗ (cloud-coupled) | ✓ | ✓ (delegation flow excepted) | ✗ (cloud-coupled) | ✓ | ✓ — `--continue` (most recent root session), `--session <id>` (specific), `--fork` (with one of the above) |
+| **Headless flag we use** | `-p --output-format stream-json --verbose --settings <file> --permission-mode default --session-id <uuid>` | `exec --skip-git-repo-check --json` | `-p --output-format stream-json --stream-partial-output --trust --model auto` | PTY (no headless stream-json — we drive TUI + read OTel telemetry file) | PTY (no headless JSON output) | `-x --stream-json` | `exec --output-format json` | **Server-attached:** `serve --hostname 127.0.0.1 --port <random> -p <random-pwd>`. Then `@opencode-ai/sdk`: `client.session.create()` + `client.session.prompt()` + `client.event.subscribe()` SSE stream. Spawn env: `OPENCODE_CONFIG_CONTENT={...overrides}` to neuter user config (DPCode trick — see §2.10). |
+| **Models / providers** | Anthropic only (subscription auth via Claude Pro/Max OAuth or API key) | OpenAI ChatGPT-tier (subscription) — Codex 0.125+ | Cursor Pro / API-key | Google Gemini (subscription / API key) | GitHub Copilot subscription | GPT-5.5 / Anthropic via Sourcegraph routing + custom `smart`/`rush`/`deep` tiers | Factory routing | **Provider-agnostic, 75+ providers** via Vercel AI SDK + models.dev catalog. Native: OpenAI, Anthropic (Claude Pro/Max OAuth), Google Vertex AI, Groq, OpenRouter, Ollama, LM Studio, llama.cpp, Bedrock, Azure, Copilot device-flow, GitLab Duo, OpenCode Zen gateway. Plus any OpenAI-compatible via `baseURL`. **This is the killer cheap-alternative-models story** — Kimi K2 via OpenRouter, Qwen3 via local Ollama, GLM 4.5, DeepSeek V3, etc. |
 
 The data on this table comes from each vendor's docs + verification on the live filesystem during the 2026-04-27 capability research. References live in §8.
 
@@ -696,6 +718,191 @@ Referenced from §6 (suggested order). When we onboard a new agent or upgrade an
 7. **Headless flags** — verify the agent runs to completion with `code=0` and no manual approval prompts blocking.
 
 Format: `docs/AGENT_CAPABILITY_TEST_MATRIX.md` (created during Phase 1 finalization). Each agent gets a row per test; pass / fail / N/A; CLI version tested. Re-run on every CLI minor version bump.
+
+### 2.10 Adapter contract refinements (from DPCode research)
+
+This section captures the 2026-04-27 deep-research findings on [DPCode](https://github.com/Emanuele-web04/dpcode) (MIT, Electron + Bun + Effect-TS, ~273 stars, very active) — a similar Electron-based agentic-coding IDE that has already integrated Claude / Codex / Gemini / **OpenCode** behind a single adapter contract. Patterns we adopt, patterns we deliberately don't, and the OpenCode adapter integration plan that emerged.
+
+#### 2.10.1 What DPCode validates
+
+Their `ProviderAdapterShape<TError>` (in their `apps/server/src/provider/Services/ProviderAdapter.ts`) is the same shape as our roadmap's `AgentAdapter` — `startSession`, `sendTurn`, `interruptTurn`, `respondToRequest`, `respondToUserInput`, `streamEvents: Stream<ProviderRuntimeEvent>`, plus a declarative `capabilities` struct.
+
+Most importantly: they've validated this single contract against four wildly different transports:
+
+- **Claude** via the official `@anthropic-ai/claude-agent-sdk` Node SDK (in-process `query()` async iterator, no subprocess)
+- **Codex** via `codex app-server` JSON-RPC over stdio (officially supported by OpenAI)
+- **Gemini** via PTY + `--acp` flag (Agent Communication Protocol)
+- **OpenCode** via HTTP + SSE through `@opencode-ai/sdk` (server-first)
+
+This is reassuring confirmation that our adapter contract can survive whatever next CLI we onboard — the per-agent transport choice is encapsulated entirely inside the adapter folder.
+
+#### 2.10.2 Patterns we adopt
+
+**A. Declarative `capabilities` struct on every adapter.** Instead of defensive runtime checks ("does this adapter support setMode?"), each adapter declares what it supports up front:
+
+```ts
+interface AdapterCapabilities {
+  steerTurn: boolean;          // mid-turn redirection (Codex/Claude only)
+  forkSession: boolean;        // session forking
+  compactThread: boolean;      // explicit compaction
+  startReview: boolean;        // review mode
+  listSkills: boolean;
+  listCommands: boolean;
+  listPlugins: boolean;
+  listModels: boolean;
+  sessionModelSwitch: "in-session" | "restart-session" | "unsupported";
+  thinkingBudget: boolean;     // configurable thinking-token budget
+  voiceTranscription: boolean;
+}
+```
+
+The mode pill (§2.4.13), inline permission cluster (§2.6), model picker (§2.4.13), and feature flags (Phase 2) all read this struct. Disabled controls render as `disabled` UI rather than error states. Adopted in §2.3 — the canonical adapter contract gets this as a first-class field.
+
+**B. `raw + providerRefs` on every canonical event.** Each event carries:
+- `raw?: { source: "claude.sdk.message" | "codex.app-server.notification" | "opencode.sdk.event" | ... ; payload: unknown }` — the original native event
+- `providerRefs?: { providerThreadId?, providerTurnId?, providerItemId?, providerRequestId?, providerParentThreadId?, parentProviderTurnId? }`
+
+Free "view raw event" debug capability for Settings → Developer; free correlation between native logs and canonical events. Adopted in §2.2.
+
+**C. The `OPENCODE_CONFIG_CONTENT={}` env trick.** When DPCode spawns `opencode serve`, they pass `OPENCODE_CONFIG_CONTENT: "{}"` in env — which **fully overrides** the user's `~/.config/opencode/opencode.json` with an empty config. Net effect: our wrapper controls the OpenCode runtime entirely; no surprises from user-configured MCP servers, custom system prompts, or permission rules bleeding in. Then we layer in our own MCP servers (the design tools) via `POST /mcp` at runtime.
+
+The same pattern, generalized: **per-adapter "config neutering" path**.
+
+| Agent | Config-neuter mechanism |
+|---|---|
+| Claude | `--settings <wrapper-owned-file>` flag merges, never overrides; we accept this |
+| Codex | `-c <key>=<value>` per-invocation overrides; user's `~/.codex/config.toml` still loads |
+| Cursor | `--mcp-config` flag for our MCP; user config still loads |
+| Gemini | `--system-settings <tmpdir-file>` (DPCode pattern: write to `${tmpdir}/dpcode/gemini/settings.json`) |
+| Copilot | `--additional-mcp-config` |
+| Amp | Workspace `.amp/settings.json` if we control cwd |
+| Droid | `FACTORY_CONFIG_DIR=<wrapper-dir>` env (existing pattern) |
+| **OpenCode** | **`OPENCODE_CONFIG_CONTENT={...}` env** — neuters user config entirely |
+
+Each adapter's `spec.ts` declares its config-neuter env/flags; the gateway sets them at spawn time.
+
+**D. The `canUseTool` Deferred bridge** (Claude SDK pattern, generalizable). When the SDK calls our permission callback, we return a `Promise` whose resolution is wired to a Deferred that the canonical event stream resolves later — when the user clicks Allow/Deny in our UI. This cleanly separates "agent is blocked waiting for a decision" from "user clicked a button somewhere." Adopt for Claude (SDK-native) and apply the same Deferred pattern to OpenCode's `POST /permission/reply` and any future SDK-based adapter.
+
+**E. The "appendDelta with deduplication" helper.** OpenCode's SDK occasionally sends overlapping/duplicate `message.part.delta` events. DPCode's `appendOpenCodeAssistantTextDelta(prevText, delta)` returns `{nextText, deltaToEmit}` — handles the case correctly. We adopt this in our OpenCode normalizer (and Claude/Cursor where we've already seen similar issues — Cursor's `--stream-partial-output` has the same overlap pattern, handled at [translator.ts:288-298](../src/engine/agents/adapters/claude/translator.ts#L288-L298)).
+
+**F. SQLite event-sourcing as a future option** (not adopted now, but flagged). DPCode persists every canonical event into an `orchestration_events` SQLite table; UI projections derive from this log and can be rebuilt at any time. Heavier than our current "session messages only" model but it's the natural Phase 3 evolution if we ever need crash-recovery of in-flight turns.
+
+#### 2.10.3 Patterns we deliberately don't adopt
+
+**A. Their monolithic `MessagesTimeline.tsx` (2,127 lines).** A single React component switching on `workEntry.itemType` to decide what to render. This is exactly the pattern our renderer registry (Phase 0) replaced. Our `src/zeros/agent/renderers/registry.ts` + per-tool-kind dispatch is structurally cleaner.
+
+**B. Their composer-anchored permission panel.** They render approvals docked to the composer (`ComposerPendingApprovalPanel.tsx`). Argument: composer is always in view. Our argument: locality (decision next to context) is more important. Both are defensible; we keep §2.6's inline cluster, but consider a hybrid in v2 (inline + composer chip showing "N pending approvals").
+
+**C. Their flat adapter file structure.** DPCode's adapters live as flat files (`provider/Services/ClaudeAdapter.ts` + `provider/Layers/ClaudeAdapter.ts`). Our `src/engine/agents/adapters/<agent>/{spec,translator,hooks,history}.ts` folder structure is clearer for non-trivial adapters with multiple supporting files. Keep ours.
+
+**D. Their fragmented Zustand store layout (13 stores, the main one at 3,844 lines).** A "design choice" that grew organically, per their own AGENTS.md. We keep the per-chat slicing pattern from Phase 0 and add slices as needed.
+
+#### 2.10.4 OpenCode adapter integration plan
+
+**Spec** ([src/engine/agents/adapters/opencode/spec.ts](../src/engine/agents/adapters/opencode/spec.ts) — new):
+- `agentId: "opencode"`
+- `cliBinary: "opencode"` (path overridable via `providerOptions.opencode.binaryPath`)
+- `installHint`: `npm install -g opencode-ai` ([opencode.ai/docs/install/](https://opencode.ai/docs/install/))
+- `authProbe`: existence of `~/.local/share/opencode/auth.json` (XDG)
+- `loginCommand`: `opencode auth login` (interactive, runs in user's Terminal)
+- `minCliVersion: "1.14.0"` (where `--format json` and the `@opencode-ai/sdk` v2 stabilized)
+
+**Spawn pattern: server-attached** (richer than `run --format json`).
+
+```ts
+// On session start:
+const port = await findAvailablePort(0);
+const password = randomUUID();
+const child = spawn("opencode", [
+  "serve",
+  "--hostname=127.0.0.1",
+  `--port=${port}`,
+], {
+  cwd: state.cwd,
+  env: {
+    ...process.env,
+    OPENCODE_SERVER_PASSWORD: password,
+    OPENCODE_CONFIG_CONTENT: JSON.stringify(buildWrapperConfig(state)),
+    OPENCODE_DISABLE_CLAUDE_CODE_PROMPT: "1", // don't bleed in ~/.claude/CLAUDE.md
+  },
+});
+await waitForLog(child.stdout, /opencode server listening/);
+
+const client = createOpencodeClient({
+  baseUrl: `http://127.0.0.1:${port}`,
+  basicAuth: { username: "opencode", password },
+});
+
+// Inject our design-tools MCP server dynamically:
+await client.mcp.add({ name: "zeros-design", type: "remote", url: zerosMcpUrl });
+
+// Create or resume session:
+const session = state.resumeId
+  ? { sessionID: state.resumeId }
+  : await client.session.create({ title: state.title, permission: buildPermissionRules(state) });
+
+// Subscribe to bus:
+const events = client.event.subscribe();
+for await (const event of events) {
+  emit(translate(event)); // → canonical SessionUpdate
+}
+```
+
+**Translator** ([src/engine/agents/adapters/opencode/translator.ts](../src/engine/agents/adapters/opencode/translator.ts) — new). Maps OpenCode's bus events to canonical:
+
+| OpenCode bus event | Canonical event | Notes |
+|---|---|---|
+| `message.updated` (assistant, first time seen) | `session.start` (if first) + usage update | extract `providerID`, `modelID`, `variant` |
+| `message.part.delta` (`field: "text"`, part type `text`) | `text.chunk` | DPCode's appendDelta-with-dedup helper |
+| `message.part.delta` (`field: "text"`, part type `reasoning`) | `thinking.chunk` | only when `--thinking` set or in server mode |
+| `message.part.updated` (part type `text`, `time.end` set) | `text.complete` | finalized |
+| `message.part.updated` (part type `tool`, `state.status: "running"`) | `tool.start` | input + title from `state.input`/`state.title` |
+| `message.part.delta` on a tool part (output streaming) | `tool.progress` | bash output streams here |
+| `message.part.updated` (part type `tool`, `state.status: "completed"`) | `tool.end` (success) | output + metadata.diff for edits |
+| `message.part.updated` (part type `tool`, `state.status: "error"`) | `tool.end` (failed) | `state.error` |
+| Tool with `tool: "task"` | `subagent.start`/`subagent.end` (canonical kind: `subagent`) | `state.input.subagent_type` etc. |
+| `permission.asked` | `permission.request` | `tool` field links to triggering tool call |
+| `permission.replied` | `permission.decision` | |
+| `question.asked` | `clarifying_question` | server-only; not in `run` mode |
+| `session.status` (`status.type: "idle"`) | `session.end` (normal) | with cost rollup |
+| `session.status` (`status.type: "retry"`) | `error` (warning, recoverable) | |
+| `session.compacted` | (internal — context-window banner, optional) | |
+| `session.error` (overflow) | (internal — compaction in progress) | |
+| `session.error` (other) | `error` (severity: `error`) | |
+| `mcp.tools.changed` | (internal — refresh MCP tool list) | |
+
+**Auth flow:**
+- The user runs `opencode auth login <provider>` in their own Terminal first (interactive OAuth or API-key prompt for the provider).
+- Our subprocess inherits `~/.local/share/opencode/auth.json` automatically.
+- We never read or write that file.
+- We optionally support `OPENCODE_AUTH_CONTENT` (raw JSON env var) for users who want to BYO via our UI — same env-var pattern as the Claude API-key flow but pointing into OpenCode.
+
+**Model picker:** at adapter init, we hydrate the OpenCode-specific model list via `client.provider.list()` (server endpoint `GET /provider`). The `provider/model` slugs (e.g. `anthropic/claude-sonnet-4-5`, `openrouter/moonshot/kimi-k2`) populate the composer's model pill. **This unlocks the cheap-alternative-models story** — Kimi K2, Qwen3 Coder via Ollama, GLM 4.5 via OpenRouter, DeepSeek V3 via OpenRouter, etc.
+
+**MCP injection:** we register our design-tools MCP server via `POST /mcp` at session start. Per-session, never written to user config. Cleanest of all the agents.
+
+**Capabilities struct** (declared in `spec.ts`):
+- `steerTurn: false` (OpenCode doesn't have mid-turn steering)
+- `forkSession: true` (`--fork`)
+- `compactThread: true` (`/compact` + `session.compacted` event)
+- `listSkills: true` (`opencode serve` exposes `GET /skills`)
+- `listCommands: true` (`GET /command`)
+- `listPlugins: true` (`GET /plugin`)
+- `listModels: true` (`GET /provider` then drill in)
+- `sessionModelSwitch: "restart-session"` (model is bound to session at create time)
+- `thinkingBudget: true` (`--variant high|max|minimal`)
+
+#### 2.10.5 What this adds to our roadmap
+
+OpenCode integration ships as part of Phase 1 — the new adapter folder pattern is identical to the others, the canonical events are already designed, and the renderer cards already cover OpenCode's tool surface (bash/edit/read/grep/etc. all map cleanly).
+
+**Estimated incremental scope:** 1.5-2 days on top of Phase 1's existing budget. The work splits roughly:
+- Spec + spawn / serve attach: 0.5 day
+- Translator (SSE bus → canonical): 0.75 day
+- Auth + model picker hydration + MCP injection: 0.5 day
+- Capability matrix entry, capability test row, roadmap doc updates: 0.25 day
+
+Sequenced after Stage 7 (Codex + Cursor) in §6 — reuses the same patterns, just with a server-attach instead of subprocess pipe.
 
 ---
 
@@ -948,6 +1155,10 @@ If we revisit this later (a real user asks for it, or codex-cli changes its auth
 | User can't see what context (CLAUDE.md/AGENTS.md/GEMINI.md) the agent loaded | Recurring confusion in agent IDEs | Stage 9 — project-context indicator chip (§2.9.5) |
 | User can't see what an agent has memorized about their project | `/memory` slash command was TUI-only | Stage 9 — memory inspector in Settings → Agents (§2.9.6) |
 | Per-agent capability regressions on CLI version bumps | E.g. Claude `Task` → `Agent` rename in v2.1.63; Codex `assistant_message` → `agent_message` rename | Stage 10 — per-agent capability test matrix (§2.9.8) |
+| No path to cheap-alternative models (Kimi K2, Qwen3 via Ollama, GLM 4.5, DeepSeek V3 etc.) | Each adapter today is single-vendor | Stage 8.5 — OpenCode adapter (§2.10) opens 75+ model providers via Vercel AI SDK + models.dev |
+| Defensive runtime checks on adapter capabilities ("does this adapter support setMode?") | Cluttered call sites | §2.10.2 — declarative `capabilities` struct on every adapter; UI reads it for enable/disable state |
+| Hard to debug why a canonical event has the shape it has | Translators throw away native detail | §2.10.2 — `raw + providerRefs` fields on every canonical event; "view raw" debug capability for free |
+| User config bleeds into agent runtime in ways we don't control (e.g. user-configured MCP server crashes our session) | Inconsistent across agents | §2.10.2 — per-adapter "config-neuter" mechanism table; OpenCode uses `OPENCODE_CONFIG_CONTENT={}` env (DPCode pattern) |
 
 ### Will be solid after Phase 2
 
@@ -1007,12 +1218,13 @@ If we revisit this later (a real user asks for it, or codex-cli changes its auth
 | **4** | **Stage 5 — Long-run UX completion** | ~1.5d | Run-summary roll-up after turn ends; vertical timeline rail (left gutter); long-turn windowing (last K=20 + chevron for older); activity HUD pinned to composer footer; global Stop replaces Send during run; streaming markdown chunking. |
 | **5** | **Stage 6 — Inline permissions + mode controls** | ~1.5d | Move permission UI from global bar to per-tool-card cluster; "Always for X" sticky decisions persisted per chat; mode pill in composer (Phase / Permission / Tier axes); auto-switch banner; ExitPlanMode special permission card. |
 | **6** | **Stage 7 — Codex + Cursor normalizers** (Track 4.A) | ~1.5d | `codex/normalizer.ts` translates `item.*` events → canonical. `cursor/normalizer.ts` translates Cursor's `tool_call` events → canonical (closes the long-standing Cursor-no-tool-calls gap). |
-| **7** | **Stage 8 — Gemini + Copilot + Amp + Droid normalizers** | ~2d | Remaining adapters. Gemini's `enter_plan_mode`/`exit_plan_mode` autonomous switching surfaces as canonical `mode.switch` events. Copilot ACP `current_mode_update` notifications. |
-| **8** | **Stage 9 — Project-context indicator + Memory inspector** (§2.9.5 + §2.9.6) | ~1d | Chat-header chip showing loaded `CLAUDE.md`/`AGENTS.md`/`GEMINI.md`; Settings → Agents memory viewer per agent. Both file-system-driven, no bridge changes. |
-| **9** | **Stage 10 — Per-agent capability test matrix run** (§2.9.8) | ~1d | Execute the 7-test corpus against all 7 agents. Document pass/fail per test in `docs/AGENT_CAPABILITY_TEST_MATRIX.md`. CLI versions recorded. Re-run on minor version bumps. |
-| **10** | **Track 4.C HMR Fast Refresh** | 30 min | Split `sessions-provider.tsx` so Vite Fast Refresh works on it. Drop-in dev win. |
+| **7** | **Stage 8 — Gemini + Copilot + Amp + Droid normalizers** | ~2d | Remaining stream-json/PTY adapters. Gemini's `enter_plan_mode`/`exit_plan_mode` autonomous switching surfaces as canonical `mode.switch` events. Copilot ACP `current_mode_update` notifications. |
+| **8** | **Stage 8.5 — OpenCode adapter (server-attached)** (§2.10.4) | ~1.5-2d | Spawn `opencode serve --port <random>`, attach `@opencode-ai/sdk`, consume SSE bus. SSE-bus → canonical translator (mapping table in §2.10.4). `OPENCODE_CONFIG_CONTENT={...}` env to neuter user config (DPCode trick). Hydrate model picker from `client.provider.list()`. Inject design-tools MCP via `POST /mcp`. **This unlocks the cheap-alternative-models story** — Kimi K2, Qwen3 via Ollama, GLM 4.5, DeepSeek V3, etc. |
+| **9** | **Stage 9 — Project-context indicator + Memory inspector** (§2.9.5 + §2.9.6) | ~1d | Chat-header chip showing loaded `CLAUDE.md`/`AGENTS.md`/`GEMINI.md`/`OPENCODE` context files; Settings → Agents memory viewer per agent. Both file-system-driven, no bridge changes. |
+| **10** | **Stage 10 — Per-agent capability test matrix run** (§2.9.8) | ~1.5d | Execute the 7-test corpus against all 8 agents (Claude, Codex, Cursor, Gemini, Copilot, Amp, Droid, OpenCode). Document pass/fail per test in `docs/AGENT_CAPABILITY_TEST_MATRIX.md`. CLI versions recorded. Re-run on minor version bumps. |
+| **11** | **Track 4.C HMR Fast Refresh** | 30 min | Split `sessions-provider.tsx` so Vite Fast Refresh works on it. Drop-in dev win. |
 
-**Phase 1 budget:** ~14 days serial. With parallelization (cards in Stages 3 + 4, normalizers in Stages 7 + 8) and one developer: ~10 days. Two developers: ~7 days.
+**Phase 1 budget:** ~16 days serial (was ~14d before adding Stage 8.5 OpenCode). With parallelization (cards in Stages 3 + 4, normalizers in Stages 7/8/8.5) and one developer: ~11-12 days. Two developers: ~8 days.
 
 ### Phase 2 — After Phase 1 lands
 
@@ -1032,9 +1244,11 @@ Most of Phase 1 parallelizes well — the registry pattern was specifically desi
 
 The long-run UX foundation (Stage 2 above) is the riskiest piece because sticky-positioning + (eventually) virtuoso + variable card heights interact subtly; budget extra time to profile in real long runs.
 
-Stages 7 + 8 (per-agent normalizers) parallelize across agents but each one has its own quirks — Codex's item-types, Cursor's stream-json shape, Gemini/Copilot's PTY-based event extraction, Droid's spec mode. Don't try to ship them all on the same day; ship one, run the relevant capability tests (Stage 10), then move to the next.
+Stages 7 + 8 + 8.5 (per-agent normalizers) parallelize across agents but each one has its own quirks — Codex's item-types, Cursor's stream-json shape, Gemini/Copilot's PTY-based event extraction, Droid's spec mode, **OpenCode's server-first SSE bus** (the structurally most-different of the eight). Don't try to ship them all on the same day; ship one, run the relevant capability tests (Stage 10), then move to the next.
 
-Stage 10 (capability test matrix) is *not* a single big stage — run the relevant subset of tests after each adapter is finalized in Stages 7 + 8. The Stage 10 milestone is "all 7 agents have a published row in the matrix and any failed tests have a tracked-defect note."
+**Stage 8.5 (OpenCode) is the most novel** — it's the only adapter where we manage a long-lived child server (not a per-prompt subprocess), parse SSE events (not NDJSON), and hydrate the model catalog from a runtime API call (not a static catalog file). It's also the only adapter where users can pick from 75+ model providers (cheap alternatives like Kimi K2 via OpenRouter, local Ollama models, etc.). DPCode's `OpenCodeAdapter.ts` (2,337 lines, MIT) is a working reference.
+
+Stage 10 (capability test matrix) is *not* a single big stage — run the relevant subset of tests after each adapter is finalized in Stages 7 + 8 + 8.5. The Stage 10 milestone is "all 8 agents have a published row in the matrix and any failed tests have a tracked-defect note."
 
 ---
 
@@ -1050,7 +1264,8 @@ After Phase 1 + 2:
 - Element-tree IPC is delta-only after the initial sync.
 - Cold start renders the sidebar from cache before the engine connects.
 - Bundle is meaningfully lighter; binary trim audit ships at least 30-40% of the reachable margin.
-- Every supported agent (Claude, Codex, Cursor, Amp, Droid, Copilot, Gemini) renders through the same canonical event pipeline. Adding the next agent — including any future API-direct adapter (§2.8) — is: spec + normalizer + register the adapter. Renderers come for free.
+- Every supported agent (Claude, Codex, Cursor, Amp, Droid, Copilot, Gemini, **OpenCode**) renders through the same canonical event pipeline. Adding the next agent — including any future API-direct adapter (§2.8) — is: spec + normalizer + register the adapter. Renderers come for free.
+- Users have access to 75+ model providers via OpenCode (§2.10) — Kimi K2 via OpenRouter, Qwen3 via local Ollama, GLM 4.5, DeepSeek V3, etc. — without us building per-model adapter logic. The cheap-alternative-models story is "use OpenCode" instead of "we built our own."
 - Permissions are inline, with persistent "Always for X" decisions; long runs no longer get interrupted by 14 modal prompts.
 - Every CLI's native capabilities (memory, skills, subagents, MCP, project context) flow through unchanged because we drive the CLI, we don't replace it (§2.9). The user runs `claude /login` or installs a skill in `~/.claude/skills/` and Zeros immediately sees it without any glue code on our side.
 - Users can see, from the chat header, which `CLAUDE.md` / `AGENTS.md` / `GEMINI.md` files the agent has loaded for the current project (project-context chip, §2.9.5). And from Settings → Agents, what the agent has memorized about their work (memory inspector, §2.9.6). No `/memory` TUI required.
@@ -1083,6 +1298,27 @@ External research and source citations underlying this rev. Verified during rese
 - [Amp manual appendix (stream-json schema)](https://ampcode.com/manual/appendix)
 - [Amp streaming JSON announcement](https://ampcode.com/news/streaming-json)
 - [Factory Droid Exec tutorial](https://docs.factory.ai/guides/building/droid-exec-tutorial)
+- [OpenCode docs](https://opencode.ai/docs/)
+- [OpenCode CLI reference](https://opencode.ai/docs/cli/)
+- [OpenCode server (HTTP + SSE bus)](https://opencode.ai/docs/server/)
+- [OpenCode SDK (`@opencode-ai/sdk`)](https://opencode.ai/docs/sdk/)
+- [OpenCode providers (75+)](https://opencode.ai/docs/providers/)
+- [OpenCode agents (primary + subagent)](https://opencode.ai/docs/agents/)
+- [OpenCode tools (16 built-in)](https://opencode.ai/docs/tools/)
+- [OpenCode rules (AGENTS.md / CLAUDE.md compat)](https://opencode.ai/docs/rules/)
+- [OpenCode skills](https://opencode.ai/docs/skills/)
+- [OpenCode plugins](https://opencode.ai/docs/plugins/)
+- [OpenCode permissions](https://opencode.ai/docs/permissions/)
+- [OpenCode MCP servers](https://opencode.ai/docs/mcp-servers/)
+- [OpenCode Zen gateway](https://opencode.ai/docs/zen/)
+- [OpenCode GitHub repo](https://github.com/sst/opencode) (MIT)
+
+### Reference IDE wrappers
+
+- [DPCode (Emanuele-web04/dpcode)](https://github.com/Emanuele-web04/dpcode) — Electron + Effect-TS multi-agent IDE; integrates Claude / Codex / Gemini / OpenCode behind a single `ProviderAdapterShape<TError>` contract. MIT, ~273 stars, very active. Reference impl studied for §2.10 patterns.
+- [DPCode `ProviderAdapter.ts`](https://github.com/Emanuele-web04/dpcode/blob/main/apps/server/src/provider/Services/ProviderAdapter.ts) — the adapter contract we mirror.
+- [DPCode `OpenCodeAdapter.ts`](https://github.com/Emanuele-web04/dpcode/blob/main/apps/server/src/provider/Layers/OpenCodeAdapter.ts) — 2,337-line working OpenCode integration; reference for our Stage 8.5.
+- [DPCode `providerRuntime.ts`](https://github.com/Emanuele-web04/dpcode/blob/main/packages/contracts/src/providerRuntime.ts) — 44-event canonical taxonomy; informed our `raw + providerRefs` pattern.
 
 ### Long-run agent UX patterns
 
