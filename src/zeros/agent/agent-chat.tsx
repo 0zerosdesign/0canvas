@@ -939,14 +939,21 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
             )}
             <div className="oc-agent-toolbar-spacer" />
             {session.status === "streaming" ? (
+              // Explicit "Stop" label rather than icon-only — the
+              // square-icon-on-blue version was being missed during
+              // long runs (users typed "stop" into the composer
+              // thinking they had to message the agent to halt it).
+              // Labeled + destructive variant + sized like a real
+              // primary action so it reads as the obvious affordance.
               <Button
                 variant="destructive"
-                size="icon-sm"
+                size="sm"
                 type="button"
                 onClick={() => session.cancel()}
-                title="Cancel current turn"
+                title="Stop the agent (cancel this turn)"
               >
                 <Square className="w-3 h-3" />
+                <span style={{ marginLeft: 6 }}>Stop</span>
               </Button>
             ) : (
               <Button

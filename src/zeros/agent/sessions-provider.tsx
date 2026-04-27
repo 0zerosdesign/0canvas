@@ -644,6 +644,14 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
         }
 
         if (resp.type === "AGENT_PROMPT_FAILED") {
+          // If the user just clicked Cancel, this PROMPT_FAILED is the
+          // expected exit of the SIGTERM'd subprocess — not a real
+          // failure. The cancel handler already optimistically flipped
+          // status to ready; just clear the flag and bail.
+          if (getStore().cancellingChats.has(chatId)) {
+            getStore().setCancelling(chatId, false);
+            return;
+          }
           const failure = failureFromAgentError(
             { ...resp, message: resp.error } as unknown as AgentErrorMessage,
             "prompt",
@@ -689,6 +697,14 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
           usage: nextUsage,
         });
       } catch (err) {
+        // Same cancel-suppression as the AGENT_PROMPT_FAILED branch
+        // above: the await chain may reject (timeout, transport-closed)
+        // because the subprocess died from our SIGTERM, not from a
+        // real fault. Don't surface as agent-error.
+        if (getStore().cancellingChats.has(chatId)) {
+          getStore().setCancelling(chatId, false);
+          return;
+        }
         const failure = classifyRpcError({
           agentId: current.agentId!,
           stage: "prompt",
@@ -709,6 +725,21 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
       if (!bridge) return;
       const current = getStore().sessions[chatId];
       if (!current?.agentId || !current.sessionId) return;
+      // Optimistic state transition: cancel is intentional, the chat
+      // should immediately be ready for the next prompt. The flag
+      // suppresses the AGENT_PROMPT_FAILED that arrives when the
+      // SIGTERM'd subprocess exits — we'd otherwise mark the chat as
+      // failed and the user gets stuck behind an "agent error" tag.
+      // The flag is cleared inside the prompt-failure handler when
+      // the expected exit lands (or the next handler if a real failure
+      // races in).
+      getStore().setCancelling(chatId, true);
+      getStore().patchSession(chatId, {
+        status: "ready",
+        error: null,
+        failure: null,
+        lastStopReason: "cancelled",
+      });
       bridge.send({
         type: "AGENT_CANCEL",
         agentId: current.agentId,

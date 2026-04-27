@@ -108,6 +108,17 @@ export interface SessionsStoreState {
    *  Phase 2.11 polish item. */
   scrollPositions: Record<string, number>;
 
+  /** Chats whose user has just clicked Cancel. The cancel sends a
+   *  SIGTERM to the agent subprocess, which exits with code 143;
+   *  the engine emits AGENT_PROMPT_FAILED — but that's an *expected*
+   *  exit, not a real failure. Without this flag, the cancel path
+   *  flips status to "failed" and shows an "agent error" tag, leaving
+   *  the user stranded. With it, the prompt-failure handler ignores
+   *  the post-cancel exit and the chat stays in "ready" state so the
+   *  user can immediately type a new prompt. The flag is cleared
+   *  inside the prompt-failure handler when the expected exit arrives. */
+  cancellingChats: Set<string>;
+
   // ── Pure mutators ───────────────────────────────────────
   setSession: (chatId: string, slot: AgentSessionState) => void;
   patchSession: (chatId: string, patch: Partial<AgentSessionState>) => void;
@@ -115,6 +126,7 @@ export interface SessionsStoreState {
   setWarmAgent: (agentId: string, warm: boolean) => void;
   setLoadInProgress: (chatId: string, value: boolean) => void;
   setScrollPosition: (chatId: string, top: number) => void;
+  setCancelling: (chatId: string, value: boolean) => void;
   clearAll: () => void;
 
   // ── Bridge-notification reducers ────────────────────────
@@ -148,6 +160,7 @@ export const useSessionsStore = create<SessionsStoreState>((set, get) => ({
   sessionToChatId: {},
   loadInProgress: new Set(),
   scrollPositions: {},
+  cancellingChats: new Set(),
 
   setScrollPosition: (chatId, top) => {
     // Identity-stable when value unchanged so subscribers (e.g. the
@@ -157,6 +170,17 @@ export const useSessionsStore = create<SessionsStoreState>((set, get) => ({
       return {
         scrollPositions: { ...state.scrollPositions, [chatId]: top },
       };
+    });
+  },
+
+  setCancelling: (chatId, value) => {
+    set((state) => {
+      const has = state.cancellingChats.has(chatId);
+      if (value === has) return state;
+      const next = new Set(state.cancellingChats);
+      if (value) next.add(chatId);
+      else next.delete(chatId);
+      return { cancellingChats: next };
     });
   },
 
@@ -195,10 +219,14 @@ export const useSessionsStore = create<SessionsStoreState>((set, get) => ({
       delete next[chatId];
       const nextScroll = { ...state.scrollPositions };
       delete nextScroll[chatId];
+      const nextCancelling = state.cancellingChats.has(chatId)
+        ? new Set([...state.cancellingChats].filter((id) => id !== chatId))
+        : state.cancellingChats;
       return {
         sessions: next,
         sessionToChatId: rebuildIndex(next),
         scrollPositions: nextScroll,
+        cancellingChats: nextCancelling,
       };
     });
   },
@@ -232,6 +260,7 @@ export const useSessionsStore = create<SessionsStoreState>((set, get) => ({
       sessionToChatId: {},
       loadInProgress: new Set(),
       scrollPositions: {},
+      cancellingChats: new Set(),
     });
   },
 
