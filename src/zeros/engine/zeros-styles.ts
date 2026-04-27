@@ -3277,7 +3277,11 @@ ${S} .oc-agent-msg-user .oc-agent-msg-content {
   max-width: min(78%, 640px);
 }
 
-/* Assistant + system + thought — flat text, no bubble. */
+/* Assistant + system + thought — flat text, no bubble.
+ * Stage 5.5: AgentMessageRole = "agent" (not "assistant") — older
+ * .oc-agent-msg-assistant rule kept for any back-compat callers
+ * but the active selector is .oc-agent-msg-agent. */
+${S} .oc-agent-msg-agent .oc-agent-msg-content,
 ${S} .oc-agent-msg-assistant .oc-agent-msg-content,
 ${S} .oc-agent-msg-system .oc-agent-msg-content,
 ${S} .oc-agent-msg-thought .oc-agent-msg-content {
@@ -3293,6 +3297,134 @@ ${S} .oc-agent-msg-thought .oc-agent-msg-content {
   font-style: italic;
   border-left: 2px solid var(--border-subtle);
   padding-left: 10px;
+}
+
+/* ── Stage 5.5: rendered markdown (.oc-agent-md) ───────── */
+/* Override the parent's white-space:pre-wrap so block elements
+ * lay out normally; block elements set their own whitespace. */
+${S} .oc-agent-md {
+  white-space: normal;
+}
+${S} .oc-agent-md > *:first-child { margin-top: 0; }
+${S} .oc-agent-md > *:last-child { margin-bottom: 0; }
+${S} .oc-agent-md p {
+  margin: 0 0 10px;
+  line-height: 1.6;
+}
+${S} .oc-agent-md h1,
+${S} .oc-agent-md h2,
+${S} .oc-agent-md h3,
+${S} .oc-agent-md h4,
+${S} .oc-agent-md h5,
+${S} .oc-agent-md h6 {
+  margin: 16px 0 8px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+${S} .oc-agent-md h1 { font-size: 18px; }
+${S} .oc-agent-md h2 { font-size: 16px; }
+${S} .oc-agent-md h3 { font-size: 14px; }
+${S} .oc-agent-md h4,
+${S} .oc-agent-md h5,
+${S} .oc-agent-md h6 { font-size: 13px; }
+${S} .oc-agent-md ul,
+${S} .oc-agent-md ol {
+  margin: 0 0 10px;
+  padding-left: 22px;
+}
+${S} .oc-agent-md li {
+  margin: 2px 0;
+  line-height: 1.55;
+}
+${S} .oc-agent-md li > p { margin: 0 0 4px; }
+${S} .oc-agent-md li > p:last-child { margin-bottom: 0; }
+${S} .oc-agent-md ul ul,
+${S} .oc-agent-md ul ol,
+${S} .oc-agent-md ol ul,
+${S} .oc-agent-md ol ol {
+  margin: 2px 0;
+}
+${S} .oc-agent-md a {
+  color: var(--text-info);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+${S} .oc-agent-md a:hover {
+  color: var(--text-primary);
+}
+${S} .oc-agent-md strong { font-weight: 600; color: var(--text-primary); }
+${S} .oc-agent-md em { font-style: italic; }
+${S} .oc-agent-md del { text-decoration: line-through; opacity: 0.7; }
+${S} .oc-agent-md hr {
+  border: 0;
+  border-top: 1px solid var(--border-subtle);
+  margin: 14px 0;
+}
+${S} .oc-agent-md blockquote {
+  margin: 8px 0;
+  padding: 4px 12px;
+  border-left: 3px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-style: italic;
+}
+${S} .oc-agent-md blockquote p { margin: 4px 0; }
+${S} .oc-agent-md code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  padding: 1px 5px;
+  background: var(--tint-black-soft);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  color: var(--text-primary);
+  word-break: break-word;
+}
+${S} .oc-agent-md pre {
+  margin: 8px 0;
+  padding: 10px 12px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+}
+${S} .oc-agent-md pre code {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  font-size: inherit;
+}
+${S} .oc-agent-md table {
+  border-collapse: collapse;
+  margin: 10px 0;
+  font-size: 12px;
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+}
+${S} .oc-agent-md th,
+${S} .oc-agent-md td {
+  padding: 6px 10px;
+  border: 1px solid var(--border-subtle);
+  text-align: left;
+}
+${S} .oc-agent-md th {
+  background: var(--surface-1);
+  font-weight: 600;
+}
+${S} .oc-agent-md img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  margin: 6px 0;
+}
+/* GFM task list checkboxes */
+${S} .oc-agent-md input[type="checkbox"] {
+  margin-right: 4px;
+  vertical-align: -1px;
 }
 
 ${S} .oc-agent-msg-queued { opacity: 0.72; }
