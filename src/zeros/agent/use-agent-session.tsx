@@ -70,7 +70,156 @@ export interface AgentToolMessage {
   updatedAt: number;
 }
 
-export type AgentMessage = AgentTextMessage | AgentToolMessage;
+// ──────────────────────────────────────────────────────────
+// Canonical message kinds (declared in Stage 1A.8 — emitted
+// in later Phase 1 stages when the matching renderers ship)
+// ──────────────────────────────────────────────────────────
+//
+// These extend the AgentMessage union with semantically-distinct
+// variants the renderer can specialise on. Today applyUpdate folds
+// every event into AgentTextMessage or AgentToolMessage; per the
+// Phase 1 roadmap (§2.4) Stages 3–4 will route specific events
+// here so the registry can dispatch to purpose-built cards
+// (ThinkingBlock, PlanPanel, QuestionCard, ModeSwitchBanner,
+// SubagentCard, ErrorNotice). The contract lives here so the
+// renderer registry's `unknown` fallback catches anything we
+// haven't handled yet — drift never silently disappears.
+
+/** Streaming reasoning content from the agent. Replaces the
+ *  AgentTextMessage(role="thought") indirection — Stage 4 promotes
+ *  agent_thought_chunk events here so the ThinkingBlock renderer
+ *  can show duration / token-count / collapse-by-default semantics
+ *  separate from regular agent text. */
+export interface AgentThinkingMessage {
+  id: string;
+  kind: "thinking";
+  text: string;
+  createdAt: number;
+  messageId?: string;
+  /** Total elapsed thinking time when this chunk arrived; populated
+   *  on the final chunk for the duration badge. */
+  durationMs?: number;
+  /** True for agents that emit `redacted_thinking` content blocks
+   *  (Anthropic + Amp). Renderer shows a stub. */
+  redacted?: boolean;
+}
+
+/** Plan-snapshot marker in the timeline. Distinct from the live
+ *  `session.plan` slot (which holds the current plan); this records
+ *  *when* the plan changed within a turn so a plan history view
+ *  can replay the evolution. Stage 4 emits these from `plan` events
+ *  and from TodoWrite-style tool calls in agents that route plans
+ *  through tools. */
+export interface AgentPlanMessage {
+  id: string;
+  kind: "plan";
+  entries: PlanEntry[];
+  /** State-merge key — multiple plan updates in the same turn
+   *  collapse to a single live block keyed on this. */
+  mergeKey: string;
+  createdAt: number;
+}
+
+/** Clarifying question awaiting a user reply. Two flavours:
+ *  - native_tool: the agent emitted a structured ask-tool call
+ *    (Claude AskUserQuestion, Gemini ask_user). The agent process
+ *    is blocked; reply via `tool_result`.
+ *  - inferred: the agent's turn ended with what looks like a
+ *    question (heuristic). Reply is a normal next-turn user prompt. */
+export interface AgentQuestionMessage {
+  id: string;
+  kind: "question";
+  source: "native_tool" | "inferred_from_text";
+  /** When source=native_tool, the originating tool-call id so the
+   *  reply routes back to the right tool_result slot. */
+  toolCallId?: string;
+  questions: AgentQuestionField[];
+  /** True iff the agent process is paused awaiting reply. */
+  blocking: boolean;
+  /** undefined until the user submits. Used by the renderer to
+   *  disable the form once submitted. */
+  answer?: string | string[];
+  createdAt: number;
+}
+
+export interface AgentQuestionField {
+  prompt: string;
+  /** Short label (≤16 chars per the native tool specs). Optional. */
+  header?: string;
+  inputType: "choice" | "multi_choice" | "text" | "yesno";
+  options?: Array<{
+    id: string;
+    label: string;
+    description?: string;
+    preview?: string;
+  }>;
+  placeholder?: string;
+}
+
+/** Banner marking a mode switch in the timeline. Phase / Permission
+ *  / Tier are the three orthogonal axes (see roadmap §2.4.13).
+ *  Triggered by user toggle, by the agent autonomously (Gemini
+ *  enter_plan_mode, Claude ExitPlanMode), or by ACP-style
+ *  current_mode_update notifications. */
+export interface AgentModeSwitchMessage {
+  id: string;
+  kind: "mode_switch";
+  axis: "phase" | "permission" | "tier";
+  from: string;
+  to: string;
+  source: "user" | "agent";
+  /** Plan content from Claude's ExitPlanMode tool, or rationale
+   *  from Gemini's enter_plan_mode call. Optional. */
+  reason?: string;
+  /** True for Claude's ExitPlanMode (a permission-gated switch).
+   *  Renderer shows the approve/reject UI inline. */
+  requiresApproval?: boolean;
+  createdAt: number;
+}
+
+/** Boundary marker for a subagent block (Claude Task, Amp Task).
+ *  The matching tool call still appears as AgentToolMessage; this
+ *  message anchors the start/end of the nested transcript so the
+ *  renderer can indent or fold it as one unit. */
+export interface AgentSubagentMessage {
+  id: string;
+  kind: "subagent";
+  marker: "start" | "end";
+  subagentId: string;
+  /** Parent tool-call id linking this subagent to its trigger. */
+  parentToolId: string;
+  description?: string;
+  /** Set on the "end" marker — renderer collapses to a one-line
+   *  "Subagent X · summary" card when present. */
+  summary?: string;
+  createdAt: number;
+}
+
+/** Free-standing error notice — distinct from a tool that failed
+ *  (which surfaces on AgentToolMessage.status). Used for adapter-
+ *  level errors (Codex API rejections, transport hiccups, etc.)
+ *  that don't belong inside a tool card. */
+export interface AgentErrorNoticeMessage {
+  id: string;
+  kind: "error_notice";
+  severity: "warning" | "error";
+  message: string;
+  /** When recoverable, renderer shows a "retry" affordance. */
+  recoverable: boolean;
+  /** Adapter-side error code for click-through to docs. */
+  code?: string;
+  createdAt: number;
+}
+
+export type AgentMessage =
+  | AgentTextMessage
+  | AgentToolMessage
+  | AgentThinkingMessage
+  | AgentPlanMessage
+  | AgentQuestionMessage
+  | AgentModeSwitchMessage
+  | AgentSubagentMessage
+  | AgentErrorNoticeMessage;
 
 export interface PendingPermission {
   permissionId: string;
