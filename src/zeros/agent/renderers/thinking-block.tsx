@@ -7,15 +7,21 @@
 // the user a way to scan past it without reading.
 //
 // Behaviour:
-//   - In-flight (last message + session streaming): single
-//     line with shimmer + ticking duration `∴ Thinking · 12s`
-//   - Otherwise: collapsed pill `[Thinking · 412 chars ▾]`,
-//     click to expand into dim italic full text
-//
-// We don't currently have a clean signal for "thinking is
-// done" beyond "another message arrived after it". Token
-// counts aren't exposed on AgentTextMessage, so the pill
-// quantifies length in characters as a proxy for depth.
+//   - Always renders the same chevron + Brain + label structure
+//     (collapsible, can expand to read italic body).
+//   - "In flight" = `session.status === "streaming"` AND this
+//     thought belongs to the active turn (its createdAt is
+//     after the last user message). In that state the head
+//     swaps `· 258 chars` for `· 12s` with a shimmer animation
+//     on the word "Thinking" and a ticking duration. Persists
+//     for the whole turn — not just the sub-second window
+//     where the thought is literally the last message — so
+//     the user can't miss it.
+//   - Once the session goes ready, the head settles back to
+//     `· 258 chars` and the shimmer stops. Old thoughts from
+//     prior turns never shimmer.
+//   - Expand still works in either state, so you can read
+//     reasoning as it grows during a long turn.
 // ──────────────────────────────────────────────────────────
 
 import { memo, useEffect, useState } from "react";
@@ -26,27 +32,26 @@ import type { Renderer } from "./types";
 
 export const ThinkingBlock: Renderer<AgentTextMessage> = memo(
   function ThinkingBlock({ message, ctx }) {
-    const isInFlight = ctx.isStreaming && ctx.lastMessageId === message.id;
+    const isInFlight =
+      ctx.isStreaming &&
+      ctx.activeTurnStartedAt > 0 &&
+      message.createdAt >= ctx.activeTurnStartedAt;
     const [expanded, setExpanded] = useState(false);
-
-    if (isInFlight) {
-      return (
-        <div className="oc-agent-thinking oc-agent-thinking-flight">
-          <Brain className="oc-agent-thinking-icon w-3.5 h-3.5" />
-          <span className="oc-agent-thinking-shimmer">Thinking</span>
-          <LiveDuration startedAt={message.createdAt} />
-        </div>
-      );
-    }
-
     const charCount = message.text.length;
+    const hasContent = charCount > 0;
+
+    const wrapperClass = `oc-agent-thinking ${
+      isInFlight ? "oc-agent-thinking-flight" : ""
+    }`;
+
     return (
-      <div className="oc-agent-thinking">
+      <div className={wrapperClass}>
         <button
           type="button"
           className="oc-agent-thinking-head"
           onClick={() => setExpanded((v) => !v)}
           aria-expanded={expanded}
+          disabled={!hasContent}
         >
           {expanded ? (
             <ChevronDown className="oc-agent-thinking-chev w-3.5 h-3.5" />
@@ -54,12 +59,21 @@ export const ThinkingBlock: Renderer<AgentTextMessage> = memo(
             <ChevronRight className="oc-agent-thinking-chev w-3.5 h-3.5" />
           )}
           <Brain className="oc-agent-thinking-icon w-3.5 h-3.5" />
-          <span className="oc-agent-thinking-label">Thinking</span>
-          <span className="oc-agent-thinking-count">
-            {formatCharCount(charCount)}
-          </span>
+          {isInFlight ? (
+            <>
+              <span className="oc-agent-thinking-shimmer">Thinking</span>
+              <LiveDuration startedAt={message.createdAt} />
+            </>
+          ) : (
+            <>
+              <span className="oc-agent-thinking-label">Thinking</span>
+              <span className="oc-agent-thinking-count">
+                {formatCharCount(charCount)}
+              </span>
+            </>
+          )}
         </button>
-        {expanded && (
+        {expanded && hasContent && (
           <div className="oc-agent-thinking-body">{message.text}</div>
         )}
       </div>
@@ -68,7 +82,7 @@ export const ThinkingBlock: Renderer<AgentTextMessage> = memo(
 );
 
 function LiveDuration({ startedAt }: { startedAt: number }) {
-  // Tick once per second. Keeps the "in-flight" affordance honest
+  // Tick once per second. Keeps the in-flight affordance honest
   // without flooding React with sub-second updates.
   const [tick, setTick] = useState(0);
   useEffect(() => {

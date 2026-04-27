@@ -47,6 +47,15 @@ export interface RendererContext {
    *  need "am I the in-flight message?" compare their own message.id
    *  to this. Stable per render — agent-chat memoizes the context. */
   lastMessageId: string | null;
+  /** createdAt of the last user message — i.e. the start of the
+   *  currently-active turn. Renderers that want "am I in the active
+   *  turn?" compare their own message.createdAt against this.
+   *
+   *  Used by ThinkingBlock so the shimmer persists for the *entire*
+   *  active turn (not just the brief window where the thought is the
+   *  literal last message). Old thoughts from prior turns sit below
+   *  this threshold and stay calm. */
+  activeTurnStartedAt: number;
 }
 
 export interface ApplyReceipt {

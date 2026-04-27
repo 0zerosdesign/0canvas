@@ -48,10 +48,14 @@ export const MessageView = memo(
     if (prev.message.kind === "text") {
       const role = (prev.message as AgentTextMessage).role;
       if (role === "thought") {
-        const wasLast = prev.ctx.lastMessageId === prev.message.id;
-        const isLast = next.ctx.lastMessageId === next.message.id;
-        if (wasLast !== isLast) return false;
+        // ThinkingBlock cares about isStreaming + activeTurnStartedAt so
+        // its shimmer persists for the whole active turn. lastMessageId
+        // is no longer used by the renderer but kept in the compare for
+        // future in-flight-aware text renderers.
         if (prev.ctx.isStreaming !== next.ctx.isStreaming) return false;
+        if (prev.ctx.activeTurnStartedAt !== next.ctx.activeTurnStartedAt) {
+          return false;
+        }
       }
     }
     return true;

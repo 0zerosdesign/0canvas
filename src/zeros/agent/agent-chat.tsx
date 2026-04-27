@@ -43,6 +43,7 @@ import type {
 import type {
   AgentSessionControls,
   AgentSessionState,
+  AgentTextMessage,
 } from "./use-agent-session";
 import {
   MessageView,
@@ -122,14 +123,28 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
   // isStreaming + lastMessageId let in-flight-aware renderers (ThinkingBlock
   // shimmer, future activity HUD) detect "am I the active in-flight message"
   // without each renderer reaching back into session state.
+  //
+  // activeTurnStartedAt = createdAt of the last user message. Drives the
+  // "am I in the current turn?" check so ThinkingBlock can persist its
+  // shimmer for the whole turn rather than only the sub-second window
+  // where the thought is literally the last message in the array.
   const lastMessageId =
     session.messages.length > 0
       ? session.messages[session.messages.length - 1].id
       : null;
+  const activeTurnStartedAt = useMemo(() => {
+    for (let i = session.messages.length - 1; i >= 0; i--) {
+      const m = session.messages[i];
+      if (m.kind === "text" && (m as AgentTextMessage).role === "user") {
+        return m.createdAt;
+      }
+    }
+    return 0;
+  }, [session.messages]);
   const isStreaming = session.status === "streaming";
   const messageCtx: RendererContext = useMemo(
-    () => ({ applyReceipts, isStreaming, lastMessageId }),
-    [applyReceipts, isStreaming, lastMessageId],
+    () => ({ applyReceipts, isStreaming, lastMessageId, activeTurnStartedAt }),
+    [applyReceipts, isStreaming, lastMessageId, activeTurnStartedAt],
   );
   // Scroll + active-prompt elements tracked via state so the
   // sticky-bottom hook + JumpPills re-run when they mount. Plain

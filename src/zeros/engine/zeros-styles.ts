@@ -3947,55 +3947,69 @@ ${S} .oc-agent-thinking {
   border-radius: 6px;
   background: var(--tint-black-soft);
   border: 1px solid transparent;
+  transition: border-color 0.2s ease, background 0.2s ease;
 }
+/* In-flight wrapper — animated border ring + tinted background so
+ * the block remains unmissable even when scrolled away from focus. */
 ${S} .oc-agent-thinking-flight {
-  display: flex; align-items: center; gap: 6px;
-  padding: 6px 10px;
-  font-size: 11px;
-  color: var(--text-muted);
-  border-color: var(--border-subtle);
+  border-color: var(--tint-info-border);
+  background: var(--tint-info-weak);
+  animation: ocAgentThinkingPulse 2.4s ease-in-out infinite;
 }
-${S} .oc-agent-thinking-icon {
-  color: var(--text-placeholder);
-  flex-shrink: 0;
-}
-${S} .oc-agent-thinking-shimmer {
-  background: linear-gradient(
-    90deg,
-    var(--text-muted) 0%,
-    var(--text-primary) 50%,
-    var(--text-muted) 100%
-  );
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: ocAgentThinkingShimmer 2.4s ease-in-out infinite;
-  font-style: italic;
-}
-@keyframes ocAgentThinkingShimmer {
-  0%   { background-position: 100% 0%; }
-  100% { background-position: -100% 0%; }
-}
-${S} .oc-agent-thinking-elapsed {
-  color: var(--text-placeholder);
-  font-variant-numeric: tabular-nums;
+@keyframes ocAgentThinkingPulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--tint-info-weak); }
+  50%      { box-shadow: 0 0 0 3px var(--tint-info-weak); }
 }
 ${S} .oc-agent-thinking-head {
   display: flex; align-items: center; gap: 6px;
-  padding: 5px 10px;
+  padding: 6px 10px;
   background: transparent; border: 0; width: 100%;
   text-align: left; cursor: pointer; color: inherit;
   font-size: 11px;
 }
 ${S} .oc-agent-thinking-head:hover { background: var(--tint-black-strong); }
+${S} .oc-agent-thinking-head:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
 ${S} .oc-agent-thinking-chev {
   color: var(--text-placeholder);
   flex-shrink: 0;
 }
+${S} .oc-agent-thinking-icon {
+  color: var(--text-placeholder);
+  flex-shrink: 0;
+}
+${S} .oc-agent-thinking-flight .oc-agent-thinking-icon {
+  color: var(--text-info);
+  animation: ocAgentThinkingIconPulse 1.6s ease-in-out infinite;
+}
+@keyframes ocAgentThinkingIconPulse {
+  0%, 100% { transform: scale(1);    opacity: 0.8; }
+  50%      { transform: scale(1.12); opacity: 1;   }
+}
 ${S} .oc-agent-thinking-label {
   color: var(--text-muted);
   font-style: italic;
+}
+${S} .oc-agent-thinking-shimmer {
+  font-style: italic;
+  font-weight: 500;
+  background: linear-gradient(
+    90deg,
+    var(--text-info) 0%,
+    var(--text-primary) 50%,
+    var(--text-info) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: ocAgentThinkingShimmer 2s linear infinite;
+}
+@keyframes ocAgentThinkingShimmer {
+  0%   { background-position: 200% 0%; }
+  100% { background-position: -200% 0%; }
 }
 ${S} .oc-agent-thinking-count {
   margin-left: auto;
@@ -4003,6 +4017,14 @@ ${S} .oc-agent-thinking-count {
   color: var(--text-placeholder);
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
+}
+${S} .oc-agent-thinking-elapsed {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--text-info);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
 }
 ${S} .oc-agent-thinking-body {
   padding: 0 12px 10px 32px;
