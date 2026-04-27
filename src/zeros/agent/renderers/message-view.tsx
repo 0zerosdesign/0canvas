@@ -17,6 +17,7 @@ import { memo } from "react";
 import type { AgentMessage, AgentTextMessage } from "../use-agent-session";
 import type { RendererContext, RendererRegistry } from "./types";
 import { defaultRegistry, resolveRenderer } from "./registry";
+import { InlinePermissionCluster } from "./inline-permission";
 
 interface MessageViewProps {
   message: AgentMessage;
@@ -27,7 +28,28 @@ interface MessageViewProps {
 export const MessageView = memo(
   function MessageView({ message, ctx, registry = defaultRegistry }: MessageViewProps) {
     const { Component } = resolveRenderer(message, registry);
-    return <Component message={message} ctx={ctx} />;
+    // Stage 6.1 — inline permission cluster: when this message is a
+    // tool whose toolCallId matches the session's pendingPermission,
+    // render the Allow/Deny cluster directly under the card. Pulls
+    // the decision into the user's reading flow instead of forcing
+    // them to glance at the chrome between message list and composer.
+    const inlinePermission =
+      message.kind === "tool" &&
+      ctx.pendingPermission &&
+      ctx.pendingPermission.request.toolCall.toolCallId === message.toolCallId
+        ? ctx.pendingPermission.request
+        : null;
+    return (
+      <>
+        <Component message={message} ctx={ctx} />
+        {inlinePermission && (
+          <InlinePermissionCluster
+            request={inlinePermission}
+            onRespond={ctx.respondToPermission}
+          />
+        )}
+      </>
+    );
   },
   // Re-render only when the message itself or its slice of ctx changed.
   // applyReceipts is keyed by toolCallId; for non-tool messages it never
@@ -52,6 +74,22 @@ export const MessageView = memo(
       // when session.messages changes, so reference equality is safe).
       if (
         prev.ctx.mergeSiblings.get(id) !== next.ctx.mergeSiblings.get(id)
+      ) {
+        return false;
+      }
+      // Stage 6.1 — re-render when this card's inline permission cluster
+      // appears or disappears. Match the toolCallId against pendingPermission
+      // on both sides.
+      const prevMatched =
+        prev.ctx.pendingPermission?.request.toolCall.toolCallId === id;
+      const nextMatched =
+        next.ctx.pendingPermission?.request.toolCall.toolCallId === id;
+      if (prevMatched !== nextMatched) return false;
+      // Permission request object identity changes ≈ a new permission
+      // arrived for the same toolCallId (rare). Bail and re-render.
+      if (
+        nextMatched &&
+        prev.ctx.pendingPermission !== next.ctx.pendingPermission
       ) {
         return false;
       }

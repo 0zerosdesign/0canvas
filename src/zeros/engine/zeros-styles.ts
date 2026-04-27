@@ -4951,6 +4951,99 @@ ${S} .oc-agent-perm-btn-cancel {
 }
 ${S} .oc-agent-perm-btn-cancel:hover { background: var(--tint-hover-strong); }
 
+/* ── Stage 6.1: Inline permission cluster ─────────────── */
+/* Rendered directly under the matching tool card. Visually a
+ * tinted strip that reads as a continuation of the card chrome
+ * rather than separate UI -- the card body above is the context
+ * for the decision; the cluster is the action. */
+${S} .oc-agent-perm-inline {
+  margin: -8px 0 12px;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--tint-warning-border);
+  background: var(--tint-warning-weak);
+  border-radius: 0 0 10px 10px;
+  border-top: 0;
+  /* Slight pulse so the user notices it landed without a modal. */
+  animation: ocAgentPermInlineLand 0.4s ease-out 1;
+}
+@keyframes ocAgentPermInlineLand {
+  from { transform: translateY(-2px); opacity: 0.6; }
+  to   { transform: translateY(0);    opacity: 1;   }
+}
+${S} .oc-agent-perm-inline-low {
+  border-color: var(--tint-info-border);
+  background: var(--tint-info-weak);
+}
+${S} .oc-agent-perm-inline-high {
+  border-color: var(--tint-critical-border);
+  background: var(--tint-critical-weak);
+}
+${S} .oc-agent-perm-inline-head {
+  display: flex; align-items: flex-start; gap: 8px;
+}
+${S} .oc-agent-perm-inline-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--text-warning);
+}
+${S} .oc-agent-perm-inline-low .oc-agent-perm-inline-icon { color: var(--text-info); }
+${S} .oc-agent-perm-inline-high .oc-agent-perm-inline-icon { color: var(--text-critical); }
+${S} .oc-agent-perm-inline-text {
+  flex: 1; min-width: 0;
+}
+${S} .oc-agent-perm-inline-title {
+  font-size: 12px; font-weight: 500;
+  color: var(--text-primary);
+}
+${S} .oc-agent-perm-inline-body {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+${S} .oc-agent-perm-inline-actions {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-top: 10px;
+}
+${S} .oc-agent-perm-inline-btn {
+  font-size: 11px; padding: 5px 11px; border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+${S} .oc-agent-perm-inline-btn:hover {
+  background: var(--surface-1);
+  border-color: var(--text-muted);
+}
+${S} .oc-agent-perm-inline-btn-allow {
+  background: var(--tint-success-weak);
+  border-color: var(--tint-success-border);
+  color: var(--text-success);
+}
+${S} .oc-agent-perm-inline-btn-allow:hover {
+  background: var(--tint-success-strong);
+}
+${S} .oc-agent-perm-inline-btn-reject {
+  background: var(--tint-critical-weak);
+  border-color: var(--tint-critical-border);
+  color: var(--text-critical);
+}
+${S} .oc-agent-perm-inline-btn-reject:hover {
+  background: var(--tint-critical-strong);
+}
+${S} .oc-agent-perm-inline-btn-cancel {
+  margin-left: auto;
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-muted);
+}
+${S} .oc-agent-perm-inline-btn-cancel:hover {
+  background: var(--tint-hover);
+  color: var(--text-primary);
+}
+
 /* ── Composer (single card: input + toolbar) ──────────── */
 ${S} .oc-agent-composer {
   /* Background stays transparent so it sits on the column's

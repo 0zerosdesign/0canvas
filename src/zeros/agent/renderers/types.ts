@@ -72,6 +72,20 @@ export interface RendererContext {
    *  blocking AskUserQuestion is a Stage 4.4+ adapter capability —
    *  same hook, different routing under the hood when it ships. */
   respondToQuestion: (text: string) => void;
+  /** Stage 6.1 — inline permission flow. When a tool call needs
+   *  permission, the host puts the request here so the matching
+   *  tool card can render an inline Allow/Deny/Always-for-X cluster
+   *  beneath itself instead of pulling the user's eye to chrome.
+   *
+   *  Match by `pendingPermission.request.toolCall.toolCallId ===
+   *  message.toolCallId`. Null when no permission is pending. */
+  pendingPermission: import("../use-agent-session").PendingPermission | null;
+  /** Submit handler that pairs with pendingPermission. Calls back
+   *  through the bridge to AGENT_PERMISSION_RESPONSE; clears the
+   *  pendingPermission slot on the store. */
+  respondToPermission: (
+    response: import("../../bridge/agent-events").RequestPermissionResponse,
+  ) => void;
 }
 
 export interface ApplyReceipt {

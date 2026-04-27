@@ -187,6 +187,15 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
     },
     [session],
   );
+  // Stage 6.1 — pendingPermission threaded into ctx so the matching
+  // tool card can render its inline Allow/Deny cluster. respondToPermission
+  // is the same call as the global PermissionBar; both surfaces share it.
+  const respondToPermission = useCallback(
+    (response: import("../bridge/agent-events").RequestPermissionResponse) => {
+      session.respondToPermission(response);
+    },
+    [session],
+  );
   const messageCtx: RendererContext = useMemo(
     () => ({
       applyReceipts,
@@ -195,6 +204,8 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
       activeTurnStartedAt,
       mergeSiblings,
       respondToQuestion,
+      pendingPermission: session.pendingPermission,
+      respondToPermission,
     }),
     [
       applyReceipts,
@@ -203,6 +214,8 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
       activeTurnStartedAt,
       mergeSiblings,
       respondToQuestion,
+      session.pendingPermission,
+      respondToPermission,
     ],
   );
   // Scroll + active-prompt elements tracked via state so the
@@ -907,15 +920,26 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
         />
       </div>
 
-      {session.pendingPermission && (
-        <PermissionBar
-          request={session.pendingPermission.request}
-          workspaceElements={workspaceState.elements}
-          onRespond={(outcome) =>
-            session.respondToPermission({ outcome })
-          }
-        />
-      )}
+      {/* Stage 6.1 — the global PermissionBar is now a fallback for
+          permissions whose toolCallId doesn't match any visible tool
+          message (auth flows, design-tool requests issued before the
+          card existed, etc.). When the toolCallId DOES match a card,
+          MessageView renders the inline cluster directly under it. */}
+      {session.pendingPermission &&
+        !visibleMessages.some(
+          (m) =>
+            m.kind === "tool" &&
+            m.toolCallId ===
+              session.pendingPermission!.request.toolCall.toolCallId,
+        ) && (
+          <PermissionBar
+            request={session.pendingPermission.request}
+            workspaceElements={workspaceState.elements}
+            onRespond={(outcome) =>
+              session.respondToPermission({ outcome })
+            }
+          />
+        )}
 
       <ActivityHUD
         messages={session.messages}
