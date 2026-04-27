@@ -164,18 +164,62 @@ export class GeminiTelemetryTailer {
     const isEnd = /finish|complete|success|end/.test(name);
     const isError = /error|fail/.test(name);
 
+    const args = attrs.function_args ?? attrs.tool_input ?? attrs;
+
     if (isStart) {
+      // Stage 8.3 — intercepts:
+      //
+      //   write_todos          → canonical `plan` notification (§2.3)
+      //   enter_plan_mode      → canonical `mode_switch` banner (§2.7.6)
+      //   exit_plan_mode       → canonical `mode_switch` banner (§2.7.6)
+      //
+      // None of these render as tool cards; they update other surfaces
+      // of the chat. Returning early after the emit means we don't
+      // also create a tool_call entry that would never get its
+      // matching tool_call_update.
+      if (/^write_todos$/i.test(toolName)) {
+        const entries = parseGeminiTodos(args);
+        if (entries.length > 0) {
+          this.opts.emit({
+            sessionId: this.opts.sessionId,
+            update: { sessionUpdate: "plan", entries },
+          });
+        }
+        return;
+      }
+      if (/^(enter|exit)_plan_mode$/i.test(toolName)) {
+        const entering = /^enter/i.test(toolName);
+        this.opts.emit({
+          sessionId: this.opts.sessionId,
+          update: {
+            sessionUpdate: "mode_switch",
+            axis: "phase",
+            from: entering ? "execute" : "plan",
+            to: entering ? "plan" : "execute",
+            source: "agent",
+            reason:
+              isObj(args) && typeof args.reason === "string"
+                ? (args.reason as string)
+                : undefined,
+            at: Date.now(),
+          } as never,
+        });
+        return;
+      }
+
       const toolCallId = randomUUID();
       this.toolCallIds.set(callId, toolCallId);
+      const mergeKey = computeMergeKey(toolName, args);
       this.opts.emit({
         sessionId: this.opts.sessionId,
         update: {
           sessionUpdate: "tool_call",
           toolCallId,
-          title: toolName,
+          title: describeTool(toolName, args),
           kind: mapToolKind(toolName),
           status: "in_progress",
-          rawInput: attrs.function_args ?? attrs.tool_input ?? attrs,
+          rawInput: args,
+          ...(mergeKey ? { mergeKey } : {}),
         },
       });
       return;
@@ -211,11 +255,116 @@ function isObj(x: unknown): x is Record<string, unknown> {
   return !!x && typeof x === "object" && !Array.isArray(x);
 }
 
+/** Map Gemini's tool names → canonical ToolKind. Names per §2.3 of
+ *  the roadmap, observed in geminicli.com/docs/tools. The previous
+ *  loose-regex map was misrouting `list_directory` → read and
+ *  `google_web_search` → search; explicit cases here fix both. */
 function mapToolKind(name: string): ToolKind {
-  if (/read|list/i.test(name)) return "read";
-  if (/search|grep|find/i.test(name)) return "search";
-  if (/write|edit|create|update/i.test(name)) return "edit";
-  if (/shell|bash|exec|run/i.test(name)) return "execute";
-  if (/fetch|web|http/i.test(name)) return "fetch";
+  if (/^read_(file|many_files)$/i.test(name)) return "read";
+  if (/^(replace|write_file)$/i.test(name)) return "edit";
+  if (/^(grep_search|glob|list_directory)$/i.test(name)) return "search";
+  if (/^run_shell_command$/i.test(name)) return "execute";
+  if (/^web_fetch$/i.test(name)) return "fetch";
+  if (/^google_web_search$/i.test(name)) return "web_search";
+  if (/^ask_user$/i.test(name)) return "question";
+  // §2.7.7 — activate_skill is conceptually a system-level chip, not
+  // a tool card. We don't have a chip surface yet, so route to
+  // switch_mode which renders as a banner — closest existing affordance.
+  if (/^activate_skill$/i.test(name)) return "switch_mode";
+  // MCP-prefixed names: convention varies, accept either. Goose-style
+  // MCP UI payloads are deferred (Phase 2 polish per §2.4.12).
+  if (/^mcp__/i.test(name) || /^mcp_/i.test(name)) return "mcp";
   return "other";
+}
+
+function describeTool(name: string, args: unknown): string {
+  const a = isObj(args) ? args : {};
+  switch (name) {
+    case "read_file":
+    case "read_many_files":
+      return `Reading ${a.absolute_path ?? a.path ?? a.file_path ?? "file"}`;
+    case "replace":
+    case "write_file":
+      return `Editing ${a.file_path ?? a.path ?? "file"}`;
+    case "run_shell_command":
+      return `Running ${
+        typeof a.command === "string" ? truncate(a.command, 60) : "shell command"
+      }`;
+    case "grep_search":
+      return `Grep ${truncate(String(a.pattern ?? a.query ?? ""), 40)}`;
+    case "glob":
+      return `Searching for ${a.pattern ?? "files"}`;
+    case "list_directory":
+      return `Listing ${a.path ?? a.directory ?? "directory"}`;
+    case "web_fetch":
+      return `Fetching ${a.url ?? "URL"}`;
+    case "google_web_search":
+      return `Searching ${truncate(String(a.query ?? ""), 40)}`;
+    case "ask_user":
+      return "Asking user";
+    case "activate_skill":
+      return `Activating skill ${a.skill_name ?? a.name ?? ""}`;
+    case "write_todos":
+      return "Updating plan";
+    default:
+      return name;
+  }
+}
+
+function computeMergeKey(name: string, args: unknown): string | null {
+  if (!/^(replace|write_file)$/i.test(name)) return null;
+  const a = isObj(args) ? args : {};
+  const path = typeof a.file_path === "string"
+    ? a.file_path
+    : typeof a.path === "string"
+    ? a.path
+    : null;
+  return path ? `edit:${path}` : null;
+}
+
+/** Gemini's `write_todos` parameter shape isn't fully observed yet
+ *  (no captured fixture); the doc suggests `{todos: [{content,
+ *  status}, …]}` mirroring Claude's TodoWrite. Defensive parser
+ *  accepts that shape and the alternate `entries`/`items` field
+ *  names. */
+function parseGeminiTodos(args: unknown): Array<{
+  content: string;
+  status: "pending" | "in_progress" | "completed";
+  priority: "high" | "medium" | "low";
+}> {
+  if (!isObj(args)) return [];
+  const list = Array.isArray(args.todos)
+    ? args.todos
+    : Array.isArray(args.entries)
+    ? args.entries
+    : Array.isArray(args.items)
+    ? args.items
+    : [];
+  const out: Array<{
+    content: string;
+    status: "pending" | "in_progress" | "completed";
+    priority: "high" | "medium" | "low";
+  }> = [];
+  for (const t of list) {
+    if (!isObj(t)) continue;
+    const content =
+      typeof t.content === "string"
+        ? t.content
+        : typeof t.text === "string"
+        ? t.text
+        : null;
+    if (!content) continue;
+    const rawStatus = typeof t.status === "string" ? t.status : "pending";
+    const status: "pending" | "in_progress" | "completed" =
+      rawStatus === "in_progress" || rawStatus === "completed"
+        ? rawStatus
+        : "pending";
+    out.push({ content, status, priority: "medium" });
+  }
+  return out;
+}
+
+function truncate(s: string, n: number): string {
+  if (s.length <= n) return s;
+  return s.slice(0, n - 1) + "…";
 }
