@@ -1,12 +1,19 @@
 # Chat Rebuild — Forward Roadmap (rev. 2026-04-27)
 
 **Companion to:** [CHAT_REBUILD_PHASE_0.md](./CHAT_REBUILD_PHASE_0.md) (the retrospective).
-**Status:** Phase 0 shipped in `2be41ae`. Phase 1 is in flight — Stage 1A (ACP type-system removal) shipped in `1f85761`, Stage 1B (CSS prefix + agent IDs + UI strings + comment sweep + persisted-data migrations) shipped in `71f7f66`/`828f0a7`, Stage 1A.8 (canonical message kinds declared) shipped in `0a2dcbb`, Stage 1C (clean ACP break — all backward-compat code removed) shipped in this revision.
+**Status:** Phase 0 shipped in `2be41ae`. Phase 1 is in flight:
+- Stage 1A (ACP type-system removal) — `1f85761`
+- Stage 1B.1-3 (CSS prefix + localStorage + UI strings + comments) — `71f7f66`
+- Stage 1B.4 (agent ID rename with backward-compat — superseded by 1C) — `828f0a7`
+- Stage 1A.8 (canonical message kinds declared) — `0a2dcbb`
+- Stage 1C (clean ACP break, no backward-compat) — `af45f5e`
+- Stage 1C cleanup (final identifier renames) — `1b3abb7`
 
 This rev replaces the previous draft, removes the Codex API-key parallel track (deferred indefinitely — CLI subscription auth is the only supported flow today), folds the original Phase 2 + Phase 3 into a single performance/architecture phase merged with the 360-degree migration audit, and adds:
 
 - **Stage 1C** — clean ACP break with no backward-compat aliases. Decided 2026-04-27 because half-here ACP residue (alias maps, migration shims, legacy keychain fallbacks) was creating cognitive load. All paths now expect canonical IDs (`claude`, `codex`, `amp`); persisted user data referencing legacy IDs is treated as invalid (chats need recreating, API keys need re-entering, enabled-agents need re-toggling).
 - **§2.8 CLI vs API agent adapters** — the architectural model for handling both consumer-CLI agents (today's path) and future direct-API agents in the same renderer pipeline.
+- **§2.9 Agent capability transparency** — the architectural commitment that every CLI's native capabilities (memory, skills, subagents, MCP, project context) flow through our wrapper unchanged because we drive the CLI, we don't replace it. Plus the renderer-side affordances we add on top (project-context indicator, memory inspector) and the gotchas (Cursor/Amp cloud-coupled resume, Task→Agent rename, TUI-only capabilities handled out-of-band).
 
 ---
 
@@ -22,6 +29,7 @@ This rev replaces the previous draft, removes the Codex API-key parallel track (
    - 2.6 [Inline permissions with sticky decisions](#26-inline-permissions-with-sticky-decisions)
    - 2.7 [Agent-specific affordances (where unification breaks)](#27-agent-specific-affordances-where-unification-breaks)
    - 2.8 [CLI vs API agent adapters (the parallel-adapter model)](#28-cli-vs-api-agent-adapters-the-parallel-adapter-model)
+   - 2.9 [Agent capability transparency — what passes through, what we add](#29-agent-capability-transparency--what-passes-through-what-we-add)
 3. [Phase 2 — Performance + architecture (merged with 360-degree audit)](#3-phase-2--performance--architecture-merged-with-360-degree-audit)
    - 3.1 [Workspace store: Zustand migration](#31-workspace-store-zustand-migration)
    - 3.2 [Message-list virtualization (react-virtuoso)](#32-message-list-virtualization-react-virtuoso)
@@ -568,6 +576,127 @@ We are explicitly building toward this convergence. Phase 1 Stage 1A defined the
 
 We revisit when (a) a real user requests it, or (b) CLI rate limits / model availability cap usage in a way an API key would unlock.
 
+### 2.9 Agent capability transparency — what passes through, what we add
+
+This section captures the 2026-04-27 architecture discussion about whether wrapping a CLI breaks any of its native capabilities (memory, skills, subagents, MCP, project context, session resume). The short answer is **no, every CLI capability works transparently** because of how we spawn the subprocess. The long answer below documents which capabilities each agent has, where they live on disk, the gotchas (cloud-coupled session state on two agents, TUI-only capabilities we handle out-of-band), and the renderer-side affordances we add on top (project-context indicator, memory inspector).
+
+#### 2.9.1 The architectural posture: we drive the CLI, we don't replace it
+
+Verified at [src/engine/agents/adapters/base.ts:53](../src/engine/agents/adapters/base.ts#L53):
+
+```ts
+env: opts.env ? { ...process.env, ...opts.env } : process.env,
+```
+
+Every subprocess we spawn inherits the user's full environment (`HOME`, `PATH`, `XDG_CONFIG_HOME`, vendor env vars). We only **layer** per-agent env on top — never override. So when `claude -p "…"` runs inside our subprocess pipe, it's the same `claude` binary, in the same `$HOME`, with the same config dirs, the same auth files, the same skills directory, the same MCP servers as if the user typed `claude` in Terminal.app. The only difference: *we* feed it the prompt and *we* read its stream-json output.
+
+**This is the GitHub Desktop / Tower / GitKraken pattern for Git, applied to agentic CLIs.** Those tools don't reimplement git's commit logic; they shell out to `git` with the right flags and parse the output. We do the same with `claude` / `codex` / `cursor-agent` / `gemini` / `amp` / `droid` / `copilot`.
+
+**The implication for product strategy:** we are not in a maintenance race with vendors. When Anthropic adds a new memory feature to Claude Code, it's in `claude` the moment the user runs `npm install -g @anthropic-ai/claude-code@latest`. We don't have to reimplement it. We may want to add a renderer for nicer display, but the *functionality* is free.
+
+#### 2.9.2 Per-agent capability matrix
+
+| Capability | Claude | Codex | Cursor | Gemini | Copilot | Amp | Droid |
+|---|---|---|---|---|---|---|---|
+| **Project-context file(s)** | `CLAUDE.md` (walks up + per-subdir) + `CLAUDE.local.md` + `.claude/rules/*.md` with `paths:` frontmatter | `AGENTS.md` (walks up) + `~/.codex/AGENTS.md` global | `.cursor/rules/*` + `AGENTS.md` + `CLAUDE.md` (per Cursor docs) + legacy `.cursorrules` | `GEMINI.md` hierarchy + JIT-loaded from any file's parent dirs; configurable via `context.fileName` | `AGENTS.md` + `<name>.agent.md` custom-agent files | `AGENTS.md` (walks up to $HOME) + `$HOME/.config/amp/AGENTS.md`; falls back to `AGENT.md` or `CLAUDE.md` | `AGENTS.md` |
+| **User config dir** | `~/.claude/` | `~/.codex/` | `~/.cursor/` | `~/.gemini/` | `~/.copilot/` (or `$XDG_CONFIG_HOME/copilot/`) | `~/.config/amp/` | `~/.factory/` |
+| **Auto-memory (file-backed)** | `~/.claude/projects/<encoded-cwd>/memory/MEMORY.md` + topic files. First 200 lines / 25 KB injected at session start | `~/.codex/memories/` (auto-injected; opt-in via `[features].memories = true`) | Cloud "Memories" feature (per-project, server-side) | `/memory show\|add\|refresh` writes to `~/.gemini/GEMINI.md` | none formal | AGENTS.md hierarchy fills the role | AGENTS.md fills the role |
+| **Memory tool (model-callable)** | `memory_20250818` API tool — model emits `tool_use` with `name: "memory"` and a `command` field operating on virtual `/memories`. **File backend is the host's responsibility** | n/a | n/a | n/a | n/a | n/a | n/a |
+| **Skills / extensions** | `~/.claude/skills/<name>/SKILL.md` (skill = folder with frontmatter + body). Resolution: enterprise > personal > project > plugin. Live-reloaded within a session | `~/.codex/skills/` (recently added; thin docs) | `~/.cursor/skills-cursor/` | `~/.gemini/extensions/<name>/gemini-extension.json` (each declares MCP servers, commands, hooks, sub-agents) | `<name>.agent.md` custom agents | `amp.skills.path` config + `mcp.json` in skill dirs | (none formal — `~/.factory/droids/` covers the related "custom agent" use case) |
+| **Subagents (model-spawnable)** | `Agent` tool (renamed from `Task` in v2.1.63) + `.claude/agents/` and `~/.claude/agents/` markdown definitions. Stream events carry `parent_tool_use_id` linking children to parent | none documented public | Background Agents (cloud, separate product) + internal composer subagents | declared via extensions | `<name>.agent.md` custom agents (user/repo/org scope) | parallel subagents but not user-defined; final summary returns to parent | `Task` tool with `subagent_type: <droid-name>`; droid markdown files in `.factory/droids/` (project) or `~/.factory/droids/` (personal) |
+| **MCP injection point** | `--settings <file>` (hooks) + `--mcp-config <file>` (servers); OR scope-based in `~/.claude.json` (local) / `.mcp.json` (project) / user-scope | `-c mcp_servers.<name>...` per-invocation flag; `~/.codex/config.toml` global | `.cursor/mcp.json` (project) + `~/.cursor/mcp.json` (global) | `mcpServers` in `settings.json` or in extensions | `--additional-mcp-config <file>` per-session; `~/.copilot/mcp-config.json` global | `amp.mcpServers` in user/workspace settings; `amp mcp add` CLI | per-droid frontmatter; `~/.factory/tools/` |
+| **Session persistence** | Local — `~/.claude/projects/<encoded-cwd>/<session-id>.jsonl` | Local — `~/.codex/sessions/` + SQLite (`logs_2.sqlite`, `state_5.sqlite`) | **Cloud** — Composer threads on Cursor's servers; `~/.cursor/chats/` is local cache | Local — `~/.gemini/history/` | Local — `~/.copilot/`; cloud delegation flow is separate | **Cloud** — `ampcode.com/threads`; `@T-<thread-id>` cross-thread refs need network | Local — `~/.factory/sessions/` |
+| **Resume offline** | ✓ | ✓ | ✗ (cloud-coupled) | ✓ | ✓ (delegation flow excepted) | ✗ (cloud-coupled) | ✓ |
+| **Headless flag we use** | `-p --output-format stream-json --verbose --settings <file> --permission-mode default --session-id <uuid>` | `exec --skip-git-repo-check --json` | `-p --output-format stream-json --stream-partial-output --trust --model auto` | PTY (no headless stream-json — we drive TUI + read OTel telemetry file) | PTY (no headless JSON output) | `-x --stream-json` | `exec --output-format json` |
+
+The data on this table comes from each vendor's docs + verification on the live filesystem during the 2026-04-27 capability research. References live in §8.
+
+#### 2.9.3 Cloud-coupled session state (Cursor + Amp)
+
+These two are the structural odd-ones-out. Their authoritative session state lives on the vendor's server, not on the user's disk:
+
+- **Cursor** keeps Composer threads in Cursor's cloud (tied to the user's Cursor account). The local `~/.cursor/chats/` and `agent-cli-state.json` are caches. If the user is offline, or their Cursor token is revoked, "resume last thread" can fail in a way it never does for Claude/Codex/Gemini/Copilot/Droid (which keep everything local).
+- **Amp** keeps threads at `ampcode.com/threads`. Resume via `amp threads continue` or `@T-<thread-id>` references go through Sourcegraph's server.
+
+**Implication for our product:** when we eventually build a "Resume previous session" UI (Phase 2 polish, or a Phase 3 feature), Cursor and Amp need an "offline / not authenticated, can't resume" state that the others don't. Worth a UI affordance that distinguishes "we don't have this session locally" from "the agent doesn't have a resume capability."
+
+We can't fix this — it's a property of how those two CLIs work. But we should expose it honestly.
+
+#### 2.9.4 TUI-only capabilities — handled out-of-band
+
+Some vendor capabilities are interactive-mode only and don't surface in headless / stream-json mode. We already handle these correctly:
+
+| Capability | Where it normally lives | How we handle it |
+|---|---|---|
+| OAuth login (`/login`, `gh auth login`, etc.) | Vendor's CLI in interactive mode | User runs the login command in their own Terminal *first*; our subprocess inherits the auth files. Documented in [agents/README.md](../src/engine/agents/README.md) |
+| Permission prompts (shell, file edits) | Vendor's CLI defaults to interactive prompts | We pass headless flags (`claude --permission-mode default`, `cursor-agent --trust`, `amp -x`, `droid exec`, etc.) plus `--settings`-based hook injection where supported |
+| Plan-mode keybinding (`Shift+Tab` in Claude TUI) | Claude's TUI | Replaced by our composer's mode pill (Phase 1 §2.4.13) |
+| `/memory` slash command UI (Claude, Codex, Gemini) | Vendor's TUI | Replaced by our memory inspector — see §2.9.6 |
+| `/agents`, `/permissions`, `/config` UI (Claude) | Vendor's TUI | Replaced by our Settings → Agents panel; permissions inline (Phase 1 §2.6); config via composer pills |
+| Approval / diff acceptance UI (Cursor) | Cursor's TUI | Replaced by inline permission cluster (Phase 1 §2.6) |
+
+#### 2.9.5 Project-context indicator (chat header chip)
+
+**New Phase 1 addition** (small renderer-side chip).
+
+A chip in the chat header showing what context files the agent is loading for the current chat's cwd. Per agent:
+
+- **Claude**: list of `CLAUDE.md` files visible from cwd (project + parents + `~/.claude/CLAUDE.md`) plus active rules from `.claude/rules/*.md`
+- **Codex**: `AGENTS.md` files (cwd + parents + `~/.codex/AGENTS.md`)
+- **Cursor**: `.cursor/rules/*` + `AGENTS.md` + `CLAUDE.md` if present at root
+- **Gemini**: `GEMINI.md` files
+- **Amp**: `AGENTS.md` (with fallback to `AGENT.md` / `CLAUDE.md`)
+- **Droid**: `AGENTS.md`
+- **Copilot**: `AGENTS.md` + custom agent files
+
+Click expands a popover listing each file with size + first 200 chars preview + "Open in editor" action.
+
+**Why it matters:** a recurring source of confusion in agent IDEs is "what does the agent know before I send my prompt?" Surfacing the loaded context closes that loop. Especially valuable when chats span monorepos with nested context files.
+
+**Implementation note:** read-only, file-system-driven. The renderer reads files at chat-cwd via the existing IPC `git`/`fs` capability (already wired). No bridge protocol changes.
+
+**Scope:** ships in Phase 1 alongside the long-run UX kit — natural fit because the chip lives in the same per-turn header area that the prompt-pin work is restructuring.
+
+#### 2.9.6 Memory inspector (Settings → Agents)
+
+**New Phase 1 addition** (Settings panel surface).
+
+A read-only viewer in Settings → Agents → \<agent\> showing the agent's persistent memory state:
+
+- **Claude**: `~/.claude/projects/<encoded-cwd>/memory/MEMORY.md` + topic files. Shows what auto-memory has captured for the current project. "Open in editor" opens the file in the user's default editor.
+- **Codex**: `~/.codex/memories/` summaries / durable entries / recent inputs. Same UI shape.
+- **Gemini**: `~/.gemini/GEMINI.md` (the file `/memory add` writes to).
+- **Cursor**: link out to Cursor's web UI (their Memories are server-side; we can't render contents directly, but we can deep-link).
+- **Amp / Copilot / Droid**: AGENTS.md / custom-agent files in the same panel.
+
+**Why it matters:** mirrors the `/memory` slash command from Claude / Codex / Gemini's own TUIs (which our wrapper bypasses since we don't run the TUI). Without this, users have no in-app way to see what an agent has memorized about their project.
+
+**Implementation note:** file-system reads via the existing IPC capability. Read-only in v1; future revisions can add edit-and-save.
+
+**Scope:** small Settings page addition; ships parallel to Phase 1 §2.6 (inline permissions) since both extend the agent settings surface.
+
+#### 2.9.7 Subagent rename — Claude `Task` → `Agent` (v2.1.63)
+
+A specific gotcha to call out for the Subagent card (§2.4.7):
+
+In Claude Code v2.1.63, the subagent invocation tool was renamed from `Task` to `Agent`. Existing chats and some Claude SDK fields (`system:init.tools`, `permission_denials[].tool_name`) still emit `"Task"`. Our renderer **must** match both names.
+
+Lives in the Claude adapter normalizer (Phase 1 §2.3): the normalizer maps `tool_use.name in {"Task", "Agent"}` → canonical `kind: "subagent"`. The Subagent card renderer then doesn't see the difference.
+
+#### 2.9.8 Per-agent capability test matrix
+
+Referenced from §6 (suggested order). When we onboard a new agent or upgrade an existing one's CLI version, run this test corpus:
+
+1. **Project-context loading** — create a `CLAUDE.md` / `AGENTS.md` / `GEMINI.md` (per agent) at project root with a marker phrase. Send a prompt that should reveal the agent has read it. Verify the marker shows up in the response.
+2. **Memory persistence across sessions** — start a session, ask the agent to remember a specific fact about the project. Quit the session, start a new one in the same cwd, ask "what did I tell you about X?" Verify recall.
+3. **Subagent invocation** — for agents that support it (Claude, Droid, Amp): prompt that should trigger Task/Agent delegation. Verify nested events render with `parent_tool_use_id` correctly indented in the Subagent card.
+4. **Skill activation** — install a known skill in the agent's skills dir. Trigger it via `/skill-name` or by description. Verify it expands to the expected prompt and the agent acts on it.
+5. **Session resume** — start a session, send a turn, quit. Resume via the agent's resume flag. Verify the prior turn loads into the chat.
+6. **MCP injection** — verify our injected design-tool MCP server is visible to the agent (prompt that should trigger an `apply_change` tool call). Verify a user-configured project-level MCP server (`.cursor/mcp.json`, `.mcp.json`, etc.) is also visible. Both should work.
+7. **Headless flags** — verify the agent runs to completion with `code=0` and no manual approval prompts blocking.
+
+Format: `docs/AGENT_CAPABILITY_TEST_MATRIX.md` (created during Phase 1 finalization). Each agent gets a row per test; pass / fail / N/A; CLI version tested. Re-run on every CLI minor version bump.
+
 ---
 
 ## 3. Phase 2 — Performance + architecture (merged with 360-degree audit)
@@ -807,15 +936,18 @@ If we revisit this later (a real user asks for it, or codex-cli changes its auth
 
 | Area | Risk today | Mitigation in Phase 1 |
 |---|---|---|
-| Cursor tool calls don't render | Pre-existing gap | Track 4.A — `cursor/normalizer.ts` |
-| Bash/Edit/Read/Grep/Web/Todo/Task render as generic card | Largest visible UX gap | §2.4 — unified card system |
+| Cursor tool calls don't render | Pre-existing gap | Stage 7 — `cursor/normalizer.ts` |
+| Bash/Edit/Read/Grep/Web/Todo/Task render as generic card | Largest visible UX gap | Stages 3 + 4 — unified card system |
 | Clarifying questions look like regular text; user has no reply UI | All 7 agents | §2.4.9 — question card with native + inferred paths |
 | Mode auto-switches happen silently (Gemini enters plan mode; Claude exits) | Confusion about agent state | §2.4.13 — mode pill + auto-switch banner + ExitPlanMode permission card |
-| Long Claude runs lose user prompt | Worry #2 | §2.5.1 + §2.5.7 — per-turn sticky prompt + jump-by-text-message |
-| Auto-scroll snaps even when reading | Worry #3 | §2.5.2 — sticky-bottom with unstick |
-| Compactness in 30-min runs | Worry #1 / #4 | §2.4 default-collapse + §2.5.5 run-summary roll-up + §2.5.6 long-turn windowing |
+| Long Claude runs lose user prompt | Worry #2 | Stage 2 — per-turn sticky prompt + jump-by-text-message |
+| Auto-scroll snaps even when reading | Worry #3 | Stage 2 — sticky-bottom with unstick |
+| Compactness in 30-min runs | Worry #1 / #4 | Stages 3 + 4 default-collapse + Stage 5 run-summary roll-up + long-turn windowing |
 | UI per agent, not unified | Worry #5 | §2.2 + §2.3 — canonical event taxonomy + adapter normalizers |
-| Permission prompts as global bar | Disrupts focus during long runs | §2.6 — inline permissions with sticky decisions |
+| Permission prompts as global bar | Disrupts focus during long runs | Stage 6 — inline permissions with sticky decisions |
+| User can't see what context (CLAUDE.md/AGENTS.md/GEMINI.md) the agent loaded | Recurring confusion in agent IDEs | Stage 9 — project-context indicator chip (§2.9.5) |
+| User can't see what an agent has memorized about their project | `/memory` slash command was TUI-only | Stage 9 — memory inspector in Settings → Agents (§2.9.6) |
+| Per-agent capability regressions on CLI version bumps | E.g. Claude `Task` → `Agent` rename in v2.1.63; Codex `assistant_message` → `agent_message` rename | Stage 10 — per-agent capability test matrix (§2.9.8) |
 
 ### Will be solid after Phase 2
 
@@ -852,25 +984,57 @@ If we revisit this later (a real user asks for it, or codex-cli changes its auth
 
 ## 6. Suggested order
 
-Serial path:
+### Phase 1 — Done (committed, pushed, tested)
 
-1. **Phase 1.A — Canonical event taxonomy + Claude/Amp/Codex normalizers** (3 days). Lands the contract; existing functionality keeps working because adapters emit the same shapes Claude already emitted, just routed through the canonical layer.
-2. **Phase 1.B — Cursor normalizer** (Track 4.A, 0.5-1 day, parallel with #1's tail). Closes the longest-standing user-visible gap.
-3. **Phase 1.C — Long-run UX kit** (3 days). Sticky per-turn prompt, sticky-bottom-with-unstick, jump pills, jump-by-text-message keybind, per-chat scroll memory, run summary roll-up, vertical timeline rail. Single highest-impact UX delta.
-4. **Phase 1.D — Card system: Shell, Edit, Read, Search, Plan, Thinking** (4 days, parallelizable). Each card is a self-contained file. Shell and Edit ship first because they're the highest-volume.
-5. **Phase 1.E — Card system: Fetch, Subagent, Question, Error, Usage, MCP** (1.5 days, parallelizable).
-6. **Phase 1.F — Inline permissions with sticky decisions** (1 day).
-7. **Phase 1.G — Gemini / Copilot / Droid normalizers** (1.5 days, parallelizable). Each agent gets a normalizer; renderers come for free.
-8. **Track 4.C HMR Fast Refresh** (30 min). Drop-in dev win.
-9. **Phase 2.1 — Workspace store Zustand migration** (3-4 days). Highest-leverage canvas-side change. Blocks 3.6 / 3.7.
-10. **Phase 2.2-2.4 — Virtuoso + Shiki worker + tool-call index + WS dedup** (2 days, parallelizable with 9 once contract is stable).
-11. **Phase 2.6 — Canvas iframe virtualization** (2 days; depends on 9).
-12. **Phase 2.7 — IPC delta protocol** (2 days; depends on 9).
-13. **Phase 2.5 — Engine sidecar runtime decision** (decision lands without code change; profile before re-opening).
-14. **Phase 2.8-2.10 — Cache-first startup + non-blocking boot + bundle audit** (2-3 days, parallelizable).
-15. **Phase 2.11 — SQLite windowed view** (1 day).
+| Stage | Commit | What shipped |
+|---|---|---|
+| 1A | [`1f85761`](https://github.com/Withso/zeros/commit/1f85761) | ACP type-system removal — `@agentclientprotocol/sdk` dropped from devDependencies; native types own the wire format (`src/zeros/bridge/agent-events.ts`); 27 type-only imports migrated |
+| 1B.1-3 | [`71f7f66`](https://github.com/Withso/zeros/commit/71f7f66) | CSS prefix `oc-acp-*` → `oc-agent-*` (121 classes); localStorage key migrated; UI strings + comment sweep |
+| 1B.4 | [`828f0a7`](https://github.com/Withso/zeros/commit/828f0a7) | Agent IDs `claude-acp`/`codex-acp`/`amp-acp` → `claude`/`codex`/`amp` with backward-compat (later replaced by 1C) |
+| 1A.8 | [`0a2dcbb`](https://github.com/Withso/zeros/commit/0a2dcbb) | Canonical message kinds declared (Thinking / Plan / Question / ModeSwitch / Subagent / ErrorNotice) |
+| 1C | [`af45f5e`](https://github.com/Withso/zeros/commit/af45f5e) | Clean ACP break — all backward-compat code deleted (alias map, SQLite migration, workspace state migration, keychain prefix fallback, legacy localStorage key) |
+| 1C cleanup | [`1b3abb7`](https://github.com/Withso/zeros/commit/1b3abb7) | Final identifier renames (`acpMode` → `agentsBetaMode`, `failureFromAcpError` → `failureFromAgentError`, `handleAcpMessage` → `handleAgentMessage`) |
 
-Most of Phase 1 parallelizes well — the registry pattern was specifically designed so each card's a standalone file. Shipping one card per day for a week is realistic with two of us; one card every 1.5 days alone. The long-run UX kit (#3) is the riskiest piece because sticky-positioning + virtuoso + variable card heights interact subtly; budget extra time to profile in real long runs.
+**Verified working** post-1C: agents panel populates, prompts to Cursor / Codex / Claude all return successful turns, build + typecheck clean, `@agentclientprotocol/sdk` zero-references confirmed.
+
+### Phase 1 — Next, in order
+
+| # | Stage | Time | What |
+|---|---|---|---|
+| **1** | **Stage 2 — Long-run UX foundation** | ~2d | Sticky-bottom auto-scroll with unstick; per-turn `<TurnContainer>`; sticky user prompt at top of active turn; "Jump to my prompt" + "Jump to latest" pills; `Cmd+Up/Down` jump-by-text-message keybind; per-chat scroll memory in Zustand+SQLite. Highest-impact UX delta. |
+| **2** | **Stage 3 — Card system part 1: Shell, Edit, Read** | ~2d | `tool-shell.tsx` (xterm DOM renderer), `tool-edit.tsx` (diff with patch + replacement modes), `tool-read.tsx` (collapsed preview). Default-collapsed; status badges; width-adaptive diffs. Highest-volume cards ship first. |
+| **3** | **Stage 4 — Card system part 2** | ~2.5d | Search + Plan + Thinking + Question + Error + Usage + Subagent + Fetch + MCP. State-merging via `mergeKey` (TodoWrite as one live block). Includes the §2.4.13 mode pill + auto-switch banner. |
+| **4** | **Stage 5 — Long-run UX completion** | ~1.5d | Run-summary roll-up after turn ends; vertical timeline rail (left gutter); long-turn windowing (last K=20 + chevron for older); activity HUD pinned to composer footer; global Stop replaces Send during run; streaming markdown chunking. |
+| **5** | **Stage 6 — Inline permissions + mode controls** | ~1.5d | Move permission UI from global bar to per-tool-card cluster; "Always for X" sticky decisions persisted per chat; mode pill in composer (Phase / Permission / Tier axes); auto-switch banner; ExitPlanMode special permission card. |
+| **6** | **Stage 7 — Codex + Cursor normalizers** (Track 4.A) | ~1.5d | `codex/normalizer.ts` translates `item.*` events → canonical. `cursor/normalizer.ts` translates Cursor's `tool_call` events → canonical (closes the long-standing Cursor-no-tool-calls gap). |
+| **7** | **Stage 8 — Gemini + Copilot + Amp + Droid normalizers** | ~2d | Remaining adapters. Gemini's `enter_plan_mode`/`exit_plan_mode` autonomous switching surfaces as canonical `mode.switch` events. Copilot ACP `current_mode_update` notifications. |
+| **8** | **Stage 9 — Project-context indicator + Memory inspector** (§2.9.5 + §2.9.6) | ~1d | Chat-header chip showing loaded `CLAUDE.md`/`AGENTS.md`/`GEMINI.md`; Settings → Agents memory viewer per agent. Both file-system-driven, no bridge changes. |
+| **9** | **Stage 10 — Per-agent capability test matrix run** (§2.9.8) | ~1d | Execute the 7-test corpus against all 7 agents. Document pass/fail per test in `docs/AGENT_CAPABILITY_TEST_MATRIX.md`. CLI versions recorded. Re-run on minor version bumps. |
+| **10** | **Track 4.C HMR Fast Refresh** | 30 min | Split `sessions-provider.tsx` so Vite Fast Refresh works on it. Drop-in dev win. |
+
+**Phase 1 budget:** ~14 days serial. With parallelization (cards in Stages 3 + 4, normalizers in Stages 7 + 8) and one developer: ~10 days. Two developers: ~7 days.
+
+### Phase 2 — After Phase 1 lands
+
+| # | Stage | Time | What |
+|---|---|---|---|
+| 11 | Phase 2.1 — Workspace store Zustand migration | ~3-4d | Highest-leverage canvas-side change. Blocks 14 (iframe virt) and 15 (delta IPC). |
+| 12 | Phase 2.2-2.4 — Virtuoso + Shiki worker + tool-call index + WS dedup | ~2d | Parallelizable with 11 once contract is stable. |
+| 13 | Phase 2.5 — Engine sidecar runtime decision | (decision-only) | Stay on Node unless profiling proves otherwise; documented in §3.5. |
+| 14 | Phase 2.6 — Canvas iframe virtualization | ~2d | Depends on 11. |
+| 15 | Phase 2.7 — IPC delta protocol | ~2d | Depends on 11. |
+| 16 | Phase 2.8-2.10 — Cache-first startup + non-blocking boot + bundle audit | ~2-3d | Parallelizable. |
+| 17 | Phase 2.11 — SQLite windowed view | ~1d | Optional polish; pairs with Virtuoso (12). |
+
+### Notes on parallelization
+
+Most of Phase 1 parallelizes well — the registry pattern was specifically designed so each card's a standalone file. Shipping one card per day for a week is realistic with two of us; one card every 1.5 days alone.
+
+The long-run UX foundation (Stage 2 above) is the riskiest piece because sticky-positioning + (eventually) virtuoso + variable card heights interact subtly; budget extra time to profile in real long runs.
+
+Stages 7 + 8 (per-agent normalizers) parallelize across agents but each one has its own quirks — Codex's item-types, Cursor's stream-json shape, Gemini/Copilot's PTY-based event extraction, Droid's spec mode. Don't try to ship them all on the same day; ship one, run the relevant capability tests (Stage 10), then move to the next.
+
+Stage 10 (capability test matrix) is *not* a single big stage — run the relevant subset of tests after each adapter is finalized in Stages 7 + 8. The Stage 10 milestone is "all 7 agents have a published row in the matrix and any failed tests have a tracked-defect note."
 
 ---
 
@@ -886,10 +1050,13 @@ After Phase 1 + 2:
 - Element-tree IPC is delta-only after the initial sync.
 - Cold start renders the sidebar from cache before the engine connects.
 - Bundle is meaningfully lighter; binary trim audit ships at least 30-40% of the reachable margin.
-- Every supported agent (Claude, Codex, Cursor, Amp, Droid, Copilot, Gemini) renders through the same canonical event pipeline. Adding the next agent is: spec + normalizer + register the adapter. Renderers come for free.
+- Every supported agent (Claude, Codex, Cursor, Amp, Droid, Copilot, Gemini) renders through the same canonical event pipeline. Adding the next agent — including any future API-direct adapter (§2.8) — is: spec + normalizer + register the adapter. Renderers come for free.
 - Permissions are inline, with persistent "Always for X" decisions; long runs no longer get interrupted by 14 modal prompts.
+- Every CLI's native capabilities (memory, skills, subagents, MCP, project context) flow through unchanged because we drive the CLI, we don't replace it (§2.9). The user runs `claude /login` or installs a skill in `~/.claude/skills/` and Zeros immediately sees it without any glue code on our side.
+- Users can see, from the chat header, which `CLAUDE.md` / `AGENTS.md` / `GEMINI.md` files the agent has loaded for the current project (project-context chip, §2.9.5). And from Settings → Agents, what the agent has memorized about their work (memory inspector, §2.9.6). No `/memory` TUI required.
+- A published per-agent capability test matrix (`docs/AGENT_CAPABILITY_TEST_MATRIX.md`, §2.9.8) documents which features work in which CLI version. Bumping a CLI ships a re-run; regressions surface as a row turning red, not as a silent "this used to work" mystery.
 
-That's the *"design tools and layers added on top won't bog down the chat — and the chat won't bog down the design tools either"* posture this all started from.
+That's the *"design tools and layers added on top won't bog down the chat — and the chat won't bog down the design tools either"* posture this all started from — combined with the *"every CLI's full power, surfaced in our UI, with no maintenance race"* posture that came out of the 2026-04-27 capability discussion.
 
 ---
 
