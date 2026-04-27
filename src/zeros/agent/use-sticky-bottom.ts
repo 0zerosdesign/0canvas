@@ -53,14 +53,19 @@ export interface StickyBottomOptions {
 }
 
 /**
- * Hook the scroll container element directly (via ref) and
- * pass an array of dependencies that mark "new content arrived"
- * (typically `[messages, status, pendingPermission]`). The
- * effect runs on each dep change and snaps to bottom only when
- * the user was at-or-near the bottom before the change.
+ * Hook the scroll container element directly and pass an array
+ * of dependencies that mark "new content arrived" (typically
+ * `[messages, status, pendingPermission]`). The effect runs on
+ * each dep change and snaps to bottom only when the user was
+ * at-or-near the bottom before the change.
+ *
+ * Pass the element via state-tracked callback ref (not RefObject)
+ * so the hook re-runs once the element mounts. RefObjects don't
+ * trigger re-renders when `.current` changes, which would leave
+ * the hook permanently stuck on `null`.
  */
 export function useStickyBottom(
-  scrollRef: React.RefObject<HTMLElement | null>,
+  scrollEl: HTMLElement | null,
   contentDeps: unknown[],
   options: StickyBottomOptions = {},
 ): StickyBottomState {
@@ -73,10 +78,9 @@ export function useStickyBottom(
 
   // Track scroll position on the user's actual scroll movement.
   useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
+    if (!scrollEl) return;
     const onScroll = () => {
-      const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+      const distance = scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight;
       const atBottom = distance <= threshold;
       stickRef.current = atBottom;
       // Avoid setState if value unchanged — the hook's consumer
@@ -84,13 +88,13 @@ export function useStickyBottom(
       // tick during a freely-scrolling read is wasteful.
       setIsAtBottom((prev) => (prev === atBottom ? prev : atBottom));
     };
-    el.addEventListener("scroll", onScroll, { passive: true });
+    scrollEl.addEventListener("scroll", onScroll, { passive: true });
     // Run once so the initial state matches actual scroll position
     // (e.g. after a chat-switch hydrates messages and we land at
     // the bottom — without this the ref stays true regardless).
     onScroll();
-    return () => el.removeEventListener("scroll", onScroll);
-  }, [scrollRef, threshold]);
+    return () => scrollEl.removeEventListener("scroll", onScroll);
+  }, [scrollEl, threshold]);
 
   // Snap to bottom on content change, but only when the user was
   // already there before the change. useLayoutEffect runs after
@@ -98,18 +102,16 @@ export function useStickyBottom(
   // intermediate "stuck above the new bottom" frame.
   useLayoutEffect(() => {
     if (!stickRef.current) return;
-    const el = scrollRef.current;
-    if (!el) return;
-    el.scrollTop = el.scrollHeight;
+    if (!scrollEl) return;
+    scrollEl.scrollTop = scrollEl.scrollHeight;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, contentDeps);
 
   const jumpToBottom = useCallback(
     (smooth = true) => {
-      const el = scrollRef.current;
-      if (!el) return;
-      el.scrollTo({
-        top: el.scrollHeight,
+      if (!scrollEl) return;
+      scrollEl.scrollTo({
+        top: scrollEl.scrollHeight,
         behavior: smooth ? "smooth" : "auto",
       });
       // Force-stick after a programmatic jump — the user explicitly
@@ -117,7 +119,7 @@ export function useStickyBottom(
       stickRef.current = true;
       setIsAtBottom(true);
     },
-    [scrollRef],
+    [scrollEl],
   );
 
   return { isAtBottom, jumpToBottom };

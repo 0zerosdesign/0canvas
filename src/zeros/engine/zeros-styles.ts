@@ -3161,6 +3161,85 @@ ${S} .oc-agent-plan-desc { flex: 1; min-width: 0; word-break: break-word; }
 ${S} .oc-agent-messages {
   display: flex; flex-direction: column; gap: 14px;
 }
+
+/* ── Turn container — Phase 1 §2.5.1 ─────────────────────── */
+/* Each turn (user prompt + subsequent agent events until the
+   next user prompt) is wrapped in a turn container so the
+   active turn's prompt can sticky-pin to the viewport top. */
+${S} .oc-agent-turn {
+  display: flex; flex-direction: column; gap: 14px;
+}
+${S} .oc-agent-turn + .oc-agent-turn {
+  margin-top: 6px;
+}
+/* The .oc-agent-turn-active modifier (applied to the most
+   recent turn) establishes the layout context for the sticky
+   prompt header. position: relative is what scopes z-index
+   without affecting layout. */
+${S} .oc-agent-turn-active {
+  position: relative;
+}
+/* Sticky-positioned wrapper for the active turn's user prompt.
+   Sticks to the top of the .oc-agent-body scroll container
+   while the user is anywhere within the active turn. Once a
+   new turn starts (the user sends a new prompt), the previous
+   turn drops the .oc-agent-turn-active class and this wrapper
+   is no longer rendered around its prompt; it scrolls naturally. */
+${S} .oc-agent-turn-prompt-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--surface-1, var(--surface-2));
+  /* Subtle separator so the pinned prompt visually detaches
+     from the streaming content scrolling under it. */
+  padding-bottom: 8px;
+  margin-bottom: -2px;
+  border-bottom: 1px solid var(--border-subtle);
+  /* Slight backdrop blur catches any text that lands behind the
+     sticky bubble during fast scroll without a hard fill flash. */
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+${S} .oc-agent-turn-prompt-sticky .oc-agent-msg {
+  margin: 0;
+}
+
+/* ── Jump pills — Phase 1 §2.5.2 ─────────────────────────── */
+/* Floating affordances for "jump to your prompt" (top-right)
+   and "jump to latest" (bottom-right). Positioned absolutely
+   over the scroll container; fade in/out via opacity. */
+${S} .oc-agent-jump-pill {
+  position: absolute;
+  right: 14px;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--surface-2, rgba(0, 0, 0, 0.7));
+  color: var(--text-primary, #fff);
+  border: 1px solid var(--border-subtle);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  /* Fade in. The pills only mount when their show-condition is
+     true, so the fade is one-direction (in). Unmount snaps
+     out — fine since the show-condition flips once the user
+     has clicked. */
+  animation: ocAgentJumpPillIn 140ms ease-out;
+}
+${S} .oc-agent-jump-pill:hover {
+  background: var(--surface-3, rgba(0, 0, 0, 0.85));
+}
+${S} .oc-agent-jump-pill-top { top: 12px; }
+${S} .oc-agent-jump-pill-bottom { bottom: 16px; }
+@keyframes ocAgentJumpPillIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* No avatar column — messages are distinguished by layout +
    bubble only (Cursor pattern). The role modifiers below own
    alignment, background and max-width. */

@@ -67,6 +67,13 @@ import { FolderOpen } from "lucide-react";
 import { Image as ImageIcon } from "lucide-react";
 import type { BridgeRegistryAgent } from "../bridge/messages";
 import { useStickyBottom, nextTextMessageTarget } from "./use-sticky-bottom";
+import {
+  TurnContainer,
+  TurnPromptHeader,
+  groupMessagesIntoTurns,
+  turnKey,
+} from "./turn-container";
+import { JumpPills } from "./jump-pills";
 
 // Error classification is handled by sessions-provider's AgentFailure
 // pipeline; the UI now branches on session.status directly (warming /
@@ -114,7 +121,16 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
     () => ({ applyReceipts }),
     [applyReceipts],
   );
-  const scrollRef = useRef<HTMLDivElement>(null);
+  // Scroll + active-prompt elements tracked via state so the
+  // sticky-bottom hook + JumpPills re-run when they mount. Plain
+  // useRef wouldn't trigger a re-render on .current changes.
+  const [scrollEl, setScrollEl] = useState<HTMLDivElement | null>(null);
+  const [activePromptEl, setActivePromptEl] = useState<HTMLDivElement | null>(
+    null,
+  );
+  // Imperative ref kept for legacy call sites that read scrollRef.current
+  // (the keybind handler, follow-along effect). Mirrors `scrollEl`.
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { state: workspaceState, dispatch } = useWorkspace();
   const agentsList = useAgentsSnapshot();
@@ -297,10 +313,27 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
   // Sticky-bottom auto-scroll with unstick-on-user-scroll. Replaces
   // the Phase 0 "snap to bottom on every change" reflex. See
   // use-sticky-bottom.ts for the rationale.
-  useStickyBottom(
-    scrollRef,
+  const { isAtBottom, jumpToBottom } = useStickyBottom(
+    scrollEl,
     [session.messages, session.pendingPermission, session.status],
   );
+
+  // Group flat message list into turns for the §2.5.1 per-turn
+  // structure. Each turn = user prompt + subsequent events until
+  // the next user prompt. Memoized so unrelated state changes
+  // (composer typing, etc.) don't re-group.
+  const turns = useMemo(
+    () => groupMessagesIntoTurns(session.messages),
+    [session.messages],
+  );
+
+  // Callback ref factory for the scroll container — sets both the
+  // state-tracked element (for hooks that need re-render on mount)
+  // and the legacy imperative ref (read by the keybind handler).
+  const setScrollContainer = useCallback((node: HTMLDivElement | null) => {
+    scrollRef.current = node;
+    setScrollEl(node);
+  }, []);
 
   // ⌘K — focus the composer from anywhere in the app. Cursor-style
   // shortcut; scoped to avoid clobbering ⌘K inside native inputs.
@@ -701,7 +734,7 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
         />
       )}
 
-      <div ref={scrollRef} className="oc-agent-body">
+      <div ref={setScrollContainer} className="oc-agent-body" style={{ position: "relative" }}>
         <div className="oc-agent-messages">
           {/* Warming/reconnecting state is now surfaced by the compact
               chip in the composer's pill row — keep the message area
@@ -714,9 +747,26 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
                 Session ready. Ask the agent anything.
               </div>
             )}
-          {session.messages.map((m) => (
-            <MessageView key={m.id} message={m} ctx={messageCtx} />
-          ))}
+          {turns.map((turn, i) => {
+            const isActive = i === turns.length - 1;
+            return (
+              <TurnContainer key={turnKey(turn)} turn={turn} isActive={isActive}>
+                {turn.userPrompt && (
+                  <TurnPromptHeader sticky={isActive}>
+                    <div ref={isActive ? setActivePromptEl : null}>
+                      <MessageView
+                        message={turn.userPrompt}
+                        ctx={messageCtx}
+                      />
+                    </div>
+                  </TurnPromptHeader>
+                )}
+                {turn.events.map((m) => (
+                  <MessageView key={m.id} message={m} ctx={messageCtx} />
+                ))}
+              </TurnContainer>
+            );
+          })}
           {queuedPreview && (
             <div className="oc-agent-msg oc-agent-msg-user oc-agent-msg-queued">
               <div className="oc-agent-msg-content">
@@ -728,6 +778,12 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
             </div>
           )}
         </div>
+        <JumpPills
+          scrollEl={scrollEl}
+          promptEl={activePromptEl}
+          isAtBottom={isAtBottom}
+          jumpToBottom={jumpToBottom}
+        />
       </div>
 
       {session.pendingPermission && (
