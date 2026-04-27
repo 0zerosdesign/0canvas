@@ -23,7 +23,8 @@
 //
 // ──────────────────────────────────────────────────────────
 
-import React, { memo } from "react";
+import React, { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import type { AgentMessage, AgentTextMessage } from "./use-agent-session";
 import { TurnRail } from "./turn-rail";
 
@@ -108,6 +109,12 @@ export const TurnContainer = memo(function TurnContainer({
  * — the actual TextMessage rendering inside is unchanged. Pass
  * `sticky={false}` for finalized (non-active) turns to render
  * the prompt naturally inline.
+ *
+ * §2.5.1 — long prompts (>3 lines) collapse to a clamped preview
+ * with a chevron toggle, so a multi-paragraph prompt doesn't eat
+ * viewport while pinned. Short prompts (single line, ≤3 lines)
+ * skip the chrome entirely — the chevron only appears when content
+ * actually overflows the clamp.
  */
 export const TurnPromptHeader = memo(function TurnPromptHeader({
   sticky,
@@ -116,6 +123,60 @@ export const TurnPromptHeader = memo(function TurnPromptHeader({
   sticky: boolean;
   children: React.ReactNode;
 }) {
+  const innerRef = useRef<HTMLDivElement>(null);
+  const [overflows, setOverflows] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
+  // Reset expanded state when sticky transitions off (turn finalized)
+  // so the next time this component sticks the prompt starts collapsed.
+  useEffect(() => {
+    if (!sticky) setExpanded(false);
+  }, [sticky]);
+
+  useLayoutEffect(() => {
+    if (!sticky) return;
+    const el = innerRef.current;
+    if (!el) return;
+    const measure = () => {
+      // The clamp's max-height pins to ~3 line heights when not
+      // .expanded; scrollHeight reports the unconstrained content
+      // height. Difference > 1px = overflow worth a toggle for.
+      const overflow = el.scrollHeight - el.clientHeight > 1;
+      setOverflows(overflow);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [sticky, children]);
+
   if (!sticky) return <>{children}</>;
-  return <div className="oc-agent-turn-prompt-sticky">{children}</div>;
+
+  const cls = expanded
+    ? "oc-agent-turn-prompt-sticky oc-agent-turn-prompt-expanded"
+    : "oc-agent-turn-prompt-sticky";
+
+  return (
+    <div className={cls}>
+      <div className="oc-agent-turn-prompt-clamp" ref={innerRef}>
+        {children}
+      </div>
+      {overflows && (
+        <button
+          type="button"
+          className="oc-agent-turn-prompt-toggle"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          aria-label={expanded ? "Collapse prompt" : "Show full prompt"}
+        >
+          {expanded ? (
+            <ChevronUp className="w-3 h-3" />
+          ) : (
+            <ChevronDown className="w-3 h-3" />
+          )}
+          <span>{expanded ? "Less" : "More"}</span>
+        </button>
+      )}
+    </div>
+  );
 });

@@ -3211,6 +3211,58 @@ ${S} .oc-agent-turn-prompt-sticky {
 ${S} .oc-agent-turn-prompt-sticky .oc-agent-msg {
   margin: 0;
 }
+/* §2.5.1 — clamp the sticky prompt to ~3 lines so multi-paragraph
+   prompts don't eat the viewport while pinned. The clamp is
+   removed when .oc-agent-turn-prompt-expanded is on the parent
+   (toggle click), and the toggle itself only renders when the
+   content actually overflows (measured in JS via ResizeObserver). */
+${S} .oc-agent-turn-prompt-sticky .oc-agent-turn-prompt-clamp {
+  max-height: calc(13px * 1.55 * 3 + 16px);
+  overflow: hidden;
+  position: relative;
+  transition: max-height 160ms ease;
+}
+${S} .oc-agent-turn-prompt-expanded .oc-agent-turn-prompt-clamp {
+  max-height: 50vh;
+  overflow: auto;
+}
+/* Soft fade at the bottom of the clamp signals "more content
+   below" before the toggle is clicked. Hidden once expanded. */
+${S} .oc-agent-turn-prompt-sticky .oc-agent-turn-prompt-clamp::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 18px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    var(--surface-1, var(--surface-2))
+  );
+  pointer-events: none;
+}
+${S} .oc-agent-turn-prompt-expanded .oc-agent-turn-prompt-clamp::after {
+  display: none;
+}
+${S} .oc-agent-turn-prompt-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 2px 8px 2px 6px;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  cursor: pointer;
+}
+${S} .oc-agent-turn-prompt-toggle:hover {
+  color: var(--text-primary);
+  background: var(--surface-2);
+}
 
 /* ── Jump pills — Phase 1 §2.5.2 ─────────────────────────── */
 /* Floating affordances for "jump to your prompt" (top-right)

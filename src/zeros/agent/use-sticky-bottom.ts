@@ -152,9 +152,15 @@ export function nextTextMessageTarget(
   scrollEl: HTMLElement,
   opts: { direction: "up" | "down"; selector?: string },
 ): number | null {
+  // §2.5.7 — walk only user prompts and final agent text. Thinking
+  // and tool blocks are deliberately skipped so a 30-min run with
+  // 200 cards is one keystroke per actual back-and-forth, not 200.
+  // The class is `oc-agent-msg-agent` after the assistant→agent
+  // rename; the older `-msg-assistant` selector silently matched
+  // nothing since that class was never emitted, which made the
+  // keybind feel like it only navigated user prompts.
   const selector =
-    opts.selector ??
-    ".oc-agent-msg-user, .oc-agent-msg-assistant, .oc-agent-msg-thought";
+    opts.selector ?? ".oc-agent-msg-user, .oc-agent-msg-agent";
   const elements = Array.from(scrollEl.querySelectorAll<HTMLElement>(selector));
   if (elements.length === 0) return null;
 
