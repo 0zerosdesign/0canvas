@@ -3160,6 +3160,9 @@ ${S} .oc-agent-plan-desc { flex: 1; min-width: 0; word-break: break-word; }
 /* ── Messages (agent chat variant of oc-ai-msg) ─────────── */
 ${S} .oc-agent-messages {
   display: flex; flex-direction: column; gap: 14px;
+  /* Stage 5.4 — establishes a container so the per-turn rail can
+   * hide itself when the chat panel narrows under ~360px. */
+  container-type: inline-size;
 }
 
 /* ── Turn container — Phase 1 §2.5.1 ─────────────────────── */
@@ -3168,16 +3171,21 @@ ${S} .oc-agent-messages {
    active turn's prompt can sticky-pin to the viewport top. */
 ${S} .oc-agent-turn {
   display: flex; flex-direction: column; gap: 14px;
+  /* Stage 5.4 — position: relative on every turn (not just active)
+   * so the per-turn TurnRail can absolute-position into the gutter
+   * scoped to its own turn. padding-left makes room for the rail
+   * (16px gutter + 6px breathing). */
+  position: relative;
+  padding-left: 22px;
 }
 ${S} .oc-agent-turn + .oc-agent-turn {
   margin-top: 6px;
 }
-/* The .oc-agent-turn-active modifier (applied to the most
-   recent turn) establishes the layout context for the sticky
-   prompt header. position: relative is what scopes z-index
-   without affecting layout. */
+/* Active modifier kept for future per-active-turn affordances and
+ * to mirror the codebase's intent; the sticky-prompt header below
+ * already works because .oc-agent-turn is now always relative. */
 ${S} .oc-agent-turn-active {
-  position: relative;
+  /* (intentionally inherits position:relative from .oc-agent-turn) */
 }
 /* Sticky-positioned wrapper for the active turn's user prompt.
    Sticks to the top of the .oc-agent-body scroll container
@@ -4206,6 +4214,85 @@ ${S} .oc-agent-earlier-banner-text {
   color: var(--text-placeholder);
   font-family: var(--font-mono);
   white-space: nowrap;
+}
+
+/* ── Stage 5.4: Vertical timeline rail ────────────────── */
+${S} .oc-agent-turn-rail {
+  position: absolute;
+  left: 4px;
+  top: 6px;
+  bottom: 6px;
+  width: 14px;
+  display: flex; flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  pointer-events: none;
+  /* The rail itself doesn't intercept hover; only the marks do. */
+}
+${S} .oc-agent-turn-rail-mark {
+  pointer-events: auto;
+  flex-shrink: 0;
+  border-radius: 50%;
+  width: 6px; height: 6px;
+  background: var(--text-placeholder);
+  transition: transform 0.12s ease, background 0.12s ease;
+  cursor: help;
+}
+${S} .oc-agent-turn-rail-mark:hover {
+  transform: scale(1.4);
+}
+/* Status colours — applied on top of the kind. */
+${S} .oc-agent-turn-rail-mark-pending {
+  background: var(--text-placeholder);
+}
+${S} .oc-agent-turn-rail-mark-in_progress {
+  background: var(--text-info);
+  animation: ocAgentRailPulse 1.4s ease-in-out infinite;
+}
+@keyframes ocAgentRailPulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50%      { opacity: 1;    transform: scale(1.25); }
+}
+${S} .oc-agent-turn-rail-mark-completed {
+  background: var(--text-success);
+}
+${S} .oc-agent-turn-rail-mark-failed {
+  background: var(--text-critical);
+}
+/* Thinking marks render as a thin horizontal bar instead of a dot
+ * so the eye can skim "this turn was mostly thinking" at a glance. */
+${S} .oc-agent-turn-rail-mark-thinking {
+  width: 10px; height: 2px;
+  border-radius: 1px;
+  background: var(--text-muted);
+  opacity: 0.55;
+}
+${S} .oc-agent-turn-rail-mark-thinking:hover {
+  opacity: 1;
+  transform: scaleY(1.5);
+}
+
+/* Connecting hairline between marks — visual continuity for long
+ * turns. Uses a pseudo-element on the rail itself, behind the marks. */
+${S} .oc-agent-turn-rail::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 4px;
+  bottom: 4px;
+  width: 1px;
+  background: var(--border-subtle);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+/* Hide the rail on narrow chat panels — falls back to the run-
+ * summary roll-up for skim affordance. The container query reads
+ * against the .oc-agent-messages element, which sets
+ * container-type: inline-size above. */
+@container (max-width: 360px) {
+  ${S} .oc-agent-turn-rail { display: none; }
+  ${S} .oc-agent-turn { padding-left: 0; }
 }
 ${S} .oc-agent-thinking-body {
   padding: 0 12px 10px 32px;

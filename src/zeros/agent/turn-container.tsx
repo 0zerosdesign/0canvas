@@ -25,6 +25,7 @@
 
 import React, { memo } from "react";
 import type { AgentMessage, AgentTextMessage } from "./use-agent-session";
+import { TurnRail } from "./turn-rail";
 
 export interface Turn {
   /** The user prompt that started this turn. null only for the
@@ -86,14 +87,19 @@ interface TurnContainerProps {
  * re-render the inactive turns above it.
  */
 export const TurnContainer = memo(function TurnContainer({
-  turn: _turn,
+  turn,
   isActive,
   children,
 }: TurnContainerProps) {
   const className = isActive
     ? "oc-agent-turn oc-agent-turn-active"
     : "oc-agent-turn";
-  return <div className={className}>{children}</div>;
+  return (
+    <div className={className}>
+      <TurnRail events={turn.events} />
+      {children}
+    </div>
+  );
 });
 
 /**
