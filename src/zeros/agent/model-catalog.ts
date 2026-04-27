@@ -74,8 +74,8 @@ export function catalogSource(): CatalogSource {
   return lastSource;
 }
 
-/** Prefix-match agent id → family. Wrapper variants (claude-acp,
- *  claude, @anthropic-ai/claude-code, etc.) all resolve here. */
+/** Prefix-match agent id → family. Wrapper variants (claude,
+ *  claude-code, @anthropic-ai/claude-code, etc.) all resolve here. */
 export function agentFamily(agentId: string | null): string {
   if (!agentId) return "";
   const id = agentId.toLowerCase();

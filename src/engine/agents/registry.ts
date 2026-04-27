@@ -105,7 +105,7 @@ function notYetImplemented(agentId: string): AgentAdapter {
 
 export const AGENT_MANIFEST: AgentManifestEntry[] = [
   {
-    id: "claude-acp", // compatibility id for saved chats/settings; rename only with migration
+    id: "claude",
     name: "Claude Code",
     description: "Anthropic's Claude Code CLI (subscription or API key).",
     cliBinary: "claude",
@@ -136,7 +136,7 @@ export const AGENT_MANIFEST: AgentManifestEntry[] = [
     createAdapter: (ctx) => createClaudeAdapter(ctx),
   },
   {
-    id: "codex-acp",
+    id: "codex",
     name: "Codex",
     description: "OpenAI Codex CLI (ChatGPT subscription or API key).",
     cliBinary: "codex",
@@ -177,7 +177,7 @@ export const AGENT_MANIFEST: AgentManifestEntry[] = [
     createAdapter: (ctx) => createCursorAdapter(ctx),
   },
   {
-    id: "amp-acp",
+    id: "amp",
     name: "Amp",
     description: "Sourcegraph Amp agent.",
     cliBinary: "amp",
@@ -255,8 +255,19 @@ export function listAgentIds(): string[] {
   return AGENT_MANIFEST.map((a) => a.id);
 }
 
+/** Legacy → canonical id map for the pre-rename agent ids that may
+ *  arrive on the wire from a renderer running off persisted data
+ *  (workspace state, SQLite chats). Keeps existing chats resolving
+ *  while one-shot migrations move them to the canonical id. */
+const LEGACY_AGENT_ID_ALIASES: Record<string, string> = {
+  "claude-acp": "claude",
+  "codex-acp": "codex",
+  "amp-acp": "amp",
+};
+
 export function findAgent(id: string): AgentManifestEntry | undefined {
-  return AGENT_MANIFEST.find((a) => a.id === id);
+  const canonical = LEGACY_AGENT_ID_ALIASES[id] ?? id;
+  return AGENT_MANIFEST.find((a) => a.id === canonical);
 }
 
 /** Produce the agent list the engine broadcasts over `AGENT_AGENTS_LIST`.

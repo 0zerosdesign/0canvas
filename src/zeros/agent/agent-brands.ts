@@ -14,6 +14,8 @@
 // foreground color — same as today.
 // ──────────────────────────────────────────────────────────
 
+import { canonicalAgentId } from "./agent-id-aliases";
+
 export interface AgentBrand {
   /** CSS color string. Used as the fill replacement for the
    *  CDN-served SVG's `currentColor` references. */
@@ -21,9 +23,9 @@ export interface AgentBrand {
 }
 
 export const AGENT_BRANDS: Record<string, AgentBrand> = {
-  "amp-acp": { color: "#FF6B35" },
-  "claude-acp": { color: "#D97757" },
-  "codex-acp": { color: "#10A37F" },
+  amp: { color: "#FF6B35" },
+  claude: { color: "#D97757" },
+  codex: { color: "#10A37F" },
   cursor: { color: "#E8E8E8" },
   "factory-droid": { color: "#A855F7" },
   gemini: { color: "#4285F4" },
@@ -31,6 +33,7 @@ export const AGENT_BRANDS: Record<string, AgentBrand> = {
 };
 
 export function brandColor(agentId: string | null | undefined): string | null {
-  if (!agentId) return null;
-  return AGENT_BRANDS[agentId]?.color ?? null;
+  const id = canonicalAgentId(agentId);
+  if (!id) return null;
+  return AGENT_BRANDS[id]?.color ?? null;
 }

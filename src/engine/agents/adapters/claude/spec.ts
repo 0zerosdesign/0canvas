@@ -45,7 +45,7 @@ interface ClaudeExtra {
 }
 
 export const claudeSpec: StreamJsonAgentSpec<ClaudeExtra> = {
-  agentId: "claude-acp",
+  agentId: "claude",
   agentName: "Claude Code",
   protocolVersion: 1,
   cliBinary: "claude",

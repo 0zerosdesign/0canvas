@@ -97,7 +97,7 @@ const DEFAULT_ENTRY: AgentUiEntry = {
 };
 
 /** Look up the static UI entry for an agent. Matches by family (claude/codex/gemini/…),
- *  so wrapper variants like `claude-acp`, `claude-code`, `@anthropic-ai/claude-code`
+ *  so wrapper variants like `claude`, `claude-code`, `@anthropic-ai/claude-code`
  *  all resolve to the same entry. */
 export function uiEntryForAgent(agentId: string | null): AgentUiEntry {
   return BY_FAMILY[agentFamily(agentId)] ?? DEFAULT_ENTRY;

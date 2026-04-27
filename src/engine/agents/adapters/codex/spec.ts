@@ -29,7 +29,7 @@ interface CodexExtra {
 }
 
 export const codexSpec: StreamJsonAgentSpec<CodexExtra> = {
-  agentId: "codex-acp",
+  agentId: "codex",
   agentName: "Codex",
   protocolVersion: 1,
   cliBinary: "codex",

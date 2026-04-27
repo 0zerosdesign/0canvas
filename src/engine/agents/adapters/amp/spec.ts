@@ -15,7 +15,7 @@ interface AmpExtra {
 }
 
 export const ampSpec: StreamJsonAgentSpec<AmpExtra> = {
-  agentId: "amp-acp",
+  agentId: "amp",
   agentName: "Amp",
   protocolVersion: 1,
   cliBinary: "amp",

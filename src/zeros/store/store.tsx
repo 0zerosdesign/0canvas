@@ -305,7 +305,7 @@ export type ChatThread = {
   /** Human label for the agent (e.g. "Claude Agent"). Cached on chat
    *  creation so the header can render without a registry lookup. */
   agentName: string | null;
-  /** Model id (agent-specific — e.g. "claude-opus-4-7" for claude-acp).
+  /** Model id (agent-specific — e.g. "claude-opus-4-7" for claude).
    *  null means "use the agent's default". Changing forces session respawn
    *  because most agents read the model from env at spawn time. */
   model: string | null;

@@ -244,13 +244,26 @@ function ChatsPersistence() {
     //   - `sessionId` (replaces the one-shot `resumeSessionId` — old
     //                  records that still carry resumeSessionId get
     //                  promoted so existing chats keep their disk link)
+    // Plus: pre-rename agent ids (claude-acp, codex-acp, amp-acp) get
+    // mapped forward to their canonical form; the engine resolves both
+    // either way, but rewriting at hydrate keeps the UI consistent.
     // Default missing fields rather than dropping old chats on the floor.
+    const LEGACY_AGENT_IDS: Record<string, string> = {
+      "claude-acp": "claude",
+      "codex-acp": "codex",
+      "amp-acp": "amp",
+    };
     const chats: ChatThread[] = raw.map((c) => {
       const legacyResume = (c as any).resumeSessionId;
+      const rawAgentId =
+        typeof (c as any).agentId === "string" ? (c as any).agentId : null;
+      const agentId = rawAgentId
+        ? LEGACY_AGENT_IDS[rawAgentId] ?? rawAgentId
+        : null;
       return ({
       ...c,
       folder: typeof c.folder === "string" ? c.folder : "",
-      agentId: typeof (c as any).agentId === "string" ? (c as any).agentId : null,
+      agentId,
       agentName: typeof (c as any).agentName === "string" ? (c as any).agentName : null,
       model: typeof (c as any).model === "string" ? (c as any).model : null,
       effort:

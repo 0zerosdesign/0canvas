@@ -2,19 +2,21 @@
 // AuthModal — spec-honest auth method chooser for an agent
 // ──────────────────────────────────────────────────────────
 //
-// Phase 4 rewrite: we now read `initialize.authMethods` advertised by the
-// agent and render each one faithfully. Env-var methods get a password
-// input per secret var (persisted to the OS keychain under `acp::<agentId>::<var>`).
-// Terminal methods show the "uses your installed CLI" disclaimer. Agent-kind
-// methods render a "the agent handles auth itself" hint and start directly.
+// Reads `initialize.authMethods` advertised by the agent and renders
+// each one faithfully. Env-var methods get a password input per secret
+// var (persisted to the OS keychain under `agent::<canonicalId>::<var>`,
+// with backward-compat reads from the legacy `acp::*` prefix).
+// Terminal methods show the "uses your installed CLI" disclaimer.
+// Agent-kind methods render a "the agent handles auth itself" hint
+// and start directly.
 //
 // Vendor enrichment: agents listed in AGENT_AUTH_CONFIG get per-vendor
 // copy — "Anthropic API key (Recommended)", console URL link, friendly
 // subscription disclaimer — but the base flow is spec-driven.
 //
-// Claude-specific: we synthesise a "Gateway (advanced)" option at the end
-// so users can point `claude-agent-acp` at a LiteLLM / Anthropic-compatible
-// proxy without shelling out to edit env.
+// Claude-specific: we synthesise a "Gateway (advanced)" option at the
+// end so users can point Claude's CLI at a LiteLLM / Anthropic-
+// compatible proxy without shelling out to edit env.
 // ──────────────────────────────────────────────────────────
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -32,6 +34,7 @@ import type { BridgeRegistryAgent } from "../bridge/messages";
 import type { AuthMethod, InitializeResponse } from "../bridge/agent-events";
 import { getSecret, setSecret, SECRET_ACCOUNTS } from "../../native/secrets";
 import { Button, Input } from "../ui";
+import { canonicalAgentId } from "./agent-id-aliases";
 
 export type AuthMethodKind = "env_var" | "terminal" | "agent";
 
@@ -65,7 +68,7 @@ export interface AgentAuthConfig {
  * response. Agents not listed here still work, just without vendor copy.
  */
 export const AGENT_AUTH_CONFIG: Record<string, AgentAuthConfig> = {
-  "claude-acp": {
+  claude: {
     secretAccount: SECRET_ACCOUNTS.ANTHROPIC_API_KEY,
     envVar: "ANTHROPIC_API_KEY",
     consoleUrl: "https://console.anthropic.com/settings/keys",
@@ -76,7 +79,7 @@ export const AGENT_AUTH_CONFIG: Record<string, AgentAuthConfig> = {
       customHeaders: "ANTHROPIC_CUSTOM_HEADERS",
     },
   },
-  "codex-acp": {
+  codex: {
     secretAccount: SECRET_ACCOUNTS.OPENAI_API_KEY,
     envVar: "OPENAI_API_KEY",
     consoleUrl: "https://platform.openai.com/api-keys",
@@ -140,7 +143,7 @@ type Option = OptionEnvVars | OptionTerminal | OptionAgentKind;
 // ───────────────────────────────────────────────────────────
 
 export function AuthModal({ agent, initialize, onConfirm, onBack }: AuthModalProps) {
-  const config = AGENT_AUTH_CONFIG[agent.id];
+  const config = AGENT_AUTH_CONFIG[canonicalAgentId(agent.id) ?? agent.id];
 
   const options = useMemo(
     () => buildOptions(agent.id, initialize, config),
@@ -178,7 +181,11 @@ export function AuthModal({ agent, initialize, onConfirm, onBack }: AuthModalPro
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Prefill env-var options from the keychain (per-var).
+  // Prefill env-var options from the keychain (per-var). Reads the
+  // canonical slot first; if empty, also tries the legacy `acp::*`
+  // prefix so users who saved API keys before the rename keep their
+  // values without re-entering. When the legacy slot wins, we copy
+  // forward into the canonical slot so the next read is direct.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -189,7 +196,30 @@ export function AuthModal({ agent, initialize, onConfirm, onBack }: AuthModalPro
         for (const v of opt.vars) {
           if (!v.keychain) continue;
           try {
-            const val = await getSecret(v.keychain);
+            let val = await getSecret(v.keychain);
+            if (!val && v.keychain.startsWith("agent::")) {
+              const legacy = v.keychain.replace(
+                /^agent::([^:]+)::/,
+                (_m, canonical: string) => {
+                  const legacyId =
+                    canonical === "claude"
+                      ? "claude-acp"
+                      : canonical === "codex"
+                      ? "codex-acp"
+                      : canonical === "amp"
+                      ? "amp-acp"
+                      : canonical;
+                  return `acp::${legacyId}::`;
+                },
+              );
+              if (legacy !== v.keychain) {
+                val = await getSecret(legacy);
+                if (val) {
+                  // Forward-migrate so subsequent reads skip the fallback.
+                  void setSecret(v.keychain, val).catch(() => {});
+                }
+              }
+            }
             if (val) values[v.name] = val;
           } catch {
             /* keychain miss — leave blank */
@@ -452,8 +482,12 @@ function buildOptions(
     out.push(defaultTerminalOption(config));
   }
 
-  // 3. Claude-specific Gateway option, always offered for claude-acp.
-  if (agentId === "claude-acp" && config?.supportsGateway && config.gatewayVars) {
+  // 3. Claude-specific Gateway option, always offered for Claude.
+  if (
+    canonicalAgentId(agentId) === "claude" &&
+    config?.supportsGateway &&
+    config.gatewayVars
+  ) {
     out.push(buildGatewayOption(config));
   }
 
@@ -514,6 +548,12 @@ function methodToOption(
  * centralised SECRET_ACCOUNTS slots; everything else gets a namespaced
  * fallback keyed by agent id + var name so two agents can share a slot name
  * without collision.
+ *
+ * The slot name uses the canonical agent id so a single keychain entry
+ * spans both pre- and post-rename invocations. `secrets.getSecret` does
+ * a backward-compat read of the legacy `acp::<legacyId>::*` slot when
+ * the canonical one isn't found, so users who saved keys under the
+ * old prefix continue to authenticate without re-entering them.
  */
 function keychainFor(
   agentId: string,
@@ -523,7 +563,7 @@ function keychainFor(
   if (config?.envVar && config?.secretAccount && varName === config.envVar) {
     return config.secretAccount;
   }
-  return `acp::${agentId}::${varName}`;
+  return `agent::${canonicalAgentId(agentId)}::${varName}`;
 }
 
 function defaultEnvVarOption(
@@ -577,7 +617,7 @@ function buildGatewayOption(config: AgentAuthConfig): OptionEnvVars {
         label: "Base URL",
         secret: false,
         optional: false,
-        keychain: `acp::claude-acp::${gw.baseUrl}`,
+        keychain: `agent::claude::${gw.baseUrl}`,
       },
       ...(gw.customHeaders
         ? [
@@ -586,7 +626,7 @@ function buildGatewayOption(config: AgentAuthConfig): OptionEnvVars {
               label: "Custom headers (JSON or Header: Value pairs)",
               secret: true,
               optional: true,
-              keychain: `acp::claude-acp::${gw.customHeaders}`,
+              keychain: `agent::claude::${gw.customHeaders}`,
             },
           ]
         : []),

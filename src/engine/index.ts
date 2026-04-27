@@ -47,10 +47,9 @@ export class ZerosEngine {
   private watcher: FileWatcher;
   private server: EngineServer;
   private mcp: ZerosMcp | null = null;
-  // Native per-CLI adapter runtime. Keeps the `acp` field name for
-  // compatibility with existing handlers; a later migration can rename
-  // this private field to `agents`.
-  private acp: AgentGateway;
+  // Native per-CLI adapter runtime — multiplexes the per-agent
+  // adapter implementations behind a single gateway surface.
+  private agents: AgentGateway;
 
   private root: string;
   private port: number;
@@ -163,7 +162,7 @@ export class ZerosEngine {
       },
     };
 
-    this.acp = new AgentGateway(backendOpts as never);
+    this.agents = new AgentGateway(backendOpts as never);
     console.log(`[Zeros] Agent backend: native`);
 
     const engineStartTime = Date.now();
@@ -214,7 +213,7 @@ export class ZerosEngine {
     // Register the MCP endpoint with the native agent gateway. Every new
     // agent session can attach this endpoint so the agent gets our 5 design
     // tools without per-agent user configuration.
-    this.acp.registerMcpServer({
+    this.agents.registerMcpServer({
       name: "Zeros",
       url: `http://127.0.0.1:${this.actualPort}/mcp`,
     });
@@ -244,7 +243,7 @@ export class ZerosEngine {
     if (this.mcp) {
       await this.mcp.stop();
     }
-    await this.acp.dispose();
+    await this.agents.dispose();
     await this.watcher.stop();
     await this.server.stop();
     this.removePortFile();
@@ -344,8 +343,8 @@ export class ZerosEngine {
       switch (msg.type) {
         case "AGENT_LIST_AGENTS": {
           const agents = msg.force
-            ? await this.acp.refreshRegistry()
-            : await this.acp.listAgents();
+            ? await this.agents.refreshRegistry()
+            : await this.agents.listAgents();
           this.server.send(ws, createMessage({
             type: "AGENT_AGENTS_LIST",
             source: "engine",
@@ -355,8 +354,8 @@ export class ZerosEngine {
           return;
         }
         case "AGENT_NEW_SESSION": {
-          const initialize = await this.acp.ensureAgent(msg.agentId, { env: msg.env });
-          const session = await this.acp.newSession(msg.agentId, {
+          const initialize = await this.agents.ensureAgent(msg.agentId, { env: msg.env });
+          const session = await this.agents.newSession(msg.agentId, {
             cwd: msg.cwd,
             env: msg.env,
           });
@@ -375,7 +374,7 @@ export class ZerosEngine {
           // so the auth screen can read the agent's advertised auth methods.
           // Providing a real env later (via AGENT_NEW_SESSION) will transparently
           // respawn the subprocess when needed.
-          const initialize = await this.acp.initializeAgent(msg.agentId);
+          const initialize = await this.agents.initializeAgent(msg.agentId);
           this.server.send(ws, createMessage({
             type: "AGENT_AGENT_INITIALIZED",
             source: "engine",
@@ -386,7 +385,7 @@ export class ZerosEngine {
           return;
         }
         case "AGENT_AUTHENTICATE": {
-          await this.acp.authenticate(msg.agentId, msg.methodId);
+          await this.agents.authenticate(msg.agentId, msg.methodId);
           this.server.send(ws, createMessage({
             type: "AGENT_AUTH_COMPLETED",
             source: "engine",
@@ -398,7 +397,7 @@ export class ZerosEngine {
         }
         case "AGENT_PROMPT": {
           try {
-            const response = await this.acp.prompt(msg.agentId, msg.sessionId, msg.prompt);
+            const response = await this.agents.prompt(msg.agentId, msg.sessionId, msg.prompt);
             this.server.send(ws, createMessage({
               type: "AGENT_PROMPT_COMPLETE",
               source: "engine",
@@ -421,15 +420,15 @@ export class ZerosEngine {
           return;
         }
         case "AGENT_CANCEL": {
-          await this.acp.cancel(msg.agentId, msg.sessionId);
+          await this.agents.cancel(msg.agentId, msg.sessionId);
           return;
         }
         case "AGENT_PERMISSION_RESPONSE": {
-          this.acp.answerPermission(msg.permissionId, msg.response);
+          this.agents.answerPermission(msg.permissionId, msg.response);
           return;
         }
         case "AGENT_SET_MODE": {
-          await this.acp.setMode(msg.agentId, msg.sessionId, msg.modeId);
+          await this.agents.setMode(msg.agentId, msg.sessionId, msg.modeId);
           this.server.send(ws, createMessage({
             type: "AGENT_MODE_CHANGED",
             source: "engine",
@@ -441,7 +440,7 @@ export class ZerosEngine {
           return;
         }
         case "AGENT_LIST_SESSIONS": {
-          const resp = await this.acp.listSessions(msg.agentId, {
+          const resp = await this.agents.listSessions(msg.agentId, {
             cwd: msg.cwd,
             cursor: msg.cursor,
           });
@@ -456,7 +455,7 @@ export class ZerosEngine {
           return;
         }
         case "AGENT_LOAD_SESSION": {
-          const response = await this.acp.loadSession(
+          const response = await this.agents.loadSession(
             msg.agentId,
             msg.sessionId,
             { cwd: msg.cwd, env: msg.env },
