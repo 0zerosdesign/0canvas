@@ -3,9 +3,18 @@
 // ──────────────────────────────────────────────────────────
 //
 // Cursor's stream-json schema is close enough to Claude's that we
-// reuse ClaudeStreamTranslator. Auth: ~/.cursor/cli-config.json (probed
-// in registry). Permissions are not routed through hooks — Cursor has
-// its own approval config.
+// reuse ClaudeStreamTranslator. The envelope (system/user/assistant/
+// result) and the `tool_use` content-block shape match; only the tool
+// names diverge — Cursor emits `shellToolCall` / `readToolCall` /
+// `editToolCall` / `writeToolCall` / `grepToolCall` / `globToolCall` /
+// `todoToolCall` / `updateTodosToolCall` instead of Claude's `Bash` /
+// `Read` / etc. The shared `mapToolKind` / `describeTool` /
+// `computeMergeKey` helpers in claude/translator.ts (Stage 7.2)
+// recognize both name sets, so Cursor tool calls render through the
+// same Shell / Read / Edit / Search / Plan cards as Claude's.
+//
+// Auth: ~/.cursor/cli-config.json (probed in registry). Permissions
+// are not routed through hooks — Cursor has its own approval config.
 // ──────────────────────────────────────────────────────────
 
 import type { StreamJsonAgentSpec } from "../shared";

@@ -348,7 +348,13 @@ export class ClaudeStreamTranslator {
         // 1:1 onto the canonical `plan` notification feeding session.plan
         // and the existing PlanPanel. Suppress the matching tool_result
         // so the UI doesn't end up with an orphan tool message.
-        if (/^TodoWrite$/i.test(block.name)) {
+        // Stage 7.2 — same intercept catches Cursor's `todoToolCall` /
+        // `updateTodosToolCall`, which use the same `{ todos: [...] }`
+        // payload shape as Claude.
+        if (
+          /^TodoWrite$/i.test(block.name) ||
+          /^(todoToolCall|updateTodosToolCall)$/i.test(block.name)
+        ) {
           this.suppressedToolUseIds.add(block.id);
           const entries = parseTodoWriteEntries(block.input);
           if (entries.length > 0 || isTodoWriteShape(block.input)) {
@@ -480,21 +486,29 @@ function describeTool(name: string, input: unknown): string {
   switch (name) {
     case "Read":
     case "ReadFile":
+    case "readToolCall":
       return `Reading ${inp.file_path ?? inp.path ?? "file"}`;
     case "Edit":
     case "Write":
+    case "editToolCall":
+    case "writeToolCall":
       return `Editing ${inp.file_path ?? inp.path ?? "file"}`;
     case "Bash":
+    case "shellToolCall":
       return `Running ${typeof inp.command === "string"
         ? truncate(inp.command, 60)
         : "shell command"}`;
     case "Glob":
+    case "globToolCall":
       return `Searching for ${inp.pattern ?? "files"}`;
     case "Grep":
-      return `Grep ${truncate(String(inp.pattern ?? ""), 40)}`;
+    case "grepToolCall":
+      return `Grep ${truncate(String(inp.pattern ?? inp.query ?? ""), 40)}`;
     case "WebFetch":
       return `Fetching ${inp.url ?? "URL"}`;
     case "TodoWrite":
+    case "todoToolCall":
+    case "updateTodosToolCall":
       return "Updating plan";
     default:
       return name;
@@ -550,7 +564,12 @@ function isTodoWriteShape(input: unknown): boolean {
  *  into a single card with "+N more changes" history. Returns null
  *  for tools that shouldn't merge. */
 function computeMergeKey(name: string, input: unknown): string | null {
-  if (!/^(Edit|Write)$/i.test(name)) return null;
+  if (
+    !/^(Edit|Write)$/i.test(name) &&
+    !/^(editToolCall|writeToolCall)$/i.test(name)
+  ) {
+    return null;
+  }
   const path = isObj(input)
     ? typeof input.file_path === "string"
       ? input.file_path
@@ -562,13 +581,20 @@ function computeMergeKey(name: string, input: unknown): string | null {
   return `edit:${path}`;
 }
 
-/** Coarse ToolKind categorization. */
+/** Coarse ToolKind categorization.
+ *  Recognizes both Claude's tool names (`Bash`, `Read`, `Edit`, …) and
+ *  Cursor's tool names (`shellToolCall`, `readToolCall`, …). Cursor's
+ *  stream-json envelope matches Claude's enough that `cursor/spec.ts`
+ *  feeds it through this same translator (Stage 7.2); the tool-name
+ *  set is the only place the dialects actually diverge. */
 function mapToolKind(name: string): ToolKind {
-  if (/^Read$/i.test(name)) return "read";
+  if (/^Read$/i.test(name) || /^readToolCall$/i.test(name)) return "read";
   if (/^(Glob|Grep|LS)$/i.test(name)) return "search";
+  if (/^(grepToolCall|globToolCall)$/i.test(name)) return "search";
   if (/^WebSearch$/i.test(name)) return "web_search";
   if (/^(Edit|Write)$/i.test(name)) return "edit";
-  if (/^Bash$/i.test(name)) return "execute";
+  if (/^(editToolCall|writeToolCall)$/i.test(name)) return "edit";
+  if (/^Bash$/i.test(name) || /^shellToolCall$/i.test(name)) return "execute";
   if (/^WebFetch$/i.test(name)) return "fetch";
   if (/^Task$/i.test(name)) return "subagent";
   if (/^AskUserQuestion$/i.test(name)) return "question";
