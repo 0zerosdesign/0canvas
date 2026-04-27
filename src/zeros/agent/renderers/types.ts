@@ -39,6 +39,14 @@ export interface RendererContext {
    *  Owned by agent-chat; passed through so the design-tool card can
    *  surface a persistent diff after the agent finishes. */
   applyReceipts: Record<string, ApplyReceipt>;
+  /** True when the session is actively streaming agent output. The
+   *  ThinkingBlock + future card kinds use this to decide whether to
+   *  render shimmer / live-tick duration / "now" affordances. */
+  isStreaming: boolean;
+  /** Id of the most recent message in the timeline. Renderers that
+   *  need "am I the in-flight message?" compare their own message.id
+   *  to this. Stable per render — agent-chat memoizes the context. */
+  lastMessageId: string | null;
 }
 
 export interface ApplyReceipt {

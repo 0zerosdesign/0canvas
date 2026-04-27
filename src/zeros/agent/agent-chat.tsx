@@ -118,9 +118,18 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
   // Stable ctx object for MessageView memoization. Without useMemo, every
   // parent re-render hands a new ref to every message and the per-message
   // memo can never short-circuit.
+  //
+  // isStreaming + lastMessageId let in-flight-aware renderers (ThinkingBlock
+  // shimmer, future activity HUD) detect "am I the active in-flight message"
+  // without each renderer reaching back into session state.
+  const lastMessageId =
+    session.messages.length > 0
+      ? session.messages[session.messages.length - 1].id
+      : null;
+  const isStreaming = session.status === "streaming";
   const messageCtx: RendererContext = useMemo(
-    () => ({ applyReceipts }),
-    [applyReceipts],
+    () => ({ applyReceipts, isStreaming, lastMessageId }),
+    [applyReceipts, isStreaming, lastMessageId],
   );
   // Scroll + active-prompt elements tracked via state so the
   // sticky-bottom hook + JumpPills re-run when they mount. Plain

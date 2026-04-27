@@ -99,19 +99,25 @@ export interface ContentAnnotations {
 // ── Tool calls ──────────────────────────────────────────────
 
 /** Canonical tool category. Adapters set this so the renderer can
- *  pick the right card without guessing from `title`. New kinds
- *  (`subagent`, `clarifying_question`) are introduced in later
- *  Phase 1 stages — Stage 1A keeps the existing set 1:1. */
+ *  pick the right card without guessing from `title`.
+ *
+ *  Stage 4 added `web_search`, `mcp`, `subagent`, `question` so the
+ *  registry's `toolByKind` dispatch covers Plan / Question / MCP /
+ *  Subagent without falling back to the title-based matchers. */
 export type ToolKind =
   | "read"
   | "edit"
   | "delete"
   | "move"
   | "search"
+  | "web_search"
   | "execute"
   | "think"
   | "fetch"
   | "switch_mode"
+  | "subagent"
+  | "mcp"
+  | "question"
   | "other";
 
 export type ToolCallStatus = "pending" | "in_progress" | "completed" | "failed";

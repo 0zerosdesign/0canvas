@@ -3716,6 +3716,304 @@ ${S} .oc-agent-read-more {
 }
 ${S} .oc-agent-read-more:hover { background: rgba(255, 255, 255, 0.05); }
 
+/* ── Stage 4.1: Search card ───────────────────────────── */
+${S} .oc-agent-tool-search { container-type: inline-size; }
+${S} .oc-agent-search-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px;
+  background: transparent; border: 0; width: 100%;
+  text-align: left; cursor: pointer; color: inherit;
+}
+${S} .oc-agent-search-head:hover { background: var(--tint-black-soft); }
+${S} .oc-agent-search-query {
+  display: flex; align-items: baseline; gap: 6px;
+  overflow: hidden; min-width: 0;
+}
+${S} .oc-agent-search-tool {
+  font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--text-placeholder);
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+${S} .oc-agent-search-pattern {
+  font-family: var(--font-mono); font-size: 11.5px;
+  color: var(--text-primary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+${S} .oc-agent-search-scope {
+  font-size: 10px; color: var(--text-muted);
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+${S} .oc-agent-search-meta {
+  display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0;
+}
+${S} .oc-agent-search-count {
+  font-size: 10px; color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+${S} .oc-agent-search-duration {
+  font-size: 10px; color: var(--text-placeholder);
+  font-variant-numeric: tabular-nums;
+}
+${S} .oc-agent-search-status {
+  font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 2px 6px; border-radius: 4px;
+  font-family: var(--font-mono);
+}
+${S} .oc-agent-search-status-ok {
+  background: var(--tint-success-weak); color: var(--text-success);
+}
+${S} .oc-agent-search-status-fail {
+  background: var(--tint-critical-weak); color: var(--text-critical);
+}
+${S} .oc-agent-search-status-run {
+  background: var(--tint-info-weak); color: var(--text-info);
+}
+${S} .oc-agent-search-content {
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface-1);
+}
+${S} .oc-agent-search-empty {
+  padding: 10px 12px;
+  font-size: 11px; color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+${S} .oc-agent-search-list {
+  max-height: 360px; overflow: auto;
+  padding: 4px 0;
+}
+${S} .oc-agent-search-group + .oc-agent-search-group {
+  margin-top: 6px;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 6px;
+}
+${S} .oc-agent-search-path {
+  padding: 4px 12px;
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--text-primary);
+  background: var(--tint-black-soft);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+${S} .oc-agent-search-hits {
+  padding: 2px 0;
+}
+${S} .oc-agent-search-hit {
+  display: flex; gap: 8px;
+  padding: 2px 12px;
+  font-family: var(--font-mono); font-size: 10.5px;
+  color: var(--text-muted);
+}
+${S} .oc-agent-search-line {
+  flex-shrink: 0;
+  width: 32px;
+  text-align: right;
+  color: var(--text-placeholder);
+  font-variant-numeric: tabular-nums;
+}
+${S} .oc-agent-search-text {
+  flex: 1;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--text-primary);
+}
+${S} mark.oc-agent-search-match {
+  background: var(--tint-warning-weak);
+  color: var(--text-primary);
+  padding: 0 1px;
+  border-radius: 2px;
+}
+${S} .oc-agent-search-trailing {
+  margin: 6px 12px 0;
+  padding: 6px 8px;
+  background: var(--tint-black-soft);
+  border-radius: 4px;
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--text-muted);
+  white-space: pre-wrap; word-break: break-word;
+  max-height: 120px; overflow: auto;
+}
+
+/* ── Stage 4.1: Fetch + WebSearch card ────────────────── */
+${S} .oc-agent-tool-fetch { container-type: inline-size; }
+${S} .oc-agent-fetch-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px;
+  background: transparent; border: 0; width: 100%;
+  text-align: left; cursor: pointer; color: inherit;
+}
+${S} .oc-agent-fetch-head:hover { background: var(--tint-black-soft); }
+${S} .oc-agent-fetch-url {
+  display: flex; gap: 6px;
+  overflow: hidden; min-width: 0;
+  font-family: var(--font-mono); font-size: 11.5px;
+}
+${S} .oc-agent-fetch-host {
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+${S} .oc-agent-fetch-path {
+  color: var(--text-muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+${S} .oc-agent-fetch-query {
+  display: flex; align-items: baseline; gap: 6px;
+  overflow: hidden; min-width: 0;
+}
+${S} .oc-agent-fetch-tool {
+  font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--text-placeholder);
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+${S} .oc-agent-fetch-querytext {
+  font-family: var(--font-mono); font-size: 11.5px;
+  color: var(--text-primary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+${S} .oc-agent-fetch-meta {
+  display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0;
+}
+${S} .oc-agent-fetch-count {
+  font-size: 10px; color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+${S} .oc-agent-fetch-duration {
+  font-size: 10px; color: var(--text-placeholder);
+  font-variant-numeric: tabular-nums;
+}
+${S} .oc-agent-fetch-status {
+  font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 2px 6px; border-radius: 4px;
+  font-family: var(--font-mono);
+}
+${S} .oc-agent-fetch-status-ok {
+  background: var(--tint-success-weak); color: var(--text-success);
+}
+${S} .oc-agent-fetch-status-fail {
+  background: var(--tint-critical-weak); color: var(--text-critical);
+}
+${S} .oc-agent-fetch-status-run {
+  background: var(--tint-info-weak); color: var(--text-info);
+}
+${S} .oc-agent-fetch-content {
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface-1);
+  max-height: 480px; overflow: auto;
+}
+${S} .oc-agent-fetch-empty {
+  padding: 10px 12px;
+  font-size: 11px; color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+${S} .oc-agent-fetch-body {
+  margin: 0;
+  padding: 8px 12px;
+  font-family: var(--font-mono); font-size: 10.5px;
+  color: var(--text-muted);
+  white-space: pre-wrap; word-break: break-word;
+}
+${S} .oc-agent-fetch-hits {
+  list-style: none; margin: 0; padding: 0;
+}
+${S} .oc-agent-fetch-hit {
+  padding: 8px 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+${S} .oc-agent-fetch-hit:first-child { border-top: 0; }
+${S} .oc-agent-fetch-hit-title {
+  font-size: 11.5px; font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+${S} .oc-agent-fetch-hit-url {
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--text-info);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+${S} .oc-agent-fetch-hit-snippet {
+  font-size: 11px; color: var(--text-muted);
+  margin-top: 3px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Stage 4.1: Thinking block ────────────────────────── */
+${S} .oc-agent-thinking {
+  margin: 4px 0;
+  border-radius: 6px;
+  background: var(--tint-black-soft);
+  border: 1px solid transparent;
+}
+${S} .oc-agent-thinking-flight {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+  border-color: var(--border-subtle);
+}
+${S} .oc-agent-thinking-icon {
+  color: var(--text-placeholder);
+  flex-shrink: 0;
+}
+${S} .oc-agent-thinking-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--text-muted) 0%,
+    var(--text-primary) 50%,
+    var(--text-muted) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: ocAgentThinkingShimmer 2.4s ease-in-out infinite;
+  font-style: italic;
+}
+@keyframes ocAgentThinkingShimmer {
+  0%   { background-position: 100% 0%; }
+  100% { background-position: -100% 0%; }
+}
+${S} .oc-agent-thinking-elapsed {
+  color: var(--text-placeholder);
+  font-variant-numeric: tabular-nums;
+}
+${S} .oc-agent-thinking-head {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 10px;
+  background: transparent; border: 0; width: 100%;
+  text-align: left; cursor: pointer; color: inherit;
+  font-size: 11px;
+}
+${S} .oc-agent-thinking-head:hover { background: var(--tint-black-strong); }
+${S} .oc-agent-thinking-chev {
+  color: var(--text-placeholder);
+  flex-shrink: 0;
+}
+${S} .oc-agent-thinking-label {
+  color: var(--text-muted);
+  font-style: italic;
+}
+${S} .oc-agent-thinking-count {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--text-placeholder);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+${S} .oc-agent-thinking-body {
+  padding: 0 12px 10px 32px;
+  font-size: 11.5px;
+  font-style: italic;
+  color: var(--text-muted);
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 /* ── Permission bar (low / high risk) ──────────────────── */
 ${S} .oc-agent-perm {
   border-top: 1px solid var(--border-subtle);

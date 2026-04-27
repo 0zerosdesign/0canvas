@@ -14,7 +14,7 @@
 // ──────────────────────────────────────────────────────────
 
 import { memo } from "react";
-import type { AgentMessage } from "../use-agent-session";
+import type { AgentMessage, AgentTextMessage } from "../use-agent-session";
 import type { RendererContext, RendererRegistry } from "./types";
 import { defaultRegistry, resolveRenderer } from "./registry";
 
@@ -32,12 +32,27 @@ export const MessageView = memo(
   // Re-render only when the message itself or its slice of ctx changed.
   // applyReceipts is keyed by toolCallId; for non-tool messages it never
   // affects the render, so we don't compare the whole object.
+  //
+  // The new ctx slice (isStreaming + lastMessageId) only matters for
+  // renderers that opt into "am I the in-flight message" UX — today that's
+  // thought messages (ThinkingBlock). For everything else we still bail
+  // early so a streaming chunk into the last message doesn't re-render the
+  // 50 above it.
   (prev, next) => {
     if (prev.message !== next.message) return false;
     if (prev.registry !== next.registry) return false;
     if (prev.message.kind === "tool") {
       const id = prev.message.toolCallId;
       return prev.ctx.applyReceipts[id] === next.ctx.applyReceipts[id];
+    }
+    if (prev.message.kind === "text") {
+      const role = (prev.message as AgentTextMessage).role;
+      if (role === "thought") {
+        const wasLast = prev.ctx.lastMessageId === prev.message.id;
+        const isLast = next.ctx.lastMessageId === next.message.id;
+        if (wasLast !== isLast) return false;
+        if (prev.ctx.isStreaming !== next.ctx.isStreaming) return false;
+      }
     }
     return true;
   },

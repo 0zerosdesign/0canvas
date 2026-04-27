@@ -34,9 +34,12 @@ import type {
 } from "../../types";
 
 // engine ToolKind union — hoisted as a string set for runtime checks.
+// Mirrors src/zeros/bridge/agent-events.ts ToolKind. Stage 4 added
+// web_search / subagent / mcp / question for the new card kinds.
 type ToolKind =
-  | "read" | "edit" | "delete" | "move" | "search"
-  | "execute" | "think" | "fetch" | "switch_mode" | "other";
+  | "read" | "edit" | "delete" | "move" | "search" | "web_search"
+  | "execute" | "think" | "fetch" | "switch_mode"
+  | "subagent" | "mcp" | "question" | "other";
 
 type Emit = (notification: SessionNotification) => void;
 
@@ -431,11 +434,16 @@ function describeTool(name: string, input: unknown): string {
 /** Coarse ToolKind categorization. */
 function mapToolKind(name: string): ToolKind {
   if (/^Read$/i.test(name)) return "read";
-  if (/^(Glob|Grep|LS|WebSearch)$/i.test(name)) return "search";
+  if (/^(Glob|Grep|LS)$/i.test(name)) return "search";
+  if (/^WebSearch$/i.test(name)) return "web_search";
   if (/^(Edit|Write)$/i.test(name)) return "edit";
   if (/^Bash$/i.test(name)) return "execute";
   if (/^WebFetch$/i.test(name)) return "fetch";
-  if (/^Task$/i.test(name)) return "think";
+  if (/^Task$/i.test(name)) return "subagent";
+  if (/^AskUserQuestion$/i.test(name)) return "question";
+  // MCP-prefixed tool names: `mcp__<server>__<tool>`. Anthropic's
+  // convention. Surface as `mcp` so the dedicated card renders.
+  if (/^mcp__/i.test(name)) return "mcp";
   return "other";
 }
 

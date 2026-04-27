@@ -24,6 +24,9 @@ import { matchSubagent } from "./subagent";
 import { ShellCard } from "./tool-shell";
 import { EditCard } from "./tool-edit";
 import { ReadCard } from "./tool-read";
+import { SearchCard } from "./tool-search";
+import { FetchCard } from "./tool-fetch";
+import { ThinkingBlock } from "./thinking-block";
 
 /** The default registry. New renderers register here; this is the single
  *  point of composition for the chat. */
@@ -31,7 +34,10 @@ export const defaultRegistry: RendererRegistry = {
   text: {
     user: TextMessage,
     agent: TextMessage,
-    thought: TextMessage,
+    // Stage 4.1: thought messages get the dedicated ThinkingBlock —
+    // collapsed pill with shimmer while in flight, instead of plain
+    // italic text bubbles.
+    thought: ThinkingBlock,
     system: TextMessage,
   },
   textFallback: TextMessage,
@@ -45,10 +51,13 @@ export const defaultRegistry: RendererRegistry = {
   ],
   toolByKind: {
     // Stage 3: high-volume cards — Shell, Edit, Read.
-    // Stage 4 fills in the rest (search / fetch / think / question / …).
     execute: ShellCard,
     edit: EditCard,
     read: ReadCard,
+    // Stage 4.1: Search + Fetch + Web search.
+    search: SearchCard,
+    fetch: FetchCard,
+    web_search: FetchCard,
   },
   toolFallback: ToolCard,
   unknown: UnknownMessage,

@@ -27,8 +27,9 @@ import type { ContentBlock, SessionNotification } from "../../types";
 type Emit = (notification: SessionNotification) => void;
 
 type ToolKind =
-  | "read" | "edit" | "delete" | "move" | "search"
-  | "execute" | "think" | "fetch" | "switch_mode" | "other";
+  | "read" | "edit" | "delete" | "move" | "search" | "web_search"
+  | "execute" | "think" | "fetch" | "switch_mode"
+  | "subagent" | "mcp" | "question" | "other";
 
 export interface TelemetryTailerOptions {
   filePath: string;
