@@ -82,12 +82,24 @@ export const claudeSpec: StreamJsonAgentSpec<ClaudeExtra> = {
   },
 
   buildPromptArgs({ state, promptText }) {
+    // Model selection: the renderer's model picker writes
+    // ANTHROPIC_MODEL into state.env (catalogs/models-v1.json
+    // convention). Claude Code's CLI in `--print` mode does honour
+    // the env var in some cases, but ~/.claude/settings.json's
+    // `model` field overrides it — meaning a user who'd ever picked
+    // a model in the Claude TUI would silently get that model in
+    // Zeros, ignoring their per-chat selection. Translate env →
+    // explicit --model flag (mirrors codex/spec.ts:63-65) so the
+    // chat-level pick always wins.
+    const model = state.env?.ANTHROPIC_MODEL;
+    const modelArgs = model ? ["--model", model] : [];
     const args = [
       "-p",
       promptText,
       "--output-format",
       "stream-json",
       "--verbose",
+      ...modelArgs,
       "--settings",
       state.extra.settingsPath,
       "--permission-mode",
