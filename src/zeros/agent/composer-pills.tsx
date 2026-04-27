@@ -535,6 +535,17 @@ export function BranchPill({
 }
 
 // ── ContextPill (real usage via usage_update + prompt usage) ──
+//
+// Stage 5.2 redesign: dropped the misleading `used / size · %` ratio.
+// `used` is "tokens billed across this turn's tool-use loop" — Claude
+// Code makes multiple internal API calls per user prompt, each of
+// which can carry up to the model's window in prompt tokens, and
+// `result.usage` reports their cumulative sum. Dividing it by the
+// single-call window cap routinely produces 100%+ on perfectly
+// normal turns (e.g. "291.4k / 200.0k · 100%" after three Haiku
+// prompts). The pill now mirrors Claude Code's own UX: just
+// "tokens billed" + cost, with the per-model window listed as
+// informational context inside the popover.
 
 function formatTokens(n: number): string {
   if (n < 1000) return n.toString();
@@ -543,19 +554,24 @@ function formatTokens(n: number): string {
   return `${(n / 1_000_000).toFixed(2)}M`;
 }
 
+function formatUsd(n: number): string {
+  if (n < 0.01) return `<$0.01`;
+  if (n < 1) return `$${n.toFixed(3)}`;
+  if (n < 100) return `$${n.toFixed(2)}`;
+  return `$${Math.round(n)}`;
+}
+
 export function ContextPill({ usage }: { usage: AgentUsage }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   useClickAway(rootRef, open, () => setOpen(false));
 
-  // Prefer the running usage_update size (what the agent actually reports),
-  // else back off to the cumulative input+output as a proxy.
+  // `used` = tokens billed across the latest turn's tool-use loop.
+  // Falls back to the cumulative input+output proxy when the adapter
+  // didn't surface a usage_update yet (pre-init, non-Claude paths).
   const size = usage.size;
   const used = usage.used || usage.inputTokens + usage.outputTokens;
-  const pct =
-    size > 0
-      ? Math.min(100, Math.round((used / size) * 100))
-      : null;
+  const cost = usage.costUsd;
 
   const rows: Array<[string, number]> = (
     [
@@ -567,31 +583,39 @@ export function ContextPill({ usage }: { usage: AgentUsage }) {
     ] as Array<[string, number]>
   ).filter(([, n]) => n > 0);
 
+  const pillLabel = used > 0 ? formatTokens(used) : "0";
+  const pillTitle =
+    used > 0
+      ? `${formatTokens(used)} tokens billed this turn${
+          cost ? ` · ${formatUsd(cost)}` : ""
+        }`
+      : "No tokens billed yet";
+
   return (
     <div ref={rootRef} className="oc-chat-dropdown-root is-footer is-right">
       <button
         type="button"
         className="oc-chat-toolbar-pill is-context"
         onClick={() => setOpen((v) => !v)}
-        title={
-          pct == null
-            ? `${formatTokens(used)} tokens used`
-            : `${pct}% of context window`
-        }
+        title={pillTitle}
       >
         <Gauge size={11} />
-        <span>{pct == null ? formatTokens(used) : `${pct}%`}</span>
+        <span>{pillLabel}</span>
       </button>
       {open && (
         <div className="oc-chat-dropdown-menu oc-chat-usage-popover">
           <div className="oc-chat-dropdown-section-label">Context usage</div>
+          <div className="oc-chat-usage-row is-primary">
+            <span>This turn</span>
+            <span>
+              {formatTokens(used)}
+              {cost != null && cost > 0 && <> · {formatUsd(cost)}</>}
+            </span>
+          </div>
           {size > 0 && (
-            <div className="oc-chat-usage-row is-primary">
-              <span>Window</span>
-              <span>
-                {formatTokens(used)} / {formatTokens(size)}
-                {pct != null && <> · {pct}%</>}
-              </span>
+            <div className="oc-chat-usage-row">
+              <span>Model context</span>
+              <span>{formatTokens(size)}</span>
             </div>
           )}
           {rows.length === 0 ? (
@@ -599,12 +623,15 @@ export function ContextPill({ usage }: { usage: AgentUsage }) {
               No tokens billed yet.
             </div>
           ) : (
-            rows.map(([label, n]) => (
-              <div key={label} className="oc-chat-usage-row">
-                <span>{label}</span>
-                <span>{formatTokens(n)}</span>
-              </div>
-            ))
+            <>
+              <div className="oc-chat-dropdown-section-label">Breakdown</div>
+              {rows.map(([label, n]) => (
+                <div key={label} className="oc-chat-usage-row">
+                  <span>{label}</span>
+                  <span>{formatTokens(n)}</span>
+                </div>
+              ))}
+            </>
           )}
         </div>
       )}

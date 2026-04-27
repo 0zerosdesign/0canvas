@@ -246,9 +246,15 @@ export type SessionStatus =
  *  (context window view); `inputTokens`/`outputTokens` come from the
  *  PromptResponse.usage at turn end. */
 export interface AgentUsage {
-  /** Total context window the model is using (tokens). */
+  /** Model's prompt context window in tokens. Informational only —
+   *  Stage 5.2 stopped using this in the headline ratio because
+   *  `used` (tokens billed across the turn's tool-use loop) is *not*
+   *  the same metric as "current window fill"; comparing the two
+   *  produced 100%+ alarms on perfectly normal turns. */
   size: number;
-  /** Tokens currently in context. */
+  /** Tokens billed for the most recent turn (cumulative across the
+   *  agent's internal tool-use loop). The headline pill renders
+   *  this verbatim, no ratio. */
   used: number;
   /** Lifetime input tokens sent to the agent this session. */
   inputTokens: number;
@@ -259,6 +265,11 @@ export interface AgentUsage {
   cachedWriteTokens: number;
   /** Tokens spent on reasoning / thought traces, when reported. */
   thoughtTokens: number;
+  /** Cost in USD for the most recent turn, when the adapter reports
+   *  it (Claude `result.total_cost_usd`). Stage 5.2 surfaces this
+   *  alongside the token count so users on metered plans see the
+   *  per-turn dollar impact directly. */
+  costUsd?: number;
 }
 
 export interface AgentSessionState {

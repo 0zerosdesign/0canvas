@@ -327,11 +327,12 @@ Already wired in `session.usage`. Phase 1 makes it canonical-event driven and ad
 - Cumulative tokens / cost in the chat header
 - Cost calculation when adapter provides per-token pricing (Phase 2 polish)
 
-**Bug carryover from Stage 3 testing (fix in Stage 5):** the current display reads `Window 291.4k / 200.0k · 100%` after just three Claude prompts because two things are wrong:
-1. **Hardcoded 200k window for all Claude variants** — `src/engine/agents/adapters/claude/translator.ts:381` sets `CLAUDE_DEFAULT_CONTEXT_WINDOW = 200_000` for every model. Opus 4.7[1m] is 1M; Haiku/Sonnet 4.5 are 200k. Detect from the `system` init event's `model` field and pick per-model.
-2. **`used / window · %` is the wrong ratio** — `usage.input_tokens + cache_read + cache_creation` from the `result` event reports tokens billed across that turn's tool-use loop (Claude Code makes multiple internal API calls per user prompt; each can carry up to 200k). It is *not* the current window fill, so comparing it to the window cap and showing a percentage produces nonsense >100% values.
+**Bug carryover from Stage 3 testing — fixed in Stage 5.2:**
+Display used to read `Window 291.4k / 200.0k · 100%` after just three Claude prompts because two things were wrong:
+1. **Hardcoded 200k window for all Claude variants** — fixed in [`claude/translator.ts`](../src/engine/agents/adapters/claude/translator.ts) by capturing `model` from the `system.init` event and routing through `contextWindowForClaudeModel(model)` — 1M for `opus-4-7[1m]`, 200k for the rest of the 4.x / 3.x family.
+2. **`used / window · %` was the wrong ratio** — `result.usage` reports tokens billed across the turn's tool-use loop (Claude makes multiple internal API calls per prompt), not current window fill. ContextPill UI now drops the headline percentage; pill shows just the token count, popover shows "This turn: 291.4k · $0.04" with model context listed informationally.
 
-**Stage 5 fix:** drop the percentage; show **`◷ 291.4k tokens this turn · $0.04`** matching Claude Code's own UX. Or, if we want a window-fill estimate (harder — no API exposes it directly), reconstruct from the latest sub-call's prompt size only. Either way, kill the misleading "100%" alarm.
+`AgentUsage.costUsd` added so the popover can surface per-turn cost when the adapter reports it (Claude `result.total_cost_usd`).
 
 #### 2.4.12 MCP card — `tool-mcp.tsx`
 

@@ -272,6 +272,7 @@ export const useSessionsStore = create<SessionsStoreState>((set, get) => ({
       sessionUpdate?: string;
       size?: number;
       used?: number;
+      cost?: { totalCostUsd?: number } | null;
       currentModeId?: string;
       entries?: PlanEntry[];
       availableCommands?: AvailableCommand[];
@@ -297,7 +298,8 @@ export const useSessionsStore = create<SessionsStoreState>((set, get) => ({
     }
 
     // usage_update → context window accounting. Keep cumulative counters
-    // from prompt-response usage; overwrite size/used.
+    // from prompt-response usage; overwrite size/used. Stage 5.2 adds
+    // costUsd capture from upd.cost.totalCostUsd.
     if (upd.sessionUpdate === "usage_update") {
       set((state) => {
         const slot = state.sessions[chatId];
@@ -306,6 +308,10 @@ export const useSessionsStore = create<SessionsStoreState>((set, get) => ({
           ...slot.usage,
           size: typeof upd.size === "number" ? upd.size : slot.usage.size,
           used: typeof upd.used === "number" ? upd.used : slot.usage.used,
+          costUsd:
+            typeof upd.cost?.totalCostUsd === "number"
+              ? upd.cost.totalCostUsd
+              : slot.usage.costUsd,
         };
         return {
           sessions: { ...state.sessions, [chatId]: { ...slot, usage: nextUsage } },

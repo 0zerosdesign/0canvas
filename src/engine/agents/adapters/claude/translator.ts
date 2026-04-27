@@ -141,6 +141,11 @@ export class ClaudeStreamTranslator {
    *  resume bookkeeping; not emitted to the UI. */
   claudeSessionId: string | null = null;
 
+  /** Stage 5.2 — model id from `system.init.model`. Drives per-model
+   *  context-window sizing on usage updates. Falls back to
+   *  CLAUDE_DEFAULT_CONTEXT_WINDOW when undefined or unrecognised. */
+  private currentModel: string | null = null;
+
   constructor(opts: ClaudeTranslatorOptions) {
     this.sessionId = opts.sessionId;
     this.emit = opts.emit;
@@ -194,6 +199,9 @@ export class ClaudeStreamTranslator {
   private onSystem(event: ClaudeSystemInitEvent): void {
     if (event.subtype === "init" && typeof event.session_id === "string") {
       this.claudeSessionId = event.session_id;
+    }
+    if (event.subtype === "init" && typeof event.model === "string") {
+      this.currentModel = event.model;
     }
     // Nothing to emit to the UI — the init event is just bookkeeping.
   }
@@ -391,14 +399,19 @@ export class ClaudeStreamTranslator {
       this.lastStopReason = "end_turn";
     }
 
-    // UsageUpdate is "how full is the context window". Claude's
-    // result.usage gives per-turn API costs. Best-effort map:
-    //   - used  = input_tokens + cache-read (what Claude just saw)
-    //   - size  = model's context window (Claude 4.x = 200k; 1M on
-    //             opus-4-7 [1m] variant. We default to 200k; the UI
-    //             shows approximate fill.)
-    // Not perfect but better than nothing — users see usage grow as
-    // the conversation extends.
+    // Stage 5.2 — usage reporting. Claude's `result.usage` gives the
+    // CUMULATIVE tokens billed across the turn's tool-use loop (one
+    // user prompt → multiple internal API calls; each can carry up to
+    // the model's window in prompt tokens). It is *not* the current
+    // window fill. The UI used to compare `used` against the window
+    // cap and render a percentage, which produced "Window 291.4k /
+    // 200.0k · 100%" on perfectly normal Haiku turns. We now just
+    // report tokens-this-turn and let the UI present it as a counter,
+    // not a ratio.
+    //
+    // size still carries the per-model window so the UI can show "of
+    // 1M" / "of 200k" context for users who want the absolute bound;
+    // the renderer keeps the number out of the headline ratio.
     const u = event.usage;
     if (u) {
       const used =
@@ -409,7 +422,7 @@ export class ClaudeStreamTranslator {
         sessionId: this.sessionId,
         update: {
           sessionUpdate: "usage_update",
-          size: CLAUDE_DEFAULT_CONTEXT_WINDOW,
+          size: contextWindowForClaudeModel(this.currentModel),
           used,
           cost: typeof event.total_cost_usd === "number"
             ? ({ totalCostUsd: event.total_cost_usd } as never)
@@ -420,9 +433,24 @@ export class ClaudeStreamTranslator {
   }
 }
 
-// Claude 4.x default context. Overridden in Phase 1.5b when we
-// inspect the SessionInit event's model id and pick the right cap
-// (opus-4-7[1m] = 1_000_000; sonnet = 200_000).
+/** Stage 5.2 — per-model context window. Drawn from Anthropic's
+ *  published model catalog (model card pages on docs.anthropic.com).
+ *  Returns the prompt-side max for the model; output cap is separate
+ *  and not surfaced in the UI. Falls back to 200k for any name we
+ *  don't recognise — the safest default across the Claude 4.x family. */
+function contextWindowForClaudeModel(model: string | null): number {
+  if (!model) return CLAUDE_DEFAULT_CONTEXT_WINDOW;
+  // Long-context Opus 4.7 variant — 1M tokens.
+  if (/opus-4-7.*\[1m\]/i.test(model)) return 1_000_000;
+  if (/opus-4-7-1m/i.test(model)) return 1_000_000;
+  // Standard Claude 4.x family — 200k tokens.
+  if (/^claude-(opus|sonnet|haiku)-4/i.test(model)) return 200_000;
+  // Older 3.x family — same 200k window.
+  if (/^claude-3/i.test(model)) return 200_000;
+  return CLAUDE_DEFAULT_CONTEXT_WINDOW;
+}
+
+// Default context window for unknown / pre-init Claude streams.
 const CLAUDE_DEFAULT_CONTEXT_WINDOW = 200_000;
 
 // ── helpers ──────────────────────────────────────────────
