@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────
-// AgentPill — pick which ACP agent drives this composer
+// AgentPill — pick which agent drives this composer
 // ──────────────────────────────────────────────────────────
 //
 // Compact pill in the composer's footer row. Shows the selected

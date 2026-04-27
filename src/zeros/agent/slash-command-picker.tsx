@@ -98,18 +98,18 @@ export function SlashCommandPicker({
 
   if (commands.length === 0) {
     return (
-      <div className="oc-acp-menu">
-        <div className="oc-acp-menu-empty">No commands match.</div>
+      <div className="oc-agent-menu">
+        <div className="oc-agent-menu-empty">No commands match.</div>
       </div>
     );
   }
 
   return (
-    <div className="oc-acp-menu">
-      <div className="oc-acp-menu-head">
+    <div className="oc-agent-menu">
+      <div className="oc-agent-menu-head">
         Slash · {commands.length} command{commands.length === 1 ? "" : "s"}
       </div>
-      <div ref={listRef} className="oc-acp-menu-list">
+      <div ref={listRef} className="oc-agent-menu-list">
         {commands.map((cmd, i) => {
           const active = i === highlightIndex;
           return (
@@ -123,19 +123,19 @@ export function SlashCommandPicker({
                 e.preventDefault();
                 onPick(cmd);
               }}
-              className={`oc-acp-menu-item ${
-                active ? "oc-acp-menu-item-active" : ""
+              className={`oc-agent-menu-item ${
+                active ? "oc-agent-menu-item-active" : ""
               }`}
             >
-              <Terminal className="oc-acp-menu-item-icon w-3.5 h-3.5" />
+              <Terminal className="oc-agent-menu-item-icon w-3.5 h-3.5" />
               <div className="min-w-0 flex-1">
-                <div className="oc-acp-menu-item-label">/{cmd.name}</div>
+                <div className="oc-agent-menu-item-label">/{cmd.name}</div>
                 {cmd.description && (
-                  <div className="oc-acp-menu-item-hint">{cmd.description}</div>
+                  <div className="oc-agent-menu-item-hint">{cmd.description}</div>
                 )}
               </div>
               {cmd.input && (
-                <span className="oc-acp-menu-item-kind">takes input</span>
+                <span className="oc-agent-menu-item-kind">takes input</span>
               )}
             </Button>
           );

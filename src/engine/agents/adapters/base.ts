@@ -163,7 +163,7 @@ export function classifyExit(args: {
   }
 
   // Previously: a stage=="initialize" branch mapped clean exits to
-  // auth-required. That branch only made sense for the ACP path,
+  // auth-required. That branch only made sense for the native path,
   // which spawned a subprocess at initialize() time. The native
   // adapters synthesise InitializeResponse without touching the
   // subprocess (see each adapter's initialize()), so this classifier
@@ -217,7 +217,7 @@ export function failureFromError(
 
 // ── Auth method advertisement ────────────────────────────
 //
-// In the ACP world, agents advertised their own auth methods via
+// In the earlier path, agents advertised their own auth methods via
 // InitializeResponse.authMethods; the UI's sign-in modal rendered
 // those verbatim. The native adapters don't speak a protocol, so
 // they synthesise InitializeResponse. An empty `authMethods: []`

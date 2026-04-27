@@ -439,7 +439,7 @@ export class CopilotAdapter implements AgentAdapter {
     pty.onExit(({ exitCode, signal }) => {
       // node-pty reports `signal` as a numeric code (or undefined);
       // our event bus wants `string | null` for wire-compat with the
-      // ACP backend. Coerce so broadcast payloads serialize cleanly.
+      // agent backend. Coerce so broadcast payloads serialize cleanly.
       const sigStr = signal != null ? String(signal) : null;
       this.ctx.emit.onAgentExit(AGENT_ID, exitCode ?? null, sigStr);
       state.pty = null;

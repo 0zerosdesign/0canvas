@@ -88,7 +88,7 @@ function notYetImplemented(agentId: string): AgentAdapter {
     agentId,
     initialize: () => {
       throw new Error(
-        `[agents] ${agentId} adapter not yet implemented — still on ACP path`,
+        `[agents] ${agentId} adapter not yet implemented — still on native path`,
       );
     },
     newSession: () => { throw new Error(`${agentId}: not implemented`); },

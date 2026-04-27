@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────
-// AuthModal — spec-honest auth method chooser for an ACP agent
+// AuthModal — spec-honest auth method chooser for an agent
 // ──────────────────────────────────────────────────────────
 //
 // Phase 4 rewrite: we now read `initialize.authMethods` advertised by the
@@ -210,7 +210,7 @@ export function AuthModal({ agent, initialize, onConfirm, onBack }: AuthModalPro
 
   if (!initialize) {
     return (
-      <div className="oc-acp-loading">
+      <div className="oc-agent-loading">
         <Loader2 className="w-3.5 h-3.5 animate-spin" />
         Initializing {agent.name}...
       </div>
@@ -274,8 +274,8 @@ export function AuthModal({ agent, initialize, onConfirm, onBack }: AuthModalPro
   };
 
   return (
-    <div className="oc-acp-surface">
-      <header className="oc-acp-subheader">
+    <div className="oc-agent-surface">
+      <header className="oc-agent-subheader">
         <Button
           variant="ghost"
           size="icon-sm"
@@ -286,8 +286,8 @@ export function AuthModal({ agent, initialize, onConfirm, onBack }: AuthModalPro
           <ArrowLeft className="w-3.5 h-3.5" />
         </Button>
         <div className="min-w-0 flex-1">
-          <div className="oc-acp-subheader-title">Connect {agent.name}</div>
-          <div className="oc-acp-subheader-sub">
+          <div className="oc-agent-subheader-title">Connect {agent.name}</div>
+          <div className="oc-agent-subheader-sub">
             {options.length === 0
               ? "Agent didn't advertise any auth methods"
               : "How should this agent authenticate?"}
@@ -296,7 +296,7 @@ export function AuthModal({ agent, initialize, onConfirm, onBack }: AuthModalPro
       </header>
 
       <div
-        className="oc-acp-auth-body"
+        className="oc-agent-auth-body"
         style={{ flex: 1, minHeight: 0, overflowY: "auto" }}
       >
         {options.map((opt) => (
@@ -311,12 +311,12 @@ export function AuthModal({ agent, initialize, onConfirm, onBack }: AuthModalPro
         ))}
 
         {selected?.kind === "env_var" && (
-          <div className="oc-acp-auth-field">
+          <div className="oc-agent-auth-field">
             {selected.vars.map((v) => {
               const val = varValues[selected.id]?.[v.name] ?? "";
               return (
                 <div key={v.name} style={{ marginBottom: "var(--space-3)" }}>
-                  <div className="oc-acp-auth-label">
+                  <div className="oc-agent-auth-label">
                     {v.label}
                     {v.optional && (
                       <span style={{ color: "var(--text-placeholder)", marginLeft: 4 }}>
@@ -341,7 +341,7 @@ export function AuthModal({ agent, initialize, onConfirm, onBack }: AuthModalPro
                 </div>
               );
             })}
-            <div className="oc-acp-auth-field-meta">
+            <div className="oc-agent-auth-field-meta">
               {(selected.link || resolveLink(selected, config)) && (
                 <a
                   href={selected.link || resolveLink(selected, config) || "#"}
@@ -352,7 +352,7 @@ export function AuthModal({ agent, initialize, onConfirm, onBack }: AuthModalPro
                 </a>
               )}
               {selected.vars.some((v) => v.secret && v.keychain) && (
-                <span className="oc-acp-auth-field-meta-badge">
+                <span className="oc-agent-auth-field-meta-badge">
                   <ShieldCheck className="w-3 h-3" /> keychain
                 </span>
               )}
@@ -361,13 +361,13 @@ export function AuthModal({ agent, initialize, onConfirm, onBack }: AuthModalPro
         )}
 
         {selected?.kind === "terminal" && (
-          <div className="oc-acp-auth-disclaimer">
+          <div className="oc-agent-auth-disclaimer">
             <Info
               className="w-3.5 h-3.5 flex-shrink-0"
               style={{ marginTop: "var(--space-1)" }}
             />
             <div>
-              <div className="oc-acp-auth-disclaimer-title">
+              <div className="oc-agent-auth-disclaimer-title">
                 Uses your locally-installed CLI
               </div>
               <div>
@@ -383,13 +383,13 @@ export function AuthModal({ agent, initialize, onConfirm, onBack }: AuthModalPro
         )}
 
         {selected?.kind === "agent" && (
-          <div className="oc-acp-auth-disclaimer">
+          <div className="oc-agent-auth-disclaimer">
             <Info
               className="w-3.5 h-3.5 flex-shrink-0"
               style={{ marginTop: "var(--space-1)" }}
             />
             <div>
-              <div className="oc-acp-auth-disclaimer-title">
+              <div className="oc-agent-auth-disclaimer-title">
                 Agent handles its own auth
               </div>
               <div>
@@ -400,14 +400,14 @@ export function AuthModal({ agent, initialize, onConfirm, onBack }: AuthModalPro
           </div>
         )}
 
-        {error && <div className="oc-acp-auth-error">{error}</div>}
+        {error && <div className="oc-agent-auth-error">{error}</div>}
       </div>
 
-      <div className="oc-acp-auth-actions">
+      <div className="oc-agent-auth-actions">
         <Button variant="ghost" type="button" onClick={onBack}>
           Cancel
         </Button>
-        <div className="oc-acp-auth-actions-spacer" />
+        <div className="oc-agent-auth-actions-spacer" />
         <Button
           variant="primary"
           type="button"
@@ -629,14 +629,14 @@ function MethodCard({
       variant="ghost"
       type="button"
       onClick={onClick}
-      className={`oc-acp-auth-card ${active ? "oc-acp-auth-card-active" : ""}`}
+      className={`oc-agent-auth-card ${active ? "oc-agent-auth-card-active" : ""}`}
     >
-      <div className="oc-acp-auth-icon">{icon}</div>
-      <div className="oc-acp-auth-body-text">
-        <div className="oc-acp-auth-title">{title}</div>
-        <div className="oc-acp-auth-desc">{description}</div>
+      <div className="oc-agent-auth-icon">{icon}</div>
+      <div className="oc-agent-auth-body-text">
+        <div className="oc-agent-auth-title">{title}</div>
+        <div className="oc-agent-auth-desc">{description}</div>
       </div>
-      <div className="oc-acp-auth-radio" />
+      <div className="oc-agent-auth-radio" />
     </Button>
   );
 }

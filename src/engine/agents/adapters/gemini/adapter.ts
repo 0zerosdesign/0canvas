@@ -4,8 +4,8 @@
 //
 // Gemini CLI has two relevant modes:
 //   1. `--acp` / `--experimental-acp`  → JSON-RPC over stdio. We
-//      deliberately skip this — the whole point of the migration is
-//      to drop ACP as a transport dependency.
+//      deliberately skip this — every adapter goes through the
+//      vendor's native CLI surface, no shared protocol.
 //   2. TUI (default invocation)        → the interactive terminal UI.
 //
 // So we drive Gemini via PTY, like Copilot. Long-lived subprocess

@@ -978,7 +978,7 @@ ${S} .oc-variant-action-btn:hover { background: var(--surface-1); color: var(--t
 /* ── Agent Panel ──
    REMOVED: legacy per-feature classes (oc-agent-*) were
    replaced by the agent-based <AgentsPanel/> which uses
-   primitives (<Button/>, <Card/>) + legacy oc-acp-* classes.
+   primitives (<Button/>, <Card/>) + legacy oc-agent-* classes.
    Old block deleted in dead-CSS sweep. ── */
 
 /* ── Command Palette ───────────────────────────────────────── */
@@ -3060,7 +3060,7 @@ ${S} .oc-effects-select option {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   Agent chat surface — legacy oc-acp-* class namespace
+   Agent chat surface — legacy oc-agent-* class namespace
    ═══════════════════════════════════════════════════════════
    Styles for the agent chat, agents picker, auth modal, tool cards,
    receipts, permission bar, and mention menu. Rides the same design
@@ -3069,49 +3069,49 @@ ${S} .oc-effects-select option {
    utility classes inside the component — structural layout is still
    Tailwind, colors and typography sit on tokens here. */
 
-${S} .oc-acp-surface {
+${S} .oc-agent-surface {
   display: flex; flex-direction: column; height: 100%; min-height: 0;
   background: transparent;
   color: var(--text-primary);
   font-size: 13px;
 }
-${S} .oc-acp-subheader {
+${S} .oc-agent-subheader {
   display: flex; align-items: center; gap: 8px;
   padding: 10px 12px;
   border-bottom: 1px solid var(--border-subtle);
 }
-${S} .oc-acp-subheader-title {
+${S} .oc-agent-subheader-title {
   font-size: 12px; font-weight: 600;
   color: var(--text-primary);
   letter-spacing: -0.005em;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-${S} .oc-acp-subheader-sub {
+${S} .oc-agent-subheader-sub {
   font-size: 10.5px;
   color: var(--text-muted);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   display: flex; align-items: center; gap: 6px;
 }
-${S} .oc-acp-subheader-agent {
+${S} .oc-agent-subheader-agent {
   color: var(--text-muted);
   font-weight: 500;
 }
-${S} .oc-acp-subheader-agent + .oc-acp-subheader-status:not(:empty)::before {
+${S} .oc-agent-subheader-agent + .oc-agent-subheader-status:not(:empty)::before {
   content: "·"; margin: 0 2px 0 -2px; color: var(--text-muted);
 }
-${S} .oc-acp-subheader-status:empty { display: none; }
-${S} .oc-acp-body {
+${S} .oc-agent-subheader-status:empty { display: none; }
+${S} .oc-agent-body {
   flex: 1; min-height: 0; overflow-y: auto;
   padding: 12px;
   background: transparent;
 }
 
 /* ── Plan panel — rendered when the agent emits session/update plan ─ */
-${S} .oc-acp-plan {
+${S} .oc-agent-plan {
   border-bottom: 1px solid var(--border-subtle);
   background: var(--tint-accent-weak);
 }
-${S} .oc-acp-plan-head {
+${S} .oc-agent-plan-head {
   all: unset;
   display: flex; align-items: center; gap: 8px;
   padding: 8px 12px;
@@ -3119,57 +3119,57 @@ ${S} .oc-acp-plan-head {
   width: 100%; box-sizing: border-box;
   font-size: 11px; color: var(--text-muted);
 }
-${S} .oc-acp-plan-head:hover { background: var(--tint-accent-soft); }
-${S} .oc-acp-plan-title {
+${S} .oc-agent-plan-head:hover { background: var(--tint-accent-soft); }
+${S} .oc-agent-plan-title {
   font-weight: 600;
   color: var(--text-info);
   letter-spacing: 0.02em;
   text-transform: uppercase;
   font-size: 10px;
 }
-${S} .oc-acp-plan-count {
+${S} .oc-agent-plan-count {
   margin-left: auto;
   font-variant-numeric: tabular-nums;
   color: var(--text-placeholder);
 }
-${S} .oc-acp-plan-list {
+${S} .oc-agent-plan-list {
   list-style: none; margin: 0; padding: 0 12px 10px;
   display: flex; flex-direction: column; gap: 4px;
 }
-${S} .oc-acp-plan-item {
+${S} .oc-agent-plan-item {
   display: flex; gap: 8px; align-items: flex-start;
   font-size: 12px; line-height: 1.45;
   color: var(--text-primary);
   padding: 3px 0;
 }
-${S} .oc-acp-plan-bullet {
+${S} .oc-agent-plan-bullet {
   flex-shrink: 0;
   width: 14px; display: inline-block;
   color: var(--text-placeholder);
   font-variant-numeric: tabular-nums;
 }
-${S} .oc-acp-plan-item-completed { color: var(--text-muted); }
-${S} .oc-acp-plan-item-completed .oc-acp-plan-desc {
+${S} .oc-agent-plan-item-completed { color: var(--text-muted); }
+${S} .oc-agent-plan-item-completed .oc-agent-plan-desc {
   text-decoration: line-through;
   text-decoration-color: var(--border-subtle);
 }
-${S} .oc-acp-plan-item-completed .oc-acp-plan-bullet { color: var(--text-success); }
-${S} .oc-acp-plan-item-in_progress .oc-acp-plan-bullet { color: var(--text-info); }
-${S} .oc-acp-plan-desc { flex: 1; min-width: 0; word-break: break-word; }
+${S} .oc-agent-plan-item-completed .oc-agent-plan-bullet { color: var(--text-success); }
+${S} .oc-agent-plan-item-in_progress .oc-agent-plan-bullet { color: var(--text-info); }
+${S} .oc-agent-plan-desc { flex: 1; min-width: 0; word-break: break-word; }
 
 /* ── Messages (agent chat variant of oc-ai-msg) ─────────── */
-${S} .oc-acp-messages {
+${S} .oc-agent-messages {
   display: flex; flex-direction: column; gap: 14px;
 }
 /* No avatar column — messages are distinguished by layout +
    bubble only (Cursor pattern). The role modifiers below own
    alignment, background and max-width. */
-${S} .oc-acp-msg {
+${S} .oc-agent-msg {
   display: flex;
   align-items: flex-start;
 }
-${S} .oc-acp-msg-icon { display: none; }
-${S} .oc-acp-msg-content {
+${S} .oc-agent-msg-icon { display: none; }
+${S} .oc-agent-msg-content {
   font-size: 13px; line-height: 1.55;
   color: var(--text-primary);
   min-width: 0;
@@ -3179,10 +3179,10 @@ ${S} .oc-acp-msg-content {
 
 /* User bubble — right-aligned, subtle surface-0 card with tight
    padding so a one-line prompt reads as a distinct message. */
-${S} .oc-acp-msg-user {
+${S} .oc-agent-msg-user {
   justify-content: flex-end;
 }
-${S} .oc-acp-msg-user .oc-acp-msg-content {
+${S} .oc-agent-msg-user .oc-agent-msg-content {
   background: var(--surface-0);
   border: 1px solid var(--border-subtle);
   border-radius: 12px;
@@ -3191,25 +3191,25 @@ ${S} .oc-acp-msg-user .oc-acp-msg-content {
 }
 
 /* Assistant + system + thought — flat text, no bubble. */
-${S} .oc-acp-msg-assistant .oc-acp-msg-content,
-${S} .oc-acp-msg-system .oc-acp-msg-content,
-${S} .oc-acp-msg-thought .oc-acp-msg-content {
+${S} .oc-agent-msg-assistant .oc-agent-msg-content,
+${S} .oc-agent-msg-system .oc-agent-msg-content,
+${S} .oc-agent-msg-thought .oc-agent-msg-content {
   max-width: 100%;
   padding: 0;
 }
-${S} .oc-acp-msg-system .oc-acp-msg-content {
+${S} .oc-agent-msg-system .oc-agent-msg-content {
   color: var(--text-muted);
   font-size: 12px;
 }
-${S} .oc-acp-msg-thought .oc-acp-msg-content {
+${S} .oc-agent-msg-thought .oc-agent-msg-content {
   color: var(--text-muted);
   font-style: italic;
   border-left: 2px solid var(--border-subtle);
   padding-left: 10px;
 }
 
-${S} .oc-acp-msg-queued { opacity: 0.72; }
-${S} .oc-acp-msg-queued-hint {
+${S} .oc-agent-msg-queued { opacity: 0.72; }
+${S} .oc-agent-msg-queued-hint {
   margin-top: 6px;
   display: inline-flex; align-items: center; gap: 4px;
   font-size: 11px;
@@ -3218,125 +3218,125 @@ ${S} .oc-acp-msg-queued-hint {
 }
 
 /* ── Tool card ─────────────────────────────────────────── */
-${S} .oc-acp-tool {
+${S} .oc-agent-tool {
   border: 1px solid var(--border-subtle);
   background: var(--surface-2);
   border-radius: 10px; overflow: hidden;
 }
-${S} .oc-acp-tool-design {
+${S} .oc-agent-tool-design {
   border-color: var(--tint-success-border);
   background: var(--tint-success-weak);
 }
-${S} .oc-acp-tool-subagent {
+${S} .oc-agent-tool-subagent {
   border-color: var(--tint-accent-border);
   background: var(--tint-accent-weak);
 }
-${S} .oc-acp-tool-subagent .oc-acp-tool-icon { color: var(--text-info); }
-${S} .oc-acp-tool-subagent .oc-acp-tool-vendor {
+${S} .oc-agent-tool-subagent .oc-agent-tool-icon { color: var(--text-info); }
+${S} .oc-agent-tool-subagent .oc-agent-tool-vendor {
   color: var(--text-info);
 }
-${S} .oc-acp-tool-head {
+${S} .oc-agent-tool-head {
   display: flex; align-items: center; gap: 8px;
   padding: 8px 10px;
 }
-${S} .oc-acp-tool-icon { flex-shrink: 0; color: var(--text-muted); }
-${S} .oc-acp-tool-design .oc-acp-tool-icon { color: var(--text-success); }
-${S} .oc-acp-tool-body { min-width: 0; flex: 1; }
-${S} .oc-acp-tool-title {
+${S} .oc-agent-tool-icon { flex-shrink: 0; color: var(--text-muted); }
+${S} .oc-agent-tool-design .oc-agent-tool-icon { color: var(--text-success); }
+${S} .oc-agent-tool-body { min-width: 0; flex: 1; }
+${S} .oc-agent-tool-title {
   font-size: 11.5px; font-weight: 500;
   color: var(--text-primary);
   display: flex; align-items: center; gap: 6px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-${S} .oc-acp-tool-vendor {
+${S} .oc-agent-tool-vendor {
   font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em;
   color: var(--text-success);
   font-weight: 400;
 }
-${S} .oc-acp-tool-summary {
+${S} .oc-agent-tool-summary {
   font-size: 10.5px;
   color: var(--text-muted);
   font-family: var(--font-mono);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   margin-top: 2px;
 }
-${S} .oc-acp-tool-kind {
+${S} .oc-agent-tool-kind {
   font-size: 10px; color: var(--text-placeholder); margin-top: 2px;
 }
-${S} .oc-acp-tool-status { flex-shrink: 0; }
+${S} .oc-agent-tool-status { flex-shrink: 0; }
 
 /* ── Tool content payload (pre-receipt) ────────────────── */
-${S} .oc-acp-tool-content {
+${S} .oc-agent-tool-content {
   border-top: 1px solid var(--border-subtle);
   padding: 8px 10px;
   font-size: 11px; color: var(--text-muted);
 }
-${S} .oc-acp-tool-content pre {
+${S} .oc-agent-tool-content pre {
   font-family: var(--font-mono); font-size: 10.5px;
   color: var(--text-muted);
   max-height: 160px; overflow: auto;
   white-space: pre-wrap; word-break: break-word;
   margin: 0;
 }
-${S} .oc-acp-tool-content-diff {
+${S} .oc-agent-tool-content-diff {
   font-size: 10.5px; color: var(--text-muted);
 }
-${S} .oc-acp-tool-content-diff .oc-acp-mono {
+${S} .oc-agent-tool-content-diff .oc-agent-mono {
   font-family: var(--font-mono); color: var(--text-placeholder);
   margin-right: 6px;
 }
 
 /* ── Apply-change receipt ──────────────────────────────── */
-${S} .oc-acp-receipt {
+${S} .oc-agent-receipt {
   border-top: 1px solid var(--border-subtle);
   background: var(--tint-black-soft);
 }
-${S} .oc-acp-receipt-head {
+${S} .oc-agent-receipt-head {
   display: flex; align-items: center; justify-content: space-between;
   padding: 6px 10px;
   font-size: 10px; color: var(--text-muted);
   gap: 8px;
 }
-${S} .oc-acp-receipt-selector {
+${S} .oc-agent-receipt-selector {
   font-family: var(--font-mono);
   color: var(--text-primary);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-${S} .oc-acp-receipt-tag {
+${S} .oc-agent-receipt-tag {
   font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em;
   color: var(--text-placeholder);
   flex-shrink: 0;
 }
-${S} .oc-acp-receipt-diff {
+${S} .oc-agent-receipt-diff {
   font-family: var(--font-mono); font-size: 10.5px;
   border-top: 1px solid var(--border-subtle);
 }
-${S} .oc-acp-receipt-row {
+${S} .oc-agent-receipt-row {
   display: flex; gap: 8px;
   padding: 5px 10px;
 }
-${S} .oc-acp-receipt-row-before { color: var(--text-critical); }
-${S} .oc-acp-receipt-row-before .oc-acp-receipt-sign {
+${S} .oc-agent-receipt-row-before { color: var(--text-critical); }
+${S} .oc-agent-receipt-row-before .oc-agent-receipt-sign {
   color: var(--text-critical); flex-shrink: 0; opacity: 0.6;
 }
-${S} .oc-acp-receipt-row-after { color: var(--text-success); }
-${S} .oc-acp-receipt-row-after .oc-acp-receipt-sign {
+${S} .oc-agent-receipt-row-after { color: var(--text-success); }
+${S} .oc-agent-receipt-row-after .oc-agent-receipt-sign {
   color: var(--text-success); flex-shrink: 0; opacity: 0.7;
 }
-${S} .oc-acp-receipt-row-failed {
+${S} .oc-agent-receipt-row-failed {
   color: var(--text-disabled);
   text-decoration: line-through;
 }
-${S} .oc-acp-receipt-row-failed .oc-acp-receipt-sign {
+${S} .oc-agent-receipt-row-failed .oc-agent-receipt-sign {
   color: var(--text-placeholder); text-decoration: none; flex-shrink: 0;
 }
-${S} .oc-acp-receipt-value {
+${S} .oc-agent-receipt-value {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
 }
-${S} .oc-acp-receipt-value-unset {
+${S} .oc-agent-receipt-value-unset {
   font-style: italic; color: var(--text-placeholder); text-decoration: none;
 }
-${S} .oc-acp-receipt-source {
+${S} .oc-agent-receipt-source {
   padding: 5px 10px;
   font-size: 9.5px; font-family: var(--font-mono);
   color: var(--text-placeholder);
@@ -3345,46 +3345,46 @@ ${S} .oc-acp-receipt-source {
 }
 
 /* ── Permission bar (low / high risk) ──────────────────── */
-${S} .oc-acp-perm {
+${S} .oc-agent-perm {
   border-top: 1px solid var(--border-subtle);
   padding: 12px;
 }
-${S} .oc-acp-perm-head {
+${S} .oc-agent-perm-head {
   display: flex; align-items: flex-start; gap: 8px;
 }
-${S} .oc-acp-perm-icon { margin-top: 2px; flex-shrink: 0; }
-${S} .oc-acp-perm-title {
+${S} .oc-agent-perm-icon { margin-top: 2px; flex-shrink: 0; }
+${S} .oc-agent-perm-title {
   font-size: 12px; font-weight: 500;
 }
-${S} .oc-acp-perm-body {
+${S} .oc-agent-perm-body {
   font-size: 11px; color: var(--text-muted);
   margin-top: 2px;
 }
-${S} .oc-acp-perm-diff {
+${S} .oc-agent-perm-diff {
   margin-top: 6px;
   border: 1px solid var(--border-subtle);
   background: var(--tint-black-soft);
   border-radius: 6px; overflow: hidden;
   font-family: var(--font-mono); font-size: 10.5px;
 }
-${S} .oc-acp-perm-actions {
+${S} .oc-agent-perm-actions {
   display: flex; flex-wrap: wrap; gap: 6px;
   margin-top: 10px;
 }
-${S} .oc-acp-perm-btn {
+${S} .oc-agent-perm-btn {
   font-size: 11px; padding: 5px 10px; border-radius: 6px;
   border: none; cursor: pointer; font-family: inherit;
   transition: background 120ms ease;
 }
-${S} .oc-acp-perm-btn-cancel {
+${S} .oc-agent-perm-btn-cancel {
   margin-left: auto;
   background: var(--tint-hover);
   color: var(--text-muted);
 }
-${S} .oc-acp-perm-btn-cancel:hover { background: var(--tint-hover-strong); }
+${S} .oc-agent-perm-btn-cancel:hover { background: var(--tint-hover-strong); }
 
 /* ── Composer (single card: input + toolbar) ──────────── */
-${S} .oc-acp-composer {
+${S} .oc-agent-composer {
   /* Background stays transparent so it sits on the column's
      surface-floor. The visible card is the inner composer-card
      (surface-2, with focus ring). */
@@ -3402,7 +3402,7 @@ ${S} .oc-acp-composer {
 /* The card wraps textarea + toolbar together with one border that
    lights up on focus-within — the whole affordance highlights when
    the user is typing. */
-${S} .oc-acp-composer-card {
+${S} .oc-agent-composer-card {
   position: relative;
   display: flex; flex-direction: column;
   width: 100%;
@@ -3415,11 +3415,11 @@ ${S} .oc-acp-composer-card {
               box-shadow 120ms ease;
   padding: 6px 8px 6px 12px;
 }
-${S} .oc-acp-composer-card:focus-within {
+${S} .oc-agent-composer-card:focus-within {
   border-color: var(--ring-focus);
   box-shadow: 0 0 0 2px var(--accent-soft-bg);
 }
-${S} .oc-acp-composer-input {
+${S} .oc-agent-composer-input {
   width: 100%;
   min-height: 26px;
   max-height: 280px;
@@ -3434,29 +3434,29 @@ ${S} .oc-acp-composer-input {
   outline: none;
   line-height: 1.5;
 }
-${S} .oc-acp-composer-input:focus,
-${S} .oc-acp-composer-input:focus-visible {
+${S} .oc-agent-composer-input:focus,
+${S} .oc-agent-composer-input:focus-visible {
   outline: none !important;
   box-shadow: none !important;
   border: none !important;
   background: transparent !important;
 }
-${S} .oc-acp-composer-input::placeholder { color: var(--text-muted); }
-${S} .oc-acp-composer-input:disabled { opacity: 0.5; }
+${S} .oc-agent-composer-input::placeholder { color: var(--text-muted); }
+${S} .oc-agent-composer-input:disabled { opacity: 0.5; }
 
-${S} .oc-acp-composer-toolbar {
+${S} .oc-agent-composer-toolbar {
   display: flex; align-items: center;
   gap: 4px;
   padding: 4px 0 2px;
   min-width: 0;
 }
 
-${S} .oc-acp-attachments {
+${S} .oc-agent-attachments {
   display: flex; flex-wrap: wrap;
   gap: 4px;
   margin-bottom: 6px;
 }
-${S} .oc-acp-attachment {
+${S} .oc-agent-attachment {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 3px 8px 3px 6px;
   background: var(--accent-soft-bg);
@@ -3466,11 +3466,11 @@ ${S} .oc-acp-attachment {
   font-size: 11px;
   max-width: 220px;
 }
-${S} .oc-acp-attachment-name {
+${S} .oc-agent-attachment-name {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   min-width: 0;
 }
-${S} .oc-acp-attachment-x {
+${S} .oc-agent-attachment-x {
   display: inline-flex; align-items: center; justify-content: center;
   width: 14px; height: 14px;
   background: transparent;
@@ -3484,12 +3484,12 @@ ${S} .oc-acp-attachment-x {
   border-radius: 50%;
   transition: opacity 120ms, background 120ms;
 }
-${S} .oc-acp-attachment-x:hover {
+${S} .oc-agent-attachment-x:hover {
   opacity: 1;
   background: var(--tint-border-hover);
 }
-${S} .oc-acp-toolbar-spacer { flex: 1; }
-${S} .oc-acp-toolbar-sep {
+${S} .oc-agent-toolbar-spacer { flex: 1; }
+${S} .oc-agent-toolbar-sep {
   width: 1px;
   height: 14px;
   background: var(--border-subtle);
@@ -3502,7 +3502,7 @@ ${S} .oc-acp-toolbar-sep {
    inputs. Workspace is read-only (scope is pinned to the chat's
    folder for the whole conversation); branch stays switchable via
    the BranchPill. */
-${S} .oc-acp-composer-footer {
+${S} .oc-agent-composer-footer {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -3512,7 +3512,7 @@ ${S} .oc-acp-composer-footer {
   font-size: 11px;
   color: var(--text-muted);
 }
-${S} .oc-acp-chat-workspace {
+${S} .oc-agent-chat-workspace {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -3520,7 +3520,7 @@ ${S} .oc-acp-chat-workspace {
   border-radius: 999px;
   color: var(--text-muted);
 }
-${S} .oc-acp-chat-workspace span {
+${S} .oc-agent-chat-workspace span {
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3598,18 +3598,18 @@ ${S} .oc-chat-dropdown-item--meta .oc-chat-dropdown-item-hint {
 ${S} .oc-spin { animation: oc-spin 1s linear infinite; }
 
 /* Phase 5 — Design-audits quick-launch strip + subagent tool cards */
-${S} .oc-acp-quicks {
+${S} .oc-agent-quicks {
   display: flex; align-items: center; gap: 6px;
   padding: 0 4px 8px;
   flex-wrap: wrap;
 }
-${S} .oc-acp-quicks-label {
+${S} .oc-agent-quicks-label {
   font-size: 9.5px; text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-placeholder);
   margin-right: 2px;
 }
-${S} .oc-acp-quick-chip {
+${S} .oc-agent-quick-chip {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 3px 8px;
   font-size: 10.5px; font-family: inherit;
@@ -3620,16 +3620,16 @@ ${S} .oc-acp-quick-chip {
   cursor: pointer;
   transition: background 120ms ease, color 120ms ease;
 }
-${S} .oc-acp-quick-chip:hover {
+${S} .oc-agent-quick-chip:hover {
   background: var(--tint-accent-soft);
   color: var(--accent-hover);
 }
-${S} .oc-acp-quick-chip[disabled] {
+${S} .oc-agent-quick-chip[disabled] {
   opacity: 0.4; cursor: not-allowed;
 }
 
-/* ── Mention picker (ACP variant of oc-slash-menu) ─────── */
-${S} .oc-acp-menu {
+/* ── Mention picker (agent variant of oc-slash-menu) ─────── */
+${S} .oc-agent-menu {
   position: absolute;
   left: 0; right: 0; bottom: calc(100% + 6px);
   background: var(--surface-1);
@@ -3639,13 +3639,13 @@ ${S} .oc-acp-menu {
   overflow: hidden;
   z-index: 25;
 }
-${S} .oc-acp-menu-head {
+${S} .oc-agent-menu-head {
   padding: 6px 12px; font-size: 10px; text-transform: uppercase;
   letter-spacing: 0.05em; color: var(--text-muted);
   border-bottom: 1px solid var(--border-subtle);
 }
-${S} .oc-acp-menu-list { max-height: 220px; overflow-y: auto; }
-${S} .oc-acp-menu-item {
+${S} .oc-agent-menu-list { max-height: 220px; overflow-y: auto; }
+${S} .oc-agent-menu-item {
   width: 100%;
   display: flex; align-items: center; gap: 8px;
   padding: 6px 12px;
@@ -3654,46 +3654,46 @@ ${S} .oc-acp-menu-item {
   cursor: pointer; text-align: left;
   transition: background 120ms ease;
 }
-${S} .oc-acp-menu-item:hover { background: var(--surface-2); }
-${S} .oc-acp-menu-item-active {
+${S} .oc-agent-menu-item:hover { background: var(--surface-2); }
+${S} .oc-agent-menu-item-active {
   background: var(--surface-3) !important;
 }
-${S} .oc-acp-menu-item-icon {
+${S} .oc-agent-menu-item-icon {
   flex-shrink: 0; color: var(--text-muted);
 }
-${S} .oc-acp-menu-item-active .oc-acp-menu-item-icon {
+${S} .oc-agent-menu-item-active .oc-agent-menu-item-icon {
   color: var(--text-success);
 }
-${S} .oc-acp-menu-item-label {
+${S} .oc-agent-menu-item-label {
   font-size: 11px; color: var(--text-primary);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-${S} .oc-acp-menu-item-hint {
+${S} .oc-agent-menu-item-hint {
   font-size: 10px; color: var(--text-muted);
   font-family: var(--font-mono);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   margin-top: 1px;
 }
-${S} .oc-acp-menu-item-kind {
+${S} .oc-agent-menu-item-kind {
   font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em;
   color: var(--text-placeholder);
   flex-shrink: 0;
 }
-${S} .oc-acp-menu-empty {
+${S} .oc-agent-menu-empty {
   padding: 12px; font-size: 11px;
   color: var(--text-muted);
 }
 
 /* ── Registry picker ───────────────────────────────────── */
-${S} .oc-acp-reg-search {
+${S} .oc-agent-reg-search {
   flex: 1; min-width: 0;
   position: relative;
 }
-${S} .oc-acp-reg-search-icon {
+${S} .oc-agent-reg-search-icon {
   position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
   color: var(--text-placeholder); pointer-events: none;
 }
-${S} .oc-acp-reg-search-input {
+${S} .oc-agent-reg-search-input {
   width: 100%;
   padding: 6px 10px 6px 28px;
   background: var(--surface-1);
@@ -3703,45 +3703,45 @@ ${S} .oc-acp-reg-search-input {
   outline: none;
   transition: border-color 120ms ease, background 120ms ease;
 }
-${S} .oc-acp-reg-search-input:focus {
+${S} .oc-agent-reg-search-input:focus {
   border-color: var(--ring-focus);
   background: var(--surface-0);
 }
-${S} .oc-acp-reg-search-input::placeholder { color: var(--text-muted); }
-${S} .oc-acp-reg-list { flex: 1; min-height: 0; overflow-y: auto; }
-${S} .oc-acp-reg-row {
+${S} .oc-agent-reg-search-input::placeholder { color: var(--text-muted); }
+${S} .oc-agent-reg-list { flex: 1; min-height: 0; overflow-y: auto; }
+${S} .oc-agent-reg-row {
   display: flex; align-items: flex-start; gap: 10px;
   padding: 10px 12px;
   border-bottom: 1px solid var(--border-subtle);
   cursor: pointer;
   transition: background 120ms ease;
 }
-${S} .oc-acp-reg-row:hover { background: var(--surface-2); }
-${S} .oc-acp-reg-row-active { background: var(--surface-3); }
-${S} .oc-acp-reg-avatar {
+${S} .oc-agent-reg-row:hover { background: var(--surface-2); }
+${S} .oc-agent-reg-row-active { background: var(--surface-3); }
+${S} .oc-agent-reg-avatar {
   width: 28px; height: 28px; border-radius: 6px;
   background: var(--surface-2);
   flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
   color: var(--text-muted); font-size: 11px; font-weight: 600;
 }
-${S} .oc-acp-reg-avatar--icon {
+${S} .oc-agent-reg-avatar--icon {
   background: var(--surface-1);
 }
-${S} .oc-acp-reg-avatar svg {
+${S} .oc-agent-reg-avatar svg {
   width: 100%; height: 100%; display: block;
 }
-${S} .oc-acp-reg-status-dot {
+${S} .oc-agent-reg-status-dot {
   width: 7px; height: 7px;
   border-radius: 50%;
   flex-shrink: 0;
   margin-right: 2px;
   align-self: center;
 }
-${S} .oc-acp-reg-status-dot.is-active {
+${S} .oc-agent-reg-status-dot.is-active {
   background: var(--text-success, #22c55e);
 }
-${S} .oc-acp-reg-status-dot.is-inactive {
+${S} .oc-agent-reg-status-dot.is-inactive {
   background: var(--text-muted);
   opacity: 0.5;
 }
@@ -3844,39 +3844,39 @@ ${S} .oc-summary-handoff__dismiss:hover {
   background: var(--surface-2);
   color: var(--text-primary);
 }
-${S} .oc-acp-reg-body { min-width: 0; flex: 1; }
-${S} .oc-acp-reg-title {
+${S} .oc-agent-reg-body { min-width: 0; flex: 1; }
+${S} .oc-agent-reg-title {
   display: flex; align-items: baseline; gap: 6px;
 }
-${S} .oc-acp-reg-name {
+${S} .oc-agent-reg-name {
   font-size: 12px; font-weight: 500;
   color: var(--text-primary);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-${S} .oc-acp-reg-version {
+${S} .oc-agent-reg-version {
   font-size: 10px; color: var(--text-placeholder); flex-shrink: 0;
 }
-${S} .oc-acp-reg-dist {
+${S} .oc-agent-reg-dist {
   font-size: 10px; color: var(--text-placeholder);
   text-transform: uppercase; letter-spacing: 0.04em;
   flex-shrink: 0;
 }
-${S} .oc-acp-reg-desc {
+${S} .oc-agent-reg-desc {
   font-size: 11px; color: var(--text-muted);
   margin-top: 2px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-${S} .oc-acp-reg-id {
+${S} .oc-agent-reg-id {
   font-size: 10px; color: var(--text-placeholder);
   font-family: var(--font-mono); margin-top: 2px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 /* Per-row right-hand cluster: Login button + enable toggle. */
-${S} .oc-acp-reg-actions {
+${S} .oc-agent-reg-actions {
   display: flex; align-items: center; gap: 8px;
   flex-shrink: 0;
 }
-${S} .oc-acp-reg-login {
+${S} .oc-agent-reg-login {
   font-size: 10px; padding: 4px 8px; border-radius: 6px;
   display: inline-flex; align-items: center; gap: 4px;
 }
@@ -3884,7 +3884,7 @@ ${S} .oc-acp-reg-login {
 /* Enable/disable toggle. Off = muted grey track, knob left; on = green
    track, knob right. Stops propagation on click so it doesn't also
    fire the row's select handler. */
-${S} .oc-acp-reg-toggle {
+${S} .oc-agent-reg-toggle {
   position: relative;
   width: 28px; height: 16px;
   border-radius: 999px;
@@ -3894,46 +3894,46 @@ ${S} .oc-acp-reg-toggle {
   transition: background 120ms ease, border-color 120ms ease;
   flex-shrink: 0;
 }
-${S} .oc-acp-reg-toggle.is-on {
+${S} .oc-agent-reg-toggle.is-on {
   background: var(--tint-success-border);
   border-color: var(--tint-success-border);
 }
-${S} .oc-acp-reg-toggle.is-on:hover {
+${S} .oc-agent-reg-toggle.is-on:hover {
   background: var(--text-success);
 }
-${S} .oc-acp-reg-toggle.is-off:hover {
+${S} .oc-agent-reg-toggle.is-off:hover {
   background: var(--tint-active);
 }
-${S} .oc-acp-reg-toggle-knob {
+${S} .oc-agent-reg-toggle-knob {
   position: absolute; top: 1px; left: 1px;
   width: 12px; height: 12px; border-radius: 50%;
   background: var(--text-primary);
   transition: transform 120ms ease;
 }
-${S} .oc-acp-reg-toggle.is-on .oc-acp-reg-toggle-knob {
+${S} .oc-agent-reg-toggle.is-on .oc-agent-reg-toggle-knob {
   transform: translateX(12px);
   background: var(--surface-absolute-inverted);
 }
-${S} .oc-acp-reg-footer {
+${S} .oc-agent-reg-footer {
   border-top: 1px solid var(--border-subtle);
   padding: 6px 12px;
   display: flex; align-items: center; justify-content: space-between;
   font-size: 10px; color: var(--text-placeholder);
 }
-${S} .oc-acp-reg-footer a {
+${S} .oc-agent-reg-footer a {
   color: var(--text-muted);
   text-decoration: none;
   display: inline-flex; align-items: center; gap: 4px;
 }
-${S} .oc-acp-reg-footer a:hover { color: var(--text-primary); }
+${S} .oc-agent-reg-footer a:hover { color: var(--text-primary); }
 
 /* Phase 3 — tabs, install-state pills, per-row resource links */
-${S} .oc-acp-reg-tabs {
+${S} .oc-agent-reg-tabs {
   display: flex; gap: 2px;
   padding: 6px 8px;
   border-bottom: 1px solid var(--border-subtle);
 }
-${S} .oc-acp-reg-tab {
+${S} .oc-agent-reg-tab {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 4px 10px;
   font-size: 11px; font-family: inherit;
@@ -3942,58 +3942,58 @@ ${S} .oc-acp-reg-tab {
   cursor: pointer;
   transition: background 120ms ease, color 120ms ease;
 }
-${S} .oc-acp-reg-tab:hover { color: var(--text-primary); background: var(--surface-2); }
-${S} .oc-acp-reg-tab-active {
+${S} .oc-agent-reg-tab:hover { color: var(--text-primary); background: var(--surface-2); }
+${S} .oc-agent-reg-tab-active {
   color: var(--text-primary);
   background: var(--surface-3);
 }
-${S} .oc-acp-reg-tab-count {
+${S} .oc-agent-reg-tab-count {
   font-size: 10px; color: var(--text-placeholder);
 }
-${S} .oc-acp-reg-tab-active .oc-acp-reg-tab-count { color: var(--text-muted); }
+${S} .oc-agent-reg-tab-active .oc-agent-reg-tab-count { color: var(--text-muted); }
 
-${S} .oc-acp-reg-pill {
+${S} .oc-agent-reg-pill {
   font-size: 9.5px;
   text-transform: uppercase; letter-spacing: 0.04em;
   padding: 1px 6px; border-radius: 999px;
   border: 1px solid transparent;
   flex-shrink: 0;
 }
-${S} .oc-acp-reg-pill-installed {
+${S} .oc-agent-reg-pill-installed {
   color: var(--text-success);
   background: var(--tint-success-soft);
   border-color: var(--tint-success-border);
 }
-${S} .oc-acp-reg-pill-available {
+${S} .oc-agent-reg-pill-available {
   color: var(--text-muted);
   background: var(--tint-hover);
   border-color: var(--border-subtle);
 }
-${S} .oc-acp-reg-pill-unavailable {
+${S} .oc-agent-reg-pill-unavailable {
   color: var(--text-placeholder);
   background: var(--tint-hover);
   border-color: var(--border-subtle);
 }
 
-${S} .oc-acp-reg-meta {
+${S} .oc-agent-reg-meta {
   display: flex; align-items: center; gap: 10px;
   margin-top: 4px;
   font-size: 10px; color: var(--text-placeholder);
 }
-${S} .oc-acp-reg-meta a {
+${S} .oc-agent-reg-meta a {
   display: inline-flex; align-items: center; gap: 3px;
   color: var(--text-muted);
   text-decoration: none;
 }
-${S} .oc-acp-reg-meta a:hover { color: var(--text-primary); }
-${S} .oc-acp-reg-meta-license {
+${S} .oc-agent-reg-meta a:hover { color: var(--text-primary); }
+${S} .oc-agent-reg-meta-license {
   display: inline-flex; align-items: center; gap: 3px;
   color: var(--text-placeholder);
 }
 
 /* ── Auth modal (method picker + key input) ────────────── */
-${S} .oc-acp-auth-body { padding: 12px; }
-${S} .oc-acp-auth-card {
+${S} .oc-agent-auth-body { padding: 12px; }
+${S} .oc-agent-auth-card {
   width: 100%;
   display: flex; align-items: flex-start; gap: 10px;
   padding: 12px;
@@ -4004,66 +4004,66 @@ ${S} .oc-acp-auth-card {
   transition: border-color 120ms ease, background 120ms ease;
   margin-bottom: 10px;
 }
-${S} .oc-acp-auth-card:hover {
+${S} .oc-agent-auth-card:hover {
   background: var(--surface-3);
 }
-${S} .oc-acp-auth-card-active {
+${S} .oc-agent-auth-card-active {
   border-color: var(--tint-success-border);
   background: var(--tint-success-weak);
 }
-${S} .oc-acp-auth-icon {
+${S} .oc-agent-auth-icon {
   flex-shrink: 0; width: 24px; height: 24px; border-radius: 6px;
   background: var(--tint-hover); color: var(--text-muted);
   display: flex; align-items: center; justify-content: center;
 }
-${S} .oc-acp-auth-card-active .oc-acp-auth-icon {
+${S} .oc-agent-auth-card-active .oc-agent-auth-icon {
   background: var(--tint-success-soft);
   color: var(--text-success);
 }
-${S} .oc-acp-auth-body-text { min-width: 0; flex: 1; }
-${S} .oc-acp-auth-title {
+${S} .oc-agent-auth-body-text { min-width: 0; flex: 1; }
+${S} .oc-agent-auth-title {
   font-size: 12px; font-weight: 500;
   color: var(--text-primary);
 }
-${S} .oc-acp-auth-desc {
+${S} .oc-agent-auth-desc {
   font-size: 11px; color: var(--text-muted);
   margin-top: 2px;
   line-height: 1.45;
 }
-${S} .oc-acp-auth-radio {
+${S} .oc-agent-auth-radio {
   flex-shrink: 0; width: 14px; height: 14px;
   border: 1px solid var(--border-strong);
   border-radius: 50%; margin-top: 2px;
 }
-${S} .oc-acp-auth-card-active .oc-acp-auth-radio {
+${S} .oc-agent-auth-card-active .oc-agent-auth-radio {
   border-color: var(--text-success);
   background: var(--text-success);
 }
-${S} .oc-acp-auth-field {
+${S} .oc-agent-auth-field {
   margin-top: 4px; padding: 12px;
   border: 1px solid var(--border-subtle);
   background: var(--surface-2);
   border-radius: 8px;
 }
-${S} .oc-acp-auth-label {
+${S} .oc-agent-auth-label {
   font-size: 11px; color: var(--text-muted);
   margin-bottom: 6px;
 }
-${S} .oc-acp-auth-field-meta {
+${S} .oc-agent-auth-field-meta {
   margin-top: 6px;
   display: flex; align-items: center; justify-content: space-between;
   gap: 8px;
 }
-${S} .oc-acp-auth-field-meta a {
+${S} .oc-agent-auth-field-meta a {
   font-size: 10px; color: var(--text-muted);
   text-decoration: none;
 }
-${S} .oc-acp-auth-field-meta a:hover { color: var(--text-primary); }
-${S} .oc-acp-auth-field-meta-badge {
+${S} .oc-agent-auth-field-meta a:hover { color: var(--text-primary); }
+${S} .oc-agent-auth-field-meta-badge {
   font-size: 10px; color: var(--text-placeholder);
   display: inline-flex; align-items: center; gap: 4px;
 }
-${S} .oc-acp-auth-disclaimer {
+${S} .oc-agent-auth-disclaimer {
   padding: 10px 12px;
   border: 1px solid var(--tint-warning-border);
   background: var(--tint-warning-soft);
@@ -4073,23 +4073,23 @@ ${S} .oc-acp-auth-disclaimer {
   line-height: 1.5;
   display: flex; gap: 8px;
 }
-${S} .oc-acp-auth-disclaimer-title {
+${S} .oc-agent-auth-disclaimer-title {
   font-weight: 500; color: var(--text-warning);
   margin-bottom: 2px;
 }
-${S} .oc-acp-auth-error {
+${S} .oc-agent-auth-error {
   font-size: 11px; color: var(--text-critical);
   margin-top: 8px;
 }
-${S} .oc-acp-auth-actions {
+${S} .oc-agent-auth-actions {
   border-top: 1px solid var(--border-subtle);
   padding: 10px 12px;
   display: flex; align-items: center; gap: 8px;
 }
-${S} .oc-acp-auth-actions-spacer { flex: 1; }
+${S} .oc-agent-auth-actions-spacer { flex: 1; }
 
 /* ── Misc small states ─────────────────────────────────── */
-${S} .oc-acp-error {
+${S} .oc-agent-error {
   margin: 8px 12px 0;
   padding: 8px;
   border: 1px solid var(--tint-critical-border);
@@ -4098,12 +4098,12 @@ ${S} .oc-acp-error {
   display: flex; gap: 8px; align-items: flex-start;
   font-size: 11px; color: var(--text-critical);
 }
-${S} .oc-acp-error-title { font-weight: 500; }
-${S} .oc-acp-empty-muted {
+${S} .oc-agent-error-title { font-weight: 500; }
+${S} .oc-agent-empty-muted {
   padding: 12px; font-size: 11px; color: var(--text-muted);
   display: flex; align-items: center; gap: 6px;
 }
-${S} .oc-acp-loading {
+${S} .oc-agent-loading {
   height: 100%;
   display: flex; align-items: center; justify-content: center;
   font-size: 11px; color: var(--text-muted);

@@ -7,7 +7,7 @@
 //   GEMINI_TELEMETRY_TARGET=local
 //   GEMINI_TELEMETRY_OUTFILE=<path>
 // Gemini writes one JSON record per line of every internal event:
-// ACP requests/responses, tool calls (`gemini.api.tool_call`), user
+// agent requests/responses, tool calls (`gemini.api.tool_call`), user
 // and model messages, etc. The schema is OpenTelemetry-ish with
 // `resource.attributes`, `instrumentation_scope`, `body`, and
 // `attributes` fields.

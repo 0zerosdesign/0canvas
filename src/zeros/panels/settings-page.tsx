@@ -161,7 +161,7 @@ export function SettingsPage() {
 
 // ── Agents (native registry + default agent picker) ─────
 //
-// Browses the live ACP agent registry and lets the user designate
+// Browses the live agent registry and lets the user designate
 // one as the default for new chats. Clicking a row toggles default
 // — no separate "install" action needed because the registry auto-
 // detects install state from PATH probes. Model catalog refresh is

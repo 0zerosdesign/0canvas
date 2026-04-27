@@ -1451,7 +1451,7 @@ export function Column1Nav() {
 // ── Chat row ──────────────────────────────────────────────
 //
 // Extracted as a component so useChatSession() can run per-row — the
-// hook reads this chat's ACP session state (streaming / pendingPermission
+// hook reads this chat's agent session state (streaming / pendingPermission
 // / failed) and maps it to a dot color class. Keeps the list virtualizable
 // later: each row owns its own subscription and only re-renders when its
 // own session state changes.

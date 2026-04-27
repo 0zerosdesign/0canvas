@@ -2,7 +2,7 @@
 // AgentChat — messages + tool cards + permission modal + composer
 // ──────────────────────────────────────────────────────────
 //
-// The chat surface for an in-flight ACP session. It's driven entirely
+// The chat surface for an in-flight agent session. It's driven entirely
 // by the state the useAgentSession hook exposes — this component does
 // not store message state of its own, which keeps us honest about
 // what the protocol says vs. what we invent.
@@ -367,7 +367,7 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
     }
   }, [session.messages, workspaceState.elements, dispatch]);
 
-  // Attachments for the next prompt — ACP image ContentBlocks queued by
+  // Attachments for the next prompt — image ContentBlocks queued by
   // the paperclip/image button. Cleared on send or manual dismissal.
   const [attachments, setAttachments] = useState<
     Array<{ id: string; name: string; mimeType: string; data: string; size: number }>
@@ -451,7 +451,7 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
   }, [pendingSub, session.status, session.pendingPermission, chatId, workspaceState.activeChatId]);
 
   /** Read a File into a base64 data payload (sans the `data:...;base64,`
-   *  prefix — ACP's image block wants the raw base64 + a separate
+   *  prefix — the wire image block wants the raw base64 + a separate
    *  mimeType field). */
   const readFileAsBase64 = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -590,8 +590,8 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
   };
 
   return (
-    <div className="oc-acp-surface">
-      <header className="oc-acp-subheader">
+    <div className="oc-agent-surface">
+      <header className="oc-agent-subheader">
         {!headerActions && (
           <Button
             variant="ghost"
@@ -608,14 +608,14 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
           style={{ color: "var(--accent-hover)" }}
         />
         <div className="min-w-0 flex-1">
-          <div className="oc-acp-subheader-title">
-            {chatThread?.title ?? session.agentName ?? session.agentId ?? "ACP"}
+          <div className="oc-agent-subheader-title">
+            {chatThread?.title ?? session.agentName ?? session.agentId ?? "Agent"}
           </div>
-          <div className="oc-acp-subheader-sub">
+          <div className="oc-agent-subheader-sub">
             {session.agentName && (
-              <span className="oc-acp-subheader-agent">{session.agentName}</span>
+              <span className="oc-agent-subheader-agent">{session.agentName}</span>
             )}
-            <span className="oc-acp-subheader-status">
+            <span className="oc-agent-subheader-status">
               {session.status === "streaming"
                 ? "streaming…"
                 : session.lastStopReason
@@ -630,7 +630,7 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
       </header>
 
       {session.status === "failed" && session.error && (
-        <div className="oc-acp-error">
+        <div className="oc-agent-error">
           <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
           <div className="min-w-0" style={{ flex: 1 }}>
             <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
@@ -654,8 +654,8 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
         />
       )}
 
-      <div ref={scrollRef} className="oc-acp-body">
-        <div className="oc-acp-messages">
+      <div ref={scrollRef} className="oc-agent-body">
+        <div className="oc-agent-messages">
           {/* Warming/reconnecting state is now surfaced by the compact
               chip in the composer's pill row — keep the message area
               empty so the user can still see the transcript area. */}
@@ -663,7 +663,7 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
             session.status === "ready" &&
             !session.error &&
             !queuedPreview && (
-              <div className="oc-acp-empty-muted">
+              <div className="oc-agent-empty-muted">
                 Session ready. Ask the agent anything.
               </div>
             )}
@@ -671,10 +671,10 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
             <MessageView key={m.id} message={m} ctx={messageCtx} />
           ))}
           {queuedPreview && (
-            <div className="oc-acp-msg oc-acp-msg-user oc-acp-msg-queued">
-              <div className="oc-acp-msg-content">
+            <div className="oc-agent-msg oc-agent-msg-user oc-agent-msg-queued">
+              <div className="oc-agent-msg-content">
                 {queuedPreview}
-                <div className="oc-acp-msg-queued-hint">
+                <div className="oc-agent-msg-queued-hint">
                   <Clock className="w-3 h-3" /> queued — sending when the session connects
                 </div>
               </div>
@@ -693,7 +693,7 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
         />
       )}
 
-      <div className="oc-acp-composer">
+      <div className="oc-agent-composer">
         {slashPickerOpen && (
           <SlashCommandPicker
             commands={filteredCommands}
@@ -711,16 +711,16 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
           />
         )}
         {attachments.length > 0 && (
-          <div className="oc-acp-attachments" role="list">
+          <div className="oc-agent-attachments" role="list">
             {attachments.map((a) => (
-              <div key={a.id} className="oc-acp-attachment" role="listitem">
+              <div key={a.id} className="oc-agent-attachment" role="listitem">
                 <Palette className="w-3 h-3" />
-                <span className="oc-acp-attachment-name" title={a.name}>
+                <span className="oc-agent-attachment-name" title={a.name}>
                   {a.name}
                 </span>
                 <button
                   type="button"
-                  className="oc-acp-attachment-x"
+                  className="oc-agent-attachment-x"
                   onClick={() => removeAttachment(a.id)}
                   title="Remove attachment"
                   aria-label="Remove attachment"
@@ -731,8 +731,8 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
             ))}
           </div>
         )}
-        <div className="oc-acp-composer-card">
-          {/* The "Connecting to {agent}…" overlay was an ACP-era
+        <div className="oc-agent-composer-card">
+          {/* The "Connecting to {agent}…" overlay was an legacy
               reassurance for the ~10s handshake. Native adapters
               spawn in <500ms — surfacing the state in the textarea
               just covers the placeholder and nothing else. The
@@ -752,9 +752,9 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
                 ? "Agent is responding…"
                 : 'Type your message… "/" for commands, "@" for files'
             }
-            className="oc-acp-composer-input"
+            className="oc-agent-composer-input"
           />
-          <div className="oc-acp-composer-toolbar">
+          <div className="oc-agent-composer-toolbar">
             <Button
               variant="ghost"
               size="icon-sm"
@@ -795,7 +795,7 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
                 />
               </>
             )}
-            <div className="oc-acp-toolbar-spacer" />
+            <div className="oc-agent-toolbar-spacer" />
             {session.status === "streaming" ? (
               <Button
                 variant="destructive"
@@ -821,7 +821,7 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
           </div>
         </div>
         {chatThread && (
-          <div className="oc-acp-composer-footer">
+          <div className="oc-agent-composer-footer">
             <AgentPill
               selectedId={chatThread.agentId}
               selectedName={chatThread.agentName}
@@ -837,7 +837,7 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
             />
             {folderLabel && (
               <span
-                className="oc-acp-chat-workspace"
+                className="oc-agent-chat-workspace"
                 title={chatThread.folder || "No project"}
               >
                 <FolderOpen size={11} />
@@ -855,7 +855,7 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
                 setGitBehind(0);
               }}
             />
-            <div className="oc-acp-toolbar-spacer" />
+            <div className="oc-agent-toolbar-spacer" />
             <ContextPill usage={session.usage} />
           </div>
         )}
@@ -874,34 +874,34 @@ function PlanPanel({ entries }: { entries: PlanEntry[] }) {
   const [collapsed, setCollapsed] = useState(false);
   const done = entries.filter((e) => e.status === "completed").length;
   return (
-    <div className="oc-acp-plan">
+    <div className="oc-agent-plan">
       <button
         type="button"
-        className="oc-acp-plan-head"
+        className="oc-agent-plan-head"
         onClick={() => setCollapsed((v) => !v)}
         aria-expanded={!collapsed}
       >
         <Layers className="w-3.5 h-3.5" />
-        <span className="oc-acp-plan-title">Plan</span>
-        <span className="oc-acp-plan-count">
+        <span className="oc-agent-plan-title">Plan</span>
+        <span className="oc-agent-plan-count">
           {done}/{entries.length}
         </span>
       </button>
       {!collapsed && (
-        <ul className="oc-acp-plan-list">
+        <ul className="oc-agent-plan-list">
           {entries.map((e, i) => (
             <li
               key={i}
-              className={`oc-acp-plan-item oc-acp-plan-item-${e.status}`}
+              className={`oc-agent-plan-item oc-agent-plan-item-${e.status}`}
             >
-              <span className="oc-acp-plan-bullet" aria-hidden>
+              <span className="oc-agent-plan-bullet" aria-hidden>
                 {e.status === "completed"
                   ? "✓"
                   : e.status === "in_progress"
                   ? "⋯"
                   : "○"}
               </span>
-              <span className="oc-acp-plan-desc">{e.content}</span>
+              <span className="oc-agent-plan-desc">{e.content}</span>
             </li>
           ))}
         </ul>
@@ -911,7 +911,7 @@ function PlanPanel({ entries }: { entries: PlanEntry[] }) {
 }
 
 // ──────────────────────────────────────────────────────────
-// PermissionBar — renders the ACP permission options verbatim
+// PermissionBar — renders the permission options verbatim
 // ──────────────────────────────────────────────────────────
 
 function PermissionBar({
@@ -931,7 +931,7 @@ function PermissionBar({
   }) ?? null;
 
   const risk = prompt?.risk ?? "high";
-  const barClass = `oc-acp-perm oc-acp-perm-${risk}`;
+  const barClass = `oc-agent-perm oc-agent-perm-${risk}`;
   const Icon = matched?.icon ?? AlertCircle;
 
   const headline =
@@ -943,32 +943,32 @@ function PermissionBar({
 
   return (
     <div className={barClass}>
-      <div className="oc-acp-perm-head">
-        <Icon className="oc-acp-perm-icon w-3.5 h-3.5" />
+      <div className="oc-agent-perm-head">
+        <Icon className="oc-agent-perm-icon w-3.5 h-3.5" />
         <div className="min-w-0 flex-1">
-          <div className="oc-acp-perm-title">{headline}</div>
-          <div className="oc-acp-perm-body">{body}</div>
+          <div className="oc-agent-perm-title">{headline}</div>
+          <div className="oc-agent-perm-body">{body}</div>
           {prompt?.diff && (
-            <div className="oc-acp-perm-diff">
+            <div className="oc-agent-perm-diff">
               {prompt.diff.before !== undefined && (
-                <div className="oc-acp-receipt-row oc-acp-receipt-row-before">
-                  <span className="oc-acp-receipt-sign">−</span>
-                  <span className="oc-acp-receipt-value">
+                <div className="oc-agent-receipt-row oc-agent-receipt-row-before">
+                  <span className="oc-agent-receipt-sign">−</span>
+                  <span className="oc-agent-receipt-value">
                     {prompt.diff.before || (
-                      <span className="oc-acp-receipt-value-unset">(unset)</span>
+                      <span className="oc-agent-receipt-value-unset">(unset)</span>
                     )}
                   </span>
                 </div>
               )}
-              <div className="oc-acp-receipt-row oc-acp-receipt-row-after">
-                <span className="oc-acp-receipt-sign">+</span>
-                <span className="oc-acp-receipt-value">{prompt.diff.after}</span>
+              <div className="oc-agent-receipt-row oc-agent-receipt-row-after">
+                <span className="oc-agent-receipt-sign">+</span>
+                <span className="oc-agent-receipt-value">{prompt.diff.after}</span>
               </div>
             </div>
           )}
         </div>
       </div>
-      <div className="oc-acp-perm-actions">
+      <div className="oc-agent-perm-actions">
         {request.options.map((opt) => {
           const variant =
             opt.kind === "allow_always" || opt.kind === "allow_once"
@@ -985,7 +985,7 @@ function PermissionBar({
               onClick={() =>
                 onRespond({ outcome: "selected", optionId: opt.optionId })
               }
-              className={`oc-acp-perm-btn oc-acp-perm-btn-${variant}`}
+              className={`oc-agent-perm-btn oc-agent-perm-btn-${variant}`}
             >
               {friendlyOptionLabel(opt.name, opt.kind)}
             </Button>
@@ -996,7 +996,7 @@ function PermissionBar({
           size="sm"
           type="button"
           onClick={() => onRespond({ outcome: "cancelled" })}
-          className="oc-acp-perm-btn oc-acp-perm-btn-cancel"
+          className="oc-agent-perm-btn oc-agent-perm-btn-cancel"
         >
           Cancel turn
         </Button>

@@ -544,7 +544,7 @@ export function applyUpdate(
       return appendText(messages, "user", upd.content, incomingId);
     }
     case "agent_message_chunk":
-      // ACP SDK 0.19 widened `messageId` to `string | null | undefined`.
+      // engine 0.19 widened `messageId` to `string | null | undefined`.
       // Treat null the same as undefined — both mean "no engine id yet",
       // which falls through to role-only coalescing in appendText.
       return appendText(messages, "agent", upd.content, upd.messageId ?? undefined);

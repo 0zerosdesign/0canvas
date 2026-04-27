@@ -10,14 +10,15 @@
 // deleted in Phase 9.
 //
 // Keep in sync with BridgeAgentFailure in messages.ts — same kinds,
-// same stages. When Phase 9b renames Acp* → Agent* we rename this too.
+// same stages.
 //
 // ──────────────────────────────────────────────────────────
 
 import type { BridgeAgentFailure } from "./messages";
 
-/** Re-export for callers that imported `AgentFailure` from the old
- *  `engine/acp/failure` path. Identical shape to BridgeAgentFailure. */
+/** Public alias of the bridge-level failure shape. Lets browser-side
+ *  callers spell it `AgentFailure` while the wire-format type stays
+ *  `BridgeAgentFailure`. Identical shape, no runtime cost. */
 export type AgentFailure = BridgeAgentFailure;
 
 const AUTH_RX =

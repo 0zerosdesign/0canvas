@@ -89,12 +89,12 @@ export function AgentMode() {
 
   if (screen === "loading" && pendingAgent) {
     return (
-      <div className="oc-acp-surface">
-        <div className="oc-acp-loading">
+      <div className="oc-agent-surface">
+        <div className="oc-agent-loading">
           {loadError ? (
-            <div className="oc-acp-error">
+            <div className="oc-agent-error">
               <div className="min-w-0">
-                <div className="oc-acp-error-title">
+                <div className="oc-agent-error-title">
                   Couldn't reach {pendingAgent.name}
                 </div>
                 <div>{loadError}</div>

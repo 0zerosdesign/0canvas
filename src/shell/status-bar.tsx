@@ -2,7 +2,7 @@
 // StatusBar — 22px bottom bar.
 //
 // Cursor/VSCode pattern. Slim, dense, always visible.
-//   Left:  git branch, agent status, ACP connection
+//   Left:  git branch, agent status, agent connection
 //   Right: problems count, project URL
 //
 // Uses semantic tokens only. Items are purely informational

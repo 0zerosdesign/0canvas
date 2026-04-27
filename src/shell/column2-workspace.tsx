@@ -3,7 +3,7 @@
 // ──────────────────────────────────────────────────────────
 //
 // Col 2 hosts the conversation layer:
-//   Chat     — AIChatPanel / ACP session for the active chat
+//   Chat     — AIChatPanel / agent session for the active chat
 //   Mission  — Mission-control panel for orchestrating multi-chat runs
 //
 // IDE tools (Git / Terminal / Env / Todo) live in Column 3
@@ -124,7 +124,7 @@ export function Column2Workspace({
         } ${activeTab === "mission" ? "is-mission" : ""}`}
         role="tabpanel"
       >
-        {/* ACP session UI is scoped under [data-Zeros-root] for
+        {/* agent session UI is scoped under [data-Zeros-root] for
             engine-injected tokens. Remount per-chat via the chatKey
             so state flips cleanly when the user switches chats. */}
         {activeTab === "chat" && (

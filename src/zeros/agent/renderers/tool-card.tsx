@@ -56,30 +56,30 @@ export const ToolCard: Renderer<AgentToolMessage> = memo(function ToolCard({
   const sourcePath = tool.locations?.[0]?.path;
   const sourceLine = tool.locations?.[0]?.line;
   const cardClass = design
-    ? "oc-acp-tool oc-acp-tool-design"
+    ? "oc-agent-tool oc-agent-tool-design"
     : subagent
-    ? "oc-acp-tool oc-acp-tool-subagent"
-    : "oc-acp-tool";
+    ? "oc-agent-tool oc-agent-tool-subagent"
+    : "oc-agent-tool";
   const vendorLabel = design ? "Zeros" : subagent ? "Subagent" : null;
 
   return (
     <div className={cardClass}>
-      <div className="oc-acp-tool-head">
-        <Icon className="oc-acp-tool-icon w-3.5 h-3.5" />
-        <div className="oc-acp-tool-body">
-          <div className="oc-acp-tool-title">
+      <div className="oc-agent-tool-head">
+        <Icon className="oc-agent-tool-icon w-3.5 h-3.5" />
+        <div className="oc-agent-tool-body">
+          <div className="oc-agent-tool-title">
             {label}
             {vendorLabel && (
-              <span className="oc-acp-tool-vendor">{vendorLabel}</span>
+              <span className="oc-agent-tool-vendor">{vendorLabel}</span>
             )}
           </div>
           {!hasReceipt && summary ? (
-            <div className="oc-acp-tool-summary">{summary}</div>
+            <div className="oc-agent-tool-summary">{summary}</div>
           ) : !hasReceipt && tool.toolKind ? (
-            <div className="oc-acp-tool-kind">{tool.toolKind}</div>
+            <div className="oc-agent-tool-kind">{tool.toolKind}</div>
           ) : null}
         </div>
-        <div className="oc-acp-tool-status">
+        <div className="oc-agent-tool-status">
           <ToolStatusIcon status={tool.status} />
         </div>
       </div>
@@ -92,7 +92,7 @@ export const ToolCard: Renderer<AgentToolMessage> = memo(function ToolCard({
         />
       )}
       {!hasReceipt && tool.content && tool.content.length > 0 && (
-        <div className="oc-acp-tool-content">
+        <div className="oc-agent-tool-content">
           <ToolContentView content={tool.content} />
         </div>
       )}
@@ -146,37 +146,37 @@ function ApplyChangeReceipt({
 }) {
   const failed = status === "failed";
   return (
-    <div className="oc-acp-receipt">
-      <div className="oc-acp-receipt-head">
-        <span className="oc-acp-receipt-selector">{receipt.selector}</span>
-        <span className="oc-acp-receipt-tag">
+    <div className="oc-agent-receipt">
+      <div className="oc-agent-receipt-head">
+        <span className="oc-agent-receipt-selector">{receipt.selector}</span>
+        <span className="oc-agent-receipt-tag">
           {failed ? "not applied" : "updated"}
         </span>
       </div>
-      <div className="oc-acp-receipt-diff">
-        <div className="oc-acp-receipt-row oc-acp-receipt-row-before">
-          <span className="oc-acp-receipt-sign">−</span>
-          <span className="oc-acp-receipt-value">
+      <div className="oc-agent-receipt-diff">
+        <div className="oc-agent-receipt-row oc-agent-receipt-row-before">
+          <span className="oc-agent-receipt-sign">−</span>
+          <span className="oc-agent-receipt-value">
             {receipt.before !== null && receipt.before !== "" ? (
               `${receipt.property}: ${receipt.before};`
             ) : (
-              <span className="oc-acp-receipt-value-unset">(unset)</span>
+              <span className="oc-agent-receipt-value-unset">(unset)</span>
             )}
           </span>
         </div>
         <div
-          className={`oc-acp-receipt-row ${
-            failed ? "oc-acp-receipt-row-failed" : "oc-acp-receipt-row-after"
+          className={`oc-agent-receipt-row ${
+            failed ? "oc-agent-receipt-row-failed" : "oc-agent-receipt-row-after"
           }`}
         >
-          <span className="oc-acp-receipt-sign">+</span>
-          <span className="oc-acp-receipt-value">
+          <span className="oc-agent-receipt-sign">+</span>
+          <span className="oc-agent-receipt-value">
             {receipt.property}: {receipt.after};
           </span>
         </div>
       </div>
       {sourcePath && (
-        <div className="oc-acp-receipt-source">
+        <div className="oc-agent-receipt-source">
           {sourcePath}
           {sourceLine ? `:${sourceLine}` : ""}
         </div>
@@ -198,14 +198,14 @@ function ToolContentView({
         }
         if (block.type === "diff") {
           return (
-            <div key={i} className="oc-acp-tool-content-diff">
-              <span className="oc-acp-mono">diff:</span>
+            <div key={i} className="oc-agent-tool-content-diff">
+              <span className="oc-agent-mono">diff:</span>
               {block.path}
             </div>
           );
         }
         return (
-          <div key={i} className="oc-acp-tool-content-diff">
+          <div key={i} className="oc-agent-tool-content-diff">
             [{block.type} block]
           </div>
         );

@@ -268,7 +268,7 @@ export function EffortPill({
 //
 // Two-mode behavior:
 //
-// 1. When the agent advertises `availableModes` (Claude Code ACP does:
+// 1. When the agent advertises `availableModes` (Claude Code does:
 //    "default" / "acceptEdits" / "bypassPermissions" / "plan"), the pill
 //    shows those and calls protocol-level `session/set_mode` on change. This is the
 //    real wire — the agent sees the new mode immediately.

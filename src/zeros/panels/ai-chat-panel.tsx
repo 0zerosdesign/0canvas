@@ -899,9 +899,10 @@ function VariantDiffView({
 export function AIChatPanel() {
   const { state, dispatch } = useWorkspace();
   const bridge = useBridge();
-  // ACP beta mode — when true, the panel swaps its body for the ACP-native
-  // surface (use-acp-session + agents-panel + acp-chat). Legacy state below
-  // stays mounted so turning it off returns to the exact prior conversation.
+  // Agents beta mode — when true, the panel swaps its body for the
+  // agent-native surface (useAgentSession + agents-panel + agent-chat).
+  // Legacy state below stays mounted so turning it off returns to the
+  // exact prior conversation.
   const [acpMode, setAcpMode] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -1407,14 +1408,14 @@ Styles:\n${Object.entries(selectedElement.styles)
       ? "var(--text-success)"
       : "var(--text-warning)";
 
-  // ACP beta surface — swaps the panel body only; header stays so the user
-  // can toggle back to the legacy chat in one click. Legacy state above is
-  // preserved intact across toggles.
+  // Agents beta surface — swaps the panel body only; header stays so the
+  // user can toggle back to the legacy chat in one click. Legacy state
+  // above is preserved intact across toggles.
   if (acpMode) {
     return (
       <div className="oc-panel oc-chat" data-Zeros="ai-chat">
         <div className="oc-chat-header">
-          <span className="oc-chat-title">ACP · Beta</span>
+          <span className="oc-chat-title">Agents · Beta</span>
           <div className="oc-chat-header-actions">
             <Button
               variant="ghost"
@@ -1449,7 +1450,7 @@ Styles:\n${Object.entries(selectedElement.styles)
             variant="ghost"
             size="icon-sm"
             onClick={() => setAcpMode(true)}
-            title="Switch to ACP (Beta) — drive any ACP agent via the shared registry"
+            title="Switch to Agents (Beta) — drive any agent via the shared registry"
           >
             <Zap size={13} />
           </Button>

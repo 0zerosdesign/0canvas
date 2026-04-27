@@ -297,9 +297,9 @@ export type ChatThread = {
   id: string;
   /** Absolute path of the project this chat belongs to, or "" for the
    *  ambient "No project" folder when Zeros hasn't been rooted yet.
-   *  Doubles as the cwd for the ACP session, git panel, terminal, env. */
+   *  Doubles as the cwd for the agent session, git panel, terminal, env. */
   folder: string;
-  /** ACP agent id bound to this chat. null means "pick the default agent
+  /** agent id bound to this chat. null means "pick the default agent
    *  when the session first starts" — set once and immutable thereafter. */
   agentId: string | null;
   /** Human label for the agent (e.g. "Claude Agent"). Cached on chat
@@ -311,14 +311,14 @@ export type ChatThread = {
   model: string | null;
   /** Reasoning effort — mapped to each agent's flag/env at spawn. */
   effort: ChatEffort;
-  /** Permission gate. Plumbed via ACP session/set_mode when the agent
+  /** Permission gate. Plumbed via agent session/set_mode when the agent
    *  advertises mode support; otherwise stored and applied to new
    *  sessions. */
   permissionMode: ChatPermissionMode;
   title: string;
   createdAt: number;
   updatedAt: number;
-  /** Persistent ACP/agent sessionId. Source-of-truth link from a chat
+  /** Persistent agent sessionId. Source-of-truth link from a chat
    *  in our sidebar to the on-disk transcript the agent CLI writes
    *  (Claude: ~/.claude/projects/<hash>/<sessionId>.jsonl, Codex:
    *  ~/.codex/sessions/...). Set in three ways:
@@ -514,7 +514,7 @@ function findElement(elements: ElementNode[], id: string): ElementNode | null {
 
 /**
  * Walk the tree looking for the first element whose canonical selector
- * matches. Used by ACP follow-along so the canvas can jump to the element
+ * matches. Used by agent follow-along so the canvas can jump to the element
  * the agent just edited. Returns null when nothing matches — callers
  * should treat that as "agent edited a selector we don't have a live node
  * for" (happens for variants rendered off-screen).

@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────
-// AgentsPanel — ACP agent settings (universal, per-user)
+// AgentsPanel — agent settings (universal, per-user)
 // ──────────────────────────────────────────────────────────
 //
 // The single place where the user decides:
@@ -207,42 +207,42 @@ export function AgentsPanel({ listAgents, onSelect, activeAgentId, onPreWarm, re
   const allIds = useMemo(() => (agents ?? []).map((a) => a.id), [agents]);
 
   return (
-    <div className="oc-acp-surface">
-      <div className="oc-acp-subheader">
-        <div className="oc-acp-reg-search">
-          <Search className="oc-acp-reg-search-icon w-3.5 h-3.5" />
+    <div className="oc-agent-surface">
+      <div className="oc-agent-subheader">
+        <div className="oc-agent-reg-search">
+          <Search className="oc-agent-reg-search-icon w-3.5 h-3.5" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search agents..."
-            className="oc-acp-reg-search-input"
+            className="oc-agent-reg-search-input"
           />
         </div>
       </div>
 
-      <div className="oc-acp-reg-tabs">
+      <div className="oc-agent-reg-tabs">
         <TabButton active={tab === "all"} onClick={() => setTab("all")} label="All" count={counts.all} />
         <TabButton active={tab === "enabled"} onClick={() => setTab("enabled")} label="Enabled" count={counts.enabled} />
         <TabButton active={tab === "disabled"} onClick={() => setTab("disabled")} label="Disabled" count={counts.disabled} />
       </div>
 
-      <div className="oc-acp-reg-list">
+      <div className="oc-agent-reg-list">
         {error && (
-          <div className="oc-acp-error" style={{ margin: "var(--space-6)" }}>
+          <div className="oc-agent-error" style={{ margin: "var(--space-6)" }}>
             <div className="min-w-0">
-              <div className="oc-acp-error-title">Failed to load registry</div>
+              <div className="oc-agent-error-title">Failed to load registry</div>
               <div>{error}</div>
             </div>
           </div>
         )}
         {!error && !agents && (
-          <div className="oc-acp-empty-muted">
+          <div className="oc-agent-empty-muted">
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            Fetching ACP registry...
+            Fetching agent registry...
           </div>
         )}
         {agents && filtered.length === 0 && (
-          <div className="oc-acp-empty-muted">
+          <div className="oc-agent-empty-muted">
             {tab === "enabled"
               ? "No agents enabled. Toggle one on to make it available in the chat picker."
               : tab === "disabled"
@@ -266,7 +266,7 @@ export function AgentsPanel({ listAgents, onSelect, activeAgentId, onPreWarm, re
       </div>
 
       {agents && (
-        <div className="oc-acp-reg-footer">
+        <div className="oc-agent-reg-footer">
           <span>
             {agents.length} agent{agents.length === 1 ? "" : "s"}
           </span>
@@ -291,10 +291,10 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`oc-acp-reg-tab ${active ? "oc-acp-reg-tab-active" : ""}`}
+      className={`oc-agent-reg-tab ${active ? "oc-agent-reg-tab-active" : ""}`}
     >
       {label}
-      <span className="oc-acp-reg-tab-count">{count}</span>
+      <span className="oc-agent-reg-tab-count">{count}</span>
     </button>
   );
 }
@@ -379,28 +379,28 @@ function AgentRow({
 
   return (
     <div
-      className={`oc-acp-reg-row ${active ? "oc-acp-reg-row-active" : ""}`}
+      className={`oc-agent-reg-row ${active ? "oc-agent-reg-row-active" : ""}`}
       onClick={handleRowClick}
       onMouseEnter={handleMouseEnter}
     >
       <span
-        className={`oc-acp-reg-status-dot ${isActive || !canProbeAuth ? "is-active" : "is-inactive"}`}
+        className={`oc-agent-reg-status-dot ${isActive || !canProbeAuth ? "is-active" : "is-inactive"}`}
         title={dotTitle}
         aria-label={dotTitle}
       />
-      <div className="oc-acp-reg-avatar oc-acp-reg-avatar--icon">
+      <div className="oc-agent-reg-avatar oc-agent-reg-avatar--icon">
         <AgentIcon agentId={agent.id} iconUrl={agent.icon ?? null} size={20} />
       </div>
-      <div className="oc-acp-reg-body">
-        <div className="oc-acp-reg-title">
-          <span className="oc-acp-reg-name">{agent.name}</span>
-          <span className="oc-acp-reg-version">v{agent.version}</span>
-          <span className="oc-acp-reg-dist">{distKind}</span>
+      <div className="oc-agent-reg-body">
+        <div className="oc-agent-reg-title">
+          <span className="oc-agent-reg-name">{agent.name}</span>
+          <span className="oc-agent-reg-version">v{agent.version}</span>
+          <span className="oc-agent-reg-dist">{distKind}</span>
         </div>
-        <div className="oc-acp-reg-desc">{agent.description}</div>
-        <div className="oc-acp-reg-id">{agent.id}</div>
+        <div className="oc-agent-reg-desc">{agent.description}</div>
+        <div className="oc-agent-reg-id">{agent.id}</div>
         {(agent.repository || agent.website || agent.license) && (
-          <div className="oc-acp-reg-meta">
+          <div className="oc-agent-reg-meta">
             {agent.repository && (
               <a
                 href={agent.repository}
@@ -426,7 +426,7 @@ function AgentRow({
               </a>
             )}
             {agent.license && (
-              <span className="oc-acp-reg-meta-license" title="License">
+              <span className="oc-agent-reg-meta-license" title="License">
                 <Scale className="w-3 h-3" />
                 {agent.license}
               </span>
@@ -434,13 +434,13 @@ function AgentRow({
           </div>
         )}
       </div>
-      <div className="oc-acp-reg-actions">
+      <div className="oc-agent-reg-actions">
         {canProbeAuth && (
           <Button
             variant="outline"
             size="sm"
             type="button"
-            className="oc-acp-reg-login"
+            className="oc-agent-reg-login"
             onClick={handleLogin}
             disabled={loginState === "opening"}
             title={
@@ -489,13 +489,13 @@ function Toggle({
       role="switch"
       aria-checked={on}
       title={title}
-      className={`oc-acp-reg-toggle ${on ? "is-on" : "is-off"}`}
+      className={`oc-agent-reg-toggle ${on ? "is-on" : "is-off"}`}
       onClick={(e) => {
         e.stopPropagation();
         onChange();
       }}
     >
-      <span className="oc-acp-reg-toggle-knob" />
+      <span className="oc-agent-reg-toggle-knob" />
     </button>
   );
 }

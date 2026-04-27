@@ -18,7 +18,7 @@
 //   {"type":"result","subtype":"success","result":"...","total_cost_usd":0.01,"usage":{...},"session_id":"..."}
 //
 // This class converts each Claude event into one or more
-// SessionNotification payloads matching the ACP SDK shape. The UI
+// SessionNotification payloads matching the wire shape. The UI
 // already knows how to render them (unchanged).
 //
 // State is per-translator-instance, keyed on the Zeros session id
@@ -33,7 +33,7 @@ import type {
   SessionNotification,
 } from "../../types";
 
-// ACP SDK ToolKind union — hoisted as a string set for runtime checks.
+// engine ToolKind union — hoisted as a string set for runtime checks.
 type ToolKind =
   | "read" | "edit" | "delete" | "move" | "search"
   | "execute" | "think" | "fetch" | "switch_mode" | "other";
@@ -346,7 +346,7 @@ export class ClaudeStreamTranslator {
       this.lastStopReason = "end_turn";
     }
 
-    // ACP's UsageUpdate is "how full is the context window". Claude's
+    // UsageUpdate is "how full is the context window". Claude's
     // result.usage gives per-turn API costs. Best-effort map:
     //   - used  = input_tokens + cache-read (what Claude just saw)
     //   - size  = model's context window (Claude 4.x = 200k; 1M on
@@ -399,8 +399,8 @@ function toolResultText(t: ClaudeToolResultBlock): string {
 
 /**
  * Short human-readable title for the tool-call pill. Matches the
- * phrasing the UI already uses for ACP ToolCall titles — "Reading
- * file", "Running shell command", etc.
+ * phrasing the UI uses for ToolCall titles — "Reading file",
+ * "Running shell command", etc.
  */
 function describeTool(name: string, input: unknown): string {
   const inp = isObj(input) ? input : {};
@@ -428,7 +428,7 @@ function describeTool(name: string, input: unknown): string {
   }
 }
 
-/** Coarse ACP "ToolKind" categorization. */
+/** Coarse ToolKind categorization. */
 function mapToolKind(name: string): ToolKind {
   if (/^Read$/i.test(name)) return "read";
   if (/^(Glob|Grep|LS|WebSearch)$/i.test(name)) return "search";

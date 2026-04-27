@@ -2,7 +2,7 @@
 // Mentions — @-picker data model, collectors, expansion
 // ──────────────────────────────────────────────────────────
 //
-// When the designer types "@" in the ACP composer we surface a picker
+// When the designer types "@" in the agent composer we surface a picker
 // over project-native objects: the current selection, design tokens,
 // variants, pending feedback items. Chosen items are inserted as a
 // compact token (e.g. `@token:--color-primary`). On send, these tokens

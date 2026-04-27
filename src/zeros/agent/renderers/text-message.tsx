@@ -20,10 +20,10 @@ import type { AgentTextMessage } from "../use-agent-session";
 export const TextMessage: Renderer<AgentTextMessage> = memo(function TextMessage({
   message,
 }) {
-  const roleClass = `oc-acp-msg oc-acp-msg-${message.role}`;
+  const roleClass = `oc-agent-msg oc-agent-msg-${message.role}`;
   return (
     <div className={roleClass}>
-      <div className="oc-acp-msg-content">{message.text}</div>
+      <div className="oc-agent-msg-content">{message.text}</div>
     </div>
   );
 });

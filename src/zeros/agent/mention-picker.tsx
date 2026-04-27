@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────
-// MentionPicker — autocomplete popover for the ACP composer
+// MentionPicker — autocomplete popover for the agent composer
 // ──────────────────────────────────────────────────────────
 //
 // Dumb list + keyboard nav. Parent owns the composer text, detects the
@@ -59,18 +59,18 @@ export function MentionPicker({
 
   if (items.length === 0) {
     return (
-      <div className="oc-acp-menu">
-        <div className="oc-acp-menu-empty">No matches.</div>
+      <div className="oc-agent-menu">
+        <div className="oc-agent-menu-empty">No matches.</div>
       </div>
     );
   }
 
   return (
-    <div className="oc-acp-menu">
-      <div className="oc-acp-menu-head">
+    <div className="oc-agent-menu">
+      <div className="oc-agent-menu-head">
         Mention · {items.length} result{items.length === 1 ? "" : "s"}
       </div>
-      <div ref={listRef} className="oc-acp-menu-list">
+      <div ref={listRef} className="oc-agent-menu-list">
         {items.map((item, i) => {
           const Icon = KIND_ICON[item.kind];
           const active = i === highlightIndex;
@@ -85,18 +85,18 @@ export function MentionPicker({
                 e.preventDefault();
                 onPick(item);
               }}
-              className={`oc-acp-menu-item ${
-                active ? "oc-acp-menu-item-active" : ""
+              className={`oc-agent-menu-item ${
+                active ? "oc-agent-menu-item-active" : ""
               }`}
             >
-              <Icon className="oc-acp-menu-item-icon w-3.5 h-3.5" />
+              <Icon className="oc-agent-menu-item-icon w-3.5 h-3.5" />
               <div className="min-w-0 flex-1">
-                <div className="oc-acp-menu-item-label">{item.label}</div>
+                <div className="oc-agent-menu-item-label">{item.label}</div>
                 {item.hint && (
-                  <div className="oc-acp-menu-item-hint">{item.hint}</div>
+                  <div className="oc-agent-menu-item-hint">{item.hint}</div>
                 )}
               </div>
-              <span className="oc-acp-menu-item-kind">
+              <span className="oc-agent-menu-item-kind">
                 {KIND_LABEL[item.kind]}
               </span>
             </Button>

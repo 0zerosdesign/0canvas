@@ -2,8 +2,8 @@
 // Model catalog — agent-driven + remote-updated + bundled fallback
 // ──────────────────────────────────────────────────────────
 //
-// "ACP is our source of truth" — the composer model pill prefers
-// whatever the agent itself advertises. When the agent says nothing,
+// The agent itself is our source of truth — the composer model pill
+// prefers whatever the agent advertises. When the agent says nothing,
 // we consult a remote catalog file (hot-updatable without app
 // releases). When even that's unreachable we fall back to the
 // bundled catalog that shipped with the app.
@@ -283,7 +283,7 @@ export function modelEnvVarForAgent(
   return activeCatalog.modelEnvVars[agentFamily(agentId)];
 }
 
-/** Env var for thinking effort. Zeros convention, not ACP spec. */
+/** Env var for thinking effort. Zeros convention, not agent spec. */
 export const EFFORT_ENV_VAR = "ZEROS_THINKING_EFFORT";
 
 /** Build env map from a chat's composer settings. */

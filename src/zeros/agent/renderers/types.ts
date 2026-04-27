@@ -14,7 +14,7 @@
 //   1. message.kind            — "text" | "tool" | unknown
 //   2. (text)  message.role    — user | agent | thought | system
 //   3. (tool)  custom matchers — design tools, subagent, …
-//   4. (tool)  ACP toolKind    — read | edit | execute | …
+//   4. (tool)  tool kind    — read | edit | execute | …
 //
 // Phase 1 will add per-toolKind renderers; Phase 2 wraps them in
 // memo and a virtualized list.
@@ -53,7 +53,7 @@ export type Renderer<M extends AgentMessage> = ComponentType<{
   ctx: RendererContext;
 }>;
 
-/** A custom matcher runs before ACP-toolKind dispatch. Lets design
+/** A custom matcher runs before tool-kind dispatch. Lets design
  *  tools and subagent calls win over the generic by-kind renderer
  *  when their title/input shape says so. */
 export interface ToolMatcher {
@@ -67,7 +67,7 @@ export interface RendererRegistry {
   textFallback: Renderer<AgentTextMessage>;
   /** Custom matchers, evaluated top-down. First hit wins. */
   toolMatchers: ToolMatcher[];
-  /** ACP-canonical tool kinds — `kind` field on ToolCall. */
+  /** canonical tool kinds — `kind` field on ToolCall. */
   toolByKind: Partial<Record<ToolKind, Renderer<AgentToolMessage>>>;
   /** Final fallback for tools that match no rule above. */
   toolFallback: Renderer<AgentToolMessage>;

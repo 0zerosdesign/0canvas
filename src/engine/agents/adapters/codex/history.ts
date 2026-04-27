@@ -154,7 +154,7 @@ export async function listCodexSessions(
     sessions: sessions.map((s) => ({
       sessionId: s.sessionId,
       title: s.title ?? "Untitled",
-      // ACP SDK's SessionInfo doesn't require createdAt but many
+      // engine SessionInfo doesn't require createdAt but many
       // clients show it; emit as _meta for forward compat.
       _meta: s.createdAt ? { createdAt: s.createdAt, cwd: s.cwd } : undefined,
     })),

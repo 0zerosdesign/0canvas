@@ -353,7 +353,7 @@ export class CodexStreamTranslator {
   private onTurnCompleted(_event: CodexTurnCompletedEvent): void {
     this.hasSeenTurnTerminal = true;
     this.lastStopReason = "end_turn";
-    // UsageUpdate in ACP is context-window semantics; Codex's usage is
+    // UsageUpdate is context-window semantics; Codex's usage is
     // per-turn API tokens. Defer (Phase 1.5 parity w/ Claude).
   }
 

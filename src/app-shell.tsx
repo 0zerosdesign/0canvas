@@ -159,10 +159,15 @@ function PreWarmAgents() {
 
 /** Read the persisted enabled-agents list synchronously so PreWarmAgents
  *  can decide which agents are visible without mounting the hook. Returns
- *  null on first run (all agents enabled by default). */
+ *  null on first run (all agents enabled by default). Falls through to
+ *  the legacy key if the new key isn't yet populated — useEnabledAgents()
+ *  migrates forward on first read, but PreWarmAgents may run before that
+ *  hook mounts. */
 function readEnabledAgentIds(): string[] | null {
   try {
-    const raw = localStorage.getItem("zeros.acp.enabledAgents");
+    const raw =
+      localStorage.getItem("zeros.agent.enabledAgents") ??
+      localStorage.getItem("zeros.acp.enabledAgents");
     if (!raw) return null;
     const parsed = JSON.parse(raw) as { ids?: unknown };
     if (Array.isArray(parsed?.ids)) {

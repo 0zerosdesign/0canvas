@@ -632,10 +632,10 @@ export function EmptyComposer() {
             onRefresh={refreshAgents}
           />
         )}
-        <div className="oc-acp-composer-card">
+        <div className="oc-agent-composer-card">
           <Textarea
             ref={textareaRef}
-            className="oc-acp-composer-input"
+            className="oc-agent-composer-input"
             placeholder={placeholder}
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -645,15 +645,15 @@ export function EmptyComposer() {
           />
 
           {attachments.length > 0 && (
-            <div className="oc-acp-attachments" role="list">
+            <div className="oc-agent-attachments" role="list">
               {attachments.map((a) => (
-                <div key={a.id} className="oc-acp-attachment" role="listitem">
-                  <span className="oc-acp-attachment-name" title={a.name}>
+                <div key={a.id} className="oc-agent-attachment" role="listitem">
+                  <span className="oc-agent-attachment-name" title={a.name}>
                     {a.name}
                   </span>
                   <button
                     type="button"
-                    className="oc-acp-attachment-x"
+                    className="oc-agent-attachment-x"
                     onClick={() => removeAttachment(a.id)}
                     title="Remove attachment"
                     aria-label="Remove attachment"
@@ -665,7 +665,7 @@ export function EmptyComposer() {
             </div>
           )}
 
-          <div className="oc-acp-composer-toolbar">
+          <div className="oc-agent-composer-toolbar">
             <Button
               variant="ghost"
               size="icon-sm"
@@ -701,7 +701,7 @@ export function EmptyComposer() {
               value={permissionMode}
               onChange={setPermissionMode}
             />
-            <div className="oc-acp-toolbar-spacer" />
+            <div className="oc-agent-toolbar-spacer" />
             <Button
               variant="primary"
               size="icon-sm"
@@ -715,7 +715,7 @@ export function EmptyComposer() {
           </div>
         </div>
 
-        <div className="oc-acp-composer-footer">
+        <div className="oc-agent-composer-footer">
           <AgentPill
             selectedId={agent?.id ?? null}
             selectedName={agentName}
