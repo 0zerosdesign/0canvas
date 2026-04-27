@@ -4129,6 +4129,84 @@ ${S} .oc-agent-hud-time {
    * meta chip". */
   color: var(--text-info);
 }
+
+/* ── Stage 5.3: Turn-summary roll-up + windowing ──────── */
+${S} .oc-agent-turn-summary {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px;
+  margin: 6px 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  cursor: pointer;
+  width: 100%; text-align: left;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+${S} .oc-agent-turn-summary:hover {
+  background: var(--surface-1);
+  border-color: var(--text-muted);
+}
+${S} .oc-agent-turn-summary-chev {
+  color: var(--text-placeholder);
+  flex-shrink: 0;
+}
+${S} .oc-agent-turn-summary-chips {
+  display: flex; align-items: center; gap: 12px;
+  flex: 1; min-width: 0;
+  overflow: hidden;
+}
+${S} .oc-agent-turn-summary-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  font-size: 11px;
+}
+${S} .oc-agent-turn-summary-chip svg {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+${S} .oc-agent-turn-summary-empty {
+  color: var(--text-placeholder);
+  font-style: italic;
+}
+${S} .oc-agent-turn-summary-time {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+  color: var(--text-placeholder);
+}
+${S} .oc-agent-turn-summary-count {
+  flex-shrink: 0;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-placeholder);
+  font-family: var(--font-mono);
+}
+
+/* Earlier-events banner (long-turn windowing) */
+${S} .oc-agent-earlier-banner {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  margin: 6px 0;
+}
+${S} .oc-agent-earlier-banner-rule {
+  height: 1px;
+  background: var(--border-subtle);
+}
+${S} .oc-agent-earlier-banner-text {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-placeholder);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
 ${S} .oc-agent-thinking-body {
   padding: 0 12px 10px 32px;
   font-size: 11.5px;

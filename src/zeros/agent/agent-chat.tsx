@@ -76,6 +76,7 @@ import {
   groupMessagesIntoTurns,
   turnKey,
 } from "./turn-container";
+import { TurnEventList } from "./turn-event-list";
 import { JumpPills } from "./jump-pills";
 import { useSessionsStore } from "./sessions-store";
 
@@ -879,9 +880,11 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
                     </div>
                   </TurnPromptHeader>
                 )}
-                {turn.events.map((m) => (
-                  <MessageView key={m.id} message={m} ctx={messageCtx} />
-                ))}
+                <TurnEventList
+                  events={turn.events}
+                  isActive={isActive}
+                  ctx={messageCtx}
+                />
               </TurnContainer>
             );
           })}
