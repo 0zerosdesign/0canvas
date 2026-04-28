@@ -249,10 +249,16 @@ export const AGENT_MANIFEST: AgentManifestEntry[] = [
       docsUrl: "https://opencode.ai/docs/install/",
     },
     authProbe: {
-      // OpenCode stores credentials in the XDG data dir, mode 0600.
-      // Existence of the file means at least one provider is logged in.
-      kind: "file",
-      paths: ["~/.local/share/opencode/auth.json"],
+      // OpenCode ships with free hosted models (the `opencode` provider:
+      // big-pickle, minimax-m2.5-free, etc.) that work without any
+      // user-added credentials. The `auth.json` file only exists when
+      // the user has logged into a paid provider (anthropic / openai /
+      // openrouter / etc.), so probing it would gray out OpenCode for
+      // free-tier users. Probe the binary's existence on PATH instead;
+      // an installed `opencode` is always runnable on the free models.
+      kind: "command",
+      binary: "opencode",
+      args: ["--version"],
     },
     loginCommand: { binary: "opencode", args: ["auth", "login"] },
     createAdapter: (ctx) => createOpencodeAdapter(ctx),

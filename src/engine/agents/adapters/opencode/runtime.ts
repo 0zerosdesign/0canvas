@@ -28,6 +28,7 @@
 import { spawn, type ChildProcessByStdio } from "node:child_process";
 import type { Readable } from "node:stream";
 import { randomUUID } from "node:crypto";
+import { createServer } from "node:net";
 
 type OpencodeServerProcess = ChildProcessByStdio<null, Readable, Readable>;
 
@@ -66,14 +67,17 @@ export async function startOpencodeRuntime(
 ): Promise<OpencodeRuntimeHandle> {
   const password = randomUUID();
   const binary = opts.binaryPath ?? "opencode";
+  // OpenCode 1.14.x interprets `--port=0` as "use the default 4096"
+  // rather than "ask the kernel for a free port", so parallel sessions
+  // would collide on 4096. Pre-allocating a free port ourselves and
+  // passing it explicitly avoids that.
+  const port = await pickFreePort();
   const child = spawn(
     binary,
     [
       "serve",
       "--hostname=127.0.0.1",
-      // Port 0 → kernel picks a free port; we read it from the
-      // server's startup log line.
-      "--port=0",
+      `--port=${port}`,
       "--print-logs",
     ],
     {
@@ -222,6 +226,28 @@ async function waitForListening(
           `opencode serve exited before listening (code=${code} signal=${signal ?? ""})`,
         ),
       );
+    });
+  });
+}
+
+/** Ask the kernel for a free port by binding port 0 on a temp
+ *  server, reading the assigned port, and closing. There's a tiny
+ *  TOCTOU window between close() and opencode's bind, but it's
+ *  vanishingly unlikely on a single-user machine. */
+async function pickFreePort(): Promise<number> {
+  return new Promise<number>((resolve, reject) => {
+    const server = createServer();
+    server.unref();
+    server.on("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const addr = server.address();
+      if (typeof addr === "object" && addr && typeof addr.port === "number") {
+        const port = addr.port;
+        server.close(() => resolve(port));
+      } else {
+        server.close();
+        reject(new Error("could not resolve a free port"));
+      }
     });
   });
 }

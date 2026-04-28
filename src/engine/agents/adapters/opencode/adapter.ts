@@ -40,6 +40,7 @@ import {
   startOpencodeRuntime,
   type OpencodeRuntimeHandle,
 } from "./runtime";
+import { OpencodeBusTranslator } from "./translator";
 
 // SDK imports kept narrow on purpose — anything we use must work
 // against the v1.14 SDK. v2 is a parallel surface; we'll evaluate
@@ -61,9 +62,12 @@ interface OpencodeSessionState {
   opencodeSessionId: string | null;
   runtime: OpencodeRuntimeHandle | null;
   client: OpencodeClient | null;
-  /** AbortController for the SSE bus subscription (Slice 2). Stored
-   *  on the session so dispose() can cancel an in-flight stream. */
+  /** AbortController for the SSE bus subscription. Stored on the
+   *  session so dispose() can cancel an in-flight stream. */
   busAbort: AbortController | null;
+  /** Bus translator instance for this session. Lives across turns
+   *  so coalesced messageIds (`oc-<partID>`) stay consistent. */
+  translator: OpencodeBusTranslator | null;
   /** Currently-in-flight prompt — null when idle. */
   pendingTurn: {
     abort: AbortController;
@@ -127,6 +131,7 @@ export class OpencodeAdapter implements AgentAdapter {
       runtime: null,
       client: null,
       busAbort: null,
+      translator: null,
       pendingTurn: null,
     };
     this.sessions.set(sessionId, state);
@@ -165,6 +170,7 @@ export class OpencodeAdapter implements AgentAdapter {
       runtime: null,
       client: null,
       busAbort: null,
+      translator: null,
       pendingTurn: null,
     };
     this.sessions.set(opts.sessionId, state);
@@ -195,30 +201,40 @@ export class OpencodeAdapter implements AgentAdapter {
       });
     }
 
-    // Lazy-boot the runtime + SDK client + OpenCode session on
-    // first prompt.
-    if (!state.runtime || !state.client) {
+    if (!state.runtime || !state.client || !state.opencodeSessionId) {
       await this.bootSession(state);
     }
 
     state.pendingTurn = { abort: new AbortController() };
     try {
-      // Slice 1 stub: surface a clear message in chat instead of
-      // silently discarding the prompt. Slice 2 will replace this
-      // with `client.session.promptAsync()` + SSE bus subscription
-      // feeding the canonical translator.
-      this.ctx.emit.onSessionUpdate(AGENT_ID, {
-        sessionId: state.sessionId,
-        update: {
-          sessionUpdate: "agent_message_chunk",
-          content: {
-            type: "text",
-            text:
-              "OpenCode runtime is connected (Slice 8.5.1). Event translation lands in 8.5.2 — your prompt was received but no model call was issued.",
-          } as ContentBlock,
-          messageId: randomUUID(),
-        },
-      });
+      // Convert ContentBlock[] → OpenCode `parts` array. We currently
+      // forward only text blocks; image/audio/embedded support lands
+      // when the canonical content taxonomy gains those shapes.
+      const parts: Array<{ type: "text"; text: string }> = [];
+      for (const b of opts.prompt) {
+        const block = b as unknown as { type?: string; text?: string };
+        if (block.type === "text" && typeof block.text === "string") {
+          parts.push({ type: "text", text: block.text });
+        }
+      }
+      if (parts.length === 0) {
+        return {
+          stopReason: "end_turn" as StopReason,
+          response: {} as PromptResponse,
+        };
+      }
+
+      // promptAsync returns immediately and the bus delivers the
+      // streaming reply. We've already subscribed to the bus in
+      // bootSession, so the translator picks up everything from
+      // here.
+      await state.client!.session.prompt({
+        path: { id: state.opencodeSessionId! },
+        body: { parts } as never,
+      } as never);
+
+      // Wait for the translator to see a session.idle / status:idle.
+      await this.waitForTurnEnd(state);
 
       return {
         stopReason: "end_turn" as StopReason,
@@ -227,6 +243,24 @@ export class OpencodeAdapter implements AgentAdapter {
     } finally {
       state.pendingTurn = null;
     }
+  }
+
+  /** Block until the bus translator marks the turn as terminal. The
+   *  bus subscription is already running in the background; this is
+   *  a polling wait. Slice 3 may add an explicit completion future. */
+  private async waitForTurnEnd(state: OpencodeSessionState): Promise<void> {
+    const abort = state.pendingTurn?.abort.signal;
+    const start = Date.now();
+    const HARD_CAP_MS = 5 * 60 * 1000; // 5min — safety net
+    while (!state.translator?.sawTerminal) {
+      if (abort?.aborted) return;
+      if (Date.now() - start > HARD_CAP_MS) return;
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    // Reset for the next turn — sawTerminal is sticky so we'd flush
+    // through subsequent prompts otherwise. Translator state stays
+    // (partID dedup, toolCallId map) so coalescing still works.
+    (state.translator as unknown as { hasSeenTerminal: boolean }).hasSeenTerminal = false;
   }
 
   async cancel(opts: { sessionId: string }): Promise<void> {
@@ -330,7 +364,92 @@ export class OpencodeAdapter implements AgentAdapter {
       state.opencodeSessionId = id;
     }
 
-    // SSE bus subscription wires up here in Slice 2.
+    // Build the translator + start the SSE bus drain. The bus
+    // subscription is per-session (a single GET /event per server)
+    // and lives until dispose(). Events for OTHER opencode sessions
+    // on the same server arrive too — we filter by sessionID.
+    const translator = new OpencodeBusTranslator({
+      sessionId: state.sessionId,
+      emit: (n) => this.ctx.emit.onSessionUpdate(AGENT_ID, n),
+      onUnknown: () => { /* ignored — most "unknown"s are bus chrome */ },
+      onPermission: (props) => {
+        // Slice 3 wires this to the canonical permission_request
+        // event. Drop on the floor for now so the bus drain doesn't
+        // deadlock waiting for a response.
+        this.ctx.emit.onAgentStderr(
+          AGENT_ID,
+          `[opencode] permission.asked received (Slice 3 will surface this in chat) — id=${props.id} permission=${props.permission}`,
+        );
+      },
+    });
+    state.translator = translator;
+    state.busAbort = new AbortController();
+    void this.drainBus(state, translator, state.busAbort.signal);
+  }
+
+  /** Long-lived SSE drain. Runs until the AbortController is fired
+   *  (dispose) or the connection closes (server died). Filters bus
+   *  events to this session's id; cross-session events on the same
+   *  server are ignored. */
+  private async drainBus(
+    state: OpencodeSessionState,
+    translator: OpencodeBusTranslator,
+    signal: AbortSignal,
+  ): Promise<void> {
+    if (!state.runtime) return;
+    const url = `${state.runtime.baseUrl}/event`;
+    const auth = `Basic ${Buffer.from(`opencode:${state.runtime.password}`).toString("base64")}`;
+    try {
+      const res = await fetch(url, {
+        headers: { Authorization: auth, Accept: "text/event-stream" },
+        signal,
+      });
+      if (!res.body) return;
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      while (true) {
+        if (signal.aborted) break;
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        let nl = buf.indexOf("\n");
+        while (nl !== -1) {
+          const line = buf.slice(0, nl);
+          buf = buf.slice(nl + 1);
+          if (line.startsWith("data: ")) {
+            const json = line.slice(6).trim();
+            if (json) {
+              try {
+                const event = JSON.parse(json) as Record<string, unknown>;
+                // Filter to this session's events. Cross-session
+                // bus events on the same server (rare today since
+                // each adapter spawns its own server, but safe in
+                // case we ever share servers) are dropped.
+                const props = (event as { properties?: Record<string, unknown> }).properties;
+                const sid = props && typeof props.sessionID === "string"
+                  ? props.sessionID
+                  : null;
+                if (sid && sid !== state.opencodeSessionId) {
+                  // Different session — skip.
+                } else {
+                  translator.feed(event);
+                }
+              } catch {
+                /* malformed line — ignore */
+              }
+            }
+          }
+          nl = buf.indexOf("\n");
+        }
+      }
+    } catch (err) {
+      if ((err as { name?: string })?.name === "AbortError") return;
+      this.ctx.emit.onAgentStderr(
+        AGENT_ID,
+        `[opencode] bus drain error: ${String(err)}`,
+      );
+    }
   }
 }
 
