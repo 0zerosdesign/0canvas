@@ -26,6 +26,7 @@ import { createCursorAdapter } from "./adapters/cursor";
 import { createDroidAdapter } from "./adapters/droid";
 import { createCopilotAdapter } from "./adapters/copilot";
 import { createGeminiAdapter } from "./adapters/gemini";
+import { createOpencodeAdapter } from "./adapters/opencode";
 
 // ── Auth-probe spec ──────────────────────────────────────
 //
@@ -236,6 +237,25 @@ export const AGENT_MANIFEST: AgentManifestEntry[] = [
     },
     loginCommand: { binary: "gemini", args: [] }, // first-run triggers OAuth
     createAdapter: (ctx) => createGeminiAdapter(ctx),
+  },
+  {
+    id: "opencode",
+    name: "OpenCode",
+    description:
+      "OpenCode agent (server-attached; supports 75+ models including Kimi K2, Qwen3, GLM 4.5).",
+    cliBinary: "opencode",
+    installHint: {
+      command: "npm install -g opencode-ai",
+      docsUrl: "https://opencode.ai/docs/install/",
+    },
+    authProbe: {
+      // OpenCode stores credentials in the XDG data dir, mode 0600.
+      // Existence of the file means at least one provider is logged in.
+      kind: "file",
+      paths: ["~/.local/share/opencode/auth.json"],
+    },
+    loginCommand: { binary: "opencode", args: ["auth", "login"] },
+    createAdapter: (ctx) => createOpencodeAdapter(ctx),
   },
 ];
 

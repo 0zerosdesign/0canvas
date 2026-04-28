@@ -27,6 +27,7 @@ export const AGENT_BRANDS: Record<string, AgentBrand> = {
   "factory-droid": { color: "#A855F7" },
   gemini: { color: "#4285F4" },
   "github-copilot-cli": { color: "#E8E8E8" },
+  opencode: { color: "#FFA500" },
 };
 
 export function brandColor(agentId: string | null | undefined): string | null {

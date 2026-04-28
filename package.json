@@ -32,6 +32,7 @@
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@radix-ui/react-scroll-area": "^1.2.0",
     "@xterm/addon-fit": "^0.11.0",
+    "@opencode-ai/sdk": "^1.14.28",
     "@xterm/xterm": "^6.0.0",
     "@xyflow/react": "^12.10.1",
     "better-sqlite3": "^12.9.0",
