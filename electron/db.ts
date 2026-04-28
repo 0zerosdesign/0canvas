@@ -97,6 +97,30 @@ function open(): Database.Database {
       payload     TEXT NOT NULL,
       updated_at  INTEGER NOT NULL
     );
+
+    -- Chat list (sidebar metadata). Migrated out of localStorage so
+    -- (a) we no longer share the 5–10 MB origin quota with UI flags,
+    -- and (b) wiping the browser store can't lose the user's chats —
+    -- they recover from this table on next boot. localStorage stays
+    -- as a sync-boot cache so the sidebar paints without a round-trip,
+    -- but SQLite is the source of truth.
+    CREATE TABLE IF NOT EXISTS chats (
+      id              TEXT PRIMARY KEY,
+      folder          TEXT NOT NULL DEFAULT '',
+      agent_id        TEXT,
+      agent_name      TEXT,
+      model           TEXT,
+      effort          TEXT NOT NULL DEFAULT 'medium',
+      permission_mode TEXT NOT NULL DEFAULT 'ask',
+      title           TEXT NOT NULL DEFAULT '',
+      created_at      INTEGER NOT NULL,
+      updated_at      INTEGER NOT NULL,
+      session_id      TEXT,
+      pinned          INTEGER NOT NULL DEFAULT 0,
+      archived        INTEGER NOT NULL DEFAULT 0,
+      source_chat_id  TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_chats_updated ON chats(updated_at DESC);
   `);
 
   db = handle;
@@ -409,4 +433,131 @@ export function upsertChatPlan(chatId: string, p: PersistedPlan): void {
 export function deleteChatPlan(chatId: string): void {
   const handle = open();
   handle.prepare(`DELETE FROM agent_chat_plan WHERE chat_id = ?`).run(chatId);
+}
+
+// ── Chat list (sidebar metadata) ──────────────────────────
+
+export interface ChatRow {
+  id: string;
+  folder: string;
+  agentId: string | null;
+  agentName: string | null;
+  model: string | null;
+  effort: string;
+  permissionMode: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+  sessionId: string | null;
+  pinned: boolean;
+  archived: boolean;
+  sourceChatId: string | null;
+}
+
+interface ChatRowSql {
+  id: string;
+  folder: string;
+  agent_id: string | null;
+  agent_name: string | null;
+  model: string | null;
+  effort: string;
+  permission_mode: string;
+  title: string;
+  created_at: number;
+  updated_at: number;
+  session_id: string | null;
+  pinned: number;
+  archived: number;
+  source_chat_id: string | null;
+}
+
+function rowFromSql(r: ChatRowSql): ChatRow {
+  return {
+    id: r.id,
+    folder: r.folder,
+    agentId: r.agent_id,
+    agentName: r.agent_name,
+    model: r.model,
+    effort: r.effort,
+    permissionMode: r.permission_mode,
+    title: r.title,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+    sessionId: r.session_id,
+    pinned: r.pinned !== 0,
+    archived: r.archived !== 0,
+    sourceChatId: r.source_chat_id,
+  };
+}
+
+export function listAllChats(): ChatRow[] {
+  const handle = open();
+  const rows = handle
+    .prepare<[], ChatRowSql>(
+      `SELECT id, folder, agent_id, agent_name, model, effort, permission_mode,
+              title, created_at, updated_at, session_id, pinned, archived,
+              source_chat_id
+         FROM chats
+         ORDER BY updated_at DESC`,
+    )
+    .all();
+  return rows.map(rowFromSql);
+}
+
+export function upsertChatRow(row: ChatRow): void {
+  const handle = open();
+  handle
+    .prepare(
+      `INSERT INTO chats (id, folder, agent_id, agent_name, model, effort,
+                          permission_mode, title, created_at, updated_at,
+                          session_id, pinned, archived, source_chat_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         folder          = excluded.folder,
+         agent_id        = excluded.agent_id,
+         agent_name      = excluded.agent_name,
+         model           = excluded.model,
+         effort          = excluded.effort,
+         permission_mode = excluded.permission_mode,
+         title           = excluded.title,
+         created_at      = excluded.created_at,
+         updated_at      = excluded.updated_at,
+         session_id      = excluded.session_id,
+         pinned          = excluded.pinned,
+         archived        = excluded.archived,
+         source_chat_id  = excluded.source_chat_id`,
+    )
+    .run(
+      row.id,
+      row.folder,
+      row.agentId,
+      row.agentName,
+      row.model,
+      row.effort,
+      row.permissionMode,
+      row.title,
+      row.createdAt,
+      row.updatedAt,
+      row.sessionId,
+      row.pinned ? 1 : 0,
+      row.archived ? 1 : 0,
+      row.sourceChatId,
+    );
+}
+
+export function deleteChatRow(id: string): void {
+  const handle = open();
+  handle.prepare(`DELETE FROM chats WHERE id = ?`).run(id);
+}
+
+/** Replace the entire chat list in one transaction. The renderer
+ *  treats SQLite as a mirror of state.chats — bulk replace keeps
+ *  the table in sync without per-mutation diffing on the JS side. */
+export function replaceAllChats(rows: ChatRow[]): void {
+  const handle = open();
+  const txn = handle.transaction((items: ChatRow[]) => {
+    handle.prepare(`DELETE FROM chats`).run();
+    for (const r of items) upsertChatRow(r);
+  });
+  txn(rows);
 }

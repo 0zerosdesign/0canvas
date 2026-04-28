@@ -33,9 +33,13 @@ import { TitleBar } from "./shell/title-bar";
 import { SettingsPage } from "./zeros/panels/settings-page";
 import { onProjectChanged } from "./native/native";
 import { loadStickyDefaults, saveStickyDefaults } from "./shell/empty-composer";
-import { nativeInvoke } from "./native/runtime";
 import { getSetting, setSetting } from "./native/settings";
 import { rememberProject } from "./native/recent-projects";
+import {
+  dbListChats,
+  dbReplaceAllChats,
+  type ChatRowWire,
+} from "./zeros/agent/agent-history-client";
 import "./shell/app-shell.css";
 
 const CHATS_STORAGE_KEY = "chats-v1";
@@ -198,11 +202,75 @@ function HydrateAiApiKey() {
   return null;
 }
 
+/** Translate a renderer-side ChatThread to the SQLite wire shape. The
+ *  wire form keeps every field a plain JSON-safe value so the IPC
+ *  envelope doesn't need a custom serializer. */
+function threadToRow(c: ChatThread): ChatRowWire {
+  return {
+    id: c.id,
+    folder: c.folder ?? "",
+    agentId: c.agentId ?? null,
+    agentName: c.agentName ?? null,
+    model: c.model ?? null,
+    effort: c.effort,
+    permissionMode: c.permissionMode,
+    title: c.title ?? "",
+    createdAt: c.createdAt,
+    updatedAt: c.updatedAt,
+    sessionId: c.sessionId ?? null,
+    pinned: !!c.pinned,
+    archived: !!c.archived,
+    sourceChatId: c.sourceChatId ?? null,
+  };
+}
+
+function rowToThread(r: ChatRowWire): ChatThread {
+  const validEffort = ["low", "medium", "high", "xhigh"] as const;
+  const validMode = ["full", "auto-edit", "ask", "plan-only"] as const;
+  type Effort = (typeof validEffort)[number];
+  type Mode = (typeof validMode)[number];
+  const effort: Effort = (validEffort as readonly string[]).includes(r.effort)
+    ? (r.effort as Effort)
+    : "medium";
+  const permissionMode: Mode = (validMode as readonly string[]).includes(
+    r.permissionMode,
+  )
+    ? (r.permissionMode as Mode)
+    : "ask";
+  return {
+    id: r.id,
+    folder: r.folder,
+    agentId: r.agentId,
+    agentName: r.agentName,
+    model: r.model,
+    effort,
+    permissionMode,
+    title: r.title,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
+    sessionId: r.sessionId ?? undefined,
+    pinned: r.pinned,
+    archived: r.archived,
+    sourceChatId: r.sourceChatId ?? undefined,
+  };
+}
+
 /**
  * Hydrate the chat list from settings on mount; save back on every
  * change. Kept separate from the UI components so Column 1 and the
  * Chat panel can both render off the same store-backed list without
  * re-implementing persistence.
+ *
+ * Storage layering (post-migration):
+ *   - SQLite (`chats` table) is the durable source of truth. Survives
+ *     a localStorage wipe, no 5–10 MB origin quota.
+ *   - localStorage (`oc-chats-v1` + backup + tombstone) is a sync-boot
+ *     cache so the sidebar paints without a round-trip on cold start.
+ *
+ * On boot we hydrate sync from LS, then if LS was empty (and the user
+ * didn't intentionally clear), we async-fetch from SQLite and re-hydrate
+ * if rows are there. On every state.chats mutation we mirror the list
+ * to SQLite so the durable copy stays current.
  */
 function ChatsPersistence() {
   const { state, dispatch } = useWorkspace();
@@ -321,6 +389,74 @@ function ChatsPersistence() {
       }
     }
     dispatch({ type: "HYDRATE_CHATS", chats, activeChatId });
+
+    // Async recovery: if the LS list ended up empty (and the user
+    // didn't intentionally clear), fall through to SQLite. This is
+    // how the user recovers their sidebar after a DevTools storage
+    // wipe — LS is the fast cache, SQLite is the durable store.
+    // If both are empty we stay on the empty composer (true fresh
+    // start), which is the explicit user requirement here.
+    if (chats.length === 0) {
+      const tombstoned = getSetting<boolean>(CHATS_TOMBSTONE_KEY, false);
+      if (!tombstoned) {
+        void (async () => {
+          try {
+            const rows = await dbListChats();
+            if (rows.length === 0) return;
+            const recovered = rows.map(rowToThread);
+            console.warn(
+              `[Zeros] LS chats empty — recovered ${recovered.length} from SQLite`,
+            );
+            // Reuse the same active-chat policy: empty composer if
+            // active was explicitly null, else most-recent live chat.
+            const live = recovered.filter((c) => !c.archived);
+            const fallbackActive =
+              live.length > 0
+                ? [...live].sort(
+                    (a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0),
+                  )[0]?.id ?? null
+                : null;
+            const nextActive =
+              rawActive === null
+                ? fallbackActive
+                : (() => {
+                    try {
+                      const parsed = JSON.parse(rawActive!) as string | null;
+                      if (parsed === null) return null;
+                      return live.some((c) => c.id === parsed)
+                        ? parsed
+                        : fallbackActive;
+                    } catch {
+                      return fallbackActive;
+                    }
+                  })();
+            dispatch({
+              type: "HYDRATE_CHATS",
+              chats: recovered,
+              activeChatId: nextActive,
+            });
+          } catch (err) {
+            console.warn("[Zeros] SQLite chat recovery failed:", err);
+          }
+        })();
+      }
+    } else {
+      // First boot after upgrade: LS already had chats, SQLite is
+      // empty. Backfill SQLite so the durable copy catches up. The
+      // mirror effect below would do this on the next mutation, but
+      // a fresh-installed user could go a long time before any
+      // mutation — better to seed up front.
+      void (async () => {
+        try {
+          const rows = await dbListChats();
+          if (rows.length === 0) {
+            await dbReplaceAllChats(chats.map(threadToRow));
+          }
+        } catch (err) {
+          console.warn("[Zeros] SQLite chat backfill failed:", err);
+        }
+      })();
+    }
   }, [dispatch]);
 
   // Persist on change (after hydration).
@@ -347,6 +483,14 @@ function ChatsPersistence() {
   useEffect(() => {
     if (!hydrated.current) return;
     setSetting(CHATS_STORAGE_KEY, state.chats);
+    // Mirror to SQLite — durable copy that survives an LS wipe. Fire-
+    // and-forget; the LS write above is the renderer's instant ack,
+    // SQLite catches up on the next event loop tick. If the IPC fails
+    // (rare; only if main is mid-shutdown), the next mutation retries
+    // the full list — there's no per-row drift to repair.
+    void dbReplaceAllChats(state.chats.map(threadToRow)).catch((err) => {
+      console.warn("[Zeros] SQLite chat mirror failed:", err);
+    });
     if (state.chats.length > 0) {
       setSetting(CHATS_BACKUP_KEY, state.chats);
       setSetting(CHATS_TOMBSTONE_KEY, false);
@@ -431,17 +575,13 @@ function ReloadOnProjectChange() {
   useEffect(() => {
     let unlisten: (() => void) | null = null;
 
-    // Seed the recent-projects list with whatever the engine is pointed
-    // at right now (Finder launch, CWD default, etc.) so the dropdown
-    // has at least one entry on first run.
-    (async () => {
-      try {
-        const root = await nativeInvoke<string | null>("get_engine_root");
-        if (root) rememberProject(root);
-      } catch {
-        /* native runtime absent, or engine not ready yet */
-      }
-    })();
+    // Recent projects are populated only by explicit user action
+    // (Open Folder, Clone, picking a workspace from the dropdown). We
+    // intentionally do NOT auto-seed from the engine root on boot —
+    // the engine always boots into *some* cwd (the dev repo, or the
+    // sentinel ~/.zeros/default-project for end users), and seeding
+    // that into recents resurrects entries the user just cleared.
+    // Fresh start = empty recents until the user picks a folder.
 
     onProjectChanged((payload) => {
       console.log("[Zeros] project changed", payload);

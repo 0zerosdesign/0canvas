@@ -60,6 +60,7 @@ import {
   type RecentProject,
 } from "../native/recent-projects";
 import { useUpdater } from "../native/updater";
+import zerosLogo from "../assets/zeros-logo.png";
 
 const DOCS_URL = "https://github.com/Withso/zeros#readme";
 const COLLAPSE_KEY = "column-1-collapsed";
@@ -981,11 +982,14 @@ export function Column1Nav() {
     >
       <div className="oc-column-1__header" data-tauri-drag-region>
         <div className="oc-column-1__brand" data-tauri-drag-region>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 2L2 7l10 5 10-5-10-5z" />
-            <path d="M2 17l10 5 10-5" />
-            <path d="M2 12l10 5 10-5" />
-          </svg>
+          <img
+            src={zerosLogo}
+            width={20}
+            height={20}
+            alt=""
+            draggable={false}
+            className="oc-column-1__brand-logo"
+          />
           {!collapsed && <span className="oc-column-1__brand-name">Zeros</span>}
         </div>
         <Button

@@ -126,6 +126,12 @@ const commandTable: Record<string, CommandHandler> = {
   agent_history_get_plan: notImpl("agent_history_get_plan", 9),
   agent_history_upsert_plan: notImpl("agent_history_upsert_plan", 9),
   agent_history_delete_plan: notImpl("agent_history_delete_plan", 9),
+
+  // ── Chat list (sidebar metadata) — SQLite-backed ──────────
+  chats_list: notImpl("chats_list", 0),
+  chats_upsert: notImpl("chats_upsert", 0),
+  chats_delete: notImpl("chats_delete", 0),
+  chats_replace_all: notImpl("chats_replace_all", 0),
 };
 
 export function listCommandNames(): string[] {

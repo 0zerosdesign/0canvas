@@ -17,15 +17,20 @@ import {
   clearChat,
   deleteChatPlan,
   deleteChatPolicy,
+  deleteChatRow,
   getChatMeta,
   getChatPlan,
+  listAllChats,
   listChatPolicies,
   listChats,
+  replaceAllChats,
   upsertChatMeta,
   upsertChatPlan,
   upsertChatPolicy,
+  upsertChatRow,
   upsertMessagesBulk,
   windowMessages,
+  type ChatRow,
   type PersistedMessage,
 } from "../../db";
 import type { CommandHandler } from "../router";
@@ -167,4 +172,62 @@ export const agentHistoryUpsertPlan: CommandHandler = (args) => {
 export const agentHistoryDeletePlan: CommandHandler = (args) => {
   const chatId = requireString(args, "chatId");
   deleteChatPlan(chatId);
+};
+
+// ── Chat list (sidebar metadata) ────────────────────────────
+
+function parseChatRow(raw: unknown, label: string): ChatRow {
+  if (!raw || typeof raw !== "object") {
+    throw new Error(`${label}: row not an object`);
+  }
+  const obj = raw as Record<string, unknown>;
+  const optStr = (k: string): string | null => {
+    const v = obj[k];
+    return typeof v === "string" && v.length > 0 ? v : null;
+  };
+  return {
+    id: requireString(obj, "id"),
+    folder: typeof obj.folder === "string" ? obj.folder : "",
+    agentId: optStr("agentId"),
+    agentName: optStr("agentName"),
+    model: optStr("model"),
+    effort: typeof obj.effort === "string" ? obj.effort : "medium",
+    permissionMode:
+      typeof obj.permissionMode === "string" ? obj.permissionMode : "ask",
+    title: typeof obj.title === "string" ? obj.title : "",
+    createdAt: requireNumber(obj, "createdAt"),
+    updatedAt: requireNumber(obj, "updatedAt"),
+    sessionId: optStr("sessionId"),
+    pinned: obj.pinned === true,
+    archived: obj.archived === true,
+    sourceChatId: optStr("sourceChatId"),
+  };
+}
+
+export const chatsList: CommandHandler = () => {
+  return listAllChats();
+};
+
+export const chatsUpsert: CommandHandler = (args) => {
+  const row = parseChatRow(args.chat, "chats_upsert");
+  upsertChatRow(row);
+};
+
+export const chatsDelete: CommandHandler = (args) => {
+  const id = requireString(args, "id");
+  deleteChatRow(id);
+  // Wipe the chat's transcript + meta + plan + policies too — keeping
+  // these around after the user deletes the chat from the sidebar would
+  // be a slow leak in agent_messages.
+  clearChat(id);
+  deleteChatPlan(id);
+};
+
+export const chatsReplaceAll: CommandHandler = (args) => {
+  const raw = args.chats;
+  if (!Array.isArray(raw)) {
+    throw new Error("chats_replace_all: 'chats' must be an array");
+  }
+  const rows = raw.map((r, i) => parseChatRow(r, `chats_replace_all[${i}]`));
+  replaceAllChats(rows);
 };

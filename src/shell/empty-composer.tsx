@@ -134,17 +134,6 @@ function tildePath(p: string): string {
   return p.replace(/^\/Users\/[^/]+\//, "~/").replace(/^\/home\/[^/]+\//, "~/");
 }
 
-async function resolveCurrentFolder(): Promise<string> {
-  const { isNativeRuntime, nativeInvoke } = await import("../native/runtime");
-  if (!isNativeRuntime()) return "";
-  try {
-    const root = await nativeInvoke<string | null>("get_engine_root");
-    return root ?? "";
-  } catch {
-    return "";
-  }
-}
-
 async function resolveBranch(cwd?: string): Promise<{
   branch: string | null;
   ahead: number;
@@ -365,17 +354,30 @@ export function EmptyComposer() {
   //   1. state.newAgentFolder       — explicit "+ on workspace" scope
   //   2. sticky.folder              — last-used folder from the user's
   //                                    previous chat / submit
-  //   3. engine root                — first-run default
-  // Sticky comes second because the workspace-section "+" is the user
-  // saying "no, this folder right here" — it should override sticky.
+  //   3. (empty)                    — fresh start, user picks via the chip
+  //
+  // We intentionally do NOT fall back to the engine root: the engine
+  // always boots into *some* directory (the dev cwd, or the sentinel
+  // ~/.zeros/default-project for end users), and using that as the
+  // composer's folder hides the "no project picked yet" state behind a
+  // confusing default. When sticky and scope are both absent we leave
+  // the chip empty so the user explicitly picks.
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       const scoped = state.newAgentFolder;
-      const f = scoped ?? sticky.folder ?? (await resolveCurrentFolder());
+      const f = scoped ?? sticky.folder ?? "";
       if (cancelled) return;
       setFolder(f);
-      const b = await resolveBranch(f || undefined);
+      // Skip the branch probe when there's no folder — git.status on a
+      // non-project would just throw and `branch` stays null anyway.
+      if (!f) {
+        setBranch(null);
+        setAhead(0);
+        setBehind(0);
+        return;
+      }
+      const b = await resolveBranch(f);
       if (cancelled) return;
       setBranch(b.branch);
       setAhead(b.ahead);

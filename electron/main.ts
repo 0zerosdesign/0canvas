@@ -160,29 +160,35 @@ function createMainWindow(): BrowserWindow {
 // zeros:// URLs get dropped).
 setupDeepLink();
 
-/** Give the Dock icon the Zeros brand in both dev and prod, and add
- *  a "Dev" badge in dev so the user can visually tell the unpackaged
- *  dev instance apart from an installed /Applications/Zeros.app.
+/** Give the Dock icon the Zeros brand in both dev and prod. Dev uses
+ *  a separate `icon-dev.png` so the unpackaged dev instance is visually
+ *  distinct from an installed /Applications/Zeros.app — both can sit
+ *  in the Dock at the same time without confusion.
  *
  *  In packaged builds electron-builder writes the icon into the bundle's
  *  Info.plist, so `app.dock.setIcon()` is only strictly necessary in
  *  dev. Calling it in both modes is idempotent — prod just overwrites
- *  with the same image. */
+ *  with the same image.
+ *
+ *  Dev fallback: if `icon-dev.png` is missing (you haven't dropped a
+ *  variant in yet), we fall back to the prod `icon.png` so the Dock
+ *  still shows something branded. */
 function setupDockBrand(): void {
   if (process.platform !== "darwin") return;
+  const iconsDir = path.join(__dirname, "..", "build", "icons");
   const iconPath = app.isPackaged
     ? path.join(process.resourcesPath, "..", "..", "Resources", "icon.icns")
-    : path.join(__dirname, "..", "build", "icons", "icon.png");
+    : (() => {
+        const dev = path.join(iconsDir, "icon-dev.png");
+        return require("node:fs").existsSync(dev)
+          ? dev
+          : path.join(iconsDir, "icon.png");
+      })();
   try {
     const image = nativeImage.createFromPath(iconPath);
     if (!image.isEmpty()) app.dock?.setIcon(image);
   } catch {
     /* icon missing is cosmetic — carry on */
-  }
-  // Dev-mode badge — tiny "Dev" label rendered on top of the Dock
-  // icon by macOS. Disappears when the app quits.
-  if (!app.isPackaged) {
-    app.dock?.setBadge("Dev");
   }
 }
 

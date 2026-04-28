@@ -55,6 +55,10 @@ import {
   agentHistoryUpsertPlan,
   agentHistoryUpsertPolicy,
   agentHistoryWindow,
+  chatsDelete,
+  chatsList,
+  chatsReplaceAll,
+  chatsUpsert,
 } from "./agent-history";
 import {
   processRelaunch,
@@ -196,4 +200,12 @@ export function registerAllCommands(): void {
   setCommand("agent_history_get_plan", agentHistoryGetPlan);
   setCommand("agent_history_upsert_plan", agentHistoryUpsertPlan);
   setCommand("agent_history_delete_plan", agentHistoryDeletePlan);
+
+  // Chat list (sidebar metadata) — SQLite-backed. Promotes chats out
+  // of localStorage so the durable store survives a browser-side wipe
+  // and can recover the sidebar on next boot.
+  setCommand("chats_list", chatsList);
+  setCommand("chats_upsert", chatsUpsert);
+  setCommand("chats_delete", chatsDelete);
+  setCommand("chats_replace_all", chatsReplaceAll);
 }

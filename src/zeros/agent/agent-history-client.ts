@@ -117,3 +117,45 @@ export async function listChats(): Promise<ChatMetaWire[]> {
   if (!isElectron()) return [];
   return nativeInvoke<ChatMetaWire[]>("agent_history_list_chats");
 }
+
+// ── Chat list (sidebar metadata) — SQLite-backed ──────────
+
+/** Wire shape mirrors the SQLite chats row. The renderer translates
+ *  to/from the in-memory ChatThread shape because store.tsx is the
+ *  single source of truth on field types (booleans, optional fields). */
+export interface ChatRowWire {
+  id: string;
+  folder: string;
+  agentId: string | null;
+  agentName: string | null;
+  model: string | null;
+  effort: string;
+  permissionMode: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+  sessionId: string | null;
+  pinned: boolean;
+  archived: boolean;
+  sourceChatId: string | null;
+}
+
+export async function dbListChats(): Promise<ChatRowWire[]> {
+  if (!isElectron()) return [];
+  return nativeInvoke<ChatRowWire[]>("chats_list");
+}
+
+export async function dbUpsertChat(chat: ChatRowWire): Promise<void> {
+  if (!isElectron()) return;
+  await nativeInvoke<void>("chats_upsert", { chat });
+}
+
+export async function dbDeleteChat(id: string): Promise<void> {
+  if (!isElectron()) return;
+  await nativeInvoke<void>("chats_delete", { id });
+}
+
+export async function dbReplaceAllChats(chats: ChatRowWire[]): Promise<void> {
+  if (!isElectron()) return;
+  await nativeInvoke<void>("chats_replace_all", { chats });
+}

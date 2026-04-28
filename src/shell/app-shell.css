@@ -159,6 +159,13 @@
   letter-spacing: -0.01em;
 }
 
+.oc-column-1__brand-logo {
+  display: block;
+  flex-shrink: 0;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
 .oc-column-1__collapse {
   display: inline-flex;
   align-items: center;
