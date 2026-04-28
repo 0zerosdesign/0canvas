@@ -45,9 +45,15 @@ import { notifySend } from "./notifications";
 import {
   agentHistoryAppend,
   agentHistoryClearChat,
+  agentHistoryDeletePlan,
+  agentHistoryDeletePolicy,
   agentHistoryGetChatMeta,
+  agentHistoryGetPlan,
   agentHistoryListChats,
+  agentHistoryListPolicies,
   agentHistorySetChatMeta,
+  agentHistoryUpsertPlan,
+  agentHistoryUpsertPolicy,
   agentHistoryWindow,
 } from "./agent-history";
 import {
@@ -184,4 +190,10 @@ export function registerAllCommands(): void {
   setCommand("agent_history_set_chat_meta", agentHistorySetChatMeta);
   setCommand("agent_history_get_chat_meta", agentHistoryGetChatMeta);
   setCommand("agent_history_list_chats", agentHistoryListChats);
+  setCommand("agent_history_list_policies", agentHistoryListPolicies);
+  setCommand("agent_history_upsert_policy", agentHistoryUpsertPolicy);
+  setCommand("agent_history_delete_policy", agentHistoryDeletePolicy);
+  setCommand("agent_history_get_plan", agentHistoryGetPlan);
+  setCommand("agent_history_upsert_plan", agentHistoryUpsertPlan);
+  setCommand("agent_history_delete_plan", agentHistoryDeletePlan);
 }

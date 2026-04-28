@@ -120,6 +120,12 @@ const commandTable: Record<string, CommandHandler> = {
   agent_history_set_chat_meta: notImpl("agent_history_set_chat_meta", 0),
   agent_history_get_chat_meta: notImpl("agent_history_get_chat_meta", 0),
   agent_history_list_chats: notImpl("agent_history_list_chats", 0),
+  agent_history_list_policies: notImpl("agent_history_list_policies", 9),
+  agent_history_upsert_policy: notImpl("agent_history_upsert_policy", 9),
+  agent_history_delete_policy: notImpl("agent_history_delete_policy", 9),
+  agent_history_get_plan: notImpl("agent_history_get_plan", 9),
+  agent_history_upsert_plan: notImpl("agent_history_upsert_plan", 9),
+  agent_history_delete_plan: notImpl("agent_history_delete_plan", 9),
 };
 
 export function listCommandNames(): string[] {

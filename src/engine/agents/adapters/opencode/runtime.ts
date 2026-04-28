@@ -60,10 +60,37 @@ export interface OpencodeRuntimeHandle {
 
 /** Spawn an `opencode serve` child, wait for the "listening" log,
  *  and return a handle the SDK client can attach to. Throws if the
- *  server doesn't come up within `timeoutMs`. */
+ *  server doesn't come up within `timeoutMs`.
+ *
+ *  Retries once with a fresh port on listen failure — Phase 1 audit
+ *  fix #7. The TOCTOU window between our pickFreePort()'s close and
+ *  the child's bind is small but non-zero, and on busy machines a
+ *  third process can grab the port in between. One retry catches
+ *  >99% of those cases. */
 export async function startOpencodeRuntime(
   opts: OpencodeRuntimeOptions,
   timeoutMs = 15_000,
+): Promise<OpencodeRuntimeHandle> {
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      return await spawnOpencodeServer(opts, timeoutMs);
+    } catch (err) {
+      lastErr = err;
+      // Only retry on listen-related failures. Auth / binary-missing
+      // shape errors will fail again with the same message.
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!/listen|EADDR|did not become ready|EACCES/i.test(msg)) break;
+    }
+  }
+  throw lastErr instanceof Error
+    ? lastErr
+    : new Error(String(lastErr ?? "opencode runtime failed to start"));
+}
+
+async function spawnOpencodeServer(
+  opts: OpencodeRuntimeOptions,
+  timeoutMs: number,
 ): Promise<OpencodeRuntimeHandle> {
   const password = randomUUID();
   const binary = opts.binaryPath ?? "opencode";

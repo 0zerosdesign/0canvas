@@ -56,6 +56,7 @@ import {
 } from "./use-agent-session";
 import {
   BLANK,
+  hydrateChatPlan,
   MAX_MESSAGES_PER_CHAT,
   useSessionsStore,
 } from "./sessions-store";
@@ -82,11 +83,18 @@ const HYDRATE_WINDOW = 200;
 // to keep its HMR boundary clean. Consumers import the constant
 // directly from `./sessions-store`.)
 
-/** User-visible ceiling for session creation. Single attempt — if it
- *  fails we surface the classified failure rather than loop. 10s gives
- *  Claude Agent and Codex enough room for their cold newSession RPC. */
+/** User-visible ceiling for session creation. Three attempts with
+ *  exponential backoff so transient flakes (cold-start lock, brief
+ *  network hiccup, slow process spawn) don't immediately surface as
+ *  "Session failed". 10s per attempt gives Claude Agent and Codex
+ *  enough room for their cold newSession RPC.
+ *
+ *  Phase 1 audit fix #6 — was previously a single attempt with no
+ *  retry, which forced too many users to manually re-open chats on
+ *  the very first cold spawn.  */
 const ENSURE_SESSION_ATTEMPT_TIMEOUT_MS = 10_000;
-const ENSURE_SESSION_ATTEMPTS = 1;
+const ENSURE_SESSION_ATTEMPTS = 3;
+const ENSURE_SESSION_BACKOFF_MS = [0, 800, 2_000];
 
 /** Pull the classified failure off an AGENT_ERROR bridge message when
  *  the engine populated it; otherwise classify from the free-form
@@ -193,6 +201,14 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
   // the existing promise instead of starting a duplicate. Force=true
   // bypasses (model swap intends a rebuild).
   const ensureInFlightRef = useRef(new Map<string, Promise<void>>());
+
+  // Phase 1 audit fix #8 — atomic guard against concurrent sendPrompt.
+  // The Zustand `status === "streaming"` check is a read-then-act
+  // pattern: two rapid Send-button clicks can both pass it before
+  // either flips the flag. The ref-based set is updated synchronously
+  // at the very top of sendPrompt, before any awaited operation, so
+  // the second call sees the lock and bails immediately.
+  const sendingChatsRef = useRef(new Set<string>());
 
   // Bridge listeners feed the store. Phase 0 step 5: notifications are
   // buffered into a ring of arrays and flushed once per animation frame
@@ -526,6 +542,12 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
         };
 
         for (let attempt = 1; attempt <= ENSURE_SESSION_ATTEMPTS; attempt++) {
+          // Backoff between attempts. Index 0 is the first try (no
+          // wait); indices 1-2 are the retry waits.
+          const backoff = ENSURE_SESSION_BACKOFF_MS[attempt - 1] ?? 2_000;
+          if (backoff > 0) {
+            await new Promise((r) => setTimeout(r, backoff));
+          }
           try {
             const resp = await attemptOnce();
             if (resp.type === "AGENT_ERROR") {
@@ -596,6 +618,14 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
   const sendPrompt = useCallback<SessionsActions["sendPrompt"]>(
     async (chatId, text, displayText, attachments) => {
       if (!bridge) return;
+      // Atomic lock — fix #8. Two synchronous Enter presses both
+      // observed `status !== "streaming"` before either could flip
+      // it; the second prompt overrode the first's pendingTurn and
+      // the first's response was lost. ref.add() is synchronous so
+      // the second call sees the lock immediately.
+      if (sendingChatsRef.current.has(chatId)) return;
+      sendingChatsRef.current.add(chatId);
+      try {
       let current = getStore().sessions[chatId];
       if (!current || !current.agentId) return;
       if (current.status === "streaming") return;
@@ -764,6 +794,9 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
           failure,
         });
       }
+      } finally {
+        sendingChatsRef.current.delete(chatId);
+      }
     },
     [bridge, getStore],
   );
@@ -877,6 +910,15 @@ export function AgentSessionsProvider({ children }: { children: React.ReactNode 
 
   const hydrateChat = useCallback<SessionsActions["hydrateChat"]>(
     async (chatId) => {
+      // Fix #2 — overlay policies from SQLite onto the localStorage
+      // bootstrap. Run alongside message hydration so the two land
+      // together when the chat opens. Errors are tolerated inside
+      // hydrateChatPolicies (returns the existing in-memory slice).
+      void getStore().hydrateChatPolicies(chatId);
+      // Fix #3 — pull the durable plan snapshot, if any. Same posture
+      // as policies: best-effort, in-memory wins if the user is mid-turn.
+      void hydrateChatPlan(chatId);
+
       const slot = getStore().sessions[chatId];
       // Only hydrate when the slot is genuinely empty. If the user has
       // already started talking we trust the live state — disk is just

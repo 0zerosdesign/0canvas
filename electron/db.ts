@@ -74,6 +74,29 @@ function open(): Database.Database {
       session_id  TEXT,
       updated_at  INTEGER NOT NULL
     );
+
+    -- Per-chat permission policies ("Always allow X for tool Y").
+    -- Phase 1 audit fix #2: was localStorage-only, which silently
+    -- failed under quota / private mode. Promoting to SQLite gives
+    -- us cross-restart durability + per-chat scoping that matches
+    -- the policy domain.
+    CREATE TABLE IF NOT EXISTS agent_chat_policies (
+      chat_id      TEXT NOT NULL,
+      policy_id    TEXT NOT NULL,
+      payload      TEXT NOT NULL,
+      created_at   INTEGER NOT NULL,
+      PRIMARY KEY (chat_id, policy_id)
+    );
+
+    -- Per-chat plan snapshot. Phase 1 audit fix #3: TodoWrite plans
+    -- were live-only, wiped on restart. Single row per chat (latest
+    -- replace-semantics snapshot) keeps the plan visible after the
+    -- user re-opens the chat.
+    CREATE TABLE IF NOT EXISTS agent_chat_plan (
+      chat_id     TEXT PRIMARY KEY,
+      payload     TEXT NOT NULL,
+      updated_at  INTEGER NOT NULL
+    );
   `);
 
   db = handle;
@@ -297,4 +320,93 @@ export function listChats(): ChatMeta[] {
     sessionId: r.session_id,
     updatedAt: r.updated_at,
   }));
+}
+
+// ── Per-chat permission policies — fix #2 ────────────────
+
+export interface PersistedPolicy {
+  policyId: string;
+  /** Opaque blob — JSON-serialized PolicyRule. The renderer owns the
+   *  shape; main-side just persists. */
+  payload: string;
+  createdAt: number;
+}
+
+export function listChatPolicies(chatId: string): PersistedPolicy[] {
+  const handle = open();
+  const rows = handle
+    .prepare<
+      [string],
+      { policy_id: string; payload: string; created_at: number }
+    >(
+      `SELECT policy_id, payload, created_at
+         FROM agent_chat_policies WHERE chat_id = ?
+         ORDER BY created_at ASC`,
+    )
+    .all(chatId);
+  return rows.map((r) => ({
+    policyId: r.policy_id,
+    payload: r.payload,
+    createdAt: r.created_at,
+  }));
+}
+
+export function upsertChatPolicy(chatId: string, p: PersistedPolicy): void {
+  const handle = open();
+  handle
+    .prepare(
+      `INSERT INTO agent_chat_policies (chat_id, policy_id, payload, created_at)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(chat_id, policy_id) DO UPDATE SET
+         payload = excluded.payload,
+         created_at = excluded.created_at`,
+    )
+    .run(chatId, p.policyId, p.payload, p.createdAt);
+}
+
+export function deleteChatPolicy(chatId: string, policyId: string): void {
+  const handle = open();
+  handle
+    .prepare(
+      `DELETE FROM agent_chat_policies WHERE chat_id = ? AND policy_id = ?`,
+    )
+    .run(chatId, policyId);
+}
+
+// ── Per-chat plan snapshot — fix #3 ──────────────────────
+
+export interface PersistedPlan {
+  /** JSON-serialized AgentPlanEntry[]. Single row per chat — replace
+   *  semantics matches how every adapter emits plans today. */
+  payload: string;
+  updatedAt: number;
+}
+
+export function getChatPlan(chatId: string): PersistedPlan | null {
+  const handle = open();
+  const row = handle
+    .prepare<[string], { payload: string; updated_at: number }>(
+      `SELECT payload, updated_at FROM agent_chat_plan WHERE chat_id = ?`,
+    )
+    .get(chatId);
+  if (!row) return null;
+  return { payload: row.payload, updatedAt: row.updated_at };
+}
+
+export function upsertChatPlan(chatId: string, p: PersistedPlan): void {
+  const handle = open();
+  handle
+    .prepare(
+      `INSERT INTO agent_chat_plan (chat_id, payload, updated_at)
+       VALUES (?, ?, ?)
+       ON CONFLICT(chat_id) DO UPDATE SET
+         payload = excluded.payload,
+         updated_at = excluded.updated_at`,
+    )
+    .run(chatId, p.payload, p.updatedAt);
+}
+
+export function deleteChatPlan(chatId: string): void {
+  const handle = open();
+  handle.prepare(`DELETE FROM agent_chat_plan WHERE chat_id = ?`).run(chatId);
 }

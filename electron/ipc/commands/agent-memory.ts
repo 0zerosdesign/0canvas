@@ -28,6 +28,25 @@ import path from "node:path";
 import { currentRoot } from "../../sidecar";
 import type { CommandHandler } from "../router";
 
+/** Same containment posture as agent-context.ts — see there for
+ *  rationale. Defense-in-depth against a future XSS pivoting through
+ *  the IPC into arbitrary file reads. */
+function isContained(cwd: string): boolean {
+  const home = path.resolve(os.homedir());
+  const root = currentRoot();
+  const target = path.resolve(cwd);
+  if (root) {
+    const rootResolved = path.resolve(root);
+    if (target === rootResolved || target.startsWith(rootResolved + path.sep)) {
+      return true;
+    }
+  }
+  if (target === home || target.startsWith(home + path.sep)) {
+    return true;
+  }
+  return false;
+}
+
 interface MemoryFile {
   path: string;
   filename: string;
@@ -108,6 +127,17 @@ function encodeClaudeCwd(cwd: string): string {
 export const agentMemoryFiles: CommandHandler = (args) => {
   const agentId = typeof args.agentId === "string" ? args.agentId : "";
   const cwdArg = typeof args.cwd === "string" ? args.cwd : "";
+  // Reject explicit cwd arguments that escape the engine's project
+  // root or the user home dir. cwdArg is renderer-supplied; cwd from
+  // currentRoot() is engine-supplied so it's trusted.
+  if (cwdArg && !isContained(cwdArg)) {
+    return {
+      agentId,
+      cwd: null,
+      files: [],
+      unsupported: true,
+    } as MemoryResult;
+  }
   const cwd = cwdArg || currentRoot() || null;
   const home = os.homedir();
   const id = agentId.toLowerCase();

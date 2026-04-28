@@ -46,12 +46,58 @@ import {
   type SessionStatus,
 } from "./use-agent-session";
 import {
+  upsertChatPlan as ipcUpsertChatPlan,
+  getChatPlan as ipcGetChatPlan,
+} from "../../native/native";
+import {
+  deletePolicyFromDb,
+  hydrateChatPolicies,
   loadPolicies,
+  persistPolicyToDb,
   savePolicies,
   type PolicyRule,
 } from "./policies";
 
 const MAX_STDERR_LINES = 200;
+
+/** Fire-and-forget persist of a plan snapshot to SQLite. Replace
+ *  semantics — every adapter today emits a complete entries array
+ *  on each plan event, so we just write the whole thing.
+ *  Phase 1 audit fix #3. */
+function persistChatPlan(
+  chatId: string,
+  entries: unknown[],
+): void {
+  void ipcUpsertChatPlan({
+    chatId,
+    payload: JSON.stringify(entries),
+  }).catch(() => {
+    /* main-side persistence is best-effort; in-memory plan is canonical
+       until restart, when SQLite (if it survived) takes over */
+  });
+}
+
+/** Async hydration of the plan from SQLite. Used by sessions-provider
+ *  on chat open so a re-opened chat sees its prior TodoWrite snapshot
+ *  instead of an empty plan panel. */
+export async function hydrateChatPlan(chatId: string): Promise<void> {
+  try {
+    const row = await ipcGetChatPlan(chatId);
+    if (!row) return;
+    const parsed = JSON.parse(row.payload) as unknown;
+    if (!Array.isArray(parsed)) return;
+    // Don't clobber a live plan that's already streaming. The timestamp
+    // is per-row so we can't compare staleness; rely on the "slot has
+    // entries" heuristic.
+    const slot = useSessionsStore.getState().sessions[chatId];
+    if (slot && slot.plan.length > 0) return;
+    useSessionsStore.getState().patchSession(chatId, {
+      plan: parsed as never,
+    });
+  } catch {
+    /* malformed row or IPC failure — chat shows empty plan, fine */
+  }
+}
 
 /** Renderer-side cap on per-chat message history. The engine streams
  *  every tool-call delta as a separate notification; long edit-heavy
@@ -151,6 +197,11 @@ export interface SessionsStoreState {
   // Stage 6.2 — policy mutators.
   addPolicy: (chatId: string, rule: PolicyRule) => void;
   removePolicy: (chatId: string, ruleId: string) => void;
+  /** Pull the durable copy of a chat's policies from SQLite and
+   *  replace the in-memory slice for that chat. Called on chat
+   *  open so localStorage's bootstrap data is overlaid with the
+   *  authoritative DB rows. Idempotent. */
+  hydrateChatPolicies: (chatId: string) => Promise<void>;
   recordAutoDecision: (
     toolCallId: string,
     policyId: string,
@@ -217,7 +268,7 @@ export const useSessionsStore = create<SessionsStoreState>((set, get) => ({
     });
   },
 
-  // ── Stage 6.2: policies ─────────────────────────────────
+  // ── Stage 6.2: policies (dual-write — fix #2) ───────────
   addPolicy: (chatId, rule) => {
     set((state) => {
       const existing = state.chatPolicies[chatId] ?? [];
@@ -225,7 +276,10 @@ export const useSessionsStore = create<SessionsStoreState>((set, get) => ({
       const nextByChat = { ...state.chatPolicies, [chatId]: nextRules };
       // Persist on every mutation. Doc is tiny (a few rules per chat)
       // so the localStorage write is cheap enough to skip debouncing.
+      // Dual-write: SQLite is the durable backstop in case localStorage
+      // hits quota or is disabled (private browsing).
       savePolicies({ byChat: nextByChat });
+      persistPolicyToDb(rule);
       return { chatPolicies: nextByChat };
     });
   },
@@ -239,6 +293,18 @@ export const useSessionsStore = create<SessionsStoreState>((set, get) => ({
       if (nextRules.length === 0) delete nextByChat[chatId];
       else nextByChat[chatId] = nextRules;
       savePolicies({ byChat: nextByChat });
+      deletePolicyFromDb(chatId, ruleId);
+      return { chatPolicies: nextByChat };
+    });
+  },
+  hydrateChatPolicies: async (chatId) => {
+    // Async overlay: SQLite is authoritative, localStorage is the
+    // pre-DB cache. On chat open the renderer calls this; the in-
+    // memory slice gets replaced with whatever SQLite returns.
+    const fallback = useSessionsStore.getState().chatPolicies[chatId] ?? [];
+    const rules = await hydrateChatPolicies(chatId, fallback);
+    set((state) => {
+      const nextByChat = { ...state.chatPolicies, [chatId]: rules };
       return { chatPolicies: nextByChat };
     });
   },
@@ -394,6 +460,12 @@ export const useSessionsStore = create<SessionsStoreState>((set, get) => ({
 
     if (upd.sessionUpdate === "plan" && Array.isArray(upd.entries)) {
       get().patchSession(chatId, { plan: upd.entries });
+      // Fix #3 — durable plan snapshot. Replace-semantics matches every
+      // adapter we ship today (Claude TodoWrite, Codex plan_update,
+      // Cursor todoToolCall, Droid TodoWrite, Gemini write_todos,
+      // OpenCode todowrite). Fire-and-forget; the in-memory slice is
+      // already updated above so a failed disk write doesn't regress UX.
+      void persistChatPlan(chatId, upd.entries);
       return;
     }
 

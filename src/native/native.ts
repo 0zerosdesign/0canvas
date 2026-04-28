@@ -184,6 +184,62 @@ export async function loadAgentContextFiles(args: {
   return nativeInvoke<AgentContextResult>("agent_context_files", args);
 }
 
+// ── Per-chat policies + plan persistence — fixes #2, #3 ────
+
+/** Policy entry as persisted on disk. `payload` is the JSON-serialized
+ *  PolicyRule (renderer owns the shape). Returned in createdAt order. */
+export type PersistedPolicy = {
+  policyId: string;
+  payload: string;
+  createdAt: number;
+};
+
+export async function listChatPolicies(
+  chatId: string,
+): Promise<PersistedPolicy[]> {
+  if (!isNativeRuntime()) return [];
+  return nativeInvoke<PersistedPolicy[]>("agent_history_list_policies", {
+    chatId,
+  });
+}
+
+export async function upsertChatPolicy(args: {
+  chatId: string;
+  policyId: string;
+  payload: string;
+}): Promise<void> {
+  if (!isNativeRuntime()) return;
+  await nativeInvoke<void>("agent_history_upsert_policy", args);
+}
+
+export async function deleteChatPolicy(args: {
+  chatId: string;
+  policyId: string;
+}): Promise<void> {
+  if (!isNativeRuntime()) return;
+  await nativeInvoke<void>("agent_history_delete_policy", args);
+}
+
+export type PersistedPlan = { payload: string; updatedAt: number } | null;
+
+export async function getChatPlan(chatId: string): Promise<PersistedPlan> {
+  if (!isNativeRuntime()) return null;
+  return nativeInvoke<PersistedPlan>("agent_history_get_plan", { chatId });
+}
+
+export async function upsertChatPlan(args: {
+  chatId: string;
+  payload: string;
+}): Promise<void> {
+  if (!isNativeRuntime()) return;
+  await nativeInvoke<void>("agent_history_upsert_plan", args);
+}
+
+export async function deleteChatPlan(chatId: string): Promise<void> {
+  if (!isNativeRuntime()) return;
+  await nativeInvoke<void>("agent_history_delete_plan", { chatId });
+}
+
 // ── Agent memory inspector — Stage 9 §2.9.6 ────────────────
 
 export type AgentMemoryFile = {

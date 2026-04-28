@@ -16,11 +16,19 @@
 // the next day. A future Settings page will offer cross-chat
 // policy management for power users.
 //
-// Persistence: localStorage. Same approach as enabled-agents.ts
-// and the model catalog — fast, durable, no SQLite migration
-// required for Phase 1. Phase 2 may move to SQLite alongside
-// chat metadata.
+// Persistence: dual-write. localStorage gives us the synchronous-
+// boot bootstrap (the store needs initial state at module load
+// time), and SQLite is the durable backstop the audit-fix #2
+// added so quota/private-mode failures on localStorage don't
+// silently drop the user's "always allow" decisions. On chat
+// open, SQLite hydrates and overlays whatever localStorage had.
 // ──────────────────────────────────────────────────────────
+
+import {
+  listChatPolicies as ipcListChatPolicies,
+  upsertChatPolicy as ipcUpsertChatPolicy,
+  deleteChatPolicy as ipcDeleteChatPolicy,
+} from "../../native/native";
 
 const STORAGE_KEY = "zeros.chat-policies.v1";
 
@@ -99,4 +107,54 @@ export function findMatchingPolicy(
  *  inside a single chat are vanishingly unlikely. */
 export function newPolicyId(): string {
   return `pol-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+// ── SQLite layer — fix #2 ──────────────────────────────────
+
+/** Async hydration from SQLite. Called when a chat is opened so the
+ *  durable copy overlays whatever localStorage had. Tolerant to IPC
+ *  failures — returns the localStorage rules as a fallback so a
+ *  broken main process doesn't strip the user's existing rules. */
+export async function hydrateChatPolicies(
+  chatId: string,
+  fallback: PolicyRule[],
+): Promise<PolicyRule[]> {
+  try {
+    const rows = await ipcListChatPolicies(chatId);
+    if (rows.length === 0) return fallback;
+    const out: PolicyRule[] = [];
+    for (const r of rows) {
+      try {
+        const parsed = JSON.parse(r.payload) as PolicyRule;
+        if (parsed && typeof parsed === "object" && parsed.id) {
+          out.push(parsed);
+        }
+      } catch {
+        /* skip malformed row */
+      }
+    }
+    return out;
+  } catch {
+    return fallback;
+  }
+}
+
+/** Fire-and-forget durable persist for a single rule. Called by
+ *  sessions-store mutations alongside the legacy localStorage write.
+ *  IPC failures are swallowed — localStorage acts as the fallback. */
+export function persistPolicyToDb(rule: PolicyRule): void {
+  void ipcUpsertChatPolicy({
+    chatId: rule.chatId,
+    policyId: rule.id,
+    payload: JSON.stringify(rule),
+  }).catch(() => {
+    /* localStorage is the fallback; main-side failure is recoverable */
+  });
+}
+
+/** Fire-and-forget durable delete. */
+export function deletePolicyFromDb(chatId: string, ruleId: string): void {
+  void ipcDeleteChatPolicy({ chatId, policyId: ruleId }).catch(() => {
+    /* see persistPolicyToDb */
+  });
 }

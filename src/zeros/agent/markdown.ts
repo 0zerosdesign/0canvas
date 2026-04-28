@@ -45,15 +45,35 @@ DOMPurify.addHook("afterSanitizeAttributes", (node) => {
   }
 });
 
+/** Phase 1 audit fix #4 — DoS guard. An agent that accidentally cats
+ *  a binary or emits a huge code block as a single message can drag
+ *  marked + DOMPurify into a multi-second sync chew that freezes the
+ *  renderer. 1MB is well above any natural reply (Claude's
+ *  context-window-fill emits ~200KB max) but small enough to keep
+ *  parsing cheap. Anything larger is truncated with a marker; the
+ *  user can click into the underlying tool call (Read/Bash card) for
+ *  the full content. */
+const MARKDOWN_MAX_INPUT_BYTES = 1_000_000;
+
 /** Render markdown text to sanitised HTML. Returns a string suitable
  *  for `dangerouslySetInnerHTML`. The empty / undefined text shortcut
  *  avoids paying the parse cost on placeholder renders. */
 export function renderMarkdown(text: string): string {
   if (!text) return "";
+  // Truncate pathologically long inputs before they hit marked. We
+  // measure character length rather than UTF-8 bytes since the
+  // pathological cases (large binary cat, raw logs) are
+  // characterwise expensive in either dimension.
+  let input = text;
+  if (input.length > MARKDOWN_MAX_INPUT_BYTES) {
+    input =
+      input.slice(0, MARKDOWN_MAX_INPUT_BYTES) +
+      "\n\n*[…content truncated; open the originating tool card for the full output]*";
+  }
   // marked.parse can return Promise<string> when async extensions are
   // configured. We don't use any, but `async: false` makes the typing
   // explicit and avoids accidental misuse.
-  const raw = marked.parse(text, { async: false }) as string;
+  const raw = marked.parse(input, { async: false }) as string;
   return DOMPurify.sanitize(raw, {
     ADD_ATTR: ["target"],
   });

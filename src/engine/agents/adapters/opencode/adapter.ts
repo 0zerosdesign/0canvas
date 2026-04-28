@@ -461,7 +461,16 @@ export class OpencodeAdapter implements AgentAdapter {
     });
     state.translator = translator;
     state.busAbort = new AbortController();
-    void this.drainBus(state, translator, state.busAbort.signal);
+    // Phase 1 audit fix #7 — wrap drainBus so an unhandled rejection
+    // (TypeError on early dispose, server died before subscribe, etc.)
+    // doesn't leak as an unhandledRejection. drainBus already swallows
+    // AbortError internally; this catches everything else.
+    this.drainBus(state, translator, state.busAbort.signal).catch((err) => {
+      this.ctx.emit.onAgentStderr(
+        AGENT_ID,
+        `[opencode] drainBus crashed: ${String(err)}`,
+      );
+    });
 
     // Slice 3 — design-tools MCP injection. Only attempts when
     // `ctx.zerosMcpUrl` is wired through; we don't have that pipe

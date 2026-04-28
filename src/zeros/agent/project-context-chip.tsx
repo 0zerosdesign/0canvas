@@ -63,7 +63,9 @@ export function ProjectContextChip({ agentId, cwd }: Props) {
     };
   }, [agentId, cwd]);
 
-  // Close on outside click.
+  // Close on outside click + Escape (fix #5 — keyboard-only users
+  // were trapped because the only dismissal was a mouse-anywhere-else
+  // gesture).
   useEffect(() => {
     if (!open) return;
     const onClick = (e: MouseEvent) => {
@@ -71,8 +73,15 @@ export function ProjectContextChip({ agentId, cwd }: Props) {
       if (!node) return;
       if (!node.contains(e.target as Node)) setOpen(false);
     };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
     document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
   }, [open]);
 
   const files = data?.files ?? [];

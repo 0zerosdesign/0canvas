@@ -3385,6 +3385,23 @@ ${S} .oc-agent-mem-file-path {
   font-family: var(--font-mono, monospace);
   margin-bottom: 4px;
 }
+${S} .oc-agent-mem-show-more {
+  margin: 8px 0 4px;
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px dashed var(--border-subtle);
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: center;
+}
+${S} .oc-agent-mem-show-more:hover {
+  color: var(--text-primary);
+  background: var(--surface-2);
+  border-style: solid;
+}
 ${S} .oc-agent-mem-file-preview {
   font-size: 11.5px;
   color: var(--text-secondary, var(--text-muted));

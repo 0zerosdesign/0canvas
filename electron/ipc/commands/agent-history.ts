@@ -15,9 +15,15 @@
 
 import {
   clearChat,
+  deleteChatPlan,
+  deleteChatPolicy,
   getChatMeta,
+  getChatPlan,
+  listChatPolicies,
   listChats,
   upsertChatMeta,
+  upsertChatPlan,
+  upsertChatPolicy,
   upsertMessagesBulk,
   windowMessages,
   type PersistedMessage,
@@ -119,4 +125,46 @@ export const agentHistoryGetChatMeta: CommandHandler = (args) => {
  *  the hydration boot path to seed the store before bridge connect. */
 export const agentHistoryListChats: CommandHandler = () => {
   return listChats();
+};
+
+// ── Per-chat permission policies — fix #2 ──────────────────
+
+export const agentHistoryListPolicies: CommandHandler = (args) => {
+  const chatId = requireString(args, "chatId");
+  return listChatPolicies(chatId);
+};
+
+export const agentHistoryUpsertPolicy: CommandHandler = (args) => {
+  const chatId = requireString(args, "chatId");
+  const policyId = requireString(args, "policyId");
+  const payload = requireString(args, "payload");
+  upsertChatPolicy(chatId, {
+    policyId,
+    payload,
+    createdAt: Date.now(),
+  });
+};
+
+export const agentHistoryDeletePolicy: CommandHandler = (args) => {
+  const chatId = requireString(args, "chatId");
+  const policyId = requireString(args, "policyId");
+  deleteChatPolicy(chatId, policyId);
+};
+
+// ── Per-chat plan snapshot — fix #3 ────────────────────────
+
+export const agentHistoryGetPlan: CommandHandler = (args) => {
+  const chatId = requireString(args, "chatId");
+  return getChatPlan(chatId);
+};
+
+export const agentHistoryUpsertPlan: CommandHandler = (args) => {
+  const chatId = requireString(args, "chatId");
+  const payload = requireString(args, "payload");
+  upsertChatPlan(chatId, { payload, updatedAt: Date.now() });
+};
+
+export const agentHistoryDeletePlan: CommandHandler = (args) => {
+  const chatId = requireString(args, "chatId");
+  deleteChatPlan(chatId);
 };

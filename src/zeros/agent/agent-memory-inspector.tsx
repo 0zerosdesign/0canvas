@@ -79,6 +79,18 @@ function AgentMemoryCard({
   const [data, setData] = useState<AgentMemoryResult | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Fix #5 — Escape collapses the card. Inline cards aren't a
+  // strict modal, but consistency with the project-context popover
+  // (and accessibility) calls for the same dismissal gesture.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
+
   // Load on first expand only — saves IPC chatter when the user
   // is just scanning the agent list.
   useEffect(() => {
@@ -143,11 +155,39 @@ function AgentMemoryCard({
               <code>{cwd ?? "(no project)"}</code>.
             </div>
           ) : (
-            data.files.map((f) => <MemoryFileRow key={f.path} file={f} />)
+            <PaginatedMemoryFiles files={data.files} />
           )}
         </div>
       )}
     </div>
+  );
+}
+
+/** Phase 1 audit fix #9 — paginate the file list. Heavy Claude users
+ *  accumulate 100+ topic files in their auto-memory dir; rendering
+ *  all of them at once (each with ~400-char preview) made the
+ *  Settings panel sluggish on expand. Show first PAGE_SIZE; offer
+ *  "Show all" to reveal the rest in one click. */
+const PAGE_SIZE = 20;
+function PaginatedMemoryFiles({ files }: { files: AgentMemoryFile[] }) {
+  const [showAll, setShowAll] = useState(false);
+  const visible = showAll ? files : files.slice(0, PAGE_SIZE);
+  const remaining = files.length - visible.length;
+  return (
+    <>
+      {visible.map((f) => (
+        <MemoryFileRow key={f.path} file={f} />
+      ))}
+      {remaining > 0 && (
+        <button
+          type="button"
+          className="oc-agent-mem-show-more"
+          onClick={() => setShowAll(true)}
+        >
+          Show {remaining} more {remaining === 1 ? "file" : "files"}
+        </button>
+      )}
+    </>
   );
 }
 
