@@ -130,6 +130,21 @@ export class OpencodeBusTranslator {
    *  state transitions; the part-id is stable across all of them. */
   private readonly toolCallIds = new Map<string, string>();
 
+  /** OpenCode callID → Zeros toolCallId. Used by permission.asked
+   *  (which references a tool by its callID, not its part-id) to
+   *  correlate back to the right card so the inline permission
+   *  cluster lands under the matching tool. */
+  private readonly callIdToToolCallId = new Map<string, string>();
+
+  /** OpenCode callID → snapshot of the canonical ToolCall fields
+   *  (title, kind, rawInput) so the adapter can reconstruct a
+   *  RequestPermissionRequest reference without re-querying the
+   *  bus. */
+  private readonly toolSnapshots = new Map<
+    string,
+    { toolCallId: string; title: string; kind: string }
+  >();
+
   /** Set of OpenCode part-ids we've already started a tool_call for, so
    *  the second/third "updated" doesn't emit a new card. */
   private readonly startedTools = new Set<string>();
@@ -231,6 +246,16 @@ export class OpencodeBusTranslator {
     return "end_turn";
   }
 
+  /** Look up the toolCall reference (id, title, kind) for a given
+   *  OpenCode callID. Returns null if no tool with that callID has
+   *  been seen yet — callers should treat this as "no tool to attach
+   *  this permission to" and fall back to a synthetic ToolCall. */
+  toolCallForCallId(
+    callId: string,
+  ): { toolCallId: string; title: string; kind: string } | null {
+    return this.toolSnapshots.get(callId) ?? null;
+  }
+
   // ── handlers ────────────────────────────────────────────
 
   private onPartDelta(props: MessagePartDeltaProps): void {
@@ -326,14 +351,21 @@ export class OpencodeBusTranslator {
     if (!this.startedTools.has(partId)) {
       this.startedTools.add(partId);
       const toolCallId = this.ensureToolCallId(partId);
+      const callId = typeof part.callID === "string" ? part.callID : null;
+      const title = describeTool(toolName, args, part.state?.title);
+      const kind = mapToolKind(toolName);
+      if (callId) {
+        this.callIdToToolCallId.set(callId, toolCallId);
+        this.toolSnapshots.set(callId, { toolCallId, title, kind });
+      }
       const mergeKey = computeMergeKey(toolName, args);
       this.emit({
         sessionId: this.sessionId,
         update: {
           sessionUpdate: "tool_call",
           toolCallId,
-          title: describeTool(toolName, args, part.state?.title),
-          kind: mapToolKind(toolName),
+          title,
+          kind: kind as never,
           status: "in_progress",
           rawInput: args,
           ...(mergeKey ? { mergeKey } : {}),

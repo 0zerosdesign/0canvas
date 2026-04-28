@@ -68,6 +68,10 @@ interface OpencodeSessionState {
   /** Bus translator instance for this session. Lives across turns
    *  so coalesced messageIds (`oc-<partID>`) stay consistent. */
   translator: OpencodeBusTranslator | null;
+  /** Pending OpenCode permission requests indexed by Zeros
+   *  permissionId (which we mint per request). The stored callId is
+   *  the OpenCode-side identifier we POST against. */
+  pendingPermissions: Map<string, { opencodePermissionId: string }>;
   /** Currently-in-flight prompt — null when idle. */
   pendingTurn: {
     abort: AbortController;
@@ -132,6 +136,7 @@ export class OpencodeAdapter implements AgentAdapter {
       client: null,
       busAbort: null,
       translator: null,
+      pendingPermissions: new Map(),
       pendingTurn: null,
     };
     this.sessions.set(sessionId, state);
@@ -171,6 +176,7 @@ export class OpencodeAdapter implements AgentAdapter {
       client: null,
       busAbort: null,
       translator: null,
+      pendingPermissions: new Map(),
       pendingTurn: null,
     };
     this.sessions.set(opts.sessionId, state);
@@ -278,14 +284,70 @@ export class OpencodeAdapter implements AgentAdapter {
     }
   }
 
-  respondToPermission(_opts: {
+  respondToPermission(opts: {
     permissionId: string;
     response: RequestPermissionResponse;
   }): void {
-    // Permission flow lands in Slice 3 — POST /permission/reply via
-    // the SDK's permission.respond() method. Slice 1 has no
-    // permission requests in flight (no model calls happen yet) so
-    // this is a no-op stub.
+    // Locate the session that minted this permissionId. We linear-
+    // scan rather than maintain a global pendingPermissions map
+    // because permission events are per-session and the count is
+    // small (usually 1 in flight per session).
+    let owner: OpencodeSessionState | null = null;
+    let pending: { opencodePermissionId: string } | null = null;
+    for (const state of this.sessions.values()) {
+      const p = state.pendingPermissions.get(opts.permissionId);
+      if (p) {
+        owner = state;
+        pending = p;
+        break;
+      }
+    }
+    if (!owner || !pending) return;
+
+    // Map Zeros's outcome shape onto OpenCode's
+    // `"once" | "always" | "reject"`.
+    const outcome = opts.response.outcome;
+    let response: "once" | "always" | "reject" = "reject";
+    if (outcome.outcome === "selected") {
+      const oid = outcome.optionId;
+      if (oid === "allow_once") response = "once";
+      else if (oid === "allow_always") response = "always";
+      else response = "reject"; // reject_once / reject_always
+    }
+    // outcome=cancelled → reject (the user dismissed the prompt).
+
+    owner.pendingPermissions.delete(opts.permissionId);
+
+    // Fire-and-forget POST. If the server is gone the bus will
+    // surface that separately; we don't want respondToPermission
+    // to be async because it's called from synchronous UI handlers.
+    void this.postPermissionReply(
+      owner,
+      pending.opencodePermissionId,
+      response,
+    );
+  }
+
+  private async postPermissionReply(
+    state: OpencodeSessionState,
+    opencodePermissionId: string,
+    response: "once" | "always" | "reject",
+  ): Promise<void> {
+    if (!state.client || !state.opencodeSessionId) return;
+    try {
+      await state.client.postSessionIdPermissionsPermissionId({
+        path: {
+          id: state.opencodeSessionId,
+          permissionID: opencodePermissionId,
+        },
+        body: { response },
+      } as never);
+    } catch (err) {
+      this.ctx.emit.onAgentStderr(
+        AGENT_ID,
+        `[opencode] permission reply failed: ${String(err)}`,
+      );
+    }
   }
 
   async dispose(): Promise<void> {
@@ -372,19 +434,101 @@ export class OpencodeAdapter implements AgentAdapter {
       sessionId: state.sessionId,
       emit: (n) => this.ctx.emit.onSessionUpdate(AGENT_ID, n),
       onUnknown: () => { /* ignored — most "unknown"s are bus chrome */ },
-      onPermission: (props) => {
-        // Slice 3 wires this to the canonical permission_request
-        // event. Drop on the floor for now so the bus drain doesn't
-        // deadlock waiting for a response.
-        this.ctx.emit.onAgentStderr(
-          AGENT_ID,
-          `[opencode] permission.asked received (Slice 3 will surface this in chat) — id=${props.id} permission=${props.permission}`,
-        );
-      },
+      onPermission: (props) => this.onPermissionAsked(state, props),
     });
     state.translator = translator;
     state.busAbort = new AbortController();
     void this.drainBus(state, translator, state.busAbort.signal);
+
+    // Slice 3 — design-tools MCP injection. Only attempts when
+    // `ctx.zerosMcpUrl` is wired through; we don't have that pipe
+    // today (the engine doesn't yet expose its MCP URL to adapters).
+    // Stub the call as a no-op until the URL plumbing lands; when
+    // it does, this turns into a single client.mcp.add() call.
+    await this.maybeInjectDesignToolsMcp(state);
+  }
+
+  /** Translate an OpenCode permission.asked into the canonical
+   *  permission_request event. The inline permission cluster (Stage
+   *  6.x) consumes this and offers Allow / Deny / Always-for-X
+   *  buttons. The user's choice flows back through respondToPermission. */
+  private onPermissionAsked(
+    state: OpencodeSessionState,
+    props: {
+      id: string;
+      permission: string;
+      patterns?: string[];
+      metadata?: Record<string, unknown>;
+      always?: string[];
+      tool?: { messageID?: string; callID?: string };
+    },
+  ): void {
+    const callId = props.tool?.callID ?? null;
+    const snapshot = callId
+      ? state.translator?.toolCallForCallId(callId) ?? null
+      : null;
+
+    // The canonical permission_request needs a ToolCall reference.
+    // If we don't have a snapshot (rare — permission arrived before
+    // any tool started, or callID was missing), synthesize a stub
+    // ToolCall whose card the inline cluster will still attach
+    // under via toolCallId match.
+    const toolCallId = snapshot?.toolCallId ?? randomUUID();
+    const toolCall = {
+      toolCallId,
+      title: snapshot?.title ?? `Permission: ${props.permission}`,
+      kind: (snapshot?.kind ?? "other") as never,
+      status: "pending" as never,
+    };
+
+    // OpenCode's three response kinds map onto our four canonical
+    // PermissionOptionKinds. We surface all four to the UI so the
+    // "always for X" flow has a button; the responder maps both
+    // reject_* → "reject".
+    const options = [
+      { optionId: "allow_once", name: "Allow", kind: "allow_once" as const },
+      {
+        optionId: "allow_always",
+        name: "Always allow",
+        kind: "allow_always" as const,
+      },
+      { optionId: "reject_once", name: "Deny", kind: "reject_once" as const },
+    ];
+
+    // Mint a Zeros-side permission id and remember the OpenCode
+    // counterpart so respondToPermission can POST to the right
+    // endpoint. Zeros-side ids stay opaque to the UI.
+    const zerosPermissionId = randomUUID();
+    state.pendingPermissions.set(zerosPermissionId, {
+      opencodePermissionId: props.id,
+    });
+
+    this.ctx.emit.onPermissionRequest(AGENT_ID, zerosPermissionId, {
+      sessionId: state.sessionId as never,
+      toolCall: toolCall as never,
+      options: options as never,
+    } as never);
+  }
+
+  /** Stub for the design-tools MCP injection promised by §2.10.4 of
+   *  the roadmap. The engine's MCP server URL isn't yet exposed
+   *  through AgentAdapterContext (would require a small ctx
+   *  extension). When it lands, this method becomes:
+   *
+   *    await state.client!.mcp.add({
+   *      body: {
+   *        name: "zeros-design",
+   *        config: { type: "remote", url: this.ctx.zerosMcpUrl }
+   *      }
+   *    });
+   *
+   *  For now we log a one-time hint and return — OpenCode runs
+   *  fine without MCP injection; tool calls just don't include
+   *  Zeros design tools. */
+  private async maybeInjectDesignToolsMcp(
+    _state: OpencodeSessionState,
+  ): Promise<void> {
+    // Intentional stub — see comment above.
   }
 
   /** Long-lived SSE drain. Runs until the AbortController is fired
