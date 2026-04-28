@@ -480,4 +480,126 @@ ${S} .oc-ai-saved-toast {
   border-radius: var(--radius-md);
   font-size: var(--text-11);
 }
+
+/* ── Appearance panel — Cursor-style theme controls ────── */
+${S} .oc-appearance-select {
+  height: var(--h-control-md);
+  min-width: 160px;
+  padding: 0 var(--space-3);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-12);
+  font-family: var(--font-ui);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-standard);
+}
+${S} .oc-appearance-select:hover {
+  border-color: var(--border-strong);
+}
+${S} .oc-appearance-select:focus-visible {
+  outline: 2px solid var(--ring-focus);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+${S} .oc-appearance-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-4);
+  align-items: center;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+${S} .oc-appearance-row:first-child { padding-top: 0; }
+${S} .oc-appearance-row:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+${S} .oc-appearance-row__label {
+  display: flex; flex-direction: column; gap: var(--space-1);
+  min-width: 0;
+}
+${S} .oc-appearance-row__control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+/* Slider — webkit + firefox. The hue variant gets a full-spectrum
+   gradient track so the user can see what each position will pick;
+   the default variant uses surface-2 for intensity, transparency,
+   etc. */
+${S} .oc-appearance-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 180px;
+  height: 6px;
+  background: var(--surface-2);
+  border-radius: var(--radius-pill);
+  outline: none;
+  cursor: pointer;
+}
+${S} .oc-appearance-slider--hue {
+  background: linear-gradient(
+    to right,
+    oklch(0.65 0.15 0),
+    oklch(0.65 0.15 60),
+    oklch(0.65 0.15 120),
+    oklch(0.65 0.15 180),
+    oklch(0.65 0.15 240),
+    oklch(0.65 0.15 300),
+    oklch(0.65 0.15 360)
+  );
+}
+${S} .oc-appearance-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-circle);
+  background: var(--text-primary);
+  border: 2px solid var(--surface-0);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--dur-fast) var(--ease-emphasized);
+}
+${S} .oc-appearance-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+${S} .oc-appearance-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-circle);
+  background: var(--text-primary);
+  border: 2px solid var(--surface-0);
+  cursor: pointer;
+}
+${S} .oc-appearance-slider:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--ring-focus);
+  outline-offset: 2px;
+}
+
+${S} .oc-appearance-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-circle);
+  border: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+${S} .oc-appearance-value {
+  min-width: 36px;
+  text-align: right;
+  font-size: var(--text-11);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+${S} .oc-appearance-reset {
+  margin-top: var(--space-4);
+  display: flex;
+  justify-content: flex-end;
+}
 `;

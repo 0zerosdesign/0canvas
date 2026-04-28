@@ -60,6 +60,11 @@ import type {
   AgentAgentsListMessage,
   BridgeRegistryAgent,
 } from "../bridge/messages";
+import { useAppearance } from "../appearance/provider";
+import {
+  DEFAULT_PREFS,
+  type ThemeMode,
+} from "../appearance/prefs";
 
 type SectionId =
   | "general"
@@ -1049,17 +1054,156 @@ function ApiKeysPanel() {
   );
 }
 
-// ── Appearance (stub — theming lives in engine styles for now) ──
+// ── Appearance — Cursor-style theme controls ─────────────
+//
+// Four user inputs feed the OKLCH theme engine (src/zeros/appearance/):
+//   1. Theme:    System / Light / Dark / High Contrast → picks the
+//                neutral palette
+//   2. Hue:      0–360° → accent color in OKLCH
+//   3. Intensity: 0–1   → scales accent chroma (capped at the mode's
+//                          max chroma so colors stay in-gamut)
+//   4. Reduce Transparency → forces opaque surfaces for accessibility
+//
+// We deliberately don't expose surface/ink/contrast — those are locked
+// per mode so the UI is guaranteed-readable regardless of what the
+// user picks. Personality (any hue, any intensity) without the ability
+// to break the UI.
+//
+// All four controls write through useAppearance().setPrefs(), which
+// flows: derive.applyTheme → CSS vars on <html> → every component
+// re-renders with the new theme via CSS, no React re-render needed.
+
+const THEME_OPTIONS: Array<{ value: ThemeMode; label: string }> = [
+  { value: "system", label: "System" },
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+  { value: "high-contrast", label: "High Contrast" },
+];
 
 function AppearancePanel() {
+  const { prefs, setPrefs } = useAppearance();
+  const intensityPct = Math.round(prefs.intensity * 100);
+
+  const resetToDefaults = () => {
+    setPrefs(DEFAULT_PREFS);
+  };
+
   return (
     <div className="oc-settings-panel">
-      <div className="oc-settings-section-title">Appearance</div>
-      <p className="oc-ai-hint">
-        Theme, accent color, and font size controls arrive in a
-        follow-up pass. The current surface uses the dark palette
-        defined in the injected engine stylesheet.
-      </p>
+      <div className="oc-settings-section-title">Theme</div>
+      <div className="oc-ai-card">
+        <div className="oc-ai-card-head oc-ai-card-head--row">
+          <div>
+            <div className="oc-ai-card-title">Theme</div>
+            <p className="oc-ai-card-hint">
+              Choose between system, light, dark, or high contrast.
+              System follows your macOS Appearance setting.
+            </p>
+          </div>
+          <select
+            className="oc-appearance-select"
+            value={prefs.mode}
+            onChange={(e) => setPrefs({ mode: e.target.value as ThemeMode })}
+          >
+            {THEME_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="oc-settings-section-title oc-settings-section-title--spaced">
+        Colors
+      </div>
+      <div className="oc-ai-card">
+        <div className="oc-appearance-row">
+          <div className="oc-appearance-row__label">
+            <div className="oc-ai-card-title">Hue</div>
+            <p className="oc-ai-card-hint">
+              Pick your accent color. Every blue-tinted token in the
+              UI — buttons, links, focus rings, soft tints — follows.
+            </p>
+          </div>
+          <div className="oc-appearance-row__control">
+            <input
+              type="range"
+              min={0}
+              max={360}
+              step={1}
+              value={prefs.hue}
+              onChange={(e) =>
+                setPrefs({ hue: Number(e.target.value) })
+              }
+              className="oc-appearance-slider oc-appearance-slider--hue"
+              aria-label="Accent hue"
+            />
+            <span
+              className="oc-appearance-swatch"
+              style={{ background: "var(--zeros-accent)" }}
+              aria-hidden
+            />
+          </div>
+        </div>
+
+        <div className="oc-appearance-row">
+          <div className="oc-appearance-row__label">
+            <div className="oc-ai-card-title">Intensity</div>
+            <p className="oc-ai-card-hint">
+              How saturated the accent is. Drop to zero for a fully
+              neutral UI, or push higher for more personality.
+            </p>
+          </div>
+          <div className="oc-appearance-row__control">
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={intensityPct}
+              onChange={(e) =>
+                setPrefs({ intensity: Number(e.target.value) / 100 })
+              }
+              className="oc-appearance-slider"
+              aria-label="Accent intensity"
+            />
+            <span className="oc-appearance-value">{intensityPct}%</span>
+          </div>
+        </div>
+
+        <div className="oc-appearance-row">
+          <div className="oc-appearance-row__label">
+            <div className="oc-ai-card-title">Reduce Transparency</div>
+            <p className="oc-ai-card-hint">
+              Replace translucent surfaces with opaque backgrounds.
+              Helps in bright environments and matches macOS's own
+              accessibility setting.
+            </p>
+          </div>
+          <label className="oc-ai-toggle">
+            <input
+              type="checkbox"
+              checked={prefs.reduceTransparency}
+              onChange={(e) =>
+                setPrefs({ reduceTransparency: e.target.checked })
+              }
+            />
+            <span className="oc-ai-toggle-track" />
+          </label>
+        </div>
+      </div>
+
+      <div className="oc-appearance-reset">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={resetToDefaults}
+          title="Reset Theme, Hue, Intensity, and Reduce Transparency to defaults"
+        >
+          Reset to defaults
+        </Button>
+      </div>
     </div>
   );
 }
