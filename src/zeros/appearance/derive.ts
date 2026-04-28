@@ -70,6 +70,22 @@ export function applyTheme(
   root.style.setProperty("--zeros-intensity", String(intensity));
   root.style.setProperty("--zeros-accent", accent);
 
+  // Diagnostic — log every applyTheme call to a window-scoped counter
+  // so the DevTools console can verify slider drags are reaching the
+  // engine end-to-end (counter goes up, accent string changes). Cheap
+  // and useful for theme debugging; remove once we've shipped a few
+  // releases without related bugs.
+  if (typeof window !== "undefined") {
+    type Diag = { calls: number; lastAccent: string; lastVariant: string };
+    const w = window as unknown as { __zerosThemeDiag?: Diag };
+    const next: Diag = {
+      calls: (w.__zerosThemeDiag?.calls ?? 0) + 1,
+      lastAccent: accent,
+      lastVariant: variant,
+    };
+    w.__zerosThemeDiag = next;
+  }
+
   if (variantChanged && typeof window !== "undefined") {
     // Two rAFs: the first lets the browser commit the new vars +
     // attribute, the second removes the suppression so the next

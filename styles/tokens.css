@@ -60,16 +60,6 @@
   --zeros-intensity: 1;
   --zeros-accent:    oklch(0.665 0.150 252.9);
 
-  /* Per-theme lightness anchors for accent derivatives. The chroma
-     multipliers stay theme-agnostic (chroma in OKLCH stays roughly
-     constant across light/dark) — only L flips. The light overrides
-     live in the [data-theme="light"] block below. */
-  --accent-l-hover:    0.78;
-  --accent-l-pressed:  0.55;
-  --accent-l-soft-bg:  0.21;
-  --accent-l-ring:     0.46;
-  --accent-c-soft-bg:  0.45;
-
   /* ═══════════════════════════════════════════════════════════
      INTERNAL PRIMITIVES — not for component use
      ───────────────────────────────────────────────────────────
@@ -188,16 +178,16 @@
      ═══════════════════════════════════════════════════════════ */
 
   /* Derived from --zeros-accent via OKLCH relative-color syntax so the
-     entire accent family responds to the user's hue + intensity. L
-     anchors live in --accent-l-* (themed per data-theme so light mode
-     can flip "hover = lighter" → "hover = darker"). Default L values
-     mirror the previous static blueDark ramp so dark renders
-     visually-identical to the pre-OKLCH state. */
+     entire accent family responds to the user's hue + intensity.
+     Literal L values matter — we previously used var() for them but
+     that was flaky in some Chromium builds (var-in-channel-position
+     of oklch(from …) didn't always compute). Light theme overrides
+     these whole recipes in the [data-theme="light"] block below. */
   --accent:          var(--zeros-accent);
-  --accent-hover:    oklch(from var(--zeros-accent) var(--accent-l-hover)   calc(c * 0.85) h);
-  --accent-pressed:  oklch(from var(--zeros-accent) var(--accent-l-pressed) c h);
-  --accent-soft-bg:  oklch(from var(--zeros-accent) var(--accent-l-soft-bg) calc(c * var(--accent-c-soft-bg)) h);
-  --ring-focus:      oklch(from var(--zeros-accent) var(--accent-l-ring)    calc(c * 0.70) h);
+  --accent-hover:    oklch(from var(--zeros-accent) 0.78 calc(c * 0.85) h);
+  --accent-pressed:  oklch(from var(--zeros-accent) 0.55 c h);
+  --accent-soft-bg:  oklch(from var(--zeros-accent) 0.21 calc(c * 0.45) h);
+  --ring-focus:      oklch(from var(--zeros-accent) 0.46 calc(c * 0.70) h);
 
 
   /* ═══════════════════════════════════════════════════════════
@@ -619,15 +609,16 @@
      blue, so dark text reads better than the dark-mode pairing. */
   --text-on-accent:   #FFFFFF;
 
-  /* Accent lightness anchors flip for light mode: hover becomes
-     DARKER (button getting pressed-feel on light), pressed darker
-     still, soft-bg becomes LIGHT (pale tint behind selections),
-     ring stays mid-tone. */
-  --accent-l-hover:    0.55;
-  --accent-l-pressed:  0.40;
-  --accent-l-soft-bg:  0.94;
-  --accent-l-ring:     0.55;
-  --accent-c-soft-bg:  0.20;
+  /* Accent recipes flip for light mode: hover becomes DARKER (the
+     "pressed-feel" on a light surface), pressed darker still, soft-bg
+     becomes LIGHT (pale tint behind selections), ring stays mid-tone.
+     Full recipes (not just L vars) so the relative-color syntax has
+     no nested var() in channel position — that was unreliable in
+     some Chromium builds. */
+  --accent-hover:    oklch(from var(--zeros-accent) 0.55 calc(c * 0.85) h);
+  --accent-pressed:  oklch(from var(--zeros-accent) 0.40 c h);
+  --accent-soft-bg:  oklch(from var(--zeros-accent) 0.94 calc(c * 0.20) h);
+  --ring-focus:      oklch(from var(--zeros-accent) 0.55 calc(c * 0.70) h);
 
   /* Modal backdrop softens in light mode — pure 0.5 black makes
      dialogs feel like they're fading the whole page to night. */
