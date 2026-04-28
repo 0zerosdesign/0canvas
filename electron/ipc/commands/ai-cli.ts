@@ -133,24 +133,48 @@ export const aiCliIsAuthenticated: CommandHandler = (args) => {
   return probeAuth(binary, home);
 };
 
-// ── Login trigger — opens Terminal running `<bin> login` ──
+// ── Login trigger — opens Terminal running `<bin> <args...>` ──
 //
-// `<binary> login` is the convention Claude, Codex, Gemini, and
-// most other agent CLIs follow. For agents that diverge (e.g.
-// `gh auth login`), the user still lands in Terminal with the
-// right binary name ready to hand — they can edit before Enter.
+// Most agent CLIs use `<binary> login` — but not all. OpenCode uses
+// `opencode auth login`; Gemini and Copilot use the bare binary
+// (first-run triggers the OAuth flow); Claude uses the slash-command
+// `/login` inside the TUI. The renderer passes the per-agent args
+// from the registry's `loginArgs` field (sourced from each manifest
+// entry's `loginCommand.args`) so we don't hardcode a wrong
+// convention here.
+//
+// Backwards-compatible default: when `args` is missing or empty, we
+// fall back to bare `<binary>` (the OAuth-on-launch pattern). The
+// previous hardcoded `<binary> login` was wrong for OpenCode and was
+// the reason the OpenCode Login button errored with "Failed to
+// change directory to /Users/.../login".
 //
 // This is also the target of the native adapters' synthesised
 // `terminal` auth method (see adapters/base.ts::TERMINAL_AUTH_METHOD).
 
-export const aiCliRunLogin: CommandHandler = async (args) => {
-  const binary = String(args.binary ?? "").trim();
+const ARG_ALLOWED = /^[a-zA-Z0-9_./-]+$/;
+
+export const aiCliRunLogin: CommandHandler = async (input) => {
+  const binary = String(input.binary ?? "").trim();
   if (!binary) throw new Error("ai_cli_run_login: missing binary");
   // Allow-list regex — no spaces or shell metachars escape into osascript.
   if (!/^[a-zA-Z0-9_.-]+$/.test(binary)) {
     throw new Error(`ai_cli_run_login: invalid binary name '${binary}'`);
   }
-  const script = `tell application "Terminal" to do script "${binary} login"`;
+  // Args come from the engine manifest, not user input — but we still
+  // gate them through the same allow-list so a future manifest typo
+  // can't smuggle a shell metachar into the AppleScript.
+  const rawArgs = Array.isArray(input.args) ? input.args : [];
+  const argv: string[] = [];
+  for (const a of rawArgs) {
+    if (typeof a !== "string" || a.length === 0) continue;
+    if (!ARG_ALLOWED.test(a)) {
+      throw new Error(`ai_cli_run_login: invalid arg '${a}'`);
+    }
+    argv.push(a);
+  }
+  const cmd = argv.length > 0 ? `${binary} ${argv.join(" ")}` : binary;
+  const script = `tell application "Terminal" to do script "${cmd}"`;
   await new Promise<void>((resolve, reject) => {
     const child = spawnChild("osascript", ["-e", script], {
       stdio: "ignore",

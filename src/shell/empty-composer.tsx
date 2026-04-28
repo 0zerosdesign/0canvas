@@ -24,15 +24,11 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   Check,
   ChevronDown,
-  Copy,
-  ExternalLink,
   Folder,
   FolderOpen,
   FolderPlus,
   ImagePlus,
-  RefreshCw,
   Send,
-  Terminal,
   X as XIcon,
 } from "lucide-react";
 import { Button, Textarea } from "../zeros/ui";
@@ -319,7 +315,6 @@ export function EmptyComposer() {
   // Distinct from `agent` (the single picked agent) because we
   // need the zero-installed case to render a *list* of options,
   // not just block on a null pointer.
-  const [allAgents, setAllAgents] = useState<BridgeRegistryAgent[]>([]);
   const [registryLoaded, setRegistryLoaded] = useState(false);
   const [initialize, setInitialize] = useState<InitializeResponse | null>(null);
   const [model, setModel] = useState<string | null>(sticky.model);
@@ -329,12 +324,6 @@ export function EmptyComposer() {
   const [submitting, setSubmitting] = useState(false);
   const [noAgentHint, setNoAgentHint] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
-
-  /** True when the registry came back with zero `installed: true`
-   *  agents. Drives the first-run empty-state card. Kept as a
-   *  derived value rather than its own ref so a post-install
-   *  listAgents refresh flips it back automatically. */
-  const hasNoInstalledAgent = registryLoaded && !agent;
 
   // The empty composer no longer creates a speculative session. The new
   // flow on Send is:
@@ -431,15 +420,17 @@ export function EmptyComposer() {
         // returning a cached (possibly stale) installed set.
         const list = await listAgentsFn(registryVersion > 0);
         if (cancelled) return;
-        setAllAgents(list);
-        // Default-agent selection must require BOTH installed and
-        // signed in — otherwise the empty composer auto-picks an agent
-        // the user can't actually talk to (e.g. Cursor installed but no
-        // login), then ensureSession fails with auth-required.
+        // Default-agent selection — match isRunnableAgent in agent-pill:
+        // authentication is the strongest evidence the agent works (you
+        // can't authenticate without invoking the binary), and the
+        // install probe is unreliable in packaged Electron because
+        // shell PATH inheritance often misses Homebrew / asdf / fnm /
+        // volta / npm-global shims. Trust auth, fall back to install
+        // only for no-auth-required agents.
         const runnable = list.filter(
           (a) =>
-            a.installed === true &&
-            (!a.authBinary || a.authenticated === true),
+            a.authenticated === true ||
+            (!a.authBinary && a.installed === true),
         );
         // Priority: sticky (the user's last-used agent) > configured
         // global default > first runnable. Sticky wins because the
@@ -621,19 +612,11 @@ export function EmptyComposer() {
   // Empty composer no longer creates a speculative session, so there's
   // no "Connecting to <agent>…" overlay to coordinate with. The
   // placeholder is the only visible affordance.
-  const placeholder = hasNoInstalledAgent
-    ? "Install a coding-agent CLI below to start chatting"
-    : "Plan, Build, / for commands, @ for context";
+  const placeholder = "Plan, Build, / for commands, @ for context";
 
   return (
     <div className="oc-empty-composer-wrap">
       <div className="oc-empty-composer" role="region" aria-label="Start a new chat">
-        {hasNoInstalledAgent && (
-          <NoAgentInstalledCard
-            agents={allAgents}
-            onRefresh={refreshAgents}
-          />
-        )}
         <div className="oc-agent-composer-card">
           <Textarea
             ref={textareaRef}
@@ -742,7 +725,7 @@ export function EmptyComposer() {
           />
         </div>
 
-        {noAgentHint && !hasNoInstalledAgent && (
+        {noAgentHint && (
           <div className="oc-empty-composer__hint" role="status">
             <span>
               No active agents. Install and log in to one from Settings →
@@ -763,114 +746,3 @@ export function EmptyComposer() {
   );
 }
 
-// ──────────────────────────────────────────────────────────
-// NoAgentInstalledCard — first-run "install a CLI" empty state
-// ──────────────────────────────────────────────────────────
-//
-// Rendered above the composer when the engine's registry probe
-// returned zero installed CLIs. Each row shows the install command
-// + a copy button + (where available) a docs link. One Refresh
-// button at the bottom re-probes PATH so the user doesn't have to
-// restart the app after installing.
-//
-// Deliberately no automatic "open terminal and run X" action — we
-// don't want to execute arbitrary install commands behind the
-// user's back. Copy-to-clipboard + docs link keeps every install
-// step consented to.
-
-function NoAgentInstalledCard({
-  agents,
-  onRefresh,
-}: {
-  agents: BridgeRegistryAgent[];
-  onRefresh: () => void;
-}) {
-  // Agents in manifest order (matches the settings page). Filtering
-  // is cosmetic — uninstalled ones are what we're showing, but the
-  // installed=true case shouldn't happen when this card is rendered.
-  const installable = agents.filter((a) => !!a.installHint?.command);
-
-  return (
-    <div className="oc-empty-composer__install-card" role="region" aria-label="Install a coding-agent CLI">
-      <div className="oc-empty-composer__install-head">
-        <Terminal size={14} />
-        <div className="oc-empty-composer__install-title-wrap">
-          <div className="oc-empty-composer__install-title">
-            No coding-agent CLI detected
-          </div>
-          <div className="oc-empty-composer__install-sub">
-            Zeros drives your own CLI — install at least one below, then click
-            Refresh.
-          </div>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          type="button"
-          onClick={onRefresh}
-          title="Re-probe PATH for newly-installed CLIs"
-        >
-          <RefreshCw size={12} />
-          <span>Refresh</span>
-        </Button>
-      </div>
-      <ul className="oc-empty-composer__install-list">
-        {installable.map((a) => (
-          <InstallRow key={a.id} agent={a} />
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function InstallRow({ agent }: { agent: BridgeRegistryAgent }) {
-  const [copied, setCopied] = useState(false);
-  const cmd = agent.installHint?.command ?? "";
-  const docsUrl = agent.installHint?.docsUrl;
-
-  const copy = async () => {
-    if (!cmd) return;
-    try {
-      await navigator.clipboard.writeText(cmd);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1500);
-    } catch {
-      // Clipboard API isn't available in every context; ignore.
-    }
-  };
-
-  return (
-    <li className="oc-empty-composer__install-row">
-      <div className="oc-empty-composer__install-agent">
-        <div className="oc-empty-composer__install-agent-name">{agent.name}</div>
-        <div className="oc-empty-composer__install-agent-desc">
-          {agent.description}
-        </div>
-      </div>
-      <code className="oc-empty-composer__install-cmd">{cmd}</code>
-      <div className="oc-empty-composer__install-actions">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          type="button"
-          onClick={() => void copy()}
-          title={copied ? "Copied!" : "Copy install command"}
-          aria-label="Copy install command"
-        >
-          {copied ? <Check size={12} /> : <Copy size={12} />}
-        </Button>
-        {docsUrl && (
-          <a
-            className="oc-empty-composer__install-docs"
-            href={docsUrl}
-            target="_blank"
-            rel="noreferrer noopener"
-            title="Open docs"
-          >
-            <ExternalLink size={12} />
-          </a>
-        )}
-      </div>
-    </li>
-  );
-}

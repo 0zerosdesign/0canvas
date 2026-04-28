@@ -309,6 +309,11 @@ export function toBridgeAgents(
       installed,
       launchKind: installed ? "binary" : "unavailable",
       authBinary: m.cliBinary,
+      // The Login-in-Terminal flow needs the per-agent args (e.g.
+      // OpenCode is `opencode auth login`, not `opencode login`).
+      // Surface them so the IPC handler doesn't have to duplicate the
+      // manifest.
+      loginArgs: m.loginCommand.args,
       // Surface install hints to the UI so the "no CLI detected" state
       // can tell the user exactly what to run. Cheap — a few strings
       // on every AGENT_AGENTS_LIST broadcast.

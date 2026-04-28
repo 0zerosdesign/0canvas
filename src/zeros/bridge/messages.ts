@@ -54,6 +54,12 @@ export interface BridgeRegistryAgent {
   launchKind?: "npx" | "uvx" | "binary" | "unavailable";
   /** CLI binary used by the Login-in-Terminal flow and the auth-state probe. */
   authBinary?: string;
+  /** Arguments passed to `authBinary` by the Login-in-Terminal flow.
+   *  Mirrored from the engine manifest's `loginCommand.args`. Required
+   *  for agents whose login subcommand isn't literally `login` — e.g.
+   *  OpenCode is `opencode auth login`. Empty / missing = launch the
+   *  bare binary (first-run OAuth pattern, e.g. Gemini, Copilot). */
+  loginArgs?: string[];
   /** Install command + docs URL from the engine's manifest. Populated so the
    *  composer can render a "install this CLI" hint without hardcoding
    *  install strings in the UI. */

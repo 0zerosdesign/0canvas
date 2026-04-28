@@ -96,16 +96,21 @@ export function AgentPill({
   }, [open, sessions.listAgents]);
 
   const label = selectedName ?? selectedId ?? "Agent";
-  // An agent is "runnable" only when it's both installed AND signed in
-  // (when sign-in is required). Previously we gated on `installed` alone,
-  // which made Droid / Gemini show green even when not signed in —
-  // out of sync with the Settings → Agents panel that uses auth state.
-  // Agents with no `authBinary` need no sign-in (none today, but kept
-  // for forward compat).
+  // An agent is "runnable" if the user can talk to it right now.
+  //
+  // Trust authentication as the strongest signal: if the engine reports
+  // `authenticated === true`, the binary obviously works (you can't
+  // authenticate without invoking it). PATH-based install probes are
+  // unreliable in packaged macOS apps — Homebrew, asdf, fnm, volta, and
+  // npm-global shims often live on directories that fix-path doesn't
+  // hydrate, which made every agent show "Sign in" even after re-login.
+  //
+  // Fallback for no-auth-required agents: trust the install probe.
+  // (None today, but kept for forward compat with shell-style agents.)
   const isRunnableAgent = (a: BridgeRegistryAgent): boolean => {
-    if (a.installed !== true) return false;
-    if (!a.authBinary) return true;
-    return a.authenticated === true;
+    if (a.authenticated === true) return true;
+    if (!a.authBinary) return a.installed === true;
+    return false;
   };
   const visible = (agents ?? [])
     .filter((a) => isEnabled(a.id))

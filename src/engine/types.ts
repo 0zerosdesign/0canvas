@@ -55,6 +55,13 @@ export interface EnrichedRegistryAgent extends RegistryAgent {
   installed: boolean;
   launchKind: "npx" | "uvx" | "binary" | "unavailable";
   authBinary?: string;
+  /** Arguments to pass to `authBinary` for the Login-in-Terminal flow.
+   *  Sourced from the manifest's `loginCommand.args` so the renderer
+   *  doesn't have to hardcode "login" — agents like OpenCode actually
+   *  use `auth login`, and a hardcoded `<bin> login` runs the wrong
+   *  subcommand. Empty array = run the bare binary (Gemini, Copilot:
+   *  first launch triggers the OAuth flow). */
+  loginArgs?: string[];
   /** User-facing install command + docs URL. Rendered by the empty
    *  composer's "No agent CLI detected" state so the user can
    *  install the CLI without leaving the app. */

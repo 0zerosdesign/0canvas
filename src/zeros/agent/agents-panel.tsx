@@ -339,7 +339,15 @@ function AgentRow({
     setLoginState("opening");
     setLoginError(null);
     try {
-      await nativeInvoke("ai_cli_run_login", { binary: agent.authBinary });
+      // Pass `loginArgs` from the registry so the IPC runs the right
+      // subcommand. Without this, OpenCode's `auth login` becomes
+      // `opencode login` and the CLI tries to cd into a folder called
+      // "login". Other agents fall through to the bare-binary path
+      // (Gemini / Copilot first-run OAuth).
+      await nativeInvoke("ai_cli_run_login", {
+        binary: agent.authBinary,
+        args: agent.loginArgs ?? [],
+      });
       setLoginState("idle");
       // Auth markers are only written once the user finishes the flow
       // in Terminal — the focus-refresh hook catches that, but give it
