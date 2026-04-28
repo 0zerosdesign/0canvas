@@ -30,17 +30,27 @@
       { "value": "gpt-5.3-codex", "label": "GPT-5.3 Codex (via Cursor)" },
       { "value": "gpt-5.3-codex-fast", "label": "GPT-5.3 Codex Fast (via Cursor)" }
     ],
-    "amp": [
-      { "value": "default", "label": "Amp default" }
-    ],
     "augment": [
       { "value": "default", "label": "Auggie default" }
+    ],
+    "opencode": [
+      { "value": "opencode/big-pickle", "label": "Big Pickle", "badge": "FREE" },
+      { "value": "opencode/minimax-m2.5-free", "label": "MiniMax M2.5", "badge": "FREE" },
+      { "value": "opencode/nemotron-3-super-free", "label": "Nemotron 3 Super", "badge": "FREE" },
+      { "value": "opencode/gpt-5-nano", "label": "GPT-5 Nano (free)", "badge": "FREE" },
+      { "value": "anthropic/claude-sonnet-4-7", "label": "Claude Sonnet 4.7" },
+      { "value": "anthropic/claude-opus-4-7", "label": "Claude Opus 4.7" },
+      { "value": "openai/gpt-5.5", "label": "GPT-5.5" },
+      { "value": "openrouter/moonshot/kimi-k2", "label": "Kimi K2", "badge": "via OpenRouter" },
+      { "value": "openrouter/qwen/qwen3-coder", "label": "Qwen3 Coder", "badge": "via OpenRouter" },
+      { "value": "ollama/qwen3-coder", "label": "Qwen3 Coder (local)", "badge": "Ollama" }
     ]
   },
   "modelEnvVars": {
     "claude": "ANTHROPIC_MODEL",
     "codex": "OPENAI_MODEL",
     "gemini": "GEMINI_MODEL",
-    "cursor": "CURSOR_MODEL"
+    "cursor": "CURSOR_MODEL",
+    "opencode": "OPENCODE_MODEL"
   }
 }

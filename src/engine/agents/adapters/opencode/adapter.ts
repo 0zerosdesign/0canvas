@@ -230,13 +230,36 @@ export class OpencodeAdapter implements AgentAdapter {
         };
       }
 
+      // Resolve the active model selection. The composer's model
+      // pill writes the chosen value to state.env.OPENCODE_MODEL
+      // (per the modelEnvVars entry in catalogs/models-v1.json).
+      // Format is `providerID/modelID`, where modelID may itself
+      // contain a slash for nested namespaces (e.g.
+      // `openrouter/moonshot/kimi-k2` = providerID `openrouter`,
+      // modelID `moonshot/kimi-k2`). Split on the FIRST slash.
+      const modelSelector = state.env?.OPENCODE_MODEL ?? null;
+      let providerID: string | undefined;
+      let modelID: string | undefined;
+      if (modelSelector) {
+        const idx = modelSelector.indexOf("/");
+        if (idx > 0) {
+          providerID = modelSelector.slice(0, idx);
+          modelID = modelSelector.slice(idx + 1);
+        }
+      }
+
       // promptAsync returns immediately and the bus delivers the
       // streaming reply. We've already subscribed to the bus in
       // bootSession, so the translator picks up everything from
       // here.
       await state.client!.session.prompt({
         path: { id: state.opencodeSessionId! },
-        body: { parts } as never,
+        body: {
+          parts,
+          ...(providerID && modelID
+            ? { providerID, modelID }
+            : {}),
+        } as never,
       } as never);
 
       // Wait for the translator to see a session.idle / status:idle.
@@ -510,25 +533,34 @@ export class OpencodeAdapter implements AgentAdapter {
     } as never);
   }
 
-  /** Stub for the design-tools MCP injection promised by §2.10.4 of
-   *  the roadmap. The engine's MCP server URL isn't yet exposed
-   *  through AgentAdapterContext (would require a small ctx
-   *  extension). When it lands, this method becomes:
-   *
-   *    await state.client!.mcp.add({
-   *      body: {
-   *        name: "zeros-design",
-   *        config: { type: "remote", url: this.ctx.zerosMcpUrl }
-   *      }
-   *    });
-   *
-   *  For now we log a one-time hint and return — OpenCode runs
-   *  fine without MCP injection; tool calls just don't include
-   *  Zeros design tools. */
+  /** §2.10.4 — inject every MCP server registered on the gateway
+   *  (today: just `Zeros` with its design-tools endpoint) into the
+   *  fresh OpenCode session via POST /mcp. Without this, OpenCode
+   *  runs with an empty MCP set because we set OPENCODE_CONFIG_CONTENT
+   *  to "{}" at boot — neutering the user's `~/.config/opencode/
+   *  opencode.json` also drops their MCP entries, so we have to
+   *  re-add ours dynamically. Per-server failures are logged but
+   *  don't abort session boot — a working OpenCode session without
+   *  Zeros tools beats a failed boot. */
   private async maybeInjectDesignToolsMcp(
-    _state: OpencodeSessionState,
+    state: OpencodeSessionState,
   ): Promise<void> {
-    // Intentional stub — see comment above.
+    if (!state.client) return;
+    for (const server of this.ctx.mcpServers) {
+      try {
+        await state.client.mcp.add({
+          body: {
+            name: server.name,
+            config: { type: "remote", url: server.url },
+          },
+        } as never);
+      } catch (err) {
+        this.ctx.emit.onAgentStderr(
+          AGENT_ID,
+          `[opencode] mcp.add(${server.name}) failed: ${String(err)}`,
+        );
+      }
+    }
   }
 
   /** Long-lived SSE drain. Runs until the AbortController is fired
