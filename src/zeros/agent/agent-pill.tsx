@@ -16,7 +16,8 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Bot, ChevronDown, Check, Loader2, ArrowUpRight } from "lucide-react";
-import { useAgentSessions, useWarmAgentIds } from "./sessions-provider";
+import { useAgentSessions } from "./sessions-provider";
+import { useWarmAgentIds } from "./sessions-store";
 import { useEnabledAgents } from "./enabled-agents";
 import {
   loadAgents,

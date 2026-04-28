@@ -77,9 +77,10 @@ import { findMatchingPolicy } from "./policies";
  *  multi-hour session without scrolling. */
 const HYDRATE_WINDOW = 200;
 
-// MAX_MESSAGES_PER_CHAT is re-exported for any caller that needs the
-// cap (display threshold, etc.). The store enforces it on writes.
-export { MAX_MESSAGES_PER_CHAT };
+// (MAX_MESSAGES_PER_CHAT no longer re-exported — Track 4.C: Vite Fast
+// Refresh requires this file to export only React components / hooks
+// to keep its HMR boundary clean. Consumers import the constant
+// directly from `./sessions-store`.)
 
 /** User-visible ceiling for session creation. Single attempt — if it
  *  fails we surface the classified failure rather than loop. 10s gives
@@ -1237,10 +1238,13 @@ export function useAgentSessions(): SessionsCtx {
   return ctx;
 }
 
-// Re-export the warm-agent hook so consumers don't have to reach into
-// the store module directly.
-export { useWarmAgentIds } from "./sessions-store";
+// `useWarmAgentIds` lives in ./sessions-store and consumers import it
+// from there directly. We don't re-export it — Track 4.C: a non-
+// component / non-hook re-export inside a Provider module breaks
+// Vite's Fast Refresh boundary, forcing a full reload on every edit.
 
 // Re-export the AgentMessage type so consumers don't have to reach into
-// the older hook file.
+// the older hook file. (Type-only `export type` is erased at compile
+// time; Vite's Fast Refresh treats it as no export at all, so it's
+// safe to keep here.)
 export type { AgentMessage };
