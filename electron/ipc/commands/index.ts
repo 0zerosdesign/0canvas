@@ -30,6 +30,7 @@ import {
 } from "./secrets";
 import { listEnvFiles, saveEnvFile } from "./env-files";
 import { loadTodoFile, saveTodoFile } from "./todo";
+import { agentContextFiles } from "./agent-context";
 import { pickCssFile, readCssFile, writeCssFile } from "./css-files";
 import { skillsList } from "./skills";
 import { discoverLocalhostServices } from "./localhost";
@@ -136,6 +137,7 @@ export function registerAllCommands(): void {
   setCommand("save_env_file", saveEnvFile);
   setCommand("load_todo_file", loadTodoFile);
   setCommand("save_todo_file", saveTodoFile);
+  setCommand("agent_context_files", agentContextFiles);
   setCommand("pick_css_file", pickCssFile);
   setCommand("read_css_file", readCssFile);
   setCommand("write_css_file", writeCssFile);

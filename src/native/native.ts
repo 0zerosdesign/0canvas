@@ -152,6 +152,38 @@ async function gitInvoke<T>(cmd: string, args?: Record<string, unknown>): Promis
 
 // ── CSS file picker / read / write (Themes page two-way sync) ──
 
+// ── Agent project-context discovery — Stage 9 §2.9.5 ──
+
+export type AgentContextFile = {
+  path: string;
+  filename: string;
+  size: number;
+  /** mtime in epoch milliseconds; useful for "last edited X ago" UI. */
+  mtime: number;
+  /** First ~200 chars of the file. Empty for binary files. */
+  preview: string;
+  scope: "project" | "parent" | "user";
+};
+
+export type AgentContextResult = {
+  agentId: string;
+  cwd: string;
+  files: AgentContextFile[];
+};
+
+/** List the project-context files an agent is loading at this cwd —
+ *  CLAUDE.md / AGENTS.md / GEMINI.md / .cursor/rules/* per agent.
+ *  Walks cwd → parents → home. Read-only; binary-safe. */
+export async function loadAgentContextFiles(args: {
+  cwd: string;
+  agentId: string;
+}): Promise<AgentContextResult> {
+  if (!isNativeRuntime()) {
+    return { agentId: args.agentId, cwd: args.cwd, files: [] };
+  }
+  return nativeInvoke<AgentContextResult>("agent_context_files", args);
+}
+
 export type CssFile = {
   path: string;
   name: string;

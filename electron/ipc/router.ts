@@ -97,6 +97,7 @@ const commandTable: Record<string, CommandHandler> = {
   save_env_file: notImpl("save_env_file", 5),
   load_todo_file: notImpl("load_todo_file", 5),
   save_todo_file: notImpl("save_todo_file", 5),
+  agent_context_files: notImpl("agent_context_files", 9),
   pick_css_file: notImpl("pick_css_file", 5),
   read_css_file: notImpl("read_css_file", 5),
   write_css_file: notImpl("write_css_file", 5),

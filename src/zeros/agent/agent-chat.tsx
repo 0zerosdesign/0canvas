@@ -63,6 +63,7 @@ import {
   ContextPill,
 } from "./composer-pills";
 import { AgentPill } from "./agent-pill";
+import { ProjectContextChip } from "./project-context-chip";
 import { SummaryHandoffPill } from "./summary-handoff-pill";
 import { ComposerStateChip } from "./composer-state-chip";
 import { useAgentsSnapshot } from "./agents-cache";
@@ -883,6 +884,10 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
             </span>
           </div>
         </div>
+        <ProjectContextChip
+          agentId={session.agentId ?? chatThread?.agentId ?? null}
+          cwd={chatFolder ?? null}
+        />
         {headerActions}
       </header>
 

@@ -3100,6 +3100,134 @@ ${S} .oc-agent-subheader-agent + .oc-agent-subheader-status:not(:empty)::before 
   content: "·"; margin: 0 2px 0 -2px; color: var(--text-muted);
 }
 ${S} .oc-agent-subheader-status:empty { display: none; }
+
+/* ── Project-context chip — Phase 1 §2.9.5 ─────────────── */
+/* Sits in the chat subheader. Compact pill with file count;
+   expands a popover listing each file with size + preview. */
+${S} .oc-agent-context-chip-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+${S} .oc-agent-context-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3px 7px;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+${S} .oc-agent-context-chip:hover {
+  color: var(--text-primary);
+  background: var(--surface-2);
+}
+${S} .oc-agent-context-chip[aria-expanded="true"] {
+  color: var(--text-primary);
+  background: var(--surface-2);
+}
+${S} .oc-agent-context-chip-caret {
+  opacity: 0.5;
+  margin-left: 1px;
+}
+${S} .oc-agent-context-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  max-height: 60vh;
+  overflow: auto;
+  padding: 4px 0;
+  background: var(--surface-1, var(--surface-2));
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  font-size: 12px;
+}
+${S} .oc-agent-context-popover-head {
+  padding: 6px 10px 4px;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 4px;
+}
+${S} .oc-agent-context-popover-body {
+  display: flex;
+  flex-direction: column;
+}
+${S} .oc-agent-context-file {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+${S} .oc-agent-context-file:last-child {
+  border-bottom: none;
+}
+${S} .oc-agent-context-file-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+${S} .oc-agent-context-file-name {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+${S} .oc-agent-context-file-scope {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+${S} .oc-agent-context-file-size {
+  margin-left: auto;
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+${S} .oc-agent-context-file-open {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 2px 4px;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+}
+${S} .oc-agent-context-file-open:hover {
+  color: var(--text-primary);
+  background: var(--surface-2);
+}
+${S} .oc-agent-context-file-path {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font-mono, monospace);
+  margin-bottom: 4px;
+}
+${S} .oc-agent-context-file-preview {
+  font-size: 11px;
+  color: var(--text-secondary, var(--text-muted));
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 60px;
+  overflow: hidden;
+  position: relative;
+  padding-bottom: 4px;
+}
+
 ${S} .oc-agent-body {
   flex: 1; min-height: 0; overflow-y: auto;
   padding: 12px;
