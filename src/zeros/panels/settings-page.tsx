@@ -1200,6 +1200,42 @@ function AppearancePanel() {
         </div>
       </div>
 
+      <div className="oc-settings-section-title oc-settings-section-title--spaced">
+        Brand
+      </div>
+      <div className="oc-ai-card">
+        <div className="oc-appearance-row">
+          <div className="oc-appearance-row__label">
+            <div className="oc-ai-card-title">Accent</div>
+            <p className="oc-ai-card-hint">
+              Pick the brand color used for buttons, focus rings,
+              links, and selection. Lightness and saturation are
+              fixed so every hue stays in a tasteful range — you
+              can't pick an unreadable one.
+            </p>
+          </div>
+          <div className="oc-appearance-row__control">
+            <input
+              type="range"
+              min={0}
+              max={360}
+              step={1}
+              value={prefs.accent}
+              onChange={(e) =>
+                setPrefs({ accent: Number(e.target.value) })
+              }
+              className="oc-appearance-slider oc-appearance-slider--hue"
+              aria-label="Brand accent hue"
+            />
+            <span
+              className="oc-appearance-swatch"
+              style={{ background: "var(--zeros-accent)" }}
+              aria-hidden
+            />
+          </div>
+        </div>
+      </div>
+
       <div className="oc-appearance-reset">
         <Button
           variant="ghost"

@@ -49,6 +49,10 @@ function readStoredPrefs(): AppearancePrefs {
         typeof parsed.intensity === "number" && Number.isFinite(parsed.intensity)
           ? parsed.intensity
           : DEFAULT_PREFS.intensity,
+      accent:
+        typeof parsed.accent === "number" && Number.isFinite(parsed.accent)
+          ? parsed.accent
+          : DEFAULT_PREFS.accent,
       reduceTransparency:
         typeof parsed.reduceTransparency === "boolean"
           ? parsed.reduceTransparency

@@ -21,6 +21,8 @@
 // ──────────────────────────────────────────────────────────
 
 import {
+  ACCENT_CHROMA,
+  ACCENT_LIGHTNESS,
   NEUTRAL_PALETTES,
   TINT_CHROMA,
   TINT_LIGHTNESS,
@@ -49,10 +51,12 @@ export function applyTheme(
 
   const intensity = clamp01(prefs.intensity);
   const hue = wrapHue(prefs.hue);
+  const accentHue = wrapHue(prefs.accent);
 
   const tintColor = `oklch(${TINT_LIGHTNESS} ${TINT_CHROMA} ${hue.toFixed(2)})`;
   const surfaceMix = (intensity * palette.maxSurfaceTintPct).toFixed(3);
   const borderMix = (intensity * palette.maxBorderTintPct).toFixed(3);
+  const accent = `oklch(${ACCENT_LIGHTNESS} ${ACCENT_CHROMA} ${accentHue.toFixed(2)})`;
 
   const variantChanged = lastVariant !== null && lastVariant !== variant;
   if (variantChanged) {
@@ -71,6 +75,7 @@ export function applyTheme(
   root.style.setProperty("--zeros-tint-color", tintColor);
   root.style.setProperty("--zeros-tint-mix-surface", `${surfaceMix}%`);
   root.style.setProperty("--zeros-tint-mix-border", `${borderMix}%`);
+  root.style.setProperty("--zeros-accent", accent);
 
   if (variantChanged && typeof window !== "undefined") {
     window.requestAnimationFrame(() => {
@@ -89,6 +94,7 @@ export function applyTheme(
       calls: number;
       lastTintColor: string;
       lastSurfaceMix: string;
+      lastAccent: string;
       lastVariant: string;
     };
     const w = window as unknown as { __zerosThemeDiag?: Diag };
@@ -96,6 +102,7 @@ export function applyTheme(
       calls: (w.__zerosThemeDiag?.calls ?? 0) + 1,
       lastTintColor: tintColor,
       lastSurfaceMix: `${surfaceMix}%`,
+      lastAccent: accent,
       lastVariant: variant,
     };
   }
