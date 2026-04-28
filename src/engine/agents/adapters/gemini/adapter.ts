@@ -272,6 +272,19 @@ export class GeminiAdapter implements AgentAdapter {
 
   private async spawnPty(state: GeminiSessionState): Promise<void> {
     const nodePty = (await import("node-pty")) as typeof import("node-pty");
+    // Auth-method auto-detect. Gemini headless / sub-shell flows refuse
+    // to start unless one of the three auth env vars below is set,
+    // even when ~/.gemini/oauth_creds.json exists. We default-on
+    // GOOGLE_GENAI_USE_GCA (Google account OAuth — the path used by
+    // Gemini AI Pro/Ultra subscriptions) when neither GEMINI_API_KEY
+    // (AI Studio) nor GOOGLE_GENAI_USE_VERTEXAI (enterprise GCP) is
+    // already set in the parent environment, so the common case "user
+    // has a Gemini AI plan and ran `gemini` once to log in" just works.
+    const parentEnv = process.env as Record<string, string | undefined>;
+    const userPickedAuth =
+      !!parentEnv.GEMINI_API_KEY ||
+      !!parentEnv.GOOGLE_GENAI_USE_VERTEXAI ||
+      !!parentEnv.GOOGLE_GENAI_USE_GCA;
     const pty = nodePty.spawn("gemini", [], {
       name: "xterm-256color",
       cols: 120,
@@ -286,6 +299,7 @@ export class GeminiAdapter implements AgentAdapter {
         GEMINI_TELEMETRY_ENABLED: "true",
         GEMINI_TELEMETRY_TARGET: "local",
         GEMINI_TELEMETRY_OUTFILE: state.telemetryPath,
+        ...(userPickedAuth ? {} : { GOOGLE_GENAI_USE_GCA: "true" }),
       } as Record<string, string>,
     });
 

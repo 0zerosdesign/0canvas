@@ -185,8 +185,12 @@ export const AGENT_MANIFEST: AgentManifestEntry[] = [
       docsUrl: "https://docs.factory.ai",
     },
     authProbe: {
+      // Modern Droid (v0.105+) writes credentials to ~/.factory/auth.v2.file
+      // (binary token blob) plus auth.v2.key (encryption key) — both 0o600.
+      // The previous `config.json` probe was for an older layout that no
+      // longer exists, so the dot stayed gray after a successful login.
       kind: "file",
-      paths: ["~/.factory/config.json"],
+      paths: ["~/.factory/auth.v2.file"],
     },
     loginCommand: { binary: "droid", args: ["login"] },
     createAdapter: (ctx) => createDroidAdapter(ctx),
