@@ -43,6 +43,34 @@
 :root {
 
   /* ═══════════════════════════════════════════════════════════
+     APPEARANCE RUNTIME — set by the appearance store on mount
+     ───────────────────────────────────────────────────────────
+     The user's hue + intensity choices land here as OKLCH. These
+     three vars are the only theme inputs; every accent-derived
+     token below resolves through them via `oklch(from …)` or
+     `color-mix()`. JS overrides --zeros-accent on every prefs
+     change; the values shipped here are fallbacks that match the
+     pre-OKLCH static accent (#3B9EFF) so first paint is correct
+     even before JS runs.
+
+     See src/zeros/appearance/{prefs,derive,store}.ts.
+     ═══════════════════════════════════════════════════════════ */
+
+  --zeros-hue:       252.9;
+  --zeros-intensity: 1;
+  --zeros-accent:    oklch(0.665 0.150 252.9);
+
+  /* Per-theme lightness anchors for accent derivatives. The chroma
+     multipliers stay theme-agnostic (chroma in OKLCH stays roughly
+     constant across light/dark) — only L flips. The light overrides
+     live in the [data-theme="light"] block below. */
+  --accent-l-hover:    0.78;
+  --accent-l-pressed:  0.55;
+  --accent-l-soft-bg:  0.21;
+  --accent-l-ring:     0.46;
+  --accent-c-soft-bg:  0.45;
+
+  /* ═══════════════════════════════════════════════════════════
      INTERNAL PRIMITIVES — not for component use
      ───────────────────────────────────────────────────────────
      Ramps drawn from Radix Colors dark scales. Components must
@@ -152,11 +180,17 @@
        5. Selection highlight bg        (--accent-soft-bg)
      ═══════════════════════════════════════════════════════════ */
 
-  --accent:          var(--blue-10);
-  --accent-hover:    var(--blue-11);
-  --accent-pressed:  var(--blue-8);
-  --accent-soft-bg:  var(--blue-3);
-  --ring-focus:      var(--blue-7);
+  /* Derived from --zeros-accent via OKLCH relative-color syntax so the
+     entire accent family responds to the user's hue + intensity. L
+     anchors live in --accent-l-* (themed per data-theme so light mode
+     can flip "hover = lighter" → "hover = darker"). Default L values
+     mirror the previous static blueDark ramp so dark renders
+     visually-identical to the pre-OKLCH state. */
+  --accent:          var(--zeros-accent);
+  --accent-hover:    oklch(from var(--zeros-accent) var(--accent-l-hover)   calc(c * 0.85) h);
+  --accent-pressed:  oklch(from var(--zeros-accent) var(--accent-l-pressed) c h);
+  --accent-soft-bg:  oklch(from var(--zeros-accent) var(--accent-l-soft-bg) calc(c * var(--accent-c-soft-bg)) h);
+  --ring-focus:      oklch(from var(--zeros-accent) var(--accent-l-ring)    calc(c * 0.70) h);
 
 
   /* ═══════════════════════════════════════════════════════════
@@ -174,14 +208,17 @@
   --text-link:     var(--accent);
 
   --tint-info-soft:      var(--blue-3);
-  --tint-success-weak:   rgba(61, 214, 140, 0.08);
+  /* Status weak/border tints: derived from each status text color so the
+     tint flips automatically when the light palette redefines the
+     base. Keeps the alpha layer (8% / 32%) consistent across themes. */
+  --tint-success-weak:   color-mix(in srgb, var(--text-success) 8%, transparent);
   --tint-success-soft:   var(--green-2);
-  --tint-success-border: rgba(61, 214, 140, 0.32);
-  --tint-warning-weak:   rgba(255, 202, 22, 0.08);
+  --tint-success-border: color-mix(in srgb, var(--text-success) 32%, transparent);
+  --tint-warning-weak:   color-mix(in srgb, var(--text-warning) 8%, transparent);
   --tint-warning-soft:   var(--amber-2);
-  --tint-warning-border: rgba(255, 202, 22, 0.32);
+  --tint-warning-border: color-mix(in srgb, var(--text-warning) 32%, transparent);
   --tint-critical-soft:  var(--red-2);
-  --tint-critical-border:rgba(255, 149, 146, 0.32);
+  --tint-critical-border:color-mix(in srgb, var(--text-critical) 32%, transparent);
 
   /* Status connecting (WebSocket handshake, etc.) — Zeros-specific. */
   --text-connecting: var(--sky-11);
@@ -196,15 +233,19 @@
      possible — tints are for subtle secondary feedback.
      ═══════════════════════════════════════════════════════════ */
 
-  --tint-hover:          rgba(255, 255, 255, 0.04);
-  --tint-hover-strong:   rgba(255, 255, 255, 0.07);
-  --tint-active:         rgba(255, 255, 255, 0.10);
-  --tint-border-hover:   rgba(255, 255, 255, 0.15);
+  /* State overlays — derived from --text-primary so they invert
+     automatically per theme: white-on-dark in dark mode becomes
+     black-on-light in light mode without per-tint overrides. */
+  --tint-hover:          color-mix(in srgb, var(--text-primary) 4%,  transparent);
+  --tint-hover-strong:   color-mix(in srgb, var(--text-primary) 7%,  transparent);
+  --tint-active:         color-mix(in srgb, var(--text-primary) 10%, transparent);
+  --tint-border-hover:   color-mix(in srgb, var(--text-primary) 15%, transparent);
 
-  /* Accent tints (for badges on surface-0/1 and soft emphasis) */
-  --tint-accent-weak:    rgba(59, 158, 255, 0.06);
-  --tint-accent-soft:    rgba(59, 158, 255, 0.12);
-  --tint-accent-border:  rgba(59, 158, 255, 0.32);
+  /* Accent tints — derive from --accent so they respond to user hue
+     and theme together. Was rgba(59,158,255,…) hardcoded blue. */
+  --tint-accent-weak:    color-mix(in srgb, var(--accent) 6%,  transparent);
+  --tint-accent-soft:    color-mix(in srgb, var(--accent) 12%, transparent);
+  --tint-accent-border:  color-mix(in srgb, var(--accent) 32%, transparent);
 
   /* Modal / command-palette backdrops */
   --backdrop-weak:   rgba(0, 0, 0, 0.50);
@@ -508,6 +549,117 @@
   --utility-variable:      var(--text-info);      /* variable (blue-11) */
   --utility-component:     var(--accent-hover);   /* component (blue-11) */
   --utility-animation:     var(--text-warning);   /* animation (amber) */
+}
+
+
+/* ============================================================
+   LIGHT THEME — overrides for [data-theme="light"]
+   ------------------------------------------------------------
+   The :root block above is the dark theme (it ships as the
+   default so first paint is correct even before JS runs). Light
+   mode overrides only the *primitives* and the few semantic
+   tokens whose meaning flips between modes (state-overlay
+   colors, accent lightness anchors). Every semantic token that
+   composes from these primitives — surfaces, borders, text,
+   tints — automatically flips with no extra wiring.
+
+   Slate values are Radix slate (light scale). Status text colors
+   are Radix red/green/amber-11 light variants.
+   ============================================================ */
+
+:root[data-theme="light"] {
+
+  /* Slate (light) — neutral ramp with an inverted brightness order:
+     in light mode the higher tiers are LIGHTER variants of white,
+     while text colors (grey-11, grey-12) become near-black. */
+  --grey-0:  #FFFFFF;   /* pure floor (under canvas) */
+  --grey-1:  #FBFCFD;   /* canvas / surface-0 */
+  --grey-2:  #F8F9FA;   /* surface-1 (cards) */
+  --grey-3:  #F1F3F5;   /* surface-2 (hover) */
+  --grey-4:  #ECEEF0;   /* surface-3 (selected) */
+  --grey-5:  #E6E8EB;
+  --grey-6:  #DFE3E6;
+  --grey-7:  #D7DBDF;
+  --grey-8:  #C1C8CD;   /* text-disabled (3.2:1 on white) */
+  --grey-9:  #889096;
+  --grey-10: #7E868C;   /* text-placeholder */
+  --grey-11: #687076;   /* text-muted */
+  --grey-12: #11181C;   /* text-primary (~14:1 on white) */
+
+  /* Blue ramp (light) — for static --text-info/--text-link/syntax
+     consumers that haven't migrated to --zeros-accent yet (Phase 3
+     sweeps these). */
+  --blue-3:  #E1F0FF;
+  --blue-4:  #CEE7FE;
+  --blue-7:  #5EB1EF;
+  --blue-8:  #006ADC;
+  --blue-9:  #006ADC;
+  --blue-10: #0091FF;
+  --blue-11: #006ADC;
+
+  /* Status (light) — Radix red/green/amber light scales. */
+  --red-2:   #FFEFEF;
+  --red-11:  #CD2B31;
+  --green-2: #E9F9EE;
+  --green-11:#18794E;
+  --amber-2: #FFF7C2;
+  --amber-11:#AB6400;
+  --sky-11:  #006ADC;
+
+  /* On-accent text — accent fill on light mode is a saturated mid
+     blue, so dark text reads better than the dark-mode pairing. */
+  --text-on-accent:   #FFFFFF;
+
+  /* Accent lightness anchors flip for light mode: hover becomes
+     DARKER (button getting pressed-feel on light), pressed darker
+     still, soft-bg becomes LIGHT (pale tint behind selections),
+     ring stays mid-tone. */
+  --accent-l-hover:    0.55;
+  --accent-l-pressed:  0.40;
+  --accent-l-soft-bg:  0.94;
+  --accent-l-ring:     0.55;
+  --accent-c-soft-bg:  0.20;
+
+  /* Modal backdrop softens in light mode — pure 0.5 black makes
+     dialogs feel like they're fading the whole page to night. */
+  --backdrop-weak:   rgba(15, 17, 20, 0.30);
+  --backdrop-strong: rgba(15, 17, 20, 0.45);
+
+  /* Inset hairline + glass shadows: keep dark-tinted in light mode
+     too so cards still feel "pressed in" rather than glowing. The
+     text-primary basis means dark-on-light here. */
+
+  /* Elevation shadows — light mode wants softer, less heavy
+     shadows because the surface contrast is much narrower. */
+  --shadow-sm: 0 1px 2px 0 rgba(15, 17, 20, 0.08);
+  --shadow-md: 0 4px 6px -1px rgba(15, 17, 20, 0.10),
+               0 2px 4px -1px rgba(15, 17, 20, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(15, 17, 20, 0.10),
+               0 4px  6px -2px rgba(15, 17, 20, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(15, 17, 20, 0.10),
+               0 10px 10px -5px rgba(15, 17, 20, 0.04);
+}
+
+
+/* ============================================================
+   THEME-SWAP TRANSITION SUPPRESSION
+   ------------------------------------------------------------
+   When the user flips between light/dark/high-contrast we want
+   the new colors to land instantly — animating every background
+   and border across the entire app at once looks jittery and
+   slow. The appearance store adds .zeros-no-transitions to
+   <html> for one frame on every applyTheme call, then removes
+   it via requestAnimationFrame. Hue/intensity slider drags
+   benefit too: each frame's colors land immediately rather than
+   chasing the slider with a 120ms transition tail.
+   ============================================================ */
+
+.zeros-no-transitions,
+.zeros-no-transitions *,
+.zeros-no-transitions *::before,
+.zeros-no-transitions *::after {
+  transition: none !important;
+  animation-duration: 0s !important;
 }
 
 

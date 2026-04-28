@@ -71,9 +71,24 @@ export function installAppMenu(): void {
     },
 
     // ── View ──────────────────────────────────────────────
+    //
+    // Standard Electron role accelerators — these work in both dev
+    // and packaged builds. We expose DevTools in production too: the
+    // user is the developer here (designers + engineers debugging
+    // their own UI), and Inspect Element is core to that workflow.
     {
       label: "View",
-      submenu: [{ role: "togglefullscreen" }],
+      submenu: [
+        { role: "reload" },              // Cmd+R
+        { role: "forceReload" },         // Cmd+Shift+R
+        { role: "toggleDevTools" },      // Cmd+Alt+I (Cmd+Opt+I)
+        { type: "separator" },
+        { role: "resetZoom" },           // Cmd+0
+        { role: "zoomIn" },              // Cmd+=
+        { role: "zoomOut" },             // Cmd+-
+        { type: "separator" },
+        { role: "togglefullscreen" },    // Ctrl+Cmd+F
+      ],
     },
 
     // ── Window ────────────────────────────────────────────

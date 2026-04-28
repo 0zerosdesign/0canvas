@@ -48,6 +48,7 @@ import {
   startWatchdog,
 } from "./sidecar";
 import { installAppMenu } from "./menu";
+import { setupContextMenu } from "./context-menu";
 import { setupDeepLink } from "./deep-link";
 import { setupUpdater } from "./updater";
 
@@ -151,6 +152,10 @@ function createMainWindow(): BrowserWindow {
     void win.loadFile(path.join(__dirname, "..", "dist", "index.html"));
   }
 
+  // Right-click → Inspect Element + standard text edit actions.
+  // Works in dev and prod identically.
+  setupContextMenu(win);
+
   return win;
 }
 
@@ -179,9 +184,12 @@ function setupDockBrand(): void {
   const iconPath = app.isPackaged
     ? path.join(process.resourcesPath, "..", "..", "Resources", "icon.icns")
     : (() => {
-        const dev = path.join(iconsDir, "icon-dev.png");
-        return require("node:fs").existsSync(dev)
-          ? dev
+        const fs = require("node:fs");
+        const devIcns = path.join(iconsDir, "icon-dev.icns");
+        if (fs.existsSync(devIcns)) return devIcns;
+        const devPng = path.join(iconsDir, "icon-dev.png");
+        return fs.existsSync(devPng)
+          ? devPng
           : path.join(iconsDir, "icon.png");
       })();
   try {

@@ -40,6 +40,7 @@ import {
   dbReplaceAllChats,
   type ChatRowWire,
 } from "./zeros/agent/agent-history-client";
+import { AppearanceProvider } from "./zeros/appearance/provider";
 import "./shell/app-shell.css";
 
 const CHATS_STORAGE_KEY = "chats-v1";
@@ -693,22 +694,24 @@ function ShellRouter() {
 
 export function AppShell() {
   return (
-    <WorkspaceProvider>
-      <BridgeProvider>
-        <AutoConnect>
-          <AgentSessionsProvider>
-            <ForceDesignPageOnBoot />
-            <HydrateAiApiKey />
-            <LoadModelCatalogOnBoot />
-            <PreWarmAgents />
-            <ReloadOnProjectChange />
-            <ChatsPersistence />
-            <SelectionSync />
-            <ShellRouter />
-          </AgentSessionsProvider>
-        </AutoConnect>
-      </BridgeProvider>
-    </WorkspaceProvider>
+    <AppearanceProvider>
+      <WorkspaceProvider>
+        <BridgeProvider>
+          <AutoConnect>
+            <AgentSessionsProvider>
+              <ForceDesignPageOnBoot />
+              <HydrateAiApiKey />
+              <LoadModelCatalogOnBoot />
+              <PreWarmAgents />
+              <ReloadOnProjectChange />
+              <ChatsPersistence />
+              <SelectionSync />
+              <ShellRouter />
+            </AgentSessionsProvider>
+          </AutoConnect>
+        </BridgeProvider>
+      </WorkspaceProvider>
+    </AppearanceProvider>
   );
 }
 
