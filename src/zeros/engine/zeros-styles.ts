@@ -3234,6 +3234,169 @@ ${S} .oc-agent-body {
   background: transparent;
 }
 
+/* ── Agent memory inspector — Phase 1 §2.9.6 ────────────── */
+${S} .oc-agent-mem {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+${S} .oc-agent-mem-empty {
+  margin-top: 16px;
+  padding: 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+${S} .oc-agent-mem-head {
+  margin-bottom: 10px;
+}
+${S} .oc-agent-mem-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+${S} .oc-agent-mem-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+${S} .oc-agent-mem-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+${S} .oc-agent-mem-card {
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--surface-1, var(--surface-2));
+  overflow: hidden;
+}
+${S} .oc-agent-mem-card-head {
+  width: 100%;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text-primary);
+}
+${S} .oc-agent-mem-card-head:hover {
+  background: var(--surface-2);
+}
+${S} .oc-agent-mem-caret {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+${S} .oc-agent-mem-card-name {
+  font-weight: 500;
+}
+${S} .oc-agent-mem-card-summary {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+${S} .oc-agent-mem-card-body {
+  padding: 0 10px 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+${S} .oc-agent-mem-note {
+  padding: 10px 4px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+${S} .oc-agent-mem-note code {
+  font-family: var(--font-mono, monospace);
+  font-size: 10.5px;
+  padding: 1px 4px;
+  background: var(--surface-2);
+  border-radius: 3px;
+}
+${S} .oc-agent-mem-deeplink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 4px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--text-primary);
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  text-decoration: none;
+}
+${S} .oc-agent-mem-deeplink:hover {
+  background: var(--surface-3, var(--surface-2));
+}
+${S} .oc-agent-mem-file {
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+${S} .oc-agent-mem-file:last-child {
+  border-bottom: none;
+}
+${S} .oc-agent-mem-file-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+${S} .oc-agent-mem-file-name {
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 12px;
+}
+${S} .oc-agent-mem-file-scope {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+${S} .oc-agent-mem-file-meta {
+  margin-left: auto;
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+${S} .oc-agent-mem-file-copy {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 2px 4px;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+}
+${S} .oc-agent-mem-file-copy:hover {
+  color: var(--text-primary);
+  background: var(--surface-2);
+}
+${S} .oc-agent-mem-file-path {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font-mono, monospace);
+  margin-bottom: 4px;
+}
+${S} .oc-agent-mem-file-preview {
+  font-size: 11.5px;
+  color: var(--text-secondary, var(--text-muted));
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 120px;
+  overflow: hidden;
+  padding: 6px 8px;
+  background: var(--surface-2);
+  border-radius: 4px;
+}
+
 /* ── Plan panel — rendered when the agent emits session/update plan ─ */
 ${S} .oc-agent-plan {
   border-bottom: 1px solid var(--border-subtle);

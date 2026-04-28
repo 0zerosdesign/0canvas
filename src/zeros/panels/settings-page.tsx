@@ -53,6 +53,7 @@ import { getSetting, setSetting } from "../../native/settings";
 import { SHOW_ARCHIVED_CHATS_KEY } from "../../shell/column1-nav";
 import { useBridge } from "../bridge/use-bridge";
 import { AgentsPanel } from "../agent/agents-panel";
+import { AgentMemoryInspector } from "../agent/agent-memory-inspector";
 import { useAgentSessions } from "../agent/sessions-provider";
 import { refreshCatalog } from "../agent/model-catalog";
 import type {
@@ -177,6 +178,12 @@ function AgentsSettingsPanel() {
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const refreshGuardRef = useRef<number | null>(null);
+  // Cached agent list for the memory inspector. AgentsPanel does its
+  // own fetch; we duplicate here rather than thread a callback so the
+  // inspector keeps its own cadence (load-on-expand).
+  const [memoryAgents, setMemoryAgents] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
 
   // Hover-prewarm — when the user hovers an agent row, spawn its
   // subprocess in the background so a click pays zero cold-start.
@@ -197,6 +204,10 @@ function AgentsSettingsPanel() {
         { type: "AGENT_LIST_AGENTS", force },
         30_000,
       );
+      // Side-effect: keep memoryAgents in sync so the inspector at the
+      // bottom of the panel uses the same list. Cheap — AgentsPanel
+      // already calls this; we just snapshot the names here.
+      setMemoryAgents(resp.agents.map((a) => ({ id: a.id, name: a.name })));
       return resp.agents;
     },
     [bridge],
@@ -258,6 +269,9 @@ function AgentsSettingsPanel() {
           onPreWarm={handlePreWarm}
         />
       </div>
+      {memoryAgents.length > 0 && (
+        <AgentMemoryInspector agents={memoryAgents} cwd={null} />
+      )}
     </div>
   );
 }

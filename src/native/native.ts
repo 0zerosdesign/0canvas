@@ -184,6 +184,48 @@ export async function loadAgentContextFiles(args: {
   return nativeInvoke<AgentContextResult>("agent_context_files", args);
 }
 
+// ── Agent memory inspector — Stage 9 §2.9.6 ────────────────
+
+export type AgentMemoryFile = {
+  path: string;
+  filename: string;
+  size: number;
+  mtime: number;
+  preview: string;
+  scope: "project" | "user";
+};
+
+export type AgentMemoryResult = {
+  agentId: string;
+  cwd: string | null;
+  /** Set when memory lives server-side (Cursor) — UI should
+   *  render a "Open in browser" link instead of a file list. */
+  deepLink?: { label: string; url: string } | null;
+  files: AgentMemoryFile[];
+  /** True when the agent has no documented memory location. */
+  unsupported?: boolean;
+};
+
+/** Surface the agent's persistent memory state — what it has
+ *  remembered across sessions. Distinct from project-context files
+ *  (which the user / repo authored); memory is what the agent
+ *  CAPTURED during use. cwd defaults to the engine's current
+ *  project root when omitted. */
+export async function loadAgentMemoryFiles(args: {
+  agentId: string;
+  cwd?: string;
+}): Promise<AgentMemoryResult> {
+  if (!isNativeRuntime()) {
+    return {
+      agentId: args.agentId,
+      cwd: args.cwd ?? null,
+      files: [],
+      unsupported: true,
+    };
+  }
+  return nativeInvoke<AgentMemoryResult>("agent_memory_files", args);
+}
+
 export type CssFile = {
   path: string;
   name: string;
