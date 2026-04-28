@@ -4,18 +4,23 @@
 //
 // The user-facing appearance system (Cursor-style):
 //   - mode               picks the fixed neutral palette
-//   - hue                accent color in OKLCH (0–360°)
-//   - intensity          scales accent chroma (0–1, capped)
+//   - hue                hue used to TINT the chrome (surfaces +
+//                        borders) — NOT the accent
+//   - intensity          0–1, scales how much tint mixes into the
+//                        neutral surfaces (capped per mode so even
+//                        100% looks tasteful, not loud)
 //   - reduceTransparency replaces translucent surfaces with opaque
+//
+// Crucially, `hue` and `intensity` do NOT touch the brand accent
+// (buttons, focus rings, links). That's what Cursor does: drag the
+// hue slider and only the chrome warms/cools — the call-to-action
+// blue stays branded. Accent gets its own picker later (separate
+// `accent` field, defaults to brand blue).
 //
 // We deliberately do NOT expose surface/ink/contrast to the user.
 // Those are locked per mode so the UI is guaranteed-readable
 // regardless of what the user picks. Users get personality (any
-// hue, any intensity) without the ability to break the UI.
-//
-// The 4-input system is the exact contract DPCode and Cursor settled
-// on after years of theme-system iteration. See docs/themes.md for
-// the math (Phase 1 ships the engine, the docs land in Phase 4).
+// hue × any intensity) without the ability to break the UI.
 // ──────────────────────────────────────────────────────────
 
 export type ThemeMode = "system" | "light" | "dark" | "high-contrast";
@@ -26,12 +31,14 @@ export type ThemeVariant = "light" | "dark" | "high-contrast";
 
 export interface AppearancePrefs {
   mode: ThemeMode;
-  /** OKLCH hue, 0–360. Default 252.9 = the hue of the previous static
-   *  Zeros accent (#3B9EFF) so the engine ships with visual identity
-   *  to the pre-OKLCH state. */
+  /** OKLCH hue, 0–360. The hue used to tint the chrome (surfaces +
+   *  borders). Does NOT change the brand accent. Default 252.9 = the
+   *  hue of the existing Zeros slate ramp so visuals are unchanged
+   *  at default prefs. */
   hue: number;
-  /** 0–1, multiplied by the mode's max chroma to produce the accent's
-   *  actual chroma. 1 = full saturation (capped per mode), 0 = neutral. */
+  /** 0–1, multiplied by the mode's `maxTintMix` to produce the actual
+   *  surface tint percentage. 0 = pure neutral (no hue visible),
+   *  1 = full mix (capped per mode so it stays subtle). */
   intensity: number;
   reduceTransparency: boolean;
 }
@@ -43,38 +50,41 @@ export const DEFAULT_PREFS: AppearancePrefs = {
   reduceTransparency: false,
 };
 
-/** Per-mode palette anchors. The L (lightness) is fixed so the accent
- *  stays at the same perceived weight regardless of hue. The chroma
- *  ceiling is mode-dependent — light mode benefits from less chroma at
- *  L≈0.55 because the same C reads heavier on a white surface.
+/** Per-mode tint mix ceilings. Surfaces and borders mix the user's
+ *  tint color into the base neutral grey; these constants set how
+ *  much tint shows at intensity=1.
  *
- *  Phase 1 ships dark only as the active mode. Light + high-contrast
- *  values are pre-defined here so Phase 2 only has to wire the mode
- *  picker — no engine work. */
+ *  Light mode uses smaller percentages because tint reads heavier on
+ *  white surfaces — 5% mix on dark slate is barely visible, the same
+ *  5% on white is a colored cast. High-contrast keeps tint minimal so
+ *  legibility wins.
+ *
+ *  Surface gets the headline tint amount. Borders get half — enough
+ *  to feel cohesive with the surface without competing with the
+ *  text/foreground contrast. */
 export const NEUTRAL_PALETTES: Record<
   ThemeVariant,
-  { accentL: number; accentMaxChroma: number }
+  { maxSurfaceTintPct: number; maxBorderTintPct: number }
 > = {
   dark: {
-    accentL: 0.665,
-    accentMaxChroma: 0.150,
+    maxSurfaceTintPct: 5,
+    maxBorderTintPct: 3,
   },
   light: {
-    accentL: 0.55,
-    accentMaxChroma: 0.140,
+    maxSurfaceTintPct: 3,
+    maxBorderTintPct: 2,
   },
   "high-contrast": {
-    accentL: 0.75,
-    accentMaxChroma: 0.180,
+    maxSurfaceTintPct: 1,
+    maxBorderTintPct: 1,
   },
 };
 
-/** Hard upper bound on chroma to keep the accent inside sRGB across
- *  every hue. Above ~0.2 chroma some hues clip at this lightness range,
- *  which the browser then gamut-maps — usually invisibly, but it can
- *  make the slider feel like it stops working past a point. Cap below
- *  the cliff. Per-mode caps in NEUTRAL_PALETTES sit under this. */
-export const MAX_CHROMA = 0.2;
+/** OKLCH lightness + chroma for the user's tint color. Mid-tone
+ *  saturated so the mix has obvious hue character but not so vivid
+ *  that low-percentage mixes shift the surface lightness much. */
+export const TINT_LIGHTNESS = 0.55;
+export const TINT_CHROMA = 0.22;
 
 export const STORAGE_KEY = "zeros.appearance.v1";
 

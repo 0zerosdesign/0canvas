@@ -45,20 +45,29 @@
   /* ═══════════════════════════════════════════════════════════
      APPEARANCE RUNTIME — set by the appearance store on mount
      ───────────────────────────────────────────────────────────
-     The user's hue + intensity choices land here as OKLCH. These
-     three vars are the only theme inputs; every accent-derived
-     token below resolves through them via `oklch(from …)` or
-     `color-mix()`. JS overrides --zeros-accent on every prefs
-     change; the values shipped here are fallbacks that match the
-     pre-OKLCH static accent (#3B9EFF) so first paint is correct
-     even before JS runs.
+     The user's hue + intensity choices land here. They tint the
+     chrome (surfaces + borders) — they do NOT change the brand
+     accent. The accent is its own slot (--zeros-accent) and stays
+     constant regardless of hue/intensity (Cursor's model).
+
+     CSS does the actual mixing via `color-mix()` further down —
+     see SURFACES and BORDERS. The values here are fallbacks for
+     first paint before JS hydrates the prefs store.
 
      See src/zeros/appearance/{prefs,derive,store}.ts.
      ═══════════════════════════════════════════════════════════ */
 
-  --zeros-hue:       252.9;
-  --zeros-intensity: 1;
-  --zeros-accent:    oklch(0.665 0.150 252.9);
+  --zeros-hue:               252.9;
+  --zeros-intensity:         1;
+  --zeros-tint-color:        oklch(0.55 0.22 252.9);
+  --zeros-tint-mix-surface:  5%;
+  --zeros-tint-mix-border:   3%;
+
+  /* Brand accent — independent of hue/intensity. Buttons, focus
+     rings, links, and selection all read this. Exposed as a CSS
+     var so a future "accent picker" in Settings can override it
+     without touching the rest of the chrome. */
+  --zeros-accent: oklch(0.665 0.150 252.9);
 
   /* ═══════════════════════════════════════════════════════════
      INTERNAL PRIMITIVES — not for component use
@@ -119,11 +128,16 @@
        3      → selected: active tab, selected row, pressed button
      ═══════════════════════════════════════════════════════════ */
 
-  --surface-floor: var(--grey-0);
-  --surface-0:     var(--grey-1);
-  --surface-1:     var(--grey-2);
-  --surface-2:     var(--grey-3);
-  --surface-3:     var(--grey-4);
+  /* Surfaces mix the user's tint into each neutral grey step. At
+     intensity=0 the mix is 0% so surfaces stay pure neutral; at
+     intensity=1 they get up to --zeros-tint-mix-surface (per-mode
+     ceiling, ~5% in dark) of the tint — visible warmth/coolness
+     without breaking the surface ladder. */
+  --surface-floor: color-mix(in oklch, var(--grey-0), var(--zeros-tint-color) var(--zeros-tint-mix-surface));
+  --surface-0:     color-mix(in oklch, var(--grey-1), var(--zeros-tint-color) var(--zeros-tint-mix-surface));
+  --surface-1:     color-mix(in oklch, var(--grey-2), var(--zeros-tint-color) var(--zeros-tint-mix-surface));
+  --surface-2:     color-mix(in oklch, var(--grey-3), var(--zeros-tint-color) var(--zeros-tint-mix-surface));
+  --surface-3:     color-mix(in oklch, var(--grey-4), var(--zeros-tint-color) var(--zeros-tint-mix-surface));
 
   /* Extreme surfaces for inverted contexts (color-picker math, etc.) */
   --surface-absolute:          #000000;
@@ -139,9 +153,13 @@
      or surface-3 (it disappears — they're the same tone).
      ═══════════════════════════════════════════════════════════ */
 
-  --border-subtle:  var(--grey-3);   /* column seams, card edges on surface-0 */
-  --border-default: var(--grey-5);   /* input outlines, button borders */
-  --border-strong:  var(--grey-7);   /* focused input, dialog edge, tab underline */
+  /* Borders pick up a smaller tint amount than surfaces (border mix
+     ceiling is ~half the surface ceiling per mode). Enough to feel
+     cohesive with the surface tint without competing with text
+     contrast at the same boundary. */
+  --border-subtle:  color-mix(in oklch, var(--grey-3), var(--zeros-tint-color) var(--zeros-tint-mix-border));
+  --border-default: color-mix(in oklch, var(--grey-5), var(--zeros-tint-color) var(--zeros-tint-mix-border));
+  --border-strong:  color-mix(in oklch, var(--grey-7), var(--zeros-tint-color) var(--zeros-tint-mix-border));
 
 
   /* ═══════════════════════════════════════════════════════════

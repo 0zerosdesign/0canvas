@@ -1059,19 +1059,24 @@ function ApiKeysPanel() {
 // Four user inputs feed the OKLCH theme engine (src/zeros/appearance/):
 //   1. Theme:    System / Light / Dark / High Contrast → picks the
 //                neutral palette
-//   2. Hue:      0–360° → accent color in OKLCH
-//   3. Intensity: 0–1   → scales accent chroma (capped at the mode's
-//                          max chroma so colors stay in-gamut)
+//   2. Hue:      0–360° → tints the chrome (surfaces + borders)
+//   3. Intensity: 0–1   → how much tint mixes into the neutrals
+//                          (capped per mode so 100% stays subtle)
 //   4. Reduce Transparency → forces opaque surfaces for accessibility
 //
-// We deliberately don't expose surface/ink/contrast — those are locked
-// per mode so the UI is guaranteed-readable regardless of what the
-// user picks. Personality (any hue, any intensity) without the ability
-// to break the UI.
+// Hue + Intensity tint the THEME (chrome), not the brand accent.
+// Drag the hue slider and surfaces warm/cool, but buttons / focus
+// rings / link text stay branded. This matches Cursor's behavior
+// and prevents the "I picked green and now my Send button is
+// green too" failure mode.
+//
+// We deliberately don't expose surface/ink/contrast — those are
+// locked per mode so the UI is guaranteed-readable regardless of
+// what the user picks.
 //
 // All four controls write through useAppearance().setPrefs(), which
-// flows: derive.applyTheme → CSS vars on <html> → every component
-// re-renders with the new theme via CSS, no React re-render needed.
+// flows: derive.applyTheme → CSS vars on <html> → CSS does the rest
+// via color-mix() recipes in tokens.css.
 
 const THEME_OPTIONS: Array<{ value: ThemeMode; label: string }> = [
   { value: "system", label: "System" },
@@ -1122,8 +1127,9 @@ function AppearancePanel() {
           <div className="oc-appearance-row__label">
             <div className="oc-ai-card-title">Hue</div>
             <p className="oc-ai-card-hint">
-              Pick your accent color. Every blue-tinted token in the
-              UI — buttons, links, focus rings, soft tints — follows.
+              Tint the chrome with a color. Surfaces and borders pick
+              up a subtle warmth or coolness. Brand accent (buttons,
+              focus rings, links) stays unchanged.
             </p>
           </div>
           <div className="oc-appearance-row__control">
@@ -1137,11 +1143,11 @@ function AppearancePanel() {
                 setPrefs({ hue: Number(e.target.value) })
               }
               className="oc-appearance-slider oc-appearance-slider--hue"
-              aria-label="Accent hue"
+              aria-label="Tint hue"
             />
             <span
               className="oc-appearance-swatch"
-              style={{ background: "var(--zeros-accent)" }}
+              style={{ background: "var(--zeros-tint-color)" }}
               aria-hidden
             />
           </div>
@@ -1151,8 +1157,8 @@ function AppearancePanel() {
           <div className="oc-appearance-row__label">
             <div className="oc-ai-card-title">Intensity</div>
             <p className="oc-ai-card-hint">
-              How saturated the accent is. Drop to zero for a fully
-              neutral UI, or push higher for more personality.
+              How strongly the tint applies. Drop to zero for a
+              fully neutral UI, or push higher for more warmth.
             </p>
           </div>
           <div className="oc-appearance-row__control">

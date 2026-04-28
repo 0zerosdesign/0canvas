@@ -2,30 +2,28 @@
 // applyTheme — write the runtime CSS variables to <html>
 // ──────────────────────────────────────────────────────────
 //
-// Single function. Takes user prefs + the system prefers-dark hint,
-// computes the OKLCH accent, sets a handful of root-level CSS
-// variables. CSS does the rest (see styles/tokens.css and the
-// derived semantic tokens that read --zeros-accent via `color-mix`
-// and `oklch(from …)`).
+// Emits four CSS variables on <html>:
+//   --zeros-tint-color       oklch(L C H) — the user's hue at fixed L+C
+//   --zeros-tint-mix-surface percent — how much tint to mix into surfaces
+//   --zeros-tint-mix-border  percent — how much tint to mix into borders
+//   --zeros-hue              numeric (raw, in case any consumer wants it)
 //
-// What we set on <html>:
-//   data-theme               "dark" | "light" | "high-contrast"
-//   data-reduce-transparency "1" when on, absent otherwise
-//   --zeros-hue              numeric, exposed for any consumer that
-//                              wants the raw hue (rare; most just read
-//                              --zeros-accent)
-//   --zeros-intensity        0–1
-//   --zeros-accent           oklch(L C H) string — the canonical accent
+// Plus the data-theme attribute for the variant block in tokens.css.
 //
-// Why a string and not three separate vars: components use
-// `oklch(from var(--zeros-accent) … h)` to derive shades. Passing one
-// composite string lets the relative-color syntax work; three split
-// channels would need each consumer to recompose them.
+// Intentionally does NOT touch --zeros-accent. The accent is the
+// brand color (buttons, focus rings, link text) and stays stable
+// regardless of hue + intensity, which match Cursor / DPCode's
+// behavior: tint the chrome, not the brand. Accent will become
+// user-configurable later via a separate `accent` field on prefs.
+//
+// CSS does the rest: surface and border tokens use color-mix with
+// these vars to produce their tinted values.
 // ──────────────────────────────────────────────────────────
 
 import {
-  MAX_CHROMA,
   NEUTRAL_PALETTES,
+  TINT_CHROMA,
+  TINT_LIGHTNESS,
   resolveVariant,
   type AppearancePrefs,
 } from "./prefs";
@@ -50,9 +48,11 @@ export function applyTheme(
   const palette = NEUTRAL_PALETTES[variant];
 
   const intensity = clamp01(prefs.intensity);
-  const chroma = Math.min(palette.accentMaxChroma * intensity, MAX_CHROMA);
   const hue = wrapHue(prefs.hue);
-  const accent = `oklch(${palette.accentL.toFixed(4)} ${chroma.toFixed(4)} ${hue.toFixed(2)})`;
+
+  const tintColor = `oklch(${TINT_LIGHTNESS} ${TINT_CHROMA} ${hue.toFixed(2)})`;
+  const surfaceMix = (intensity * palette.maxSurfaceTintPct).toFixed(3);
+  const borderMix = (intensity * palette.maxBorderTintPct).toFixed(3);
 
   const variantChanged = lastVariant !== null && lastVariant !== variant;
   if (variantChanged) {
@@ -68,29 +68,11 @@ export function applyTheme(
 
   root.style.setProperty("--zeros-hue", String(hue));
   root.style.setProperty("--zeros-intensity", String(intensity));
-  root.style.setProperty("--zeros-accent", accent);
-
-  // Diagnostic — log every applyTheme call to a window-scoped counter
-  // so the DevTools console can verify slider drags are reaching the
-  // engine end-to-end (counter goes up, accent string changes). Cheap
-  // and useful for theme debugging; remove once we've shipped a few
-  // releases without related bugs.
-  if (typeof window !== "undefined") {
-    type Diag = { calls: number; lastAccent: string; lastVariant: string };
-    const w = window as unknown as { __zerosThemeDiag?: Diag };
-    const next: Diag = {
-      calls: (w.__zerosThemeDiag?.calls ?? 0) + 1,
-      lastAccent: accent,
-      lastVariant: variant,
-    };
-    w.__zerosThemeDiag = next;
-  }
+  root.style.setProperty("--zeros-tint-color", tintColor);
+  root.style.setProperty("--zeros-tint-mix-surface", `${surfaceMix}%`);
+  root.style.setProperty("--zeros-tint-mix-border", `${borderMix}%`);
 
   if (variantChanged && typeof window !== "undefined") {
-    // Two rAFs: the first lets the browser commit the new vars +
-    // attribute, the second removes the suppression so the next
-    // hover/focus animates normally. One rAF would race with the
-    // commit on some Chromium builds.
     window.requestAnimationFrame(() => {
       window.requestAnimationFrame(() => {
         root.classList.remove("zeros-no-transitions");
@@ -98,6 +80,25 @@ export function applyTheme(
     });
   }
   lastVariant = variant;
+
+  // Diagnostic — log every applyTheme call to a window-scoped counter
+  // so the DevTools console can verify slider drags reach the engine
+  // end-to-end (counter goes up, tint string changes).
+  if (typeof window !== "undefined") {
+    type Diag = {
+      calls: number;
+      lastTintColor: string;
+      lastSurfaceMix: string;
+      lastVariant: string;
+    };
+    const w = window as unknown as { __zerosThemeDiag?: Diag };
+    w.__zerosThemeDiag = {
+      calls: (w.__zerosThemeDiag?.calls ?? 0) + 1,
+      lastTintColor: tintColor,
+      lastSurfaceMix: `${surfaceMix}%`,
+      lastVariant: variant,
+    };
+  }
 }
 
 function clamp01(n: number): number {
