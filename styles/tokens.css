@@ -92,14 +92,21 @@
   --grey-11: #B0B4BA;   /* slate11 */
   --grey-12: #EDEEF0;   /* slate12 */
 
-  /* Blue — accent ramp (Radix blueDark) */
-  --blue-3:  #0D2847;
-  --blue-4:  #003362;
-  --blue-7:  #205D9E;
-  --blue-8:  #2870BD;
-  --blue-9:  #0090FF;
-  --blue-10: #3B9EFF;
-  --blue-11: #70B8FF;
+  /* Blue ramp — derived from --zeros-accent so consumers like
+     --text-info, --text-link, --syntax-property, --brand-* all
+     follow the user's chosen hue. L values mirror the previous
+     static Radix blueDark steps so default visuals are unchanged.
+     Chroma multipliers compensate for OKLCH chroma falling off at
+     L extremes (the Radix ramp peaked at blue-9; we replicate by
+     scaling chroma highest at L=0.62 and tapering toward both
+     ends). */
+  --blue-3:  oklch(from var(--zeros-accent) 0.21 calc(c * 0.45) h);
+  --blue-4:  oklch(from var(--zeros-accent) 0.27 calc(c * 0.65) h);
+  --blue-7:  oklch(from var(--zeros-accent) 0.46 calc(c * 0.70) h);
+  --blue-8:  oklch(from var(--zeros-accent) 0.55 c h);
+  --blue-9:  oklch(from var(--zeros-accent) 0.62 calc(c * 1.30) h);
+  --blue-10: var(--zeros-accent);
+  --blue-11: oklch(from var(--zeros-accent) 0.78 calc(c * 0.85) h);
 
   /* Status ramps (Radix redDark / greenDark / amberDark / skyDark) */
   --red-2:   #201314;
@@ -586,16 +593,18 @@
   --grey-11: #687076;   /* text-muted */
   --grey-12: #11181C;   /* text-primary (~14:1 on white) */
 
-  /* Blue ramp (light) — for static --text-info/--text-link/syntax
-     consumers that haven't migrated to --zeros-accent yet (Phase 3
-     sweeps these). */
-  --blue-3:  #E1F0FF;
-  --blue-4:  #CEE7FE;
-  --blue-7:  #5EB1EF;
-  --blue-8:  #006ADC;
-  --blue-9:  #006ADC;
-  --blue-10: #0091FF;
-  --blue-11: #006ADC;
+  /* Blue ramp (light) — derived from --zeros-accent like the dark
+     ramp. L values are tuned for white-surface contrast (text-info /
+     text-link want stronger contrast on light), with the soft tints
+     (blue-3, blue-4) becoming pale washes for selection / soft-bg
+     contexts. Same chroma scaling structure as dark; only L flips. */
+  --blue-3:  oklch(from var(--zeros-accent) 0.94 calc(c * 0.20) h);
+  --blue-4:  oklch(from var(--zeros-accent) 0.88 calc(c * 0.35) h);
+  --blue-7:  oklch(from var(--zeros-accent) 0.62 calc(c * 0.85) h);
+  --blue-8:  oklch(from var(--zeros-accent) 0.50 c h);
+  --blue-9:  oklch(from var(--zeros-accent) 0.45 calc(c * 1.20) h);
+  --blue-10: var(--zeros-accent);
+  --blue-11: oklch(from var(--zeros-accent) 0.40 c h);
 
   /* Status (light) — Radix red/green/amber light scales. */
   --red-2:   #FFEFEF;
