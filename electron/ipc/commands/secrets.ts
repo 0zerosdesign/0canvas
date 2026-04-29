@@ -16,12 +16,12 @@
 // transparently to the Electron build — no migration needed.
 // ──────────────────────────────────────────────────────────
 
-import { app } from "electron";
 import keytar from "keytar";
 import type { CommandHandler } from "../router";
+import { IS_PACKAGED } from "../../runtime-mode";
 
 function service(): string {
-  return app.isPackaged ? "Zeros" : "Zeros Dev";
+  return IS_PACKAGED ? "Zeros" : "Zeros Dev";
 }
 
 export const keychainSet: CommandHandler = async (args) => {

@@ -242,7 +242,7 @@
   margin-left: auto;
   padding: 2px 6px;
   border-radius: 4px;
-  background: var(--surface-2);
+  background: var(--surface-1);
   border: 1px solid var(--border-subtle);
   color: var(--text-muted);
   font-family: inherit;
@@ -1171,9 +1171,11 @@
   50% { opacity: 0.9; }
 }
 
-.oc-column-1__profile:hover,
-.oc-column-1__profile.is-open {
+.oc-column-1__profile:hover {
   background: var(--surface-2);
+}
+.oc-column-1__profile.is-open {
+  background: var(--surface-3);
 }
 
 .oc-column-1__profile:disabled {
@@ -1304,7 +1306,7 @@
 .oc-column-2__show-panel-kbd {
   padding: 2px 6px;
   border-radius: 4px;
-  background: var(--surface-2);
+  background: var(--surface-1);
   border: 1px solid var(--border-subtle);
   color: var(--text-muted);
   font-family: inherit;
@@ -2279,7 +2281,7 @@
 }
 
 .oc-git__file.is-expanded {
-  background: var(--surface-2);
+  background: var(--surface-3);
 }
 
 .oc-git__file-header {
@@ -3732,7 +3734,7 @@
 
 .oc-empty-composer__box:focus-within {
   border-color: var(--border-strong);
-  background: var(--surface-1-strong, var(--surface-1));
+  background: var(--surface-1);
 }
 
 .oc-empty-composer__input {
@@ -3824,7 +3826,7 @@
   align-items: center;
   gap: var(--space-1);
   padding: 2px 6px 2px 8px;
-  background: var(--surface-2);
+  background: var(--surface-1);
   border-radius: var(--radius-pill);
   font-size: var(--text-11);
   color: var(--text-primary);
@@ -3864,7 +3866,7 @@
   font-weight: 600;
   padding: 1px 4px;
   margin-left: var(--space-1);
-  background: var(--surface-2);
+  background: var(--surface-1);
   color: var(--text-muted);
   border-radius: var(--radius-sm);
 }
@@ -3931,7 +3933,7 @@
   padding: var(--space-3);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
-  background: var(--bg-surface);
+  background: var(--surface-1);
   display: flex;
   flex-direction: column;
   gap: var(--space-5x);
@@ -3950,14 +3952,14 @@
 
 .oc-empty-composer__install-title {
   font-size: var(--text-13);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--weight-control);
   color: var(--text-primary);
 }
 
 .oc-empty-composer__install-sub {
   margin-top: 2px;
   font-size: var(--text-12);
-  color: var(--text-secondary);
+  color: var(--text-muted);
   line-height: var(--leading-snug);
 }
 
@@ -3986,7 +3988,7 @@
 
 .oc-empty-composer__install-agent-name {
   font-size: var(--text-12);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--weight-control);
   color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3996,7 +3998,7 @@
 .oc-empty-composer__install-agent-desc {
   margin-top: 1px;
   font-size: var(--text-11);
-  color: var(--text-secondary);
+  color: var(--text-muted);
   line-height: var(--leading-snug);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4007,7 +4009,7 @@
   font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
   font-size: var(--text-11);
   color: var(--text-primary);
-  background: var(--bg-surface);
+  background: var(--surface-0);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   padding: 2px var(--space-5x);
@@ -4037,3 +4039,198 @@
   background: var(--tint-hover);
 }
 
+
+
+/* ──────────────────────────────────────────────────────────
+   DevThemeTester — Zeros Dev only floating theme controls
+   ──────────────────────────────────────────────────────────
+   Bottom-right anchored. Two states (button / panel) share the
+   same bottom-right corner so the panel pops out from where
+   the button was. Sits at z-modal so it's above content but
+   under toasts. Hidden in packaged builds via the
+   `import.meta.env.DEV` gate at the mount site (app-shell.tsx).
+   ────────────────────────────────────────────────────────── */
+
+.oc-dev-theme-tester {
+  position: fixed;
+  right: var(--space-5);
+  bottom: var(--space-5);
+  z-index: var(--z-modal);
+  pointer-events: auto;
+}
+
+.oc-dev-theme-tester__trigger {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-circle);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-standard),
+              border-color var(--dur-fast) var(--ease-standard),
+              transform var(--dur-fast) var(--ease-emphasized);
+}
+
+.oc-dev-theme-tester__trigger:hover {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+
+.oc-dev-theme-tester__trigger:focus-visible {
+  outline: 2px solid var(--ring-focus);
+  outline-offset: 2px;
+}
+
+.oc-dev-theme-tester__panel {
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.oc-dev-theme-tester__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3x) var(--space-3) var(--space-3x) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-floor);
+}
+
+.oc-dev-theme-tester__title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-12);
+  font-weight: var(--weight-control);
+  color: var(--text-primary);
+}
+
+.oc-dev-theme-tester__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-xs);
+  background: var(--tint-warning-soft);
+  color: var(--text-warning);
+  font-size: var(--text-9);
+  font-weight: var(--weight-heading);
+  letter-spacing: var(--tracking-overline);
+  text-transform: uppercase;
+}
+
+.oc-dev-theme-tester__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.oc-dev-theme-tester__close:hover {
+  background: var(--tint-hover);
+  color: var(--text-primary);
+}
+
+.oc-dev-theme-tester__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+}
+
+.oc-dev-theme-tester__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.oc-dev-theme-tester__label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--text-11);
+  font-weight: var(--weight-control);
+  color: var(--text-muted);
+}
+
+.oc-dev-theme-tester__value {
+  font-size: var(--text-11);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.oc-dev-theme-tester__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Override the shared --hue slider width inside the compact panel
+   so it fills the available row width. */
+.oc-dev-theme-tester__panel .oc-appearance-slider {
+  flex: 1;
+  width: auto;
+}
+
+.oc-dev-theme-tester__seg {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  padding: 2px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.oc-dev-theme-tester__seg-item {
+  padding: var(--space-2) 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-xs);
+  color: var(--text-muted);
+  font-size: var(--text-11);
+  font-weight: var(--weight-control);
+  font-family: inherit;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-standard),
+              color var(--dur-fast) var(--ease-standard);
+}
+
+.oc-dev-theme-tester__seg-item:hover {
+  color: var(--text-primary);
+}
+
+.oc-dev-theme-tester__seg-item.is-active {
+  background: var(--surface-1);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.oc-dev-theme-tester__check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-12);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.oc-dev-theme-tester__check input {
+  cursor: pointer;
+}

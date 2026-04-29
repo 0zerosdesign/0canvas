@@ -52,6 +52,15 @@ import { isNativeRuntime } from "../native/runtime";
 import { getSetting, setSetting } from "../native/settings";
 import { Button, Textarea } from "../zeros/ui";
 import { useChatCwd } from "./use-chat-cwd";
+import { resolveTokenValue } from "../zeros/appearance/resolve-tokens";
+
+/** First-render fallback colors for PreviewFrame — only used if
+ *  getComputedStyle returns nothing (i.e. tokens.css not yet
+ *  applied). Real values come from --surface-1 / --text-primary. */
+// check:ui ignore-next
+const FALLBACK_PREVIEW_BG = "#1a1a1a";
+// check:ui ignore-next
+const FALLBACK_PREVIEW_FG = "#ddd";
 
 const FORCE_PUSH_KEY = "git-allow-force-push";
 
@@ -108,9 +117,15 @@ function isCssPath(p: string): boolean {
 
 function PreviewFrame({ css, label }: { css: string; label: string }) {
   // Inline HTML for a sandboxed iframe — CSS custom properties from
-  // the parent document are not inherited, so literal colors are
-  // required here. check:ui ignore-next
-  const html = `<!doctype html><html><head><style>${css}\nhtml,body{margin:0;padding:16px;font-family:system-ui,sans-serif;font-size:13px;color:#ddd;background:#1a1a1a}</style></head><body><div class="oc-preview-sample"><button class="oc-preview-btn">Sample</button><h3>Heading</h3><p>Paragraph of body text.</p></div></body></html>`;
+  // the parent document are not inherited, so we resolve chrome
+  // tokens at render time and bake them into literal hex/rgb. Keeps
+  // the preview chrome aligned with the user's hue/intensity choice
+  // instead of stranded on a hardcoded dark grey. The ?? fallbacks
+  // only matter on the very first render before tokens.css resolves,
+  // so they're approximate dark-mode defaults.
+  const bg = resolveTokenValue("--surface-1") ?? FALLBACK_PREVIEW_BG;
+  const fg = resolveTokenValue("--text-primary") ?? FALLBACK_PREVIEW_FG;
+  const html = `<!doctype html><html><head><style>${css}\nhtml,body{margin:0;padding:16px;font-family:system-ui,sans-serif;font-size:13px;color:${fg};background:${bg}}</style></head><body><div class="oc-preview-sample"><button class="oc-preview-btn">Sample</button><h3>Heading</h3><p>Paragraph of body text.</p></div></body></html>`;
   return (
     <div className="oc-git__preview">
       <div className="oc-git__preview-label">{label}</div>

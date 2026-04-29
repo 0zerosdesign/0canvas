@@ -45,10 +45,13 @@ import { OpencodeBusTranslator } from "./translator";
 // SDK imports kept narrow on purpose — anything we use must work
 // against the v1.14 SDK. v2 is a parallel surface; we'll evaluate
 // migrating in a follow-up once Slice 2 is verified.
-import {
-  createOpencodeClient,
-  type OpencodeClient,
-} from "@opencode-ai/sdk";
+//
+// Why dynamic: @opencode-ai/sdk is ESM-only (`"type": "module"`,
+// only an `import` exports key). The engine bundles to CJS, so a
+// static `import` becomes `require()` and crashes at startup with
+// ERR_PACKAGE_PATH_NOT_EXPORTED. The runtime value is loaded lazily
+// when a session boots; only the type is needed at compile time.
+import type { OpencodeClient } from "@opencode-ai/sdk";
 
 const AGENT_ID = "opencode";
 const AGENT_NAME = "OpenCode";
@@ -425,6 +428,7 @@ export class OpencodeAdapter implements AgentAdapter {
       },
     });
 
+    const { createOpencodeClient } = await import("@opencode-ai/sdk");
     const client = createOpencodeClient({
       baseUrl: runtime.baseUrl,
       auth: () =>

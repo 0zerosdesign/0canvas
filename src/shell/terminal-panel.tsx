@@ -29,6 +29,8 @@ import "@xterm/xterm/css/xterm.css";
 import { useWorkspace } from "../zeros/store/store";
 import { isNativeRuntime, nativeInvoke } from "../native/runtime";
 import { spawn as spawnPty, type IPtyShim as IPty } from "../native/pty-shim";
+import { resolveTokenValue } from "../zeros/appearance/resolve-tokens";
+import { useAppearance } from "../zeros/appearance/provider";
 
 async function resolveProjectRoot(): Promise<string | undefined> {
   if (!isNativeRuntime()) return undefined;
@@ -50,17 +52,13 @@ async function resolveSessionCwd(
   return resolveProjectRoot();
 }
 
-// Desaturated palette — ANSI hues stay distinguishable (so `ls`, git
-// log, grep output still parses visually) but everything's pulled
-// back so the terminal chrome reads as quiet grey alongside the rest
-// of the Mac shell instead of a neon-coloured island.
-const TERMINAL_THEME = {
-  background: "#0a0a0a",
-  foreground: "#d4d4d4",
-  cursor: "#a3a3a3",
-  cursorAccent: "#0a0a0a",
-  selectionBackground: "rgba(255, 255, 255, 0.12)",
-  black: "#0a0a0a",
+// ANSI palette — desaturated so `ls`, git log, grep output stays
+// distinguishable without becoming a neon-coloured island next to
+// the rest of the Mac shell. These 16 ANSI slots are intentionally
+// fixed (not theme-tracked): users expect ANSI red to be red regardless
+// of chrome hue. What IS theme-tracked is the surrounding chrome —
+// background, foreground, cursor, selection — see resolveTerminalTheme.
+const ANSI_PALETTE = {
   red: "#c4807d",
   green: "#a3c094",
   yellow: "#c9b173",
@@ -78,6 +76,27 @@ const TERMINAL_THEME = {
   brightWhite: "#fafafa",
 };
 
+/** Resolve the terminal's chrome theme from current --surface-* /
+ *  --text-* tokens so it follows the user's hue/intensity. ANSI
+ *  slots stay fixed (above) so `red` is always recognizable. */
+function resolveTerminalTheme() {
+  const bg = resolveTokenValue("--surface-floor") ?? "#0a0a0a";
+  const fg = resolveTokenValue("--text-primary") ?? "#d4d4d4";
+  const cursor = resolveTokenValue("--text-muted") ?? "#a3a3a3";
+  const sel = resolveTokenValue("--accent-soft-bg") ?? "rgba(255, 255, 255, 0.12)";
+  return {
+    background: bg,
+    foreground: fg,
+    cursor,
+    cursorAccent: bg,
+    selectionBackground: sel,
+    // ANSI black follows surface-floor so a clean shell prompt sits flat
+    // on the panel rather than producing a darker chip behind text.
+    black: bg,
+    ...ANSI_PALETTE,
+  };
+}
+
 // ── Single session (xterm + pty) ──────────────────────────
 
 function TerminalSession({
@@ -92,6 +111,15 @@ function TerminalSession({
   const fitRef = useRef<FitAddon | null>(null);
   const ptyRef = useRef<IPty | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Subscribe so terminal chrome restyles when the user shifts hue /
+  // intensity / theme — xterm needs concrete RGB strings, not vars.
+  const { prefs } = useAppearance();
+
+  useEffect(() => {
+    const term = termRef.current;
+    if (!term) return;
+    term.options.theme = resolveTerminalTheme();
+  }, [prefs.hue, prefs.intensity, prefs.mode, prefs.accent]);
 
   useEffect(() => {
     if (!hostRef.current) return;
@@ -101,7 +129,7 @@ function TerminalSession({
     }
 
     const term = new XTerm({
-      theme: TERMINAL_THEME,
+      theme: resolveTerminalTheme(),
       fontFamily:
         'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace',
       fontSize: 12,

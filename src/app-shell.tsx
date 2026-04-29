@@ -41,6 +41,7 @@ import {
   type ChatRowWire,
 } from "./zeros/agent/agent-history-client";
 import { AppearanceProvider } from "./zeros/appearance/provider";
+import { DevThemeTester } from "./shell/dev-theme-tester";
 import "./shell/app-shell.css";
 
 const CHATS_STORAGE_KEY = "chats-v1";
@@ -707,6 +708,7 @@ export function AppShell() {
               <ChatsPersistence />
               <SelectionSync />
               <ShellRouter />
+              {import.meta.env.DEV && <DevThemeTester />}
             </AgentSessionsProvider>
           </AutoConnect>
         </BridgeProvider>

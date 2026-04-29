@@ -25,6 +25,10 @@ export default defineConfig([
       "ws",
       "tinyglobby",
       "@modelcontextprotocol/sdk",
+      // ESM-only — must stay external so the runtime resolves it via
+      // Node's dynamic import (CJS `require()` would throw
+      // ERR_PACKAGE_PATH_NOT_EXPORTED).
+      "@opencode-ai/sdk",
     ],
     define: {
       __VERSION__: JSON.stringify(VERSION),

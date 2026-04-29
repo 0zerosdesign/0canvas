@@ -25,6 +25,7 @@ import os from "node:os";
 import path from "node:path";
 import { app } from "electron";
 import { emitEvent } from "./ipc/events";
+import { IS_PACKAGED } from "./runtime-mode";
 
 interface SidecarStateShape {
   child: ChildProcess | null;
@@ -69,7 +70,7 @@ function archTriple(): string {
 function resolveEngineSpawn(): { cmd: string; args: string[] } {
   const triple = archTriple();
 
-  if (app.isPackaged) {
+  if (IS_PACKAGED) {
     const candidates = [
       path.join(process.resourcesPath, "zeros-engine"),
       path.join(process.resourcesPath, `zeros-engine-${triple}`),
@@ -254,7 +255,7 @@ export async function spawnEngine(projectRoot: string): Promise<number> {
   //                inherited console writes from Electron main).
   //   - packaged: same forwarding, plus a side-stream into engine.log
   //               for raw spool inspection.
-  const isPackaged = app.isPackaged;
+  const isPackaged = IS_PACKAGED;
   const child = spawn(
     cmd,
     [...engineArgs, "serve", "--root", projectRoot, "--port", "24193"],
@@ -397,7 +398,7 @@ export function currentRoot(): string | null {
  *  within 6s and respawns (via bun src/cli.ts) with the fresh code.
  *  No-op in packaged builds. */
 export function startEngineCodeWatcher(): void {
-  if (app.isPackaged) return;
+  if (IS_PACKAGED) return;
   const repoRoot = path.resolve(__dirname, "..");
   const cliSrc = path.join(repoRoot, "src", "cli.ts");
   const engineDir = path.join(repoRoot, "src", "engine");

@@ -542,16 +542,21 @@ ${S} .oc-appearance-slider {
   outline: none;
   cursor: pointer;
 }
+/* Hue track stops use the same OKLCH L+C as the swatch's tint color
+ * (TINT_LIGHTNESS=0.55, TINT_CHROMA=0.22 in src/zeros/appearance/prefs.ts).
+ * Keeping these in sync means the position-on-track perceptually matches
+ * the swatch you'll see — pick yellow on the track, get yellow in the
+ * swatch and the chrome. If those constants change, update here too. */
 ${S} .oc-appearance-slider--hue {
   background: linear-gradient(
     to right,
-    oklch(0.65 0.15 0),
-    oklch(0.65 0.15 60),
-    oklch(0.65 0.15 120),
-    oklch(0.65 0.15 180),
-    oklch(0.65 0.15 240),
-    oklch(0.65 0.15 300),
-    oklch(0.65 0.15 360)
+    oklch(0.55 0.22 0),
+    oklch(0.55 0.22 60),
+    oklch(0.55 0.22 120),
+    oklch(0.55 0.22 180),
+    oklch(0.55 0.22 240),
+    oklch(0.55 0.22 300),
+    oklch(0.55 0.22 360)
   );
 }
 ${S} .oc-appearance-slider::-webkit-slider-thumb {

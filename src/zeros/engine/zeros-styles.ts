@@ -1316,7 +1316,7 @@ ${S} .oc-themes-default-badge {
   display: inline-block;
   font-size: 10px; font-weight: 600;
   padding: 1px 6px; border-radius: 4px;
-  background: var(--surface-2);
+  background: var(--surface-1);
   color: var(--text-primary);
 }
 
@@ -1406,7 +1406,7 @@ ${S} .oc-theme-syntax-badge {
   display: inline-flex; align-items: center;
   font-size: 10px; font-weight: 600;
   padding: 1px 5px; border-radius: 4px;
-  background: var(--surface-2);
+  background: var(--surface-1);
   color: var(--text-muted);
 }
 
@@ -2100,7 +2100,7 @@ ${S} .oc-feedback-item-header {
 ${S} .oc-feedback-badge {
   font-size: 10px; font-weight: 600; text-transform: uppercase;
   padding: 1px 6px; border-radius: 4px; letter-spacing: 0.3px;
-  background: var(--surface-2); color: var(--text-muted);
+  background: var(--surface-1); color: var(--text-muted);
 }
 ${S} .oc-feedback-badge[data-intent="fix"] { background: var(--tint-critical-soft); color: var(--text-critical); }
 ${S} .oc-feedback-badge[data-intent="change"] { background: var(--tint-warning-soft); color: var(--text-warning); }
@@ -2707,7 +2707,7 @@ ${S} .oc-chat-agent-inactive-hint {
   font-weight: 500;
   letter-spacing: 0.01em;
   color: var(--text-muted);
-  background: var(--surface-2);
+  background: var(--surface-1);
   padding: 2px 6px;
   border-radius: 4px;
   flex-shrink: 0;
@@ -2887,7 +2887,7 @@ ${S} .oc-ai-hint {
 }
 ${S} .oc-ai-hint code {
   font-family: var(--font-mono); font-size: 10px;
-  background: var(--surface-2); padding: 1px 5px;
+  background: var(--surface-1); padding: 1px 5px;
   border-radius: 4px;
 }
 
@@ -3128,7 +3128,7 @@ ${S} .oc-agent-context-chip:hover {
 }
 ${S} .oc-agent-context-chip[aria-expanded="true"] {
   color: var(--text-primary);
-  background: var(--surface-2);
+  background: var(--surface-3);
 }
 ${S} .oc-agent-context-chip-caret {
   opacity: 0.5;
@@ -3186,7 +3186,7 @@ ${S} .oc-agent-context-file-scope {
   letter-spacing: 0.4px;
   padding: 1px 5px;
   border-radius: 4px;
-  background: var(--surface-2);
+  background: var(--surface-1);
   color: var(--text-muted);
 }
 ${S} .oc-agent-context-file-size {
@@ -3219,7 +3219,7 @@ ${S} .oc-agent-context-file-path {
 }
 ${S} .oc-agent-context-file-preview {
   font-size: 11px;
-  color: var(--text-secondary, var(--text-muted));
+  color: var(--text-muted);
   white-space: pre-wrap;
   word-break: break-word;
   max-height: 60px;
@@ -3311,7 +3311,7 @@ ${S} .oc-agent-mem-note code {
   font-family: var(--font-mono, monospace);
   font-size: 10.5px;
   padding: 1px 4px;
-  background: var(--surface-2);
+  background: var(--surface-1);
   border-radius: 3px;
 }
 ${S} .oc-agent-mem-deeplink {
@@ -3322,13 +3322,13 @@ ${S} .oc-agent-mem-deeplink {
   padding: 6px 10px;
   font-size: 12px;
   color: var(--text-primary);
-  background: var(--surface-2);
+  background: var(--surface-1);
   border: 1px solid var(--border-subtle);
   border-radius: 4px;
   text-decoration: none;
 }
 ${S} .oc-agent-mem-deeplink:hover {
-  background: var(--surface-3, var(--surface-2));
+  background: var(--surface-2);
 }
 ${S} .oc-agent-mem-file {
   padding: 8px 4px;
@@ -3354,7 +3354,7 @@ ${S} .oc-agent-mem-file-scope {
   letter-spacing: 0.4px;
   padding: 1px 5px;
   border-radius: 4px;
-  background: var(--surface-2);
+  background: var(--surface-1);
   color: var(--text-muted);
 }
 ${S} .oc-agent-mem-file-meta {
@@ -3404,13 +3404,13 @@ ${S} .oc-agent-mem-show-more:hover {
 }
 ${S} .oc-agent-mem-file-preview {
   font-size: 11.5px;
-  color: var(--text-secondary, var(--text-muted));
+  color: var(--text-muted);
   white-space: pre-wrap;
   word-break: break-word;
   max-height: 120px;
   overflow: hidden;
   padding: 6px 8px;
-  background: var(--surface-2);
+  background: var(--surface-1);
   border-radius: 4px;
 }
 
@@ -3799,7 +3799,7 @@ ${S} .oc-agent-msg-queued-hint {
 /* ── Tool card ─────────────────────────────────────────── */
 ${S} .oc-agent-tool {
   border: 1px solid var(--border-subtle);
-  background: var(--surface-2);
+  background: var(--surface-1);
   border-radius: 10px; overflow: hidden;
 }
 ${S} .oc-agent-tool-design {
@@ -4141,7 +4141,7 @@ ${S} .oc-agent-edit-text code {
 /* ── Stage 4.2: Merged-edit history (+N more changes) ──── */
 ${S} .oc-agent-edit-history {
   border-top: 1px solid var(--border-subtle);
-  background: var(--surface-2);
+  background: var(--surface-1);
 }
 ${S} .oc-agent-edit-history-head {
   display: flex; align-items: center; gap: 6px;
@@ -4592,7 +4592,7 @@ ${S} .oc-agent-hud {
   margin: 0 8px 4px;
   border: 1px solid var(--border-subtle);
   border-radius: 8px;
-  background: var(--surface-2);
+  background: var(--surface-1);
   font-size: 11px;
   color: var(--text-muted);
   /* Subtle running-state breathing so a long quiet phase
@@ -4635,7 +4635,7 @@ ${S} .oc-agent-turn-summary {
   display: flex; align-items: center; gap: 10px;
   padding: 8px 12px;
   margin: 6px 0;
-  background: var(--surface-2);
+  background: var(--surface-1);
   border: 1px solid var(--border-subtle);
   border-radius: 8px;
   cursor: pointer;
@@ -4900,7 +4900,7 @@ ${S} .oc-agent-question-textarea {
   padding: 8px 10px;
   border: 1px solid var(--border-subtle);
   border-radius: 6px;
-  background: var(--surface-2);
+  background: var(--surface-1);
   color: var(--text-primary);
   font-size: 11.5px;
   font-family: var(--font-base);
@@ -5259,7 +5259,7 @@ ${S} .oc-agent-errorcard-actions {
 ${S} .oc-agent-errorcard-action {
   display: flex; align-items: center; gap: 4px;
   padding: 5px 10px;
-  background: var(--surface-2);
+  background: var(--surface-1);
   border: 1px solid var(--border-subtle);
   border-radius: 5px;
   color: var(--text-primary);
@@ -5597,7 +5597,9 @@ ${S} .oc-agent-auto-decision-revoke:hover {
 ${S} .oc-agent-composer {
   /* Background stays transparent so it sits on the column's
      surface-floor. The visible card is the inner composer-card
-     (surface-2, with focus ring). */
+     (surface-1 = raised, with focus ring) — pops above the canvas
+     in both dark mode (s1 lighter than s0) and light mode (s1 closer
+     to white than s0). */
   background: transparent;
   border-top: none;
   padding: 10px 12px 14px;
@@ -5618,7 +5620,7 @@ ${S} .oc-agent-composer-card {
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
-  background: var(--surface-2);
+  background: var(--surface-1);
   border: 1px solid var(--border-subtle);
   border-radius: 10px;
   transition: border-color 120ms ease, background 120ms ease,

@@ -42,6 +42,8 @@ import "@xterm/xterm/css/xterm.css";
 import type { Renderer } from "./types";
 import type { AgentToolMessage } from "../use-agent-session";
 import { DurationChip } from "./live-duration";
+import { resolveTokenValue } from "../../appearance/resolve-tokens";
+import { useAppearance } from "../../appearance/provider";
 
 const LARGE_OUTPUT_LINE_THRESHOLD = 5000;
 
@@ -169,6 +171,10 @@ function ShellOutput({ text }: { text: string }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const xtermRef = useRef<XTerm | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
+  // Subscribe to appearance prefs so xterm restyles when the user
+  // changes hue/intensity/theme — xterm needs concrete RGB strings,
+  // it can't read CSS variables on its own.
+  const { prefs } = useAppearance();
 
   // Mount xterm once.
   useLayoutEffect(() => {
@@ -184,12 +190,7 @@ function ShellOutput({ text }: { text: string }) {
       scrollback: 10_000,
       // Use a DOM renderer (xterm's default in v6); no webgl/canvas
       // addon so the card has zero GPU footprint.
-      theme: {
-        background: "#0d1117",
-        foreground: "#e6edf3",
-        cursor: "#e6edf3",
-        selectionBackground: "#1f6feb55",
-      },
+      theme: resolveXtermTheme(),
     });
     const fit = new FitAddon();
     term.loadAddon(fit);
@@ -211,6 +212,14 @@ function ShellOutput({ text }: { text: string }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Re-apply theme whenever appearance prefs change so the xterm
+  // chrome follows the user's hue/intensity in real time.
+  useEffect(() => {
+    const term = xtermRef.current;
+    if (!term) return;
+    term.options.theme = resolveXtermTheme();
+  }, [prefs.hue, prefs.intensity, prefs.mode, prefs.accent]);
 
   // Write text whenever it changes (streaming friendly — Stage 7
   // adapters push partial output via `tool_call_update.content`,
@@ -255,6 +264,32 @@ function ShellOutput({ text }: { text: string }) {
 // ──────────────────────────────────────────────────────────
 // helpers
 // ──────────────────────────────────────────────────────────
+
+/** First-render fallbacks if getComputedStyle hasn't seen tokens.css
+ *  yet. Should never hit in practice. */
+// check:ui ignore-next
+const FALLBACK_XTERM_BG = "#0d1117";
+// check:ui ignore-next
+const FALLBACK_XTERM_FG = "#e6edf3";
+// check:ui ignore-next
+const FALLBACK_XTERM_SEL = "#1f6feb55";
+
+/** Read the current chrome surface + foreground tokens and shape them
+ *  into an xterm theme object. xterm doesn't read CSS variables, so
+ *  we resolve them here at mount time and again whenever prefs flip
+ *  (hue / intensity / mode). */
+function resolveXtermTheme() {
+  const bg = resolveTokenValue("--surface-floor") ?? FALLBACK_XTERM_BG;
+  const fg = resolveTokenValue("--text-primary") ?? FALLBACK_XTERM_FG;
+  const cursor = resolveTokenValue("--text-muted") ?? fg;
+  const sel = resolveTokenValue("--accent-soft-bg") ?? FALLBACK_XTERM_SEL;
+  return {
+    background: bg,
+    foreground: fg,
+    cursor,
+    selectionBackground: sel,
+  };
+}
 
 function readCommand(input: unknown): string {
   if (!isObj(input)) return "";

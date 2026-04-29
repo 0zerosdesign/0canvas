@@ -26,6 +26,7 @@ import { app, shell } from "electron";
 import { autoUpdater } from "electron-updater";
 import { emitEvent } from "./ipc/events";
 import type { CommandHandler } from "./ipc/router";
+import { IS_PACKAGED } from "./runtime-mode";
 
 let wired = false;
 
@@ -55,7 +56,7 @@ export function setupUpdater(): void {
   wired = true;
 
   // Dev / unpackaged builds: no meaningful update source.
-  if (!app.isPackaged) return;
+  if (!IS_PACKAGED) return;
 
   // autoDownload false because we never use electron-updater's
   // own download path. We only use it for version comparison.
@@ -97,7 +98,7 @@ export function setupUpdater(): void {
  *  the renderer can paint the pill immediately if a new version is
  *  live. Event stream handles longer-running progress. */
 export const updaterCheck: CommandHandler = async () => {
-  if (!app.isPackaged) return null;
+  if (!IS_PACKAGED) return null;
   try {
     const result = await autoUpdater.checkForUpdates();
     if (!result?.updateInfo) return null;
@@ -124,7 +125,7 @@ export const updaterCheck: CommandHandler = async () => {
 /** "Install" = open the DMG in the user's browser. User drags
  *  new app into /Applications to replace the old one. */
 export const updaterInstall: CommandHandler = async () => {
-  if (!app.isPackaged) return;
+  if (!IS_PACKAGED) return;
 
   // Prefer the URL captured during the check — guaranteed to match
   // the version the UI currently shows as "available".

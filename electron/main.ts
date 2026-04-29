@@ -51,6 +51,7 @@ import { installAppMenu } from "./menu";
 import { setupContextMenu } from "./context-menu";
 import { setupDeepLink } from "./deep-link";
 import { setupUpdater } from "./updater";
+import { IS_DEV, IS_PACKAGED } from "./runtime-mode";
 
 // ──────────────────────────────────────────────────────────
 // Dev / prod environment separation
@@ -64,7 +65,7 @@ import { setupUpdater } from "./updater";
 // This must run BEFORE anything reads app.getName() or
 // app.getPath("userData") — deep-link setup, log file init, window
 // construction all depend on these. Must also run before app.ready.
-if (!app.isPackaged) {
+if (IS_DEV) {
   app.setName("Zeros Dev");
   // appData = ~/Library/Application Support on macOS.
   app.setPath(
@@ -111,14 +112,14 @@ function setupLogFile(): void {
     stream.write(`[${stamp()}] UNHANDLED ${String(reason)}\n`);
   });
   console.log(
-    `[${APP_LABEL}] main log: ${logPath} | packaged=${app.isPackaged} cwd=${process.cwd()}`,
+    `[${APP_LABEL}] main log: ${logPath} | packaged=${IS_PACKAGED} cwd=${process.cwd()}`,
   );
 }
 
 setupLogFile();
 
 const DEV_URL = process.env.ELECTRON_RENDERER_URL ?? "http://localhost:5173";
-const isDev = !app.isPackaged;
+const isDev = IS_DEV;
 
 function createMainWindow(): BrowserWindow {
   const win = new BrowserWindow({
@@ -181,7 +182,7 @@ setupDeepLink();
 function setupDockBrand(): void {
   if (process.platform !== "darwin") return;
   const iconsDir = path.join(__dirname, "..", "build", "icons");
-  const iconPath = app.isPackaged
+  const iconPath = IS_PACKAGED
     ? path.join(process.resourcesPath, "..", "..", "Resources", "icon.icns")
     : (() => {
         const fs = require("node:fs");

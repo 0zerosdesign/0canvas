@@ -50,18 +50,25 @@
      accent. The accent is its own slot (--zeros-accent) and stays
      constant regardless of hue/intensity (Cursor's model).
 
-     CSS does the actual mixing via `color-mix()` further down —
-     see SURFACES and BORDERS. The values here are fallbacks for
-     first paint before JS hydrates the prefs store.
+     Surfaces use `oklch(from var(--grey-N) l <chroma> <hue>)` to
+     keep each grey's own lightness intact — only chroma+hue change
+     when the user moves the sliders. This is what preserves the
+     5-tier surface ladder at any intensity.
+
+     Values below are fallbacks for first paint before JS hydrates
+     the prefs store.
 
      See src/zeros/appearance/{prefs,derive,store}.ts.
      ═══════════════════════════════════════════════════════════ */
 
-  --zeros-hue:               252.9;
-  --zeros-intensity:         1;
-  --zeros-tint-color:        oklch(0.55 0.22 252.9);
-  --zeros-tint-mix-surface:  5%;
-  --zeros-tint-mix-border:   3%;
+  --zeros-hue:             252.9;
+  --zeros-intensity:       1;
+  --zeros-tint-c-surface:  0.05;
+  --zeros-tint-c-border:   0.06;
+  /* Swatch-only preview for the slider's circle indicator. Surfaces
+     do NOT mix this in — they compute their own tint from hue +
+     tint-c-* at their own lightness. */
+  --zeros-tint-color:      oklch(0.55 0.22 252.9);
 
   /* Brand accent — independent of hue/intensity. Buttons, focus
      rings, links, and selection all read this. Exposed as a CSS
@@ -128,16 +135,21 @@
        3      → selected: active tab, selected row, pressed button
      ═══════════════════════════════════════════════════════════ */
 
-  /* Surfaces mix the user's tint into each neutral grey step. At
-     intensity=0 the mix is 0% so surfaces stay pure neutral; at
-     intensity=1 they get up to --zeros-tint-mix-surface (per-mode
-     ceiling, ~5% in dark) of the tint — visible warmth/coolness
-     without breaking the surface ladder. */
-  --surface-floor: color-mix(in oklch, var(--grey-0), var(--zeros-tint-color) var(--zeros-tint-mix-surface));
-  --surface-0:     color-mix(in oklch, var(--grey-1), var(--zeros-tint-color) var(--zeros-tint-mix-surface));
-  --surface-1:     color-mix(in oklch, var(--grey-2), var(--zeros-tint-color) var(--zeros-tint-mix-surface));
-  --surface-2:     color-mix(in oklch, var(--grey-3), var(--zeros-tint-color) var(--zeros-tint-mix-surface));
-  --surface-3:     color-mix(in oklch, var(--grey-4), var(--zeros-tint-color) var(--zeros-tint-mix-surface));
+  /* Each surface keeps its own lightness from the matching --grey-N
+     and takes on chroma + hue from the user's tint settings. The
+     fallback values below are pure neutral greys (chroma=0) so the
+     first paint before JS hydrates doesn't flash with tint. JS in
+     src/zeros/appearance/derive.ts overrides these with
+       oklch(<grey-L> <intensity*cap> <hue>)
+     on every prefs change. Recipe is computed in JS rather than via
+     CSS `oklch(from var(--grey-N) l var(--c) var(--h))` because
+     Chromium has historically been unreliable with var() in
+     oklch(from …) channel positions (see commit 4bf4928). */
+  --surface-floor: oklch(0.166 0 0);
+  --surface-0:     oklch(0.180 0 0);
+  --surface-1:     oklch(0.220 0 0);
+  --surface-2:     oklch(0.262 0 0);
+  --surface-3:     oklch(0.295 0 0);
 
   /* Extreme surfaces for inverted contexts (color-picker math, etc.) */
   --surface-absolute:          #000000;
@@ -153,13 +165,13 @@
      or surface-3 (it disappears — they're the same tone).
      ═══════════════════════════════════════════════════════════ */
 
-  /* Borders pick up a smaller tint amount than surfaces (border mix
-     ceiling is ~half the surface ceiling per mode). Enough to feel
-     cohesive with the surface tint without competing with text
-     contrast at the same boundary. */
-  --border-subtle:  color-mix(in oklch, var(--grey-3), var(--zeros-tint-color) var(--zeros-tint-mix-border));
-  --border-default: color-mix(in oklch, var(--grey-5), var(--zeros-tint-color) var(--zeros-tint-mix-border));
-  --border-strong:  color-mix(in oklch, var(--grey-7), var(--zeros-tint-color) var(--zeros-tint-mix-border));
+  /* Borders use the same lightness-anchored recipe as surfaces but
+     with a slightly higher chroma cap — borders are thin and need
+     more chroma to read tinted at the same intensity. Same JS-set
+     pattern as surfaces. */
+  --border-subtle:  oklch(0.262 0 0);
+  --border-default: oklch(0.328 0 0);
+  --border-strong:  oklch(0.422 0 0);
 
 
   /* ═══════════════════════════════════════════════════════════
@@ -600,6 +612,21 @@
   --grey-10: #7E868C;   /* text-placeholder */
   --grey-11: #687076;   /* text-muted */
   --grey-12: #11181C;   /* text-primary (~14:1 on white) */
+
+  /* Surfaces + borders — light-mode static fallbacks (intensity=0)
+     for first paint before JS hydrates. Same "elevation = lighter"
+     ladder as dark mode (chrome darkest, raised cards lightest), so
+     the chat composer + dropdowns + cards always pop above the
+     canvas regardless of intensity. Every surface tints together
+     when intensity > 0 (chromaScale=1 across the board). */
+  --surface-floor: oklch(0.935 0 0); /* chrome — clear gray */
+  --surface-0:     oklch(0.968 0 0); /* canvas — paper */
+  --surface-1:     oklch(0.992 0 0); /* raised — effectively white */
+  --surface-2:     oklch(0.945 0 0); /* hover — press-in from canvas */
+  --surface-3:     oklch(0.918 0 0); /* active — clearly pressed */
+  --border-subtle:  oklch(0.905 0 0);
+  --border-default: oklch(0.870 0 0);
+  --border-strong:  oklch(0.810 0 0);
 
   /* Blue ramp (light) — derived from --zeros-accent like the dark
      ramp. L values are tuned for white-surface contrast (text-info /

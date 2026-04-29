@@ -344,5 +344,5 @@ for (const [file, vs] of [...byFile.entries()].sort()) {
   for (const v of vs) console.log(`    ${String(v.line).padStart(4)}: ${v.message}`);
   console.log("");
 }
-console.log("Fix violations above. See RULES.md — "Quick Decision Table" maps UI needs to tokens.");
+console.log('Fix violations above. See RULES.md — "Quick Decision Table" maps UI needs to tokens.');
 process.exit(1);
