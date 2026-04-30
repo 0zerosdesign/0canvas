@@ -6,13 +6,14 @@
 // Droid Task and OpenCode task wire to the same kind in their
 // respective stages.
 //
-// Roadmap §2.4.7 calls for an indented nested transcript driven
-// by parent_tool_id — that requires the canonical event taxonomy
-// to carry a parent_tool_id field, which we don't surface from
-// any adapter yet. For Stage 4.3 we ship the header + collapsible
-// prompt + final-result body. The nested-transcript view stays a
-// Stage 5 follow-up; this card is shaped to swap that view in
-// without breaking callers.
+// Roadmap §2.4.7 — nested transcript: Claude stamps every event
+// from inside a Task subagent with parent_tool_use_id pointing at
+// the Task's tool_use_id. The translator forwards this as
+// parentToolId on canonical events; agent-chat groups them under
+// the parent's toolCallId in `ctx.subagentChildren`. We pull our
+// bucket out and recursively render each child via MessageView,
+// indented with a left-border accent so the user can see the
+// nested execution as one unit.
 // ──────────────────────────────────────────────────────────
 
 import { memo, useState } from "react";
@@ -22,9 +23,10 @@ import type { Renderer } from "./types";
 import type { AgentToolMessage } from "../use-agent-session";
 import { matchSubagent } from "./subagent";
 import { DurationChip } from "./live-duration";
+import { MessageView } from "./message-view";
 
 export const SubagentCard: Renderer<AgentToolMessage> = memo(
-  function SubagentCard({ message }) {
+  function SubagentCard({ message, ctx }) {
     const tool = message;
     const info = matchSubagent(tool) ?? {
       subagentType: undefined,
@@ -34,7 +36,12 @@ export const SubagentCard: Renderer<AgentToolMessage> = memo(
     const description = info.description ?? readPrompt(tool.rawInput);
     const result = readResultText(tool);
     const durationMs = tool.updatedAt - tool.createdAt;
-    const [expanded, setExpanded] = useState(() => tool.status === "failed");
+    const children = ctx.subagentChildren.get(tool.toolCallId) ?? [];
+    // Default-collapsed when finished (the user can re-open to inspect),
+    // default-expanded while running so the user sees progress live.
+    const [expanded, setExpanded] = useState(
+      () => tool.status === "failed" || tool.status === "in_progress",
+    );
 
     return (
       <div className="oc-agent-tool oc-agent-tool-subagent2">
@@ -77,13 +84,25 @@ export const SubagentCard: Renderer<AgentToolMessage> = memo(
                 <div className="oc-agent-subagent-task">{description}</div>
               </div>
             )}
+            {children.length > 0 && (
+              <div className="oc-agent-subagent-section">
+                <div className="oc-agent-subagent-section-label">
+                  Nested events ({children.length})
+                </div>
+                <div className="oc-agent-subagent-nested">
+                  {children.map((child) => (
+                    <MessageView key={child.id} message={child} ctx={ctx} />
+                  ))}
+                </div>
+              </div>
+            )}
             {result && (
               <div className="oc-agent-subagent-section">
                 <div className="oc-agent-subagent-section-label">Result</div>
                 <pre className="oc-agent-subagent-result">{result}</pre>
               </div>
             )}
-            {!description && !result && (
+            {!description && !result && children.length === 0 && (
               <div className="oc-agent-subagent-empty">
                 {tool.status === "in_progress"
                   ? "Subagent running…"

@@ -18,5 +18,13 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  // Phase 2 §2.11.2 — module workers (syntax.worker.ts) need ESM
+  // output for code-splitting. Shiki has dynamic imports internally
+  // for grammars/themes; the default "iife" worker format rejects
+  // the build with "UMD and IIFE output formats are not supported
+  // for code-splitting builds".
+  worker: {
+    format: 'es',
+  },
   assetsInclude: ['**/*.svg', '**/*.csv'],
 })

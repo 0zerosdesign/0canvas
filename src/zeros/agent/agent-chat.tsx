@@ -53,6 +53,7 @@ import {
   type ApplyReceipt,
   type RendererContext,
 } from "./renderers";
+import { THINKING_TOGGLE_EVENT } from "./renderers/thinking-block";
 import { ActivityHUD } from "./activity-hud";
 import { Button, Textarea } from "../ui";
 import {
@@ -80,6 +81,7 @@ import {
 import { TurnEventList } from "./turn-event-list";
 import { JumpPills } from "./jump-pills";
 import { useSessionsStore } from "./sessions-store";
+import { windowOlderMessages as ipcWindowOlderMessages } from "./agent-history-client";
 
 // Error classification is handled by sessions-provider's AgentFailure
 // pipeline; the UI now branches on session.status directly (warming /
@@ -149,7 +151,7 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
   // message renders as the primary card; predecessors get filtered out
   // of the timeline and surface as "+N more" history under the primary.
   // The store keeps every message; shadowing is purely render-time.
-  const { visibleMessages, mergeSiblings } = useMemo(() => {
+  const { visibleMessages, mergeSiblings, subagentChildren } = useMemo(() => {
     const groups = new Map<string, import("./use-agent-session").AgentToolMessage[]>();
     for (const m of session.messages) {
       if (m.kind !== "tool") continue;
@@ -170,11 +172,37 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
       siblingsByPrimaryId.set(primary.toolCallId, arr.slice(0, -1));
       for (let i = 0; i < arr.length - 1; i++) shadowed.add(arr[i].id);
     }
+    // Roadmap §2.4.7 — group child events of in-flight subagents under
+    // the parent's toolCallId. The parent SubagentCard reads its bucket
+    // out of `subagentChildren` and renders them indented inside its
+    // expanded body. Children are also shadowed at the top-level so
+    // we don't double-render.
+    const subagentChildren = new Map<
+      string,
+      import("./use-agent-session").AgentMessage[]
+    >();
+    for (const m of session.messages) {
+      const parentId =
+        m.kind === "tool"
+          ? (m as import("./use-agent-session").AgentToolMessage).parentToolId
+          : m.kind === "text"
+          ? (m as import("./use-agent-session").AgentTextMessage).parentToolId
+          : undefined;
+      if (!parentId) continue;
+      const bucket = subagentChildren.get(parentId) ?? [];
+      bucket.push(m);
+      subagentChildren.set(parentId, bucket);
+      shadowed.add(m.id);
+    }
     const visible =
       shadowed.size === 0
         ? session.messages
         : session.messages.filter((m) => !shadowed.has(m.id));
-    return { visibleMessages: visible, mergeSiblings: siblingsByPrimaryId };
+    return {
+      visibleMessages: visible,
+      mergeSiblings: siblingsByPrimaryId,
+      subagentChildren,
+    };
   }, [session.messages]);
   const isStreaming = session.status === "streaming";
   // Stage 4.3 — QuestionCard's submit hook. Routes through
@@ -236,6 +264,7 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
       lastMessageId,
       activeTurnStartedAt,
       mergeSiblings,
+      subagentChildren,
       respondToQuestion,
       pendingPermission: session.pendingPermission,
       respondToPermission,
@@ -251,6 +280,7 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
       lastMessageId,
       activeTurnStartedAt,
       mergeSiblings,
+      subagentChildren,
       respondToQuestion,
       session.pendingPermission,
       respondToPermission,
@@ -275,6 +305,15 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
   const { state: workspaceState, dispatch } = useWorkspace();
   const agentsList = useAgentsSnapshot();
   const followedToolsRef = useRef<Set<string>>(new Set());
+  // Phase 2 §2.11.3 — incremental cursor for the design-tool follow-along
+  // effect below. Avoids rescanning the full message history on every
+  // store update; we only walk the tail since the last run. The index is
+  // chat-scoped (reset when chatId changes) so a chat-switch starts
+  // fresh and a fresh chat doesn't carry stale cursor state.
+  const followCursorRef = useRef<{ chatId: string | null; index: number }>({
+    chatId: null,
+    index: 0,
+  });
 
   // Chat-thread-backed composer settings. When `chatId` is absent
   // (picker/beta flows) this returns null and the pills render stubs.
@@ -496,6 +535,69 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
     [session.messages, session.pendingPermission, session.status],
   );
 
+  // Phase 2 §2.11.4 — "Load older" affordance. The Phase 0 hydrate
+  // pulls the most-recent 200 messages on chat open; older transcript
+  // sits on disk until the user asks. We don't auto-page on
+  // scroll-up because that would silently change scroll position
+  // mid-read; explicit click keeps the affordance honest.
+  const LOAD_OLDER_PAGE = 200;
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  // Whether more older messages might exist on disk. Starts true so
+  // we offer the button on every chat with the hydrate window full;
+  // a load that returns 0 rows flips this off so we hide the button.
+  // Reset when chatId changes (different chat, different on-disk tail).
+  const [hasOlder, setHasOlder] = useState(true);
+  useEffect(() => {
+    setHasOlder(true);
+  }, [chatId]);
+  const loadOlder = useCallback(async () => {
+    if (!chatId) return;
+    if (loadingOlder) return;
+    const slot = useSessionsStore.getState().sessions[chatId];
+    const oldest = slot?.messages[0];
+    if (!oldest) return;
+    setLoadingOlder(true);
+    try {
+      const older = await ipcWindowOlderMessages(
+        chatId,
+        LOAD_OLDER_PAGE,
+        oldest.id,
+      );
+      if (older.length === 0) {
+        setHasOlder(false);
+        return;
+      }
+      // Dedup against the in-memory tail in case of overlap.
+      const present = new Set(slot.messages.map((m) => m.id));
+      const fresh = older.filter((m) => !present.has(m.id));
+      if (fresh.length === 0) {
+        // SQLite returned only messages already in memory — treat as no-more.
+        setHasOlder(false);
+        return;
+      }
+      // Preserve viewport position: the prepend grows scrollHeight; we
+      // add the delta to scrollTop so the user sees the same content
+      // they were reading rather than getting yanked to the new top.
+      const heightBefore = scrollEl?.scrollHeight ?? 0;
+      const topBefore = scrollEl?.scrollTop ?? 0;
+      useSessionsStore.getState().patchSession(chatId, {
+        messages: [...fresh, ...slot.messages],
+      });
+      requestAnimationFrame(() => {
+        if (!scrollEl) return;
+        const heightAfter = scrollEl.scrollHeight;
+        const delta = heightAfter - heightBefore;
+        if (delta > 0) scrollEl.scrollTop = topBefore + delta;
+      });
+      // If the page wasn't full, no point offering another load.
+      if (older.length < LOAD_OLDER_PAGE) setHasOlder(false);
+    } catch (err) {
+      console.warn("[Zeros] load-older failed:", err);
+    } finally {
+      setLoadingOlder(false);
+    }
+  }, [chatId, loadingOlder, scrollEl]);
+
   // Group flat message list into turns for the §2.5.1 per-turn
   // structure. Each turn = user prompt + subsequent events until
   // the next user prompt. Memoized so unrelated state changes
@@ -520,9 +622,23 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
   // "where did I ask?" problem during long Claude runs (roadmap §2.5.7).
   // ⌘Home / ⌘End — first/last message. All gated on the textarea
   // not being focused so plain typing keeps native behavior.
+  // ⌘⇧T — toggle every thinking block in the chat (roadmap §2.4.8).
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey) || e.shiftKey || e.altKey) return;
+      if (!(e.metaKey || e.ctrlKey)) return;
+
+      // ⌘⇧T — global thinking toggle. Allowed even when typing in the
+      // composer, since users want to peek at reasoning without losing
+      // their place. Dispatches a window event the ThinkingBlock
+      // components listen for.
+      if (e.shiftKey && !e.altKey && e.key.toLowerCase() === "t") {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent(THINKING_TOGGLE_EVENT));
+        return;
+      }
+
+      // Remaining bindings need plain ⌘ (no shift/alt).
+      if (e.shiftKey || e.altKey) return;
 
       // ⌘K is composer-focus; allowed even when in an input
       if (e.key.toLowerCase() === "k") {
@@ -578,11 +694,28 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
   // Fires once per tool call id; repeated status updates don't re-flash
   // and don't overwrite the captured "before".
   useEffect(() => {
+    // Reset cursor on chat-switch so the new chat starts from index 0.
+    if (followCursorRef.current.chatId !== (chatId ?? null)) {
+      followCursorRef.current = { chatId: chatId ?? null, index: 0 };
+      // Also clear the followed-tools set — different chat, different
+      // tool ids; carrying state across would skip valid new entries
+      // if their ids ever collide.
+      followedToolsRef.current = new Set();
+    }
+    const startIndex = followCursorRef.current.index;
+    // No new messages since last run? Bail without iteration.
+    if (startIndex >= session.messages.length) return;
+
     const receiptsToAdd: Record<
       string,
       { before: string | null; selector: string; property: string; after: string }
     > = {};
-    for (const m of session.messages) {
+    // Iterate ONLY the tail since last run — Phase 2 §2.11.3 makes this
+    // incremental rather than re-scanning the whole transcript on every
+    // store update. New messages always append, so a forward sweep
+    // from the last seen index is sufficient.
+    for (let i = startIndex; i < session.messages.length; i++) {
+      const m = session.messages[i];
       if (m.kind !== "tool") continue;
       if (followedToolsRef.current.has(m.toolCallId)) continue;
       const design = matchDesignTool(m.title);
@@ -620,10 +753,12 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
         };
       }
     }
+    // Advance the cursor past the messages we just processed.
+    followCursorRef.current.index = session.messages.length;
     if (Object.keys(receiptsToAdd).length > 0) {
       setApplyReceipts((prev) => ({ ...prev, ...receiptsToAdd }));
     }
-  }, [session.messages, workspaceState.elements, dispatch]);
+  }, [session.messages, workspaceState.elements, dispatch, chatId]);
 
   // Attachments for the next prompt — image ContentBlocks queued by
   // the paperclip/image button. Cleared on send or manual dismissal.
@@ -899,7 +1034,14 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
         />
       )}
 
-      {session.plan.length > 0 && <PlanPanel entries={session.plan} />}
+      {/* Phase 2 §2.4.6: PlanPanel moved into the active TurnContainer
+          (see the turns.map() below) so it pins beneath the sticky user
+          prompt while the turn is in flight. The session-level slot
+          stays only as a fallback for the rare case where there's no
+          active turn (no user prompts yet) but a plan already exists. */}
+      {session.plan.length > 0 && turns.length === 0 && (
+        <PlanPanel entries={session.plan} />
+      )}
 
       {chatThread?.sourceChatId && session.messages.length === 0 && chatId && (
         <SummaryHandoffPill
@@ -915,6 +1057,25 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
 
       <div ref={setScrollContainer} className="oc-agent-body" style={{ position: "relative" }}>
         <div className="oc-agent-messages">
+          {/* Phase 2 §2.11.4 — "Load older" affordance. Renders only
+              when there's at least one message on screen and a hydrate
+              window's worth of older history *might* still exist on
+              disk. A load that returns 0 rows flips hasOlder off and
+              hides the button. */}
+          {chatId && session.messages.length > 0 && hasOlder && (
+            <div className="oc-agent-load-older-row">
+              <button
+                type="button"
+                className="oc-agent-load-older"
+                onClick={() => void loadOlder()}
+                disabled={loadingOlder}
+              >
+                {loadingOlder
+                  ? "Loading older messages…"
+                  : "Load older messages"}
+              </button>
+            </div>
+          )}
           {/* Warming/reconnecting state is now surfaced by the compact
               chip in the composer's pill row — keep the message area
               empty so the user can still see the transcript area. */}
@@ -939,6 +1100,14 @@ export function AgentChat({ session, onBack, headerActions, chatId }: AgentChatP
                       />
                     </div>
                   </TurnPromptHeader>
+                )}
+                {/* Phase 2 §2.4.6: per-turn plan pin. The agent's current
+                    intent (TodoWrite, plan_update, …) belongs WITH the
+                    in-flight turn, not as session-level chrome above the
+                    transcript. Sits under the sticky prompt so the user
+                    sees "what I asked → what the agent is doing" together. */}
+                {isActive && session.plan.length > 0 && (
+                  <PlanPanel entries={session.plan} />
                 )}
                 <TurnEventList
                   events={turn.events}

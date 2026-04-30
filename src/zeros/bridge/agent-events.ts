@@ -141,6 +141,11 @@ export interface ToolCall {
    *  for `edit:<path>` so multiple Edit/Write calls to the same file
    *  collapse into one card per file. */
   mergeKey?: string | null;
+  /** Roadmap §2.4.7 — set by adapters when this tool was invoked from
+   *  inside a subagent context (Claude Task/Agent, Droid Task,
+   *  OpenCode task). The renderer renders these inside the parent
+   *  SubagentCard's nested transcript instead of at the top level. */
+  parentToolId?: string | null;
 }
 
 export interface ToolCallUpdate {
@@ -246,12 +251,24 @@ export interface AgentMessageChunkUpdate {
   sessionUpdate: "agent_message_chunk";
   content: ContentBlock;
   messageId?: string | null;
+  /** Roadmap §2.4.7 — when a subagent emits text through this stream,
+   *  the parent Task's toolCallId. Renderer hides the message from
+   *  the top-level timeline and routes it into the SubagentCard. */
+  parentToolId?: string | null;
 }
 
 export interface AgentThoughtChunkUpdate {
   sessionUpdate: "agent_thought_chunk";
   content: ContentBlock;
   messageId?: string | null;
+  /** Roadmap §2.4.8 — Anthropic's `redacted_thinking` content blocks
+   *  carry encrypted reasoning the model produced but won't surface
+   *  in plaintext. The renderer shows a distinct "redacted" stub
+   *  with no expandable body. Defaults to false / undefined for
+   *  ordinary thinking chunks. */
+  redacted?: boolean | null;
+  /** Roadmap §2.4.7 — see same field on AgentMessageChunkUpdate. */
+  parentToolId?: string | null;
 }
 
 export interface ToolCallStartUpdate extends ToolCall {

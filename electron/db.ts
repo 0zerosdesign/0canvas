@@ -68,11 +68,12 @@ function open(): Database.Database {
       ON agent_messages(chat_id, created_at);
 
     CREATE TABLE IF NOT EXISTS agent_chat_meta (
-      chat_id     TEXT PRIMARY KEY,
-      agent_id    TEXT,
-      agent_name  TEXT,
-      session_id  TEXT,
-      updated_at  INTEGER NOT NULL
+      chat_id         TEXT PRIMARY KEY,
+      agent_id        TEXT,
+      agent_name      TEXT,
+      session_id      TEXT,
+      updated_at      INTEGER NOT NULL,
+      scroll_position INTEGER
     );
 
     -- Per-chat permission policies ("Always allow X for tool Y").
@@ -123,6 +124,18 @@ function open(): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_chats_updated ON chats(updated_at DESC);
   `);
 
+  // Migration: pre-Phase-2 DBs have agent_chat_meta without scroll_position.
+  // SQLite ALTER TABLE ADD COLUMN is idempotent only if we guard, so we
+  // probe pragma_table_info. Cheap (one row per column), runs once per boot.
+  const cols = handle
+    .prepare<[], { name: string }>(
+      `SELECT name FROM pragma_table_info('agent_chat_meta')`,
+    )
+    .all();
+  if (!cols.some((c) => c.name === "scroll_position")) {
+    handle.exec(`ALTER TABLE agent_chat_meta ADD COLUMN scroll_position INTEGER`);
+  }
+
   db = handle;
   return handle;
 }
@@ -160,6 +173,12 @@ export interface ChatMeta {
   agentName: string | null;
   sessionId: string | null;
   updatedAt: number;
+  /** Last persisted scroll-top of the message list for this chat.
+   *  Optional on writes — `upsertChatMeta` leaves the column untouched,
+   *  so callers updating only agent/session id don't need to read the
+   *  value first. Always present on reads (`null` until the user has
+   *  scrolled, or until a pre-Phase-2 row gets its first update). */
+  scrollPosition?: number | null;
 }
 
 /** Upsert a single message. New messages get a fresh `ord`; messages
@@ -259,6 +278,26 @@ export function windowMessages(
     }));
 }
 
+/** Phase 2 §2.11.4 — fetch a page of older messages relative to a known
+ *  message id. The renderer passes the oldest visible message's id;
+ *  we look up its `ord` and return the next `limit` rows below it.
+ *  Returns empty if the message id isn't found (chat hydrate edge
+ *  case) or if no older rows exist. */
+export function windowOlderMessages(
+  chatId: string,
+  limit: number,
+  beforeMsgId: string,
+): PersistedMessage[] {
+  const handle = open();
+  const cursor = handle
+    .prepare<[string, string], { ord: number }>(
+      `SELECT ord FROM agent_messages WHERE chat_id = ? AND msg_id = ? LIMIT 1`,
+    )
+    .get(chatId, beforeMsgId);
+  if (!cursor) return [];
+  return windowMessages(chatId, limit, cursor.ord);
+}
+
 /** Wipe a chat's transcript. Used by `reset(chatId)` and chat deletion. */
 export function clearChat(chatId: string): void {
   const handle = open();
@@ -269,7 +308,10 @@ export function clearChat(chatId: string): void {
   txn();
 }
 
-/** Persist the per-chat metadata row (agent id, session id, last-seen). */
+/** Persist the per-chat metadata row (agent id, session id, last-seen).
+ *  Leaves `scroll_position` untouched — the renderer writes that on its
+ *  own debounced cadence via `setChatMetaScrollPosition` and would lose
+ *  state otherwise (we don't have a fresh top here). */
 export function upsertChatMeta(meta: ChatMeta): void {
   const handle = open();
   handle
@@ -291,6 +333,26 @@ export function upsertChatMeta(meta: ChatMeta): void {
     );
 }
 
+/** Persist just the scroll position for a chat. Called by the renderer
+ *  on a 1s debounce while the user scrolls. Upserts so the row exists
+ *  even before the agent has bound (chats opened in Picker mode etc.).
+ *  Phase 2 §2.11 — closes the comment in sessions-store about SQLite
+ *  scroll persistence being a polish item. */
+export function setChatMetaScrollPosition(
+  chatId: string,
+  scrollTop: number,
+): void {
+  const handle = open();
+  handle
+    .prepare(
+      `INSERT INTO agent_chat_meta (chat_id, updated_at, scroll_position)
+       VALUES (?, ?, ?)
+       ON CONFLICT(chat_id) DO UPDATE SET
+         scroll_position = excluded.scroll_position`,
+    )
+    .run(chatId, Date.now(), scrollTop);
+}
+
 export function getChatMeta(chatId: string): ChatMeta | null {
   const handle = open();
   const row = handle
@@ -302,9 +364,10 @@ export function getChatMeta(chatId: string): ChatMeta | null {
         agent_name: string | null;
         session_id: string | null;
         updated_at: number;
+        scroll_position: number | null;
       }
     >(
-      `SELECT chat_id, agent_id, agent_name, session_id, updated_at
+      `SELECT chat_id, agent_id, agent_name, session_id, updated_at, scroll_position
          FROM agent_chat_meta WHERE chat_id = ?`,
     )
     .get(chatId);
@@ -315,6 +378,7 @@ export function getChatMeta(chatId: string): ChatMeta | null {
     agentName: row.agent_name,
     sessionId: row.session_id,
     updatedAt: row.updated_at,
+    scrollPosition: row.scroll_position,
   };
 }
 
@@ -331,9 +395,10 @@ export function listChats(): ChatMeta[] {
         agent_name: string | null;
         session_id: string | null;
         updated_at: number;
+        scroll_position: number | null;
       }
     >(
-      `SELECT chat_id, agent_id, agent_name, session_id, updated_at
+      `SELECT chat_id, agent_id, agent_name, session_id, updated_at, scroll_position
          FROM agent_chat_meta ORDER BY updated_at DESC`,
     )
     .all();
@@ -343,7 +408,27 @@ export function listChats(): ChatMeta[] {
     agentName: r.agent_name,
     sessionId: r.session_id,
     updatedAt: r.updated_at,
+    scrollPosition: r.scroll_position,
   }));
+}
+
+/** Bulk-fetch scroll positions for all chats. Cheaper than `listChats`
+ *  when the boot path only needs scroll restoration — one tiny scalar
+ *  per chat instead of every meta column. Returns a map; chats with
+ *  no saved position simply don't appear in the map. */
+export function listChatScrollPositions(): Record<string, number> {
+  const handle = open();
+  const rows = handle
+    .prepare<[], { chat_id: string; scroll_position: number | null }>(
+      `SELECT chat_id, scroll_position FROM agent_chat_meta
+         WHERE scroll_position IS NOT NULL`,
+    )
+    .all();
+  const out: Record<string, number> = {};
+  for (const r of rows) {
+    if (r.scroll_position !== null) out[r.chat_id] = r.scroll_position;
+  }
+  return out;
 }
 
 // ── Per-chat permission policies — fix #2 ────────────────

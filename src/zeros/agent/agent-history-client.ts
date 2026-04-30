@@ -34,6 +34,9 @@ export interface ChatMetaWire {
   agentName: string | null;
   sessionId: string | null;
   updatedAt: number;
+  /** Optional — pre-Phase-2 rows return undefined; null means the user
+   *  hasn't scrolled yet. */
+  scrollPosition?: number | null;
 }
 
 /** Convert an in-memory AgentMessage to its on-disk shape. The msgId
@@ -91,6 +94,25 @@ export async function windowMessages(
     .filter((m): m is AgentMessage => m !== null);
 }
 
+/** Phase 2 §2.11.4 — fetch the next page of older messages relative
+ *  to the oldest visible message. Returns rows in chronological
+ *  order; renderer prepends them. Empty array = no older rows on
+ *  disk (renderer should hide the "Load older" affordance). */
+export async function windowOlderMessages(
+  chatId: string,
+  limit: number,
+  beforeMsgId: string,
+): Promise<AgentMessage[]> {
+  if (!isElectron()) return [];
+  const rows = await nativeInvoke<PersistedMessageWire[]>(
+    "agent_history_window_older",
+    { chatId, limit, beforeMsgId },
+  );
+  return rows
+    .map(fromPersistedMessage)
+    .filter((m): m is AgentMessage => m !== null);
+}
+
 export async function clearChat(chatId: string): Promise<void> {
   if (!isElectron()) return;
   await nativeInvoke<void>("agent_history_clear_chat", { chatId });
@@ -116,6 +138,31 @@ export async function getChatMeta(
 export async function listChats(): Promise<ChatMetaWire[]> {
   if (!isElectron()) return [];
   return nativeInvoke<ChatMetaWire[]>("agent_history_list_chats");
+}
+
+/** Fire-and-forget persist of a chat's scroll position. The renderer
+ *  already updates the in-memory store synchronously; this just makes
+ *  the value durable across restart. Caller is expected to debounce —
+ *  typically 1s of scroll-idle. Phase 2 §2.11 closure. */
+export async function setChatScrollPosition(
+  chatId: string,
+  top: number,
+): Promise<void> {
+  if (!isElectron()) return;
+  await nativeInvoke<void>("agent_history_set_chat_scroll_position", {
+    chatId,
+    top,
+  });
+}
+
+/** Bulk-fetch every chat's saved scroll position. Called once at app
+ *  boot to seed the in-memory store before any chat mounts. Returns
+ *  an empty map outside Electron (no persistence available). */
+export async function listChatScrollPositions(): Promise<Record<string, number>> {
+  if (!isElectron()) return {};
+  return nativeInvoke<Record<string, number>>(
+    "agent_history_list_chat_scroll_positions",
+  );
 }
 
 // ── Chat list (sidebar metadata) — SQLite-backed ──────────

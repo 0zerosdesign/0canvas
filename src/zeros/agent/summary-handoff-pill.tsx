@@ -12,7 +12,7 @@
 
 import React from "react";
 import { FileText, X as XIcon } from "lucide-react";
-import { useAgentSessions } from "./sessions-provider";
+import { useAgentSessions } from "./sessions-hooks";
 import { useWorkspace } from "../store/store";
 import type { AgentSessionState } from "./use-agent-session";
 

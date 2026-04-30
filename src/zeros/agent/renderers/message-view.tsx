@@ -19,6 +19,7 @@ import type { RendererContext, RendererRegistry } from "./types";
 import { defaultRegistry, resolveRenderer } from "./registry";
 import { InlinePermissionCluster } from "./inline-permission";
 import { AutoDecisionChip } from "./auto-decision-chip";
+import { InferredQuestion } from "./inferred-question";
 
 interface MessageViewProps {
   message: AgentMessage;
@@ -52,6 +53,12 @@ export const MessageView = memo(
     // trust in the policy machinery.
     const autoDecision =
       message.kind === "tool" ? ctx.autoDecisions[message.toolCallId] : null;
+    // Roadmap §2.4.9 inferred-question heuristic — agent text messages
+    // that finalize the turn with a clarifying `?` get a quick-reply
+    // banner under them. Skipped for in-flight text and for non-tail
+    // messages (the InferredQuestion component double-checks all this).
+    const isAgentText =
+      message.kind === "text" && (message as AgentTextMessage).role === "agent";
     return (
       <>
         <Component message={message} ctx={ctx} />
@@ -67,6 +74,12 @@ export const MessageView = memo(
           <AutoDecisionChip
             decision={autoDecision.decision}
             onRevoke={() => ctx.revokePolicy(autoDecision.policyId)}
+          />
+        )}
+        {isAgentText && (
+          <InferredQuestion
+            message={message as AgentTextMessage}
+            ctx={ctx}
           />
         )}
       </>
@@ -119,6 +132,16 @@ export const MessageView = memo(
       if (prev.ctx.autoDecisions[id] !== next.ctx.autoDecisions[id]) {
         return false;
       }
+      // Roadmap §2.4.7 — SubagentCard reads ctx.subagentChildren.get(id)
+      // to render its nested transcript. New child events arriving while
+      // the subagent is in flight need to re-render the card. Compare
+      // the bucket arrays by reference; subagentChildren is rebuilt
+      // only when session.messages changes, so reference equality is safe.
+      if (
+        prev.ctx.subagentChildren.get(id) !== next.ctx.subagentChildren.get(id)
+      ) {
+        return false;
+      }
       return true;
     }
     if (prev.message.kind === "text") {
@@ -130,6 +153,18 @@ export const MessageView = memo(
         // future in-flight-aware text renderers.
         if (prev.ctx.isStreaming !== next.ctx.isStreaming) return false;
         if (prev.ctx.activeTurnStartedAt !== next.ctx.activeTurnStartedAt) {
+          return false;
+        }
+      }
+      if (role === "agent") {
+        // Roadmap §2.4.9 — InferredQuestion (rendered below an agent
+        // text message) has to appear/disappear when this message
+        // becomes/stops-being the chat's tail and when the turn flips
+        // from streaming to ready. Bail when either signal changed.
+        const wasTail = prev.ctx.lastMessageId === prev.message.id;
+        const isTail = next.ctx.lastMessageId === next.message.id;
+        if (wasTail !== isTail) return false;
+        if (isTail && prev.ctx.isStreaming !== next.ctx.isStreaming) {
           return false;
         }
       }

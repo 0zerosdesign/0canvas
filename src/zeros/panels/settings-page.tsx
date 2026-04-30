@@ -54,7 +54,7 @@ import { SHOW_ARCHIVED_CHATS_KEY } from "../../shell/column1-nav";
 import { useBridge } from "../bridge/use-bridge";
 import { AgentsPanel } from "../agent/agents-panel";
 import { AgentMemoryInspector } from "../agent/agent-memory-inspector";
-import { useAgentSessions } from "../agent/sessions-provider";
+import { useAgentSessions } from "../agent/sessions-hooks";
 import { refreshCatalog } from "../agent/model-catalog";
 import type {
   AgentAgentsListMessage,

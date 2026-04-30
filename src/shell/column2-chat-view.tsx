@@ -22,7 +22,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Plus, Bot as BotIcon, History } from "lucide-react";
 import { Button } from "../zeros/ui";
 import { useWorkspace, type ChatThread } from "../zeros/store/store";
-import { useAgentSessions, useChatSession } from "../zeros/agent/sessions-provider";
+import { useAgentSessions, useChatSession } from "../zeros/agent/sessions-hooks";
 import { useBridgeStatus } from "../zeros/bridge/use-bridge";
 import { AgentChat } from "../zeros/agent/agent-chat";
 import { AgentsPanel } from "../zeros/agent/agents-panel";

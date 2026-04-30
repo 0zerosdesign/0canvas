@@ -17,20 +17,16 @@
 // ──────────────────────────────────────────────────────────
 
 import React, {
-  createContext,
   startTransition,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
 } from "react";
 import type {
   ContentBlock,
-  InitializeResponse,
   RequestPermissionResponse,
 } from "../bridge/agent-events";
-import type { ListSessionsResponse } from "../bridge/agent-events";
 import type {
   AgentAgentsListMessage,
   AgentAgentInitializedMessage,
@@ -41,18 +37,14 @@ import type {
   AgentSessionCreatedMessage,
   AgentSessionLoadedMessage,
   AgentSessionsListMessage,
-  BridgeRegistryAgent,
 } from "../bridge/messages";
 import { useBridge } from "../bridge/use-bridge";
 import {
   BLANK_USAGE,
   type AgentMessage,
-  type AgentSessionControls,
-  type AgentSessionState,
   type AgentTextMessage,
   type AgentUsage,
   type SessionStatus,
-  type StartSessionOptions,
 } from "./use-agent-session";
 import {
   BLANK,
@@ -72,6 +64,11 @@ import {
   type AgentFailure,
 } from "../bridge/failure";
 import { findMatchingPolicy } from "./policies";
+import {
+  ActionsCtx,
+  type SessionsActions,
+  type StartForChatOptions,
+} from "./sessions-context";
 
 /** How many messages we hydrate into memory per chat on first mount.
  *  Older messages stay on disk and load on scroll-up. 200 covers a
@@ -118,77 +115,11 @@ function statusForFailure(failure: AgentFailure): SessionStatus {
   return "failed";
 }
 
-interface StartForChatOptions extends StartSessionOptions {
-  /** Absolute path the agent subprocess should use as cwd. */
-  cwd?: string;
-  /** Force a fresh session even when one is already ready. Used when
-   *  the user changes model/effort. */
-  force?: boolean;
-}
-
-/** Bridge-connected actions. The context value contains ONLY these —
- *  no session data — so the value is stable and downstream consumers
- *  using `useContext(ActionsCtx)` don't re-render on every token. */
-interface SessionsActions {
-  getSession(chatId: string): AgentSessionState | undefined;
-  listAgents(force?: boolean): Promise<BridgeRegistryAgent[]>;
-  initAgent(agentId: string): Promise<InitializeResponse>;
-  ensureSession(
-    chatId: string,
-    agentId: string,
-    options?: StartForChatOptions,
-  ): Promise<void>;
-  sendPrompt(
-    chatId: string,
-    text: string,
-    displayText?: string,
-    attachments?: ContentBlock[],
-  ): Promise<void>;
-  cancel(chatId: string): Promise<void>;
-  respondToPermission(
-    chatId: string,
-    response: RequestPermissionResponse,
-  ): void;
-  setMode(chatId: string, modeId: string): Promise<void>;
-  reset(chatId: string): void;
-  listSessionsFor(
-    agentId: string,
-    opts?: { cwd?: string; cursor?: string | null },
-  ): Promise<ListSessionsResponse>;
-  loadIntoChat(
-    chatId: string,
-    agentId: string,
-    sessionId: string,
-    options?: StartForChatOptions,
-  ): Promise<void>;
-  /** Load on-disk transcript for `chatId` if the in-memory slot is
-   *  empty. Idempotent — safe to call from a chat view's mount effect.
-   *  Does NOT touch a slot that's already populated; the live store
-   *  is the source of truth once the user is interacting. */
-  hydrateChat(chatId: string): Promise<void>;
-  disposeAll(): void;
-}
-
-/** Public surface — what `useAgentSessions()` returns.
- *
- *  This used to also expose `sessions: Record<string, AgentSessionState>`
- *  and `warmAgentIds: ReadonlySet<string>` as direct fields. That broke
- *  consumers' useEffect dependency arrays — every store mutation
- *  produced a new returned-object reference, so any effect with
- *  `[..., sessions]` in its deps re-fired on every token stream chunk.
- *  One such effect (empty-composer) called `sessions.initAgent` inside,
- *  which produced a runaway 50+/sec AGENT_INIT_AGENT loop that
- *  saturated the bridge queue and prevented real prompts from getting
- *  through (observed 2026-04-26 with codex never responding).
- *
- *  The data fields now live behind dedicated hooks
- *  (`useChatSlot(id)` for one chat, `useWarmAgentIds()` for the warm
- *  set, `useAgentSessions().getSession(id)` for one-shot access). The
- *  context value itself is the stable actions object — its identity
- *  only changes if a memo dep on the provider does. */
-export type SessionsCtx = SessionsActions;
-
-const ActionsCtx = createContext<SessionsActions | null>(null);
+// SessionsActions / SessionsCtx / StartForChatOptions / ActionsCtx all
+// live in ./sessions-context now — splitting them out kept Vite Fast
+// Refresh's "this file exports only components" boundary clean
+// (Track 5.C). Hooks live in ./sessions-hooks. This file is the
+// component-only surface.
 
 export function AgentSessionsProvider({ children }: { children: React.ReactNode }) {
   const bridge = useBridge();
@@ -1220,73 +1151,8 @@ function messagesContentEqual(a: AgentMessage, b: AgentMessage): boolean {
   return false;
 }
 
-/** Per-chat session access. Returns an object shaped like the old
- *  useAgentSession return value so <AgentChat session={...} /> works as-is.
- *  Also exposes ensureSession for the Chat view to warm up on mount.
- *
- *  Subscribes via Zustand selector so this hook only re-renders when
- *  *this chat's* slot changes — not when sibling chats stream tokens. */
-export function useChatSession(
-  chatId: string,
-): AgentSessionState & AgentSessionControls & {
-  ensureSession(agentId: string, options?: StartForChatOptions): Promise<void>;
-  hydrateChat(): Promise<void>;
-} {
-  const ctx = useContext(ActionsCtx);
-  if (!ctx) {
-    throw new Error("useChatSession must be used inside <AgentSessionsProvider>");
-  }
-  const slot = useSessionsStore((s) => s.sessions[chatId] ?? BLANK);
-
-  return {
-    ...slot,
-    listAgents: ctx.listAgents,
-    initAgent: ctx.initAgent,
-    // startSession kept for API compatibility; forwards to ensureSession
-    // with the chat's id baked in.
-    startSession: (agentId, options) =>
-      ctx.ensureSession(chatId, agentId, options),
-    sendPrompt: (text, displayText, attachments) =>
-      ctx.sendPrompt(chatId, text, displayText, attachments),
-    cancel: () => ctx.cancel(chatId),
-    respondToPermission: (response) =>
-      ctx.respondToPermission(chatId, response),
-    setMode: (modeId: string) => ctx.setMode(chatId, modeId),
-    reset: () => ctx.reset(chatId),
-    ensureSession: (agentId, options) =>
-      ctx.ensureSession(chatId, agentId, options),
-    hydrateChat: () => ctx.hydrateChat(chatId),
-  };
-}
-
-/** App-level access for flows that aren't tied to a single chat
- *  (e.g. the settings Agents panel fetching the registry).
- *
- *  Returns the **stable** actions context. Its identity does NOT change
- *  on every store mutation — that's the whole point. Consumers can put
- *  this in `useEffect` / `useCallback` deps without their effects
- *  re-firing on every chat token (the bug that produced the 50+/sec
- *  AGENT_INIT_AGENT flood).
- *
- *  For chat-slot data: use `useChatSession(chatId)` (sliced) or
- *  `useChatSlot(chatId)` (raw slot).
- *
- *  For warm-agent state: use `useWarmAgentIds()`. */
-export function useAgentSessions(): SessionsCtx {
-  const ctx = useContext(ActionsCtx);
-  if (!ctx) {
-    throw new Error("useAgentSessions must be used inside <AgentSessionsProvider>");
-  }
-  return ctx;
-}
-
-// `useWarmAgentIds` lives in ./sessions-store and consumers import it
-// from there directly. We don't re-export it — Track 4.C: a non-
-// component / non-hook re-export inside a Provider module breaks
-// Vite's Fast Refresh boundary, forcing a full reload on every edit.
-
-// Re-export the AgentMessage type so consumers don't have to reach into
-// the older hook file. (Type-only `export type` is erased at compile
-// time; Vite's Fast Refresh treats it as no export at all, so it's
-// safe to keep here.)
-export type { AgentMessage };
+// Hooks `useChatSession` + `useAgentSessions` live in ./sessions-hooks
+// (Track 5.C). This file is now component-only so Vite Fast Refresh
+// hot-swaps the provider on edit instead of full-reloading the page.
+// `useWarmAgentIds` lives in ./sessions-store. Type re-exports of
+// `AgentMessage` etc. happen via ./sessions-hooks where the hooks live.

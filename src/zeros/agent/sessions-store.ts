@@ -49,6 +49,7 @@ import {
   upsertChatPlan as ipcUpsertChatPlan,
   getChatPlan as ipcGetChatPlan,
 } from "../../native/native";
+import { setChatScrollPosition as ipcSetChatScrollPosition } from "./agent-history-client";
 import {
   deletePolicyFromDb,
   hydrateChatPolicies,
@@ -75,6 +76,27 @@ function persistChatPlan(
     /* main-side persistence is best-effort; in-memory plan is canonical
        until restart, when SQLite (if it survived) takes over */
   });
+}
+
+/** Per-chat debounce timers for scroll-position persistence. Scroll
+ *  events fire many times per second; we let the in-memory store
+ *  update on every event (free) but coalesce SQLite writes into one
+ *  per chat per second of scroll-idle. The trailing write captures
+ *  the user's final resting position. Phase 2 §2.11 closure. */
+const SCROLL_PERSIST_DEBOUNCE_MS = 1000;
+const scrollPersistTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+function schedulePersistScrollPosition(chatId: string, top: number): void {
+  const existing = scrollPersistTimers.get(chatId);
+  if (existing) clearTimeout(existing);
+  const t = setTimeout(() => {
+    scrollPersistTimers.delete(chatId);
+    void ipcSetChatScrollPosition(chatId, top).catch(() => {
+      /* SQLite persistence is best-effort; the in-memory store is
+         canonical until restart, when the seed-on-boot path takes over */
+    });
+  }, SCROLL_PERSIST_DEBOUNCE_MS);
+  scrollPersistTimers.set(chatId, t);
 }
 
 /** Async hydration of the plan from SQLite. Used by sessions-provider
@@ -154,9 +176,10 @@ export interface SessionsStoreState {
    *  each chat restores its last scroll position rather than snapping
    *  to bottom. Conductor 0.49 ships this; without it, the long-run UX
    *  loses the "I was reading mid-transcript" state on every chat
-   *  swap. In-memory only for now — survives chat-switch within a
-   *  session, resets at app restart. SQLite persistence is a
-   *  Phase 2.11 polish item. */
+   *  swap. Hydrated from SQLite at app boot via `seedScrollPositions`,
+   *  so the layoutEffect on chat mount finds the durable value
+   *  synchronously. Writes go to SQLite on a 1-second scroll-idle
+   *  debounce (see `setScrollPosition`). Phase 2 §2.11 closure. */
   scrollPositions: Record<string, number>;
 
   /** Chats whose user has just clicked Cancel. The cancel sends a
@@ -191,6 +214,10 @@ export interface SessionsStoreState {
   setWarmAgent: (agentId: string, warm: boolean) => void;
   setLoadInProgress: (chatId: string, value: boolean) => void;
   setScrollPosition: (chatId: string, top: number) => void;
+  /** Replace the scrollPositions map with the boot-time hydrated copy
+   *  from SQLite. Called once at app start before any chat mounts so
+   *  the layoutEffect's `scrollPositions[chatId]` lookup is populated. */
+  seedScrollPositions: (positions: Record<string, number>) => void;
   setCancelling: (chatId: string, value: boolean) => void;
   clearAll: () => void;
 
@@ -255,6 +282,18 @@ export const useSessionsStore = create<SessionsStoreState>((set, get) => ({
         scrollPositions: { ...state.scrollPositions, [chatId]: top },
       };
     });
+    // Debounced SQLite persist — coalesces a fast scroll burst into one
+    // write at scroll-idle. Errors are swallowed (in-memory state is the
+    // truth until restart). Phase 2 §2.11 closure.
+    schedulePersistScrollPosition(chatId, top);
+  },
+
+  seedScrollPositions: (positions) => {
+    // Replace, not merge — the SQLite copy is authoritative at boot.
+    // No-op when positions is empty so non-Electron harnesses don't
+    // wipe any in-memory state seeded by tests.
+    if (Object.keys(positions).length === 0) return;
+    set(() => ({ scrollPositions: { ...positions } }));
   },
 
   setCancelling: (chatId, value) => {

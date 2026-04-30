@@ -50,11 +50,14 @@ import {
   agentHistoryGetChatMeta,
   agentHistoryGetPlan,
   agentHistoryListChats,
+  agentHistoryListChatScrollPositions,
   agentHistoryListPolicies,
   agentHistorySetChatMeta,
+  agentHistorySetChatScrollPosition,
   agentHistoryUpsertPlan,
   agentHistoryUpsertPolicy,
   agentHistoryWindow,
+  agentHistoryWindowOlder,
   chatsDelete,
   chatsList,
   chatsReplaceAll,
@@ -190,10 +193,19 @@ export function registerAllCommands(): void {
   // append on every chunk, hydrate on boot, and clear on chat reset.
   setCommand("agent_history_append", agentHistoryAppend);
   setCommand("agent_history_window", agentHistoryWindow);
+  setCommand("agent_history_window_older", agentHistoryWindowOlder);
   setCommand("agent_history_clear_chat", agentHistoryClearChat);
   setCommand("agent_history_set_chat_meta", agentHistorySetChatMeta);
   setCommand("agent_history_get_chat_meta", agentHistoryGetChatMeta);
   setCommand("agent_history_list_chats", agentHistoryListChats);
+  setCommand(
+    "agent_history_set_chat_scroll_position",
+    agentHistorySetChatScrollPosition,
+  );
+  setCommand(
+    "agent_history_list_chat_scroll_positions",
+    agentHistoryListChatScrollPositions,
+  );
   setCommand("agent_history_list_policies", agentHistoryListPolicies);
   setCommand("agent_history_upsert_policy", agentHistoryUpsertPolicy);
   setCommand("agent_history_delete_policy", agentHistoryDeletePolicy);

@@ -112,6 +112,13 @@ export interface RendererContext {
    *  continue in Default / Accept Edits / Auto" pick. Returns null
    *  for sessions whose adapter doesn't expose modes (Codex). */
   setMode: ((modeId: string) => void) | null;
+  /** Roadmap §2.4.7 — children of an in-flight subagent, keyed by
+   *  the parent's toolCallId. SubagentCard reads its own children
+   *  here and renders them indented inside its expanded body.
+   *  Computed once per session.messages change at the host level
+   *  so the per-card lookup is O(1). Empty map when no subagent is
+   *  active. */
+  subagentChildren: Map<string, AgentMessage[]>;
 }
 
 export interface ApplyReceipt {

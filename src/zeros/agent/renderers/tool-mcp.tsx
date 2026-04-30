@@ -11,16 +11,20 @@
 // the same `mcp__*` namespace once an MCP server is registered.
 // One card, one renderer, every agent.
 //
-// Goose-style rich `ui` content payloads (MCP-UI components)
-// are deferred — for now we render the JSON. Phase 2 polish
-// can detect a `ui` content block and embed the widget.
+// Stage 11 polish (2026-04-29): image and resource content
+// blocks render as actual <img>/preview rather than raw JSON,
+// so MCP servers that return screenshots or attachments are
+// usable instead of dumping a base64 wall. Goose-style rich
+// MCP-UI widgets are still deferred — those need a separate
+// component library and aren't part of the MCP core spec.
 // ──────────────────────────────────────────────────────────
 
 import { memo, useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, Plug } from "lucide-react";
+import { ChevronDown, ChevronRight, FileDown, Plug } from "lucide-react";
 
 import type { Renderer } from "./types";
 import type { AgentToolMessage } from "../use-agent-session";
+import type { ContentBlock, ToolCallContent } from "../../bridge/agent-events";
 import { DurationChip } from "./live-duration";
 
 export const MCPCard: Renderer<AgentToolMessage> = memo(function MCPCard({
@@ -31,7 +35,13 @@ export const MCPCard: Renderer<AgentToolMessage> = memo(function MCPCard({
     tool.title,
   ]);
   const inputJson = useMemo(() => safeStringify(tool.rawInput), [tool.rawInput]);
-  const outputJson = useMemo(() => readOutputText(tool), [tool]);
+  // Stage 11 — split content blocks into rich (image/resource) vs
+  // text. Rich blocks render as real widgets; text concatenates into
+  // a single output preview the way the original card did.
+  const { textOutput, mediaBlocks } = useMemo(
+    () => splitContentBlocks(tool),
+    [tool],
+  );
   const durationMs = tool.updatedAt - tool.createdAt;
   const [expanded, setExpanded] = useState(() => tool.status === "failed");
 
@@ -74,15 +84,25 @@ export const MCPCard: Renderer<AgentToolMessage> = memo(function MCPCard({
               <pre className="oc-agent-mcp-json">{inputJson}</pre>
             </div>
           )}
-          {outputJson && (
+          {mediaBlocks.length > 0 && (
+            <div className="oc-agent-mcp-section">
+              <div className="oc-agent-mcp-section-label">Attachments</div>
+              <div className="oc-agent-mcp-media">
+                {mediaBlocks.map((b, i) => (
+                  <MCPMediaBlock key={i} block={b} />
+                ))}
+              </div>
+            </div>
+          )}
+          {textOutput && (
             <div className="oc-agent-mcp-section">
               <div className="oc-agent-mcp-section-label">
                 {tool.status === "failed" ? "Error" : "Output"}
               </div>
-              <pre className="oc-agent-mcp-json">{outputJson}</pre>
+              <pre className="oc-agent-mcp-json">{textOutput}</pre>
             </div>
           )}
-          {!inputJson && !outputJson && (
+          {!inputJson && !textOutput && mediaBlocks.length === 0 && (
             <div className="oc-agent-mcp-empty">
               {tool.status === "in_progress" ? "Calling…" : "(no payload)"}
             </div>
@@ -133,17 +153,119 @@ function safeStringify(value: unknown): string {
   }
 }
 
-function readOutputText(tool: AgentToolMessage): string {
-  if (!tool.content) return "";
-  const parts: string[] = [];
-  for (const block of tool.content) {
-    if (block.type === "content") {
-      const c = block.content as { type?: string; text?: string };
-      if (c?.type === "text" && typeof c.text === "string") {
-        parts.push(c.text);
-      }
+function splitContentBlocks(
+  tool: AgentToolMessage,
+): { textOutput: string; mediaBlocks: ContentBlock[] } {
+  if (!tool.content) return { textOutput: "", mediaBlocks: [] };
+  const textParts: string[] = [];
+  const mediaBlocks: ContentBlock[] = [];
+  for (const wrapper of tool.content as ToolCallContent[]) {
+    if (wrapper.type !== "content") continue;
+    const block = wrapper.content;
+    switch (block.type) {
+      case "text":
+        if (typeof block.text === "string") textParts.push(block.text);
+        break;
+      case "image":
+      case "audio":
+      case "resource":
+      case "resource_link":
+        mediaBlocks.push(block);
+        break;
+      default:
+        // Unknown content type — fall back to JSON dump in text section
+        // so the user at least sees something rather than silent loss.
+        try {
+          textParts.push(JSON.stringify(block, null, 2));
+        } catch {
+          /* skip */
+        }
     }
   }
-  return parts.join("");
+  return { textOutput: textParts.join(""), mediaBlocks };
+}
+
+/** Renders a single non-text MCP content block. Image data renders
+ *  as an actual <img> with a data URL; resources show file metadata
+ *  + open-link affordance; audio/blob fall back to a download badge. */
+function MCPMediaBlock({ block }: { block: ContentBlock }) {
+  if (block.type === "image") {
+    const src = `data:${block.mimeType};base64,${block.data}`;
+    return (
+      <div className="oc-agent-mcp-media-row">
+        <img
+          src={src}
+          alt="MCP image attachment"
+          className="oc-agent-mcp-media-image"
+        />
+      </div>
+    );
+  }
+  if (block.type === "resource_link") {
+    return (
+      <div className="oc-agent-mcp-media-row">
+        <FileDown className="w-3.5 h-3.5" />
+        <a
+          href={block.uri}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="oc-agent-mcp-media-link"
+        >
+          {block.title ?? block.name}
+        </a>
+        {block.description && (
+          <span className="oc-agent-mcp-media-desc">
+            — {block.description}
+          </span>
+        )}
+      </div>
+    );
+  }
+  if (block.type === "resource") {
+    const r = block.resource;
+    if ("text" in r) {
+      return (
+        <div className="oc-agent-mcp-media-row">
+          <div className="oc-agent-mcp-media-resource">
+            <div className="oc-agent-mcp-media-resource-uri">{r.uri}</div>
+            <pre className="oc-agent-mcp-json">{r.text}</pre>
+          </div>
+        </div>
+      );
+    }
+    // Blob — try to render as image when the mime type suggests it,
+    // else surface as a download badge with the blob's URI.
+    const mime = r.mimeType ?? "";
+    if (mime.startsWith("image/")) {
+      const src = `data:${mime};base64,${r.blob}`;
+      return (
+        <div className="oc-agent-mcp-media-row">
+          <img
+            src={src}
+            alt={`MCP resource ${r.uri}`}
+            className="oc-agent-mcp-media-image"
+          />
+        </div>
+      );
+    }
+    return (
+      <div className="oc-agent-mcp-media-row">
+        <FileDown className="w-3.5 h-3.5" />
+        <span className="oc-agent-mcp-media-resource-uri">{r.uri}</span>
+        <span className="oc-agent-mcp-media-desc">
+          ({mime || "binary"})
+        </span>
+      </div>
+    );
+  }
+  if (block.type === "audio") {
+    const src = `data:${block.mimeType};base64,${block.data}`;
+    return (
+      <div className="oc-agent-mcp-media-row">
+        <audio controls src={src} className="oc-agent-mcp-media-audio" />
+      </div>
+    );
+  }
+  return null;
 }
 

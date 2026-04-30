@@ -23,7 +23,8 @@ import { hydrateAiApiKey } from "./zeros/lib/openai";
 import { BridgeProvider, useBridge, useExtensionConnected } from "./zeros/bridge/use-bridge";
 import { SelectionSync } from "./zeros/agent/selection-sync";
 import { AutoConnect } from "./zeros/engine/zeros-engine";
-import { AgentSessionsProvider, useAgentSessions } from "./zeros/agent/sessions-provider";
+import { AgentSessionsProvider } from "./zeros/agent/sessions-provider";
+import { useAgentSessions } from "./zeros/agent/sessions-hooks";
 import { loadCatalog } from "./zeros/agent/model-catalog";
 import { injectStyles } from "./zeros/engine/zeros-styles";
 import { Column1Nav } from "./shell/column1-nav";
@@ -38,8 +39,10 @@ import { rememberProject } from "./native/recent-projects";
 import {
   dbListChats,
   dbReplaceAllChats,
+  listChatScrollPositions,
   type ChatRowWire,
 } from "./zeros/agent/agent-history-client";
+import { useSessionsStore } from "./zeros/agent/sessions-store";
 import { AppearanceProvider } from "./zeros/appearance/provider";
 import { DevThemeTester } from "./shell/dev-theme-tester";
 import "./shell/app-shell.css";
@@ -391,6 +394,20 @@ function ChatsPersistence() {
       }
     }
     dispatch({ type: "HYDRATE_CHATS", chats, activeChatId });
+
+    // Phase 2 §2.11 — seed per-chat scroll positions from SQLite into
+    // the sessions store before the chat view mounts. Without this,
+    // the chat's layoutEffect runs with an empty scrollPositions map
+    // and falls back to "snap to bottom" instead of restoring the
+    // last reading position. Best-effort; non-Electron returns {}.
+    void (async () => {
+      try {
+        const positions = await listChatScrollPositions();
+        useSessionsStore.getState().seedScrollPositions(positions);
+      } catch (err) {
+        console.warn("[Zeros] scroll-position hydration failed:", err);
+      }
+    })();
 
     // Async recovery: if the LS list ended up empty (and the user
     // didn't intentionally clear), fall through to SQLite. This is

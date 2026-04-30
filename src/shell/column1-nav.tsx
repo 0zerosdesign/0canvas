@@ -42,7 +42,7 @@ import {
 } from "lucide-react";
 import { Button, Input } from "../zeros/ui";
 import { useWorkspace, type ChatThread } from "../zeros/store/store";
-import { useAgentSessions, useChatSession } from "../zeros/agent/sessions-provider";
+import { useAgentSessions, useChatSession } from "../zeros/agent/sessions-hooks";
 import { getDefaultAgentId } from "../zeros/panels/settings-page";
 import {
   discoverLocalhostServices,

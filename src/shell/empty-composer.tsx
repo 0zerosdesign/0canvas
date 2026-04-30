@@ -38,7 +38,7 @@ import {
   type ChatPermissionMode,
   type ChatThread,
 } from "../zeros/store/store";
-import { useAgentSessions } from "../zeros/agent/sessions-provider";
+import { useAgentSessions } from "../zeros/agent/sessions-hooks";
 import { useBridgeStatus } from "../zeros/bridge/use-bridge";
 import { getDefaultAgentId } from "../zeros/panels/settings-page";
 import type { InitializeResponse } from "../zeros/bridge/agent-events";

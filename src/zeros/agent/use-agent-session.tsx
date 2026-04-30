@@ -53,6 +53,16 @@ export interface AgentTextMessage {
    *  one growing bubble (the symptom that surfaced after we fixed the
    *  Codex stdin hang and turns started actually completing). */
   messageId?: string;
+  /** Roadmap §2.4.8 — true for `role: "thought"` messages whose
+   *  content the model encrypted (Anthropic `redacted_thinking`
+   *  blocks). Renderer shows a distinct "redacted" badge with no
+   *  expandable body. Other roles ignore this field. */
+  redacted?: boolean;
+  /** Roadmap §2.4.7 — text emitted by a subagent (Claude `Task` /
+   *  `Agent` tool) carries the parent Task's toolCallId. The renderer
+   *  routes it inside the SubagentCard rather than the top-level
+   *  timeline. See same field on AgentToolMessage. */
+  parentToolId?: string;
 }
 
 export interface AgentToolMessage {
@@ -71,6 +81,12 @@ export interface AgentToolMessage {
    *  surface as "+N more" history under it. The store keeps every
    *  message; shadowing is a render-time concern only. */
   mergeKey?: string;
+  /** Roadmap §2.4.7 — when a subagent (Claude `Task`/`Agent` tool,
+   *  Droid Task, OpenCode task) is in flight, the child events the
+   *  subagent emits carry the parent Task's toolCallId here. The
+   *  renderer hides children from the top-level timeline and shows
+   *  them indented inside the parent SubagentCard's expanded body. */
+  parentToolId?: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -712,9 +728,23 @@ export function applyUpdate(
       // engine 0.19 widened `messageId` to `string | null | undefined`.
       // Treat null the same as undefined — both mean "no engine id yet",
       // which falls through to role-only coalescing in appendText.
-      return appendText(messages, "agent", upd.content, upd.messageId ?? undefined);
+      return appendText(
+        messages,
+        "agent",
+        upd.content,
+        upd.messageId ?? undefined,
+        undefined,
+        upd.parentToolId ?? undefined,
+      );
     case "agent_thought_chunk":
-      return appendText(messages, "thought", upd.content, upd.messageId ?? undefined);
+      return appendText(
+        messages,
+        "thought",
+        upd.content,
+        upd.messageId ?? undefined,
+        upd.redacted ?? undefined,
+        upd.parentToolId ?? undefined,
+      );
     case "tool_call": {
       const tc = upd as unknown as ToolCall & { sessionUpdate: "tool_call" };
       const msg: AgentToolMessage = {
@@ -729,6 +759,7 @@ export function applyUpdate(
         rawInput: tc.rawInput,
         rawOutput: tc.rawOutput,
         mergeKey: tc.mergeKey ?? undefined,
+        parentToolId: tc.parentToolId ?? undefined,
         createdAt: Date.now(),
         updatedAt: Date.now(),
       };
@@ -788,6 +819,8 @@ function appendText(
   role: AgentMessageRole,
   content: { type?: string; text?: string } | undefined,
   messageId: string | undefined,
+  redacted?: boolean,
+  parentToolId?: string,
 ): AgentMessage[] {
   if (!content || content.type !== "text" || typeof content.text !== "string") {
     return messages;
@@ -813,7 +846,15 @@ function appendText(
   ) {
     return [
       ...messages.slice(0, -1),
-      { ...last, text: last.text + chunkText },
+      {
+        ...last,
+        text: last.text + chunkText,
+        // Once a message has been flagged redacted (any block in it),
+        // keep the flag set — Anthropic interleaves redacted/plain
+        // blocks within a single thinking message and we want the
+        // composite to render as redacted.
+        ...(redacted ? { redacted: true } : {}),
+      },
     ];
   }
 
@@ -826,6 +867,8 @@ function appendText(
       text: chunkText,
       createdAt: Date.now(),
       messageId,
+      ...(redacted ? { redacted: true } : {}),
+      ...(parentToolId ? { parentToolId } : {}),
     },
   ];
 }

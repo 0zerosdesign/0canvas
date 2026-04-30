@@ -3485,6 +3485,21 @@ ${S} .oc-agent-turn {
    * (16px gutter + 6px breathing). */
   position: relative;
   padding-left: 22px;
+  /* Phase 2 §2.11.1 lighter alternative — content-visibility: auto
+   * lets the browser skip layout/paint for off-viewport turns at near-
+   * zero cost while keeping the simpler full-DOM model (so Cmd+up/down
+   * jump-by-message and the custom sticky-bottom hook keep working).
+   * contain-intrinsic-size reserves a height placeholder so the
+   * scrollbar size does not jump when content-visibility skips layout.
+   * Browser support: Chromium-based (incl. Electron). Falls back to
+   * normal rendering elsewhere. */
+  content-visibility: auto;
+  contain-intrinsic-size: 0 240px;
+}
+/* …but the active turn must always render — its sticky prompt and
+ * live tool cards depend on actually being in the layout tree. */
+${S} .oc-agent-turn-active {
+  content-visibility: visible;
 }
 ${S} .oc-agent-turn + .oc-agent-turn {
   margin-top: 6px;
@@ -4512,6 +4527,16 @@ ${S} .oc-agent-thinking-flight .oc-agent-thinking-icon {
   color: var(--text-muted);
   animation: ocAgentThinkingIconPulse 1.6s ease-in-out infinite;
 }
+${S} .oc-agent-thinking-redacted {
+  color: var(--text-placeholder);
+  font-style: italic;
+  background: var(--tint-black-strong);
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
 @keyframes ocAgentThinkingIconPulse {
   0%, 100% { transform: scale(1);    opacity: 0.8; }
   50%      { transform: scale(1.12); opacity: 1;   }
@@ -5014,6 +5039,42 @@ ${S} .oc-agent-mcp-section-label {
   font-family: var(--font-mono);
   background: var(--tint-black-soft);
 }
+/* Stage 11: rich content blocks (images, resources, audio, links). */
+${S} .oc-agent-mcp-media {
+  padding: 8px 12px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+${S} .oc-agent-mcp-media-row {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--text-muted);
+}
+${S} .oc-agent-mcp-media-image {
+  max-width: 100%; max-height: 320px;
+  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-2);
+}
+${S} .oc-agent-mcp-media-link {
+  color: var(--text-info);
+  text-decoration: underline;
+}
+${S} .oc-agent-mcp-media-link:hover { color: var(--text-info-strong); }
+${S} .oc-agent-mcp-media-desc {
+  color: var(--text-placeholder);
+  font-size: 10.5px;
+}
+${S} .oc-agent-mcp-media-resource {
+  width: 100%;
+  display: flex; flex-direction: column; gap: 4px;
+}
+${S} .oc-agent-mcp-media-resource-uri {
+  font-family: var(--font-mono); font-size: 10.5px;
+  color: var(--text-placeholder);
+  word-break: break-all;
+}
+${S} .oc-agent-mcp-media-audio {
+  width: 100%; max-width: 320px;
+}
 ${S} .oc-agent-mcp-json {
   margin: 0;
   padding: 8px 12px;
@@ -5084,6 +5145,16 @@ ${S} .oc-agent-subagent-status-run {
 ${S} .oc-agent-subagent-content {
   border-top: 1px solid var(--border-subtle);
   background: var(--surface-1);
+}
+/* Roadmap §2.4.7 — nested transcript inside the SubagentCard. Indented
+ * with a left-border accent so the user can see the child events as
+ * one delegated unit. Children render via the same MessageView so they
+ * pick up all the standard chrome (cards, status, mergeKey collapse). */
+${S} .oc-agent-subagent-nested {
+  padding: 8px 12px 8px 16px;
+  border-left: 2px solid var(--tint-info-border);
+  margin-left: 12px;
+  display: flex; flex-direction: column; gap: 8px;
 }
 ${S} .oc-agent-subagent-section + .oc-agent-subagent-section {
   border-top: 1px solid var(--border-subtle);
@@ -5316,6 +5387,53 @@ ${S} .oc-agent-perm-btn-cancel:hover { background: var(--tint-hover-strong); }
  * tinted strip that reads as a continuation of the card chrome
  * rather than separate UI -- the card body above is the context
  * for the decision; the cluster is the action. */
+/* ── Stage 11.4: "Load older messages" affordance ─────── */
+${S} .oc-agent-load-older-row {
+  display: flex; justify-content: center;
+  padding: 6px 0 10px;
+}
+${S} .oc-agent-load-older {
+  font-size: 11px;
+  color: var(--text-placeholder);
+  background: transparent;
+  border: 1px dashed var(--tint-black-strong);
+  padding: 4px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+${S} .oc-agent-load-older:hover:not(:disabled) {
+  color: var(--text-muted);
+  border-color: var(--text-placeholder);
+}
+${S} .oc-agent-load-older:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+/* ── Stage 4.9: inferred-question quick-reply banner ─── */
+${S} .oc-agent-inferred-question {
+  margin: 4px 0 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--tint-black-soft);
+  border: 1px dashed var(--tint-black-strong);
+  font-size: 11px;
+}
+${S} .oc-agent-inferred-question-hint {
+  display: flex; align-items: center; gap: 6px;
+  color: var(--text-placeholder);
+}
+${S} .oc-agent-inferred-question-hint span { line-height: 1.3; }
+${S} .oc-agent-inferred-question-options {
+  margin-top: 6px;
+  display: flex; flex-wrap: wrap; gap: 4px;
+}
+${S} .oc-agent-inferred-question-opt {
+  font-size: 11px;
+  padding: 2px 8px;
+}
+
 ${S} .oc-agent-perm-inline {
   margin: -8px 0 12px;
   padding: 10px 12px 12px;

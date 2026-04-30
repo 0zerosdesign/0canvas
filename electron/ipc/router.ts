@@ -116,10 +116,19 @@ const commandTable: Record<string, CommandHandler> = {
   // ── Agent transcript persistence (Phase 0 step 4) ─────────
   agent_history_append: notImpl("agent_history_append", 0),
   agent_history_window: notImpl("agent_history_window", 0),
+  agent_history_window_older: notImpl("agent_history_window_older", 0),
   agent_history_clear_chat: notImpl("agent_history_clear_chat", 0),
   agent_history_set_chat_meta: notImpl("agent_history_set_chat_meta", 0),
   agent_history_get_chat_meta: notImpl("agent_history_get_chat_meta", 0),
   agent_history_list_chats: notImpl("agent_history_list_chats", 0),
+  agent_history_set_chat_scroll_position: notImpl(
+    "agent_history_set_chat_scroll_position",
+    0,
+  ),
+  agent_history_list_chat_scroll_positions: notImpl(
+    "agent_history_list_chat_scroll_positions",
+    0,
+  ),
   agent_history_list_policies: notImpl("agent_history_list_policies", 9),
   agent_history_upsert_policy: notImpl("agent_history_upsert_policy", 9),
   agent_history_delete_policy: notImpl("agent_history_delete_policy", 9),

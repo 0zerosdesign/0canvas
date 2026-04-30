@@ -23,13 +23,16 @@ import {
   listAllChats,
   listChatPolicies,
   listChats,
+  listChatScrollPositions,
   replaceAllChats,
+  setChatMetaScrollPosition,
   upsertChatMeta,
   upsertChatPlan,
   upsertChatPolicy,
   upsertChatRow,
   upsertMessagesBulk,
   windowMessages,
+  windowOlderMessages,
   type ChatRow,
   type PersistedMessage,
 } from "../../db";
@@ -102,6 +105,19 @@ export const agentHistoryWindow: CommandHandler = (args) => {
   return windowMessages(chatId, limit, before);
 };
 
+/** agent_history_window_older — Phase 2 §2.11.4 "Load older" affordance.
+ *  Renderer passes the oldest visible message's id; we return the next
+ *  `limit` rows below it (older). Used by the message-list "Load
+ *  older" button when the user scrolls to the top of a hydrated
+ *  window. Empty result = no older rows on disk; renderer should hide
+ *  the button. */
+export const agentHistoryWindowOlder: CommandHandler = (args) => {
+  const chatId = requireString(args, "chatId");
+  const limit = requireNumber(args, "limit");
+  const beforeMsgId = requireString(args, "beforeMsgId");
+  return windowOlderMessages(chatId, limit, beforeMsgId);
+};
+
 /** agent_history_clear_chat — delete a chat's transcript and metadata. */
 export const agentHistoryClearChat: CommandHandler = (args) => {
   const chatId = requireString(args, "chatId");
@@ -130,6 +146,23 @@ export const agentHistoryGetChatMeta: CommandHandler = (args) => {
  *  the hydration boot path to seed the store before bridge connect. */
 export const agentHistoryListChats: CommandHandler = () => {
   return listChats();
+};
+
+/** agent_history_set_chat_scroll_position — debounced write of the
+ *  message-list scroll-top so chat scroll position survives restart.
+ *  Phase 2 §2.11 closure. */
+export const agentHistorySetChatScrollPosition: CommandHandler = (args) => {
+  const chatId = requireString(args, "chatId");
+  const top = requireNumber(args, "top");
+  setChatMetaScrollPosition(chatId, top);
+};
+
+/** agent_history_list_chat_scroll_positions — bulk-fetch every chat's
+ *  saved scroll position. App-shell calls this once at boot to seed
+ *  the in-memory store before any chat mounts, so the layoutEffect
+ *  scroll-restore can find the value synchronously. */
+export const agentHistoryListChatScrollPositions: CommandHandler = () => {
+  return listChatScrollPositions();
 };
 
 // ── Per-chat permission policies — fix #2 ──────────────────

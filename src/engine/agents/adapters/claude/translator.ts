@@ -54,6 +54,11 @@ interface ClaudeAssistantContentBlock {
 
 interface ClaudeMessageEvent {
   type: "user" | "assistant";
+  /** Anthropic stamps `parent_tool_use_id` at the envelope level when
+   *  the message originates from inside a Task subagent. Roadmap
+   *  §2.4.7 — the renderer uses this to route child events into the
+   *  parent SubagentCard's nested transcript. */
+  parent_tool_use_id?: string | null;
   message?: {
     role?: string;
     content?: ClaudeAssistantContentBlock[];
@@ -272,6 +277,16 @@ export class ClaudeStreamTranslator {
   // ── Assistant turn (thinking, text, tool_use) ───────────
   private onAssistant(event: ClaudeMessageEvent): void {
     const blocks = event.message?.content ?? [];
+    // Roadmap §2.4.7 — when Claude routes a Task subagent's emissions
+    // through the parent stream, every event in this assistant chunk
+    // is stamped with `parent_tool_use_id` pointing at the Task tool's
+    // tool_use_id. We translate that to the parent's Zeros-side tool
+    // id (so the renderer can match it against the SubagentCard's
+    // toolCallId) and propagate it onto every emitted update.
+    const claudeParentId = event.parent_tool_use_id ?? undefined;
+    const parentToolId = claudeParentId
+      ? this.toolCallIds.get(claudeParentId)
+      : undefined;
 
     // Claude emits one assistant event per turn with the full text in
     // one block — a single messageId per call is correct.
@@ -298,6 +313,24 @@ export class ClaudeStreamTranslator {
             sessionUpdate: "agent_thought_chunk",
             content: { type: "text", text: block.thinking } as ContentBlock,
             messageId: this.currentAssistantMessageId,
+            ...(parentToolId ? { parentToolId } : {}),
+          },
+        });
+      } else if (block.type === "redacted_thinking") {
+        // Roadmap §2.4.8 — Anthropic encrypted-thinking blocks. The
+        // model produced reasoning but won't surface it in plaintext;
+        // the wire payload is a `data` blob we don't decode. Emit a
+        // sentinel so the renderer shows a "Thinking · redacted"
+        // badge with no expandable body. Use a single space so the
+        // appendText coalesce path doesn't reject it as empty.
+        this.emit({
+          sessionId: this.sessionId,
+          update: {
+            sessionUpdate: "agent_thought_chunk",
+            content: { type: "text", text: " " } as ContentBlock,
+            messageId: this.currentAssistantMessageId,
+            redacted: true,
+            ...(parentToolId ? { parentToolId } : {}),
           },
         });
       } else if (block.type === "text" && typeof block.text === "string") {
@@ -331,6 +364,7 @@ export class ClaudeStreamTranslator {
             sessionUpdate: "agent_message_chunk",
             content: { type: "text", text: toEmit } as ContentBlock,
             messageId: this.currentAssistantMessageId,
+            ...(parentToolId ? { parentToolId } : {}),
           },
         });
       } else if (
@@ -379,6 +413,7 @@ export class ClaudeStreamTranslator {
             status: "in_progress",
             rawInput: block.input,
             ...(mergeKey ? { mergeKey } : {}),
+            ...(parentToolId ? { parentToolId } : {}),
           },
         });
       }

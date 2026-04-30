@@ -42,9 +42,19 @@ const RECONNECT_GRACE_MS = 7_000;
  *  the user has open + a handful of registry probes) without burning
  *  meaningful memory. The deadline check still expires entries so a
  *  stuck reconnect doesn't grow the queue forever. */
-/** Cap on the number of requests we'll queue during a disconnect so
- *  a wedged engine can't balloon memory. */
 const MAX_QUEUED_REQUESTS = 256;
+
+/** Phase 2 §2.11.3 — per-type cap on queued requests for high-fan-out
+ *  message types that React effects can re-fire while disconnected.
+ *  AGENT_LOAD_SESSION is the worst offender: every chat-view mount
+ *  emits one, and a chat-switch storm during a brief reconnect can
+ *  pile up dozens for the same chatId. We cap each type at 50 entries
+ *  in the queue and drop the oldest when the cap is reached. The
+ *  newest write always wins because session state is monotonic. */
+const PER_TYPE_QUEUE_CAP: Record<string, number> = {
+  AGENT_LOAD_SESSION: 50,
+  AGENT_LIST_SESSIONS: 50,
+};
 
 /**
  * Resolve the engine port. Cached at module level so the reconnect
@@ -292,6 +302,31 @@ export class CanvasBridgeClient {
     // Disconnected: queue under the grace window. A connection attempt
     // is already running (onclose → scheduleReconnect), so we just
     // wait for onopen → flushQueue() to pick this up.
+
+    // Phase 2 §2.11.3 — dedup by (type, sessionId). For idempotent
+    // requests like AGENT_LOAD_SESSION targeting the same session, the
+    // newer call supersedes any older queued copy: chat-view mount
+    // effects and chat-switch storms used to stack 5× the same call.
+    // Drop older copies with a "superseded" reject so upstream retry
+    // loops can decide what to do.
+    this.dedupSupersededInQueue(msg);
+
+    // Per-type cap (§2.11.3) — for message types that can balloon under
+    // a sustained disconnect, drop the oldest of that type rather than
+    // overflowing the global cap and rejecting unrelated traffic.
+    const typeCap = PER_TYPE_QUEUE_CAP[msg.type];
+    if (typeCap !== undefined) {
+      const sameType = this.queuedRequests.filter(
+        (q) => q.msg.type === msg.type,
+      );
+      if (sameType.length >= typeCap) {
+        const oldest = sameType[0];
+        oldest.reject(new Error(`Queued ${msg.type} dropped (per-type cap)`));
+        const idx = this.queuedRequests.indexOf(oldest);
+        if (idx >= 0) this.queuedRequests.splice(idx, 1);
+      }
+    }
+
     if (this.queuedRequests.length >= MAX_QUEUED_REQUESTS) {
       return Promise.reject(
         new Error(`Request timeout: ${msg.type} (queue full)`),
@@ -311,6 +346,42 @@ export class CanvasBridgeClient {
         void this.connect();
       }
     });
+  }
+
+  /** Reject any queued request that the incoming message supersedes.
+   *  Two queued requests with the same `type` AND same `sessionId`/
+   *  `chatId` are by definition redundant — the newer one carries the
+   *  newer caller's intent. Older copies surface as "superseded" so
+   *  upstream callers know they've been replaced rather than vanishing. */
+  private dedupSupersededInQueue(
+    incoming: Partial<BridgeMessage> & { type: string },
+  ): void {
+    const inSession = (incoming as Record<string, unknown>).sessionId as
+      | string
+      | undefined;
+    const inChat = (incoming as Record<string, unknown>).chatId as
+      | string
+      | undefined;
+    // Only dedup when there's *some* identity key — a bare type match
+    // would over-collapse legitimate distinct calls.
+    if (!inSession && !inChat) return;
+    const before = this.queuedRequests.length;
+    this.queuedRequests = this.queuedRequests.filter((q) => {
+      if (q.msg.type !== incoming.type) return true;
+      const qSession = (q.msg as Record<string, unknown>).sessionId as
+        | string
+        | undefined;
+      const qChat = (q.msg as Record<string, unknown>).chatId as
+        | string
+        | undefined;
+      const sameKey =
+        (inSession && qSession === inSession) ||
+        (inChat && qChat === inChat);
+      if (!sameKey) return true;
+      q.reject(new Error(`${q.msg.type} superseded by newer queued copy`));
+      return false;
+    });
+    void before; // helper for future logging if we need to see hit-rate
   }
 
   /** Subscribe to a specific message type. Returns an unsubscribe function. */

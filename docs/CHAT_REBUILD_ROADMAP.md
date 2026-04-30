@@ -1,7 +1,16 @@
-# Chat Rebuild — Forward Roadmap (rev. 2026-04-27)
+# Chat Rebuild — Forward Roadmap (rev. 2026-04-29)
 
 **Companion to:** [CHAT_REBUILD_PHASE_0.md](./CHAT_REBUILD_PHASE_0.md) (the retrospective).
-**Status:** Phase 0 shipped in `2be41ae`. Phase 1 is in flight:
+**Status:** Phase 0 shipped in `2be41ae`. Phase 1 (ACP cleanup) shipped through `1b3abb7`. Phases 2-4 are next.
+
+**Phase structure (rev. 2026-04-29 re-split):**
+
+- **Phase 1 — DONE** (ACP cleanup) — stages 1A → 1C cleanup, listed below.
+- **Phase 2 — Agent chat & agents (col 1+2)** — everything chat-side: canonical event taxonomy, per-CLI normalizers, unified card system, long-run UX, inline permissions, capability transparency, OpenCode adapter, **plus** chat-side performance (virtuoso, shiki worker, tool-call index, WS dedup, SQLite windowed view).
+- **Phase 3 — Design canvas refactor (col 3)** — workspace store Zustand migration, iframe virtualization, IPC delta protocol.
+- **Phase 4 — Cross-cutting** — engine sidecar runtime decision, cache-first startup, non-blocking session boot, bundle + binary trim.
+
+**Phase 1 stages (committed):**
 
 - Stage 1A (ACP type-system removal) — `1f85761`
 - Stage 1B.1-3 (CSS prefix + localStorage + UI strings + comments) — `71f7f66`
@@ -10,7 +19,7 @@
 - Stage 1C (clean ACP break, no backward-compat) — `af45f5e`
 - Stage 1C cleanup (final identifier renames) — `1b3abb7`
 
-This rev replaces the previous draft, removes the Codex API-key parallel track (deferred indefinitely — CLI subscription auth is the only supported flow today), folds the original Phase 2 + Phase 3 into a single performance/architecture phase merged with the 360-degree migration audit, and adds:
+This rev re-splits the post-Phase-1 work. The previous rev folded the original Phase 2 + Phase 3 into a single performance/architecture phase; this rev un-folds that into three focused phases (col 1+2, col 3, cross-cutting) per the 2026-04-29 product decision — the chat experience ships whole (UX *and* its perf) before we touch the canvas, and cross-cutting work (runtime/startup/bundle) ships last when convenient. Also retained from the prior rev:
 
 - **Stage 1C** — clean ACP break with no backward-compat aliases. Decided 2026-04-27 because half-here ACP residue (alias maps, migration shims, legacy keychain fallbacks) was creating cognitive load. All paths now expect canonical IDs (`claude`, `codex`); persisted user data referencing legacy IDs is treated as invalid (chats need recreating, API keys need re-entering, enabled-agents need re-toggling).
 - **§2.8 CLI vs API agent adapters** — the architectural model for handling both consumer-CLI agents (today's path) and future direct-API agents in the same renderer pipeline.
@@ -23,7 +32,7 @@ This rev replaces the previous draft, removes the Codex API-key parallel track (
 ## Table of contents
 
 1. [Where we are](#1-where-we-are)
-2. [Phase 1 — Unified Conductor-quality experience](#2-phase-1--unified-conductor-quality-experience)
+2. [Phase 2 — Agent chat & agents (col 1 + col 2)](#2-phase-2--agent-chat--agents-col-1--col-2)
   - 2.1 [Why "unified" is the through-line](#21-why-unified-is-the-through-line)
   - 2.2 [The canonical event taxonomy](#22-the-canonical-event-taxonomy)
   - 2.3 [Adapter normalizers — where agent dialects collapse](#23-adapter-normalizers--where-agent-dialects-collapse)
@@ -34,26 +43,24 @@ This rev replaces the previous draft, removes the Codex API-key parallel track (
   - 2.8 [CLI vs API agent adapters (the parallel-adapter model)](#28-cli-vs-api-agent-adapters-the-parallel-adapter-model)
   - 2.9 [Agent capability transparency — what passes through, what we add](#29-agent-capability-transparency--what-passes-through-what-we-add)
   - 2.10 [Adapter contract refinements (from DPCode research)](#210-adapter-contract-refinements-from-dpcode-research)
-3. [Phase 2 — Performance + architecture (merged with 360-degree audit)](#3-phase-2--performance--architecture-merged-with-360-degree-audit)
+  - 2.11 [Chat-side performance (virtuoso, shiki worker, tool-call index, WS dedup, SQLite windowed view)](#211-chat-side-performance)
+3. [Phase 3 — Design canvas refactor (col 3)](#3-phase-3--design-canvas-refactor-col-3)
   - 3.1 [Workspace store: Zustand migration](#31-workspace-store-zustand-migration)
-  - 3.2 [Message-list virtualization (react-virtuoso)](#32-message-list-virtualization-react-virtuoso)
-  - 3.3 [Streaming markdown + Shiki worker](#33-streaming-markdown--shiki-worker)
-  - 3.4 [Tool-call index + WS dedup](#34-tool-call-index--ws-dedup)
-  - 3.5 [Engine sidecar runtime decision](#35-engine-sidecar-runtime-decision)
-  - 3.6 [Canvas iframe virtualization](#36-canvas-iframe-virtualization)
-  - 3.7 [IPC delta protocol](#37-ipc-delta-protocol)
-  - 3.8 [Cache-first startup](#38-cache-first-startup)
-  - 3.9 [Non-blocking session boot](#39-non-blocking-session-boot)
-  - 3.10 [Bundle + binary trim](#310-bundle--binary-trim)
-  - 3.11 [SQLite windowed view](#311-sqlite-windowed-view)
-4. [Parallel tracks](#4-parallel-tracks)
-  - 4.A [Cursor translator (thinking + tool calls)](#4a-cursor-translator-thinking--tool-calls)
-  - 4.B ~~[Codex API-key auth~~ — REMOVED](#4b-codex-api-key-auth--removed)
-  - 4.C [HMR Fast Refresh recovery](#4c-hmr-fast-refresh-recovery)
-5. [Audit summary — what's solid, what's still risky](#5-audit-summary--whats-solid-whats-still-risky)
-6. [Suggested order](#6-suggested-order)
-7. [End-state vision](#7-end-state-vision)
-8. [References](#8-references)
+  - 3.2 [Canvas iframe virtualization](#32-canvas-iframe-virtualization)
+  - 3.3 [IPC delta protocol](#33-ipc-delta-protocol)
+4. [Phase 4 — Cross-cutting (runtime, startup, bundle)](#4-phase-4--cross-cutting-runtime-startup-bundle)
+  - 4.1 [Engine sidecar runtime decision](#41-engine-sidecar-runtime-decision)
+  - 4.2 [Cache-first startup](#42-cache-first-startup)
+  - 4.3 [Non-blocking session boot](#43-non-blocking-session-boot)
+  - 4.4 [Bundle + binary trim](#44-bundle--binary-trim)
+5. [Parallel tracks](#5-parallel-tracks)
+  - 5.A [Cursor translator (thinking + tool calls)](#5a-cursor-translator-thinking--tool-calls)
+  - 5.B ~~[Codex API-key auth~~ — REMOVED](#5b-codex-api-key-auth--removed)
+  - 5.C [HMR Fast Refresh recovery](#5c-hmr-fast-refresh-recovery)
+6. [Audit summary — what's solid, what's still risky](#6-audit-summary--whats-solid-whats-still-risky)
+7. [Suggested order](#7-suggested-order)
+8. [End-state vision](#8-end-state-vision)
+9. [References](#9-references)
 
 ---
 
@@ -63,24 +70,26 @@ Phase 0 set the foundation: renderer registry, per-chat Zustand slices, rAF coal
 
 What this **doesn't** yet give us — and what this rev addresses:
 
-- **No purpose-built UI for non-design tool calls.** Bash, Edit, Read, Grep, Glob, WebFetch, TodoWrite, Task — all fall through to the generic `ToolCard`. The renderer registry's `toolByKind` table is empty (`src/zeros/agent/renderers/registry.ts:43`). Phase 1 fills it.
-- **No unification across agents.** Today the Codex error path, the Cursor "no thinking" gap, and Claude's rich tool surface all render through the same generic card with no agent-aware shape. Phase 1 introduces a canonical event taxonomy + adapter normalizers so every agent's output flows into the same set of cards.
-- **No long-run UX affordances.** Scroll behaviour is `scrollTop = scrollHeight` on every change (`src/zeros/agent/agent-chat.tsx:296-301`). After a 30-min Claude run with hundreds of tool calls + thinking blocks, the user has lost their original prompt and can't navigate back to it. Phase 1 ships the full long-run UX kit (sticky-bottom with unstick-on-user-scroll, per-turn sticky user prompt, jump-by-text-message keybind, run-summary roll-up, vertical timeline rail, etc.).
-- **No virtualization.** 1000-message chats still mount 1000 DOM nodes. Same problem on the design canvas — every variant `<iframe>` stays mounted (`src/zeros/canvas/variant-canvas.tsx`). Phase 2 fixes both.
-- **Workspace state is a single 23-field React Context reducer.** `src/zeros/store/store.tsx` holds `elements`, `variants`, `themes`, `chats`, inspector mode, and 18 more fields in one `useReducer` whose dispatcher broadcasts every change to every consumer. Cross-chat / cross-canvas / cross-inspector re-render cascade is the canvas-side equivalent of the bug Phase 0 just fixed for chat. Phase 2 migrates it to Zustand slices.
-- **Engine sidecar is Node.js in both dev and prod.** The previous draft of this roadmap (and the 360-audit document) said "Node in prod, Bun in dev" — this is incorrect. `package.json` shows `"serve:engine": "node dist-engine/cli.js"`, the build is `node scripts/build-sidecar.mjs`, and tsup compiles to Node-targeted output. Phase 2 makes a deliberate runtime decision rather than drifting.
-- **All IPC is full-state.** SET_ELEMENTS dispatches the entire `ElementNode[]` tree on every selection or DOM change. The bridge has no delta protocol. Phase 2 adds one.
-- **Bundle is 1.38 MB / 367 KB gzipped, binary is full Electron + Chromium.** Phase 2 audits and trims.
+- **No purpose-built UI for non-design tool calls.** Bash, Edit, Read, Grep, Glob, WebFetch, TodoWrite, Task — all fall through to the generic `ToolCard`. The renderer registry's `toolByKind` table is empty (`src/zeros/agent/renderers/registry.ts:43`). Phase 2 fills it.
+- **No unification across agents.** Today the Codex error path, the Cursor "no thinking" gap, and Claude's rich tool surface all render through the same generic card with no agent-aware shape. Phase 2 introduces a canonical event taxonomy + adapter normalizers so every agent's output flows into the same set of cards.
+- **No long-run UX affordances.** Scroll behaviour is `scrollTop = scrollHeight` on every change (`src/zeros/agent/agent-chat.tsx:296-301`). After a 30-min Claude run with hundreds of tool calls + thinking blocks, the user has lost their original prompt and can't navigate back to it. Phase 2 ships the full long-run UX kit (sticky-bottom with unstick-on-user-scroll, per-turn sticky user prompt, jump-by-text-message keybind, run-summary roll-up, vertical timeline rail, etc.).
+- **No virtualization.** 1000-message chats still mount 1000 DOM nodes — Phase 2 closes this with virtuoso + content-visibility (§2.11). Same problem on the design canvas — every variant `<iframe>` stays mounted (`src/zeros/canvas/variant-canvas.tsx`); Phase 3 closes that with IO-driven mount/unmount (§3.2).
+- **Workspace state is a single 23-field React Context reducer.** `src/zeros/store/store.tsx` holds `elements`, `variants`, `themes`, `chats`, inspector mode, and 18 more fields in one `useReducer` whose dispatcher broadcasts every change to every consumer. Cross-chat / cross-canvas / cross-inspector re-render cascade is the canvas-side equivalent of the bug Phase 0 just fixed for chat. Phase 3 migrates it to Zustand slices.
+- **Engine sidecar is Node.js in both dev and prod.** The previous draft of this roadmap (and the 360-audit document) said "Node in prod, Bun in dev" — this is incorrect. `package.json` shows `"serve:engine": "node dist-engine/cli.js"`, the build is `node scripts/build-sidecar.mjs`, and tsup compiles to Node-targeted output. Phase 4 makes a deliberate runtime decision rather than drifting.
+- **All IPC is full-state.** SET_ELEMENTS dispatches the entire `ElementNode[]` tree on every selection or DOM change. The bridge has no delta protocol. Phase 3 adds one.
+- **Bundle is 1.38 MB / 367 KB gzipped, binary is full Electron + Chromium.** Phase 4 audits and trims.
 
-Phase 1 closes the visible-UX gap. Phase 2 scales it and rebuilds the surrounding architecture for the next 12 months of features without re-running Phase 0's pain.
+**Phase 1 (ACP cleanup) is done** — it shipped through `1b3abb7` and replaced the half-here ACP residue (alias maps, migration shims, legacy keychain fallbacks) with a clean break. Phase 2 closes the visible chat-experience gap (col 1+2). Phase 3 brings the same Phase 0 surgery to the canvas (col 3). Phase 4 rebuilds the surrounding runtime/startup/bundle for the next 12 months without re-running Phase 0's pain.
 
 ---
 
-## 2. Phase 1 — Unified Conductor-quality experience
+## 2. Phase 2 — Agent chat & agents (col 1 + col 2)
 
-**Goal:** every CLI agent — Claude Code, Codex, Cursor, Gemini, Copilot, Droid, plus any agent we add later — produces a chat that looks and feels identical at the chrome level. Same Bash card, same Edit card, same Read card, same Thinking block, same Plan panel, same scroll behaviour, same prompt-pinning, same run summary. Per-agent quirks stay inside the adapter, never inside the renderer. The user can switch from Claude to Codex mid-project and notice no UI shift — only a model change.
+**Scope:** everything chat-side — sidebar (col 1), active chat view (col 2), the adapters and CLIs feeding them, and the chat-side performance work. Phase 1 already shipped the ACP cleanup that made this phase tractable; Phase 2 is the substantive rebuild of the chat experience.
 
-**Estimated scope:** ~~2 weeks. The work splits cleanly into the canonical event taxonomy (~~3 days), the adapter normalizers (~~3 days, can parallelize per agent), the card system (~~4 days, parallelizable per card), the long-run UX kit (~~3 days), and inline permissions (~~1 day). With two of us shipping cards in parallel, ~10 working days.
+**Goal:** every CLI agent — Claude Code, Codex, Cursor, Gemini, Copilot, Droid, OpenCode — produces a chat that looks and feels identical at the chrome level. Same Bash card, same Edit card, same Read card, same Thinking block, same Plan panel, same scroll behaviour, same prompt-pinning, same run summary. Per-agent quirks stay inside the adapter, never inside the renderer. The user can switch from Claude to Codex mid-project and notice no UI shift — only a model change. And the chat stays smooth at 1000+ messages — virtualization, worker-mode shiki, indexed tool-call lookup, deduplicated WS queue, paged SQLite hydration (§2.11) all land *on the new renderer surface*, not retro-fitted later.
+
+**Estimated scope:** ~3 weeks. Splits into the canonical event taxonomy (~3 days), the per-agent normalizers (~3 days, parallelizable per agent), the card system (~4 days, parallelizable per card), the long-run UX kit (~3 days), inline permissions (~1 day), capability transparency (project-context chip + memory inspector + capability test matrix, ~2.5 days), the OpenCode server-attached adapter (~2 days), and chat-side performance (§2.11, ~3 days — lands last). With two of us shipping cards + normalizers in parallel, ~12-14 working days; serial, ~16-18.
 
 ### 2.1 Why "unified" is the through-line
 
@@ -96,7 +105,7 @@ The reason this isn't trivial is that the seven CLIs we support emit seven diffe
 - **Droid** emits `system`, `message`, `tool_call`, `tool_result`, `assistant_chunk`, `completion`, `exit`. Thinking surface is undocumented. ([docs.factory.ai/guides/building/droid-exec-tutorial](https://docs.factory.ai/guides/building/droid-exec-tutorial))
 - **OpenCode** is the most architecturally different of the seven: it's **server-first**. The CLI binary boots an HTTP server (`opencode serve`) that exposes an OpenAPI 3.1 surface plus an SSE event bus. The official `@opencode-ai/sdk` is the canonical client. Bus events: `message.updated`, `message.part.updated`, `message.part.delta` (token streaming), `permission.asked`/`replied`, `question.asked`/`replied`, `session.status`, `session.compacted`, `session.error`, `mcp.tools.changed`. The narrower `opencode run --format json` (NDJSON to stdout) is a subset for one-shot use; we use `serve` to get the full vocabulary. ([opencode.ai/docs/server](https://opencode.ai/docs/server/), [opencode.ai/docs/sdk](https://opencode.ai/docs/sdk/), [github.com/sst/opencode](https://github.com/sst/opencode))
 
-The unification strategy is the standard one: a canonical event vocabulary in the middle, with adapter-side normalizers that translate native events into the canonical set, and renderers that consume only canonical events. We already have the rough shape of this (the renderer registry resolves by message kind), but the message kinds today are bound to the ACP-ish subset Claude emits. Phase 1 generalizes the kind system.
+The unification strategy is the standard one: a canonical event vocabulary in the middle, with adapter-side normalizers that translate native events into the canonical set, and renderers that consume only canonical events. We already have the rough shape of this (the renderer registry resolves by message kind), but the message kinds today are bound to the ACP-ish subset Claude emits. Phase 2 generalizes the kind system.
 
 **DPCode validates the architecture.** [Emanuele-web04/dpcode](https://github.com/Emanuele-web04/dpcode) is an MIT-licensed Electron-based agentic-coding IDE that has already integrated four of our seven agents (Claude, Codex, Gemini, OpenCode) using exactly this adapter pattern. They prove a single `ProviderAdapterShape<TError>` interface (with declarative `capabilities` struct) handles four wildly different transports: Claude via the official Node SDK, Codex via JSON-RPC over stdio (`codex app-server`), Gemini via PTY+ACP, OpenCode via HTTP+SSE through the SDK. Their canonical event vocabulary (~44 events) is more granular than our v1 taxonomy and is documented in [§2.10 (Adapter contract refinements)](#210-adapter-contract-refinements-from-dpcode-research) below — patterns we adopt and patterns we deliberately don't. Anti-pattern they don't recommend either: their renderer is a 2,127-line monolithic timeline, which is what we're explicitly avoiding with the renderer registry.
 
@@ -223,7 +232,7 @@ The visual contract (Conductor / Cursor / Zed convergence — see [§8](#8-refer
 
 **Merge:** consecutive edits to the same file share `mergeKey: "edit:<path>"`. The renderer collapses N edits into one cumulative diff, with a `+N more changes` chevron underneath that expands to per-edit history.
 
-**Highlighting:** via **react-shiki in Worker mode** (Phase 2.3). Phase 1 ships with main-thread shiki to avoid blocking on Phase 2; the worker swap is a one-liner once 2.3 lands.
+**Highlighting:** via **react-shiki in Worker mode** (§2.11.2). Earlier Phase 2 stages ship with main-thread shiki to avoid blocking on §2.11; the worker swap is a one-liner once §2.11.2 lands.
 
 #### 2.4.3 Read card — `tool-read.tsx`
 
@@ -261,7 +270,7 @@ Two sub-modes selected by canonical `kind`:
 - Distinct visual style from the existing collapsed `PlanPanel` — this is per-turn, that one was per-session
 - Existing session-level plan in `session.plan` (today rendered by `PlanPanel` above the message list) becomes the canonical surface; tool-level TodoWrite/plan_update calls feed it
 
-**The cross-agent unification here is the single highest-leverage thing in Phase 1.** Today five agents emit five different shapes, and we render them as five differently-rendered tool cards. After Phase 1, all five drive the same Plan panel.
+**The cross-agent unification here is the single highest-leverage thing in Phase 2.** Today five agents emit five different shapes, and we render them as five differently-rendered tool cards. After Phase 2, all five drive the same Plan panel.
 
 #### 2.4.7 Subagent card — `tool-subagent.tsx`
 
@@ -336,11 +345,11 @@ For canonical `error` events and for the existing `session.error` state. Tinted 
 
 #### 2.4.11 Usage badge — extend existing
 
-Already wired in `session.usage`. Phase 1 makes it canonical-event driven and adds:
+Already wired in `session.usage`. Phase 2 makes it canonical-event driven and adds:
 
 - Per-turn usage chip on the run summary (see §2.5)
 - Cumulative tokens / cost in the chat header
-- Cost calculation when adapter provides per-token pricing (Phase 2 polish)
+- Cost calculation when adapter provides per-token pricing (§2.11 polish)
 
 **Bug carryover from Stage 3 testing — fixed in Stage 5.2:**
 Display used to read `Window 291.4k / 200.0k · 100%` after just three Claude prompts because two things were wrong:
@@ -431,7 +440,7 @@ The user's specific worries:
 
 > *Claude Code will think too long, take 30 minutes, do a lot of bash, write, review, WebSearch, MCP search. There will be a lot of thinking cards. The user has previously given some prompt — when the AI is working it auto-scrolls to the right, and the user has to scroll up too long to see their previous prompt.*
 
-This is the single most important piece of Phase 1 and the part the original roadmap left untreated. The patterns below are drawn from Cursor 3.0, Claude Code (terminal + VS Code), Conductor 0.49, Zed Agent Panel, OpenCode, and T3 Chat — citations in [§8](#8-references).
+This is the single most important piece of Phase 2 and the part the original roadmap left untreated. The patterns below are drawn from Cursor 3.0, Claude Code (terminal + VS Code), Conductor 0.49, Zed Agent Panel, OpenCode, and T3 Chat — citations in [§9](#9-references).
 
 #### 2.5.1 Per-turn structure as the unit of UX
 
@@ -532,7 +541,7 @@ Composer mode switches: **Send** (idle) / **Stop** (running) / **Continue** (pau
 
 #### 2.5.11 Streaming markdown
 
-Past messages get `React.memo` keyed by `chunk.id + chunk.finalized`. Only the actively-streaming message re-parses markdown each chunk. (T3 Chat pattern — see [§8](#8-references).) This is the difference between "renders fine at 30 messages, jank at 100" and "renders fine at 1000+." Phase 1 ships chunked-markdown; Phase 2 swaps shiki to worker mode.
+Past messages get `React.memo` keyed by `chunk.id + chunk.finalized`. Only the actively-streaming message re-parses markdown each chunk. (T3 Chat pattern — see [§9](#9-references).) This is the difference between "renders fine at 30 messages, jank at 100" and "renders fine at 1000+." Earlier Phase 2 stages ship chunked-markdown; §2.11.2 swaps shiki to worker mode.
 
 We use `[marked](https://marked.js.org/)` (already in deps) with a streaming-aware lexer; old messages serialize to HTML once and stay memoized.
 
@@ -544,13 +553,13 @@ We use `[marked](https://marked.js.org/)` (already in deps) with a streaming-awa
 - **Modal permission dialogs.** Anything that pulls focus from the timeline. Inline only — see §2.6.
 - **One card per tool call with no collapsing.** Cline's strict approach makes long runs unusable. Default-collapsed.
 - **Surfacing internal state (MCP/WebSocket/connection).** Per the existing `feedback_no_technical_ui.md` memory.
-- **Heavy virtualization too early.** `react-virtuoso` is great but introduces measurement bugs with variable-height tool cards. Phase 1 uses `content-visibility: auto` + memoization. Phase 2.2 reaches for virtuoso when profiling proves the need at >500 messages.
+- **Heavy virtualization too early.** `react-virtuoso` is great but introduces measurement bugs with variable-height tool cards. Earlier Phase 2 stages use `content-visibility: auto` + memoization. §2.11.1 reaches for virtuoso when profiling proves the need at >500 messages — and only after the new TurnContainer surface is stable.
 
 ### 2.6 Inline permissions with sticky decisions
 
 Today the permission UI lives in `PermissionBar` between the message list and the composer. It's not modal but it is global — it sits in chrome rather than next to the tool call that triggered it.
 
-Phase 1 moves permission to the tool card itself:
+Phase 2 moves permission to the tool card itself:
 
 - The tool card's status is `permission_pending`; the card body shows: brief description, the diff (for apply_change), a button cluster: `Allow · Deny · Always for <tool> · Always for <scope> · Settings`.
 - "Always for X" decisions persist to a per-chat policy (Zustand + SQLite). They don't cross chats by default; a Settings page lists every "Always for" decision so users can revoke.
@@ -677,15 +686,15 @@ Some vendor capabilities are interactive-mode only and don't surface in headless
 | -------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | OAuth login (`/login`, `gh auth login`, etc.)      | Vendor's CLI in interactive mode             | User runs the login command in their own Terminal *first*; our subprocess inherits the auth files. Documented in [agents/README.md](../src/engine/agents/README.md)      |
 | Permission prompts (shell, file edits)             | Vendor's CLI defaults to interactive prompts | We pass headless flags (`claude --permission-mode default`, `cursor-agent --trust`, `droid exec`, etc.) plus `--settings`-based hook injection where supported |
-| Plan-mode keybinding (`Shift+Tab` in Claude TUI)   | Claude's TUI                                 | Replaced by our composer's mode pill (Phase 1 §2.4.13)                                                                                                                   |
+| Plan-mode keybinding (`Shift+Tab` in Claude TUI)   | Claude's TUI                                 | Replaced by our composer's mode pill (§2.4.13)                                                                                                                   |
 | `/memory` slash command UI (Claude, Codex, Gemini) | Vendor's TUI                                 | Replaced by our memory inspector — see §2.9.6                                                                                                                            |
-| `/agents`, `/permissions`, `/config` UI (Claude)   | Vendor's TUI                                 | Replaced by our Settings → Agents panel; permissions inline (Phase 1 §2.6); config via composer pills                                                                    |
-| Approval / diff acceptance UI (Cursor)             | Cursor's TUI                                 | Replaced by inline permission cluster (Phase 1 §2.6)                                                                                                                     |
+| `/agents`, `/permissions`, `/config` UI (Claude)   | Vendor's TUI                                 | Replaced by our Settings → Agents panel; permissions inline (§2.6); config via composer pills                                                                    |
+| Approval / diff acceptance UI (Cursor)             | Cursor's TUI                                 | Replaced by inline permission cluster (§2.6)                                                                                                                     |
 
 
 #### 2.9.5 Project-context indicator (chat header chip)
 
-**New Phase 1 addition** (small renderer-side chip).
+**New Phase 2 addition** (small renderer-side chip).
 
 A chip in the chat header showing what context files the agent is loading for the current chat's cwd. Per agent:
 
@@ -702,11 +711,11 @@ Click expands a popover listing each file with size + first 200 chars preview + 
 
 **Implementation note:** read-only, file-system-driven. The renderer reads files at chat-cwd via the existing IPC `git`/`fs` capability (already wired). No bridge protocol changes.
 
-**Scope:** ships in Phase 1 alongside the long-run UX kit — natural fit because the chip lives in the same per-turn header area that the prompt-pin work is restructuring.
+**Scope:** ships in Phase 2 alongside the long-run UX kit — natural fit because the chip lives in the same per-turn header area that the prompt-pin work is restructuring.
 
 #### 2.9.6 Memory inspector (Settings → Agents)
 
-**New Phase 1 addition** (Settings panel surface).
+**New Phase 2 addition** (Settings panel surface).
 
 A read-only viewer in Settings → Agents → agent showing the agent's persistent memory state:
 
@@ -720,7 +729,7 @@ A read-only viewer in Settings → Agents → agent showing the agent's persiste
 
 **Implementation note:** file-system reads via the existing IPC capability. Read-only in v1; future revisions can add edit-and-save.
 
-**Scope:** small Settings page addition; ships parallel to Phase 1 §2.6 (inline permissions) since both extend the agent settings surface.
+**Scope:** small Settings page addition; ships parallel to §2.6 (inline permissions) — both extend the agent settings surface.
 
 #### 2.9.7 Subagent rename — Claude `Task` → `Agent` (v2.1.63)
 
@@ -728,7 +737,7 @@ A specific gotcha to call out for the Subagent card (§2.4.7):
 
 In Claude Code v2.1.63, the subagent invocation tool was renamed from `Task` to `Agent`. Existing chats and some Claude SDK fields (`system:init.tools`, `permission_denials[].tool_name`) still emit `"Task"`. Our renderer **must** match both names.
 
-Lives in the Claude adapter normalizer (Phase 1 §2.3): the normalizer maps `tool_use.name in {"Task", "Agent"}` → canonical `kind: "subagent"`. The Subagent card renderer then doesn't see the difference.
+Lives in the Claude adapter normalizer (§2.3): the normalizer maps `tool_use.name in {"Task", "Agent"}` → canonical `kind: "subagent"`. The Subagent card renderer then doesn't see the difference.
 
 #### 2.9.8 Per-agent capability test matrix
 
@@ -742,7 +751,7 @@ Referenced from §6 (suggested order). When we onboard a new agent or upgrade an
 6. **MCP injection** — verify our injected design-tool MCP server is visible to the agent (prompt that should trigger an `apply_change` tool call). Verify a user-configured project-level MCP server (`.cursor/mcp.json`, `.mcp.json`, etc.) is also visible. Both should work.
 7. **Headless flags** — verify the agent runs to completion with `code=0` and no manual approval prompts blocking.
 
-Format: `docs/AGENT_CAPABILITY_TEST_MATRIX.md` (created during Phase 1 finalization). Each agent gets a row per test; pass / fail / N/A; CLI version tested. Re-run on every CLI minor version bump.
+Format: `docs/AGENT_CAPABILITY_TEST_MATRIX.md` (created during Phase 2 finalization). Each agent gets a row per test; pass / fail / N/A; CLI version tested. Re-run on every CLI minor version bump.
 
 ### 2.10 Adapter contract refinements (from DPCode research)
 
@@ -781,7 +790,7 @@ interface AdapterCapabilities {
 }
 ```
 
-The mode pill (§2.4.13), inline permission cluster (§2.6), model picker (§2.4.13), and feature flags (Phase 2) all read this struct. Disabled controls render as `disabled` UI rather than error states. Adopted in §2.3 — the canonical adapter contract gets this as a first-class field.
+The mode pill (§2.4.13), inline permission cluster (§2.6), model picker (§2.4.13), and feature flags (§2.11) all read this struct. Disabled controls render as `disabled` UI rather than error states. Adopted in §2.3 — the canonical adapter contract gets this as a first-class field.
 
 **B. `raw + providerRefs` on every canonical event.** Each event carries:
 
@@ -926,28 +935,77 @@ for await (const event of events) {
 
 #### 2.10.5 What this adds to our roadmap
 
-OpenCode integration ships as part of Phase 1 — the new adapter folder pattern is identical to the others, the canonical events are already designed, and the renderer cards already cover OpenCode's tool surface (bash/edit/read/grep/etc. all map cleanly).
+OpenCode integration ships as part of Phase 2 — the new adapter folder pattern is identical to the others, the canonical events are already designed, and the renderer cards already cover OpenCode's tool surface (bash/edit/read/grep/etc. all map cleanly).
 
-**Estimated incremental scope:** 1.5-2 days on top of Phase 1's existing budget. The work splits roughly:
+**Estimated incremental scope:** 1.5-2 days on top of Phase 2's existing budget. The work splits roughly:
 
 - Spec + spawn / serve attach: 0.5 day
 - Translator (SSE bus → canonical): 0.75 day
 - Auth + model picker hydration + MCP injection: 0.5 day
 - Capability matrix entry, capability test row, roadmap doc updates: 0.25 day
 
-Sequenced after Stage 7 (Codex + Cursor) in §6 — reuses the same patterns, just with a server-attach instead of subprocess pipe.
+Sequenced after Stage 7 (Codex + Cursor) in §7 — reuses the same patterns, just with a server-attach instead of subprocess pipe.
+
+### 2.11 Chat-side performance
+
+**Why this lands inside Phase 2, not later:** virtualization, syntax-highlight worker, indexed tool-call lookup, WS queue dedup, and paged SQLite hydration all care about the *shape of the message stream*. That shape is rewritten in §2.1-§2.10 (canonical events, per-turn TurnContainer, default-collapsed cards, mergeKey state-merging). Trying to virtualize the *current* surface and then re-virtualize after the rewrite would mean shipping the perf work twice. Better to ship it once on the new surface.
+
+This subsection merges four items the previous draft scheduled into Phase 2 (then-§3.2, §3.3, §3.4, §3.11). They land in roughly this order, after the new card system + long-run UX foundation are stable.
+
+#### 2.11.1 Message-list virtualization (react-virtuoso)
+
+**Why:** today every message is mounted in DOM. With 1000 messages × N concurrent chats, that's thousands of nodes always alive.
+
+**What changes:**
+
+- [agent-chat.tsx:668](../src/zeros/agent/agent-chat.tsx#L668) — wrap `messages.map(...)` in `<Virtuoso>` from `react-virtuoso` (free MIT core, not the paid `@virtuoso.dev/message-list`).
+- `followOutput="smooth"` and `initialTopMostItemIndex={Infinity}` for chat-style anchor.
+- Each renderer is already memoized (Phase 0); virtuoso-recycled rows update cleanly.
+- The sticky per-turn prompt (§2.5.1) requires that turn containers be the virtualized item, not individual messages — virtuoso handles variable heights, but sticky-positioned children need their parent to be the row.
+
+**Why this is now a one-day drop-in:** Phase 0 made renderers self-contained and memoized. The Phase 2 card work (§2.4) gives them stable heights per kind (default-collapsed cards have stable collapsed height; expanded heights are measured on toggle). Pre-Phase-0/2 this would have been weeks of measurement bugs.
+
+**Note:** keep `content-visibility: auto` on turn containers as a belt-and-suspenders for browsers that support it; virtuoso handles outside-viewport, content-visibility handles within-viewport partial paint.
+
+#### 2.11.2 Streaming markdown + Shiki worker
+
+**Why:** Shiki's regex-heavy grammars can pin the main thread ~50ms per code block. Multiple streaming code blocks → visible jank. And default `react-markdown` re-parses the entire message on every token.
+
+**What changes:**
+
+- Switch syntax-highlight import from `react-shiki` to `react-shiki/worker`.
+- Highlighting runs in a Web Worker; main thread receives rendered HTML.
+- Shared worker boot cost (~50ms) amortized across all code blocks.
+- Pair with the streaming-markdown approach already shipped in §2.5.11. Old messages serialize once to HTML and stay memoized.
+
+#### 2.11.3 Tool-call index + WS dedup
+
+**Tool-call follow-along: O(N) → O(1).** [agent-chat.tsx:320-366](../src/zeros/agent/agent-chat.tsx#L320-L366) iterates all messages on every store update to find pending design-tool calls. Build an index map keyed by `toolCallId` at message-insert time, stored alongside the chat slot in the Zustand store. The follow-along effect reads `index.get(id)` instead of scanning.
+
+**WebSocket queue dedup.** [ws-client.ts](../src/zeros/bridge/ws-client.ts) bounds the offline queue at 256 entries with no dedup. The same `AGENT_LOAD_SESSION` for one sessionId can pile up 5×. Dedup by `(type, sessionId)`; per-type cap (max 50 `AGENT_LOAD_SESSION` queued at once).
+
+The Phase 0 stable-actions fix removed the main runaway-init scenario; the queue shape is still wasteful, this is the cleanup.
+
+#### 2.11.4 SQLite windowed view
+
+Optional polish. Today we hydrate 200 messages on mount (`HYDRATE_WINDOW`); older messages stay on disk but aren't visible.
+
+- Add a "Load older" affordance at the top of the message list.
+- Calls `agent_history_window(chatId, limit, before)` with the oldest visible `ord`.
+- Prepends the older window to the in-memory list.
+- Combines with virtuoso (§2.11.1): "load older" prepends; virtuoso handles the index update.
 
 ---
 
-## 3. Phase 2 — Performance + architecture (merged with 360-degree audit)
+## 3. Phase 3 — Design canvas refactor (col 3)
 
-The previous draft of this roadmap had a Phase 2 (performance scale: virtuoso, shiki worker, tool-call index, WS dedup) and a Phase 3 (polish: cache-first startup, non-blocking session boot, bundle audit, SQLite windowed view). The 360-degree migration audit added: workspace store Zustand migration, engine sidecar runtime decision, canvas iframe virtualization, IPC delta protocol.
+**Scope:** the canvas-side equivalent of Phase 0's chat surgery. Three items, all tightly coupled — workspace state slicing, iframe lifecycle, and patch-based IPC — that together make the canvas hold its frame budget at 30+ variants, while the chat work in Phase 2 ships independently.
 
-These all serve the same end-state — chat + canvas stay smooth at 1000+ messages, 50+ chats, 30+ design variants — and they're tightly coupled in practice (you can't virtualize the message list without resolving the workspace store re-render cascade; you can't ship Bun in the sidecar without confirming `better-sqlite3` and `node-pty` work; you can't add deltas without first sliced state). So they merge into one phase.
+**Why these three together:** you can't virtualize iframes without resolving the workspace re-render cascade first (the IO event would bounce through the global reducer and re-render everything); you can't add IPC deltas without sliced state (the renderer needs granular subscription targets to apply patches). So §3.1 lands first, then §3.2 and §3.3 parallelize.
 
-**Estimated scope:** ~2 weeks. Splits into chat-side performance (3.2-3.4: ~3 days), workspace-side restructuring (3.1, 3.6, 3.7: ~5 days, depends on 3.1 first), runtime / startup / bundle (3.5, 3.8-3.10: ~3 days), and SQLite polish (3.11: ~1 day). With the chat and canvas tracks parallelizing after 3.1 lands, ~10 working days.
+**Estimated scope:** ~7-8 working days. §3.1 (workspace store) is ~3-4 days; §3.2 and §3.3 are ~2 days each, parallelizable after 3.1.
 
-The audit summary at the end ([§5](#5-audit-summary--whats-solid-whats-still-risky)) captures what's solid vs still-risky after Phase 1 + 2 ship.
+The audit summary ([§6](#6-audit-summary--whats-solid-whats-still-risky)) captures what's solid vs still-risky after Phases 2-4 ship.
 
 ### 3.1 Workspace store: Zustand migration
 
@@ -978,47 +1036,48 @@ This is the canvas-side equivalent of the bug Phase 0 just fixed for chat. Sympt
 
 **Outcome:** dragging a node updates `useElementsStore`; only canvas nodes that subscribe to that specific element via `useElementsStore(s => s.byId[id])` re-render. Variant CSS edits no longer re-render the inspector. Chat updates no longer re-render the canvas.
 
-This is the highest-leverage canvas-side change. Until 3.1 lands, the rest of Phase 2 (especially 3.6 iframe virtualization) won't deliver its full value because re-render storms still propagate.
+This is the highest-leverage canvas-side change. Until 3.1 lands, the rest of Phase 3 (especially §3.2 iframe virtualization) won't deliver its full value because re-render storms still propagate.
 
-### 3.2 Message-list virtualization (react-virtuoso)
+### 3.2 Canvas iframe virtualization
 
-**Why:** today every message is mounted in DOM. With 1000 messages × N concurrent chats, that's thousands of nodes always alive.
-
-**What changes:**
-
-- [agent-chat.tsx:668](../src/zeros/agent/agent-chat.tsx#L668) — wrap `messages.map(...)` in `<Virtuoso>` from `react-virtuoso` (free MIT core, not the paid `@virtuoso.dev/message-list`).
-- `followOutput="smooth"` and `initialTopMostItemIndex={Infinity}` for chat-style anchor.
-- Each renderer is already memoized (Phase 0); virtuoso-recycled rows update cleanly.
-- The sticky per-turn prompt (§2.5.1) requires that turn containers be the virtualized item, not individual messages — virtuoso handles variable heights, but sticky-positioned children need their parent to be the row.
-
-**Why this is now a one-day drop-in:** Phase 0 made renderers self-contained and memoized. Phase 1 gives them stable heights per kind (default-collapsed cards have stable collapsed height; expanded heights are measured on toggle). Pre-Phase 0/1 this would have been weeks of measurement bugs.
-
-**Note:** keep `content-visibility: auto` on turn containers as a belt-and-suspenders for browsers that support it; virtuoso handles outside-viewport, content-visibility handles within-viewport partial paint.
-
-### 3.3 Streaming markdown + Shiki worker
-
-**Why:** Shiki's regex-heavy grammars can pin the main thread ~50ms per code block. Multiple streaming code blocks → visible jank. And default `react-markdown` re-parses the entire message on every token.
+**Why:** `src/zeros/canvas/variant-canvas.tsx` mounts every variant `<iframe>` simultaneously. Each iframe is a full browser context with its own JS heap and rendering pipeline. On a project with 30 variants, the canvas is 30 live browsers running on a single Mac.
 
 **What changes:**
 
-- Switch syntax-highlight import from `react-shiki` to `react-shiki/worker`.
-- Highlighting runs in a Web Worker; main thread receives rendered HTML.
-- Shared worker boot cost (~50ms) amortized across all code blocks.
-- Pair with the streaming-markdown approach already shipped in Phase 1 (§2.5.11). Old messages serialize once to HTML and stay memoized.
+1. **Intersection-observer-driven mount/unmount.** Each `VariantNode` watches its own intersection with the canvas viewport. Outside viewport (with a generous margin to account for React Flow's pan/zoom): unmount the iframe and replace with a snapshot image.
+2. **Snapshot capture.** Before unmounting, capture the iframe's rendered surface to a `<canvas>` (or just `<img>`) via the existing canvas screenshot infrastructure. Store the snapshot data-url in the variant's slice of `useVariantsStore`. Re-mount with live iframe when the variant comes back into view.
+3. **Mount budget.** Hard cap of 6 live iframes regardless of viewport; LRU-evict the least-recently-active. Active = focused, or being inspected, or recently scrolled into view.
 
-### 3.4 Tool-call index + WS dedup
+This depends on §3.1 — the Zustand variants slice — because each variant's mount/snapshot state needs granular subscription. Without §3.1, the IO event would bounce through the global reducer and re-render everything.
 
-**Tool-call follow-along: O(N) → O(1).** [agent-chat.tsx:320-366](../src/zeros/agent/agent-chat.tsx#L320-L366) iterates all messages on every store update to find pending design-tool calls. Build an index map keyed by `toolCallId` at message-insert time, stored alongside the chat slot in the Zustand store. The follow-along effect reads `index.get(id)` instead of scanning.
+**The 360-audit's "long term: WebGL canvas" suggestion:** out of scope. Replacing React Flow with PixiJS / WASM is a multi-month project for a marginal benefit at our current scale. We re-evaluate when iframe virtualization runs out of headroom.
 
-**WebSocket queue dedup.** [ws-client.ts](../src/zeros/bridge/ws-client.ts) bounds the offline queue at 256 entries with no dedup. The same `AGENT_LOAD_SESSION` for one sessionId can pile up 5×. Dedup by `(type, sessionId)`; per-type cap (max 50 `AGENT_LOAD_SESSION` queued at once).
+### 3.3 IPC delta protocol
 
-The Phase 0 stable-actions fix removed the main runaway-init scenario; the queue shape is still wasteful, this is the cleanup.
+**Why:** today `SET_ELEMENTS` dispatches the entire `ElementNode[]` tree on every selection or DOM change. Even a single style update sends the full tree across the IPC boundary.
 
-### 3.5 Engine sidecar runtime decision
+**What changes:**
+
+1. **Element tree deltas.** Instead of `SET_ELEMENTS(fullTree)`, dispatch `UPDATE_ELEMENT({ id, patch })` or `INSERT_ELEMENT({ parentId, index, node })`. The renderer's Zustand store applies the patch to its local copy.
+2. **Initial sync stays full.** First load of a variant still ships the full tree once. Only subsequent changes are deltas.
+3. **Inspector style updates** (the highest-frequency event) become especially small: one element id + a styles object diff.
+4. **Bridge protocol stays JSON.** The 360-audit's binary protocol (Protocol Buffers) suggestion is not worth the build complexity at our current message rates. Re-evaluate if bridge throughput exceeds 1k msg/s.
+
+The delta layer is implemented in the Zustand workspace store (§3.1) — `useElementsStore` exposes `applyPatch(patch)` actions, and the engine emits patches instead of full trees.
+
+---
+
+## 4. Phase 4 — Cross-cutting (runtime, startup, bundle)
+
+**Scope:** what's left after Phases 2 and 3 — items that don't sit cleanly in either chat-only or canvas-only territory. Mostly independent of each other; ship them when convenient.
+
+**Estimated scope:** ~3-4 days; mostly parallelizable. §4.1 is decision-only (no code).
+
+### 4.1 Engine sidecar runtime decision
 
 **Correcting the previous draft:** the sidecar runs on **Node.js in both dev and prod** today — `package.json` has `"serve:engine": "node dist-engine/cli.js"` and the build is via tsup targeting Node. The 360-audit document said "Bun in dev / Node in prod", which is wrong.
 
-**The decision Phase 2 forces:** stay on Node, or move to Bun.
+**The decision Phase 4 forces:** stay on Node, or move to Bun.
 
 **Pro-Bun:**
 
@@ -1040,34 +1099,7 @@ The Phase 0 stable-actions fix removed the main runaway-init scenario; the queue
 
 This explicitly closes the question rather than letting it drift. If later evidence flips the answer, we revisit.
 
-### 3.6 Canvas iframe virtualization
-
-**Why:** `src/zeros/canvas/variant-canvas.tsx` mounts every variant `<iframe>` simultaneously. Each iframe is a full browser context with its own JS heap and rendering pipeline. On a project with 30 variants, the canvas is 30 live browsers running on a single Mac.
-
-**What changes:**
-
-1. **Intersection-observer-driven mount/unmount.** Each `VariantNode` watches its own intersection with the canvas viewport. Outside viewport (with a generous margin to account for React Flow's pan/zoom): unmount the iframe and replace with a snapshot image.
-2. **Snapshot capture.** Before unmounting, capture the iframe's rendered surface to a `<canvas>` (or just `<img>`) via the existing canvas screenshot infrastructure. Store the snapshot data-url in the variant's slice of `useVariantsStore`. Re-mount with live iframe when the variant comes back into view.
-3. **Mount budget.** Hard cap of 6 live iframes regardless of viewport; LRU-evict the least-recently-active. Active = focused, or being inspected, or recently scrolled into view.
-
-This depends on 3.1 — the Zustand variants slice — because each variant's mount/snapshot state needs granular subscription. Without 3.1, the IO event would bounce through the global reducer and re-render everything.
-
-**The 360-audit's "long term: WebGL canvas" suggestion:** out of scope. Replacing React Flow with PixiJS / WASM is a multi-month project for a marginal benefit at our current scale. We re-evaluate when iframe virtualization runs out of headroom.
-
-### 3.7 IPC delta protocol
-
-**Why:** today `SET_ELEMENTS` dispatches the entire `ElementNode[]` tree on every selection or DOM change. Even a single style update sends the full tree across the IPC boundary.
-
-**What changes:**
-
-1. **Element tree deltas.** Instead of `SET_ELEMENTS(fullTree)`, dispatch `UPDATE_ELEMENT({ id, patch })` or `INSERT_ELEMENT({ parentId, index, node })`. The renderer's Zustand store applies the patch to its local copy.
-2. **Initial sync stays full.** First load of a variant still ships the full tree once. Only subsequent changes are deltas.
-3. **Inspector style updates** (the highest-frequency event) become especially small: one element id + a styles object diff.
-4. **Bridge protocol stays JSON.** The 360-audit's binary protocol (Protocol Buffers) suggestion is not worth the build complexity at our current message rates. Re-evaluate if bridge throughput exceeds 1k msg/s.
-
-The delta layer is implemented in the Zustand workspace store (3.1) — `useElementsStore` exposes `applyPatch(patch)` actions, and the engine emits patches instead of full trees.
-
-### 3.8 Cache-first startup
+### 4.2 Cache-first startup
 
 **Why:** today boot waits for bridge connect → `AGENT_LIST_AGENTS` round-trip → agent install / auth probes → session list fetch, all in series, before the user sees anything useful.
 
@@ -1079,7 +1111,7 @@ The delta layer is implemented in the Zustand workspace store (3.1) — `useElem
 
 **Source:** Conductor 0.49 explicitly does this and credits it for half the perceived speedup.
 
-### 3.9 Non-blocking session boot
+### 4.3 Non-blocking session boot
 
 **Why:** today `loadIntoChat` awaits the engine round-trip before status flips to `ready`. The chat shows "warming…" for the duration.
 
@@ -1089,7 +1121,7 @@ The delta layer is implemented in the Zustand workspace store (3.1) — `useElem
 - Show a lightweight "connecting" pill in the corner during engine warm-up.
 - Subsequent prompts work — composer is interactive while warm-up completes (queues into the existing `queuedPreview` slot).
 
-### 3.10 Bundle + binary trim
+### 4.4 Bundle + binary trim
 
 Renderer: 1.38 MB / 367 KB gzipped. Conductor shaved 150 MB.
 
@@ -1100,28 +1132,19 @@ Renderer: 1.38 MB / 367 KB gzipped. Conductor shaved 150 MB.
 - Remove dead `// removed:` code paths.
 - Run `pnpm dlx vite-bundle-visualizer` for the renderer; `npx source-map-explorer` for the engine sidecar.
 
-### 3.11 SQLite windowed view
-
-Optional polish. Today we hydrate 200 messages on mount (`HYDRATE_WINDOW`); older messages stay on disk but aren't visible.
-
-- Add a "Load older" affordance at the top of the message list.
-- Calls `agent_history_window(chatId, limit, before)` with the oldest visible `ord`.
-- Prepends the older window to the in-memory list.
-- Combines with virtuoso (3.2): "load older" prepends; virtuoso handles the index update.
-
 ---
 
-## 4. Parallel tracks
+## 5. Parallel tracks
 
 Tracks that run alongside the phases without blocking each other.
 
-### 4.A Cursor translator (thinking + tool calls)
+### 5.A Cursor translator (thinking + tool calls)
 
 **Why:** Cursor agent currently emits prompts but no thinking blocks or tool calls show up in the UI. Reported by the user; pre-existing, not a Phase 0 regression. The cursor adapter [cursor/spec.ts](../src/engine/agents/adapters/cursor/spec.ts) reuses `ClaudeStreamTranslator` on the assumption *"Cursor's stream-json schema is close enough to Claude's"*. That assumption holds for plain text but breaks for thinking + tool calls.
 
 **Important:** as of April 2026, Cursor's docs explicitly state thinking is **not emitted in headless print mode** ([cursor.com/docs/cli/reference/output-format](https://cursor.com/docs/cli/reference/output-format)). So this track has two halves:
 
-1. **Tool-call translation.** Cursor emits `tool_call` events with `subtype: started/completed` and tool-specific shapes (`shellToolCall`, `readToolCall`, etc. — see [tarq.net/posts/cursor-agent-stream-format](https://tarq.net/posts/cursor-agent-stream-format/)). Today these don't render. Build a `CursorStreamTranslator` (or extend Claude's) to map them to canonical `tool.start` / `tool.end` events. **This is real work and must ship in Phase 1.**
+1. **Tool-call translation.** Cursor emits `tool_call` events with `subtype: started/completed` and tool-specific shapes (`shellToolCall`, `readToolCall`, etc. — see [tarq.net/posts/cursor-agent-stream-format](https://tarq.net/posts/cursor-agent-stream-format/)). Today these don't render. Build a `CursorStreamTranslator` (or extend Claude's) to map them to canonical `tool.start` / `tool.end` events. **This is real work and must ship in Phase 2.**
 2. **Thinking visibility.** Cursor doesn't emit thinking in print mode. So we don't render thinking for Cursor — gracefully, no stub, no error. The user sees text without thinking, same posture every other product takes.
 
 **Diagnosis approach:**
@@ -1135,7 +1158,7 @@ Tracks that run alongside the phases without blocking each other.
 
 **Why it matters:** Cursor is the most popular non-Claude agent. Shipping with cursor "no tool calls" is a real gap. With Phase 0's live-log workflow we can diagnose this in one session. This track is effectively **part of Phase 1.3 (adapter normalizers)** — splitting it out only because it's a known pre-existing user-visible gap.
 
-### 4.B ~~Codex API-key auth~~ — REMOVED
+### 5.B ~~Codex API-key auth~~ — REMOVED
 
 **Per user decision (2026-04-27):** removed from the roadmap.
 
@@ -1143,7 +1166,7 @@ The previous draft proposed an API-key auth flow for Codex to unlock 12 catalog 
 
 If we revisit this later (a real user asks for it, or codex-cli changes its auth model), we'll re-add behind a tier flag. Until then, the codex catalog stays at the verified-working subscription-tier 3 (gpt-5.5, gpt-5.4, gpt-5.3-codex) and we don't build the API-key flow.
 
-### 4.C HMR Fast Refresh recovery
+### 5.C HMR Fast Refresh recovery
 
 **Why:** [sessions-provider.tsx](../src/zeros/agent/sessions-provider.tsx) exports both hooks (`useChatSession`, `useAgentSessions`, `useWarmAgentIds`) and a component (`AgentSessionsProvider`) from the same file. Vite Fast Refresh disables itself when a file mixes these — every edit causes a full reload instead of a hot-swap.
 
@@ -1156,14 +1179,14 @@ If we revisit this later (a real user asks for it, or codex-cli changes its auth
 
 ---
 
-## 5. Audit summary — what's solid, what's still risky
+## 6. Audit summary — what's solid, what's still risky
 
 ### Solid (post-Phase 0)
 
 
 | Area                                          | Status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Renderer registry pattern                     | Battle-tested by existing migrations. Phase 1 will exercise it heavily.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Renderer registry pattern                     | Battle-tested by existing migrations. Phase 2 will exercise it heavily.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | Zustand per-chat slices (chat)                | Verified — cross-chat re-render cascade is gone.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | rAF coalescence                               | Verified at the engine level.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | SQLite append-only schema                     | Verified — no data-loss surfaces in audit.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
@@ -1179,10 +1202,10 @@ If we revisit this later (a real user asks for it, or codex-cli changes its auth
 | Clean ACP break (Stage 1C)                    | Shipped this rev. All backward-compat paths deleted: `agent-id-aliases.ts` removed, registry alias map removed, SQLite migration removed, workspace state migration removed, keychain prefix fallback removed, legacy localStorage key removed, `canonicalAgentId()` lookups stripped. The codebase no longer carries any ACP shape. **Breaking for users carrying forward pre-rename data:** chats with `agentId: "claude-acp"` no longer match an adapter; API keys saved under `acp::`* keychain prefix become unreadable; `zeros.acp.enabledAgents` localStorage is ignored. Acceptable per the user's "start fresh, no half-here state" decision. |
 
 
-### Will be solid after Phase 1
+### Will be solid after Phase 2 (col 1+2 chat-side)
 
 
-| Area                                                                                                                 | Risk today                                                                                         | Mitigation in Phase 1                                                                                                  |
+| Area                                                                                                                 | Risk today                                                                                         | Mitigation in Phase 2                                                                                                  |
 | -------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | Cursor tool calls don't render                                                                                       | Pre-existing gap                                                                                   | Stage 7 — `cursor/normalizer.ts`                                                                                       |
 | Bash/Edit/Read/Grep/Web/Todo/Task render as generic card                                                             | Largest visible UX gap                                                                             | Stages 3 + 4 — unified card system                                                                                     |
@@ -1200,33 +1223,43 @@ If we revisit this later (a real user asks for it, or codex-cli changes its auth
 | Defensive runtime checks on adapter capabilities ("does this adapter support setMode?")                              | Cluttered call sites                                                                               | §2.10.2 — declarative `capabilities` struct on every adapter; UI reads it for enable/disable state                     |
 | Hard to debug why a canonical event has the shape it has                                                             | Translators throw away native detail                                                               | §2.10.2 — `raw + providerRefs` fields on every canonical event; "view raw" debug capability for free                   |
 | User config bleeds into agent runtime in ways we don't control (e.g. user-configured MCP server crashes our session) | Inconsistent across agents                                                                         | §2.10.2 — per-adapter "config-neuter" mechanism table; OpenCode uses `OPENCODE_CONFIG_CONTENT={}` env (DPCode pattern) |
+| 1000+ messages keep all DOM nodes                                                                                    | Phase 0 helps; virtuoso closes the gap                                                             | §2.11.1 — react-virtuoso on the new TurnContainer surface                                                              |
+| Shiki on main thread                                                                                                 | jank on streaming code blocks                                                                      | §2.11.2 — worker mode                                                                                                  |
+| Tool-call follow-along O(N)                                                                                          | scales poorly                                                                                      | §2.11.3 — index map                                                                                                    |
+| WS queue duplicates                                                                                                  | wasteful, not user-visible                                                                         | §2.11.3 — dedup                                                                                                        |
+| Pre-200-message history not loadable                                                                                 | older transcripts effectively invisible                                                            | §2.11.4 — SQLite windowed view                                                                                         |
 
 
-### Will be solid after Phase 2
+### Will be solid after Phase 3 (col 3 canvas-side)
 
 
-| Area                                            | Risk after Phase 1                                              | Mitigation in Phase 2                    |
-| ----------------------------------------------- | --------------------------------------------------------------- | ---------------------------------------- |
-| Workspace state re-render cascade (canvas-side) | Same shape as Phase 0's chat bug, still present on canvas       | §3.1 — workspace store Zustand migration |
-| 1000+ messages keep all DOM nodes               | Phase 1 helps via collapse + windowing; virtuoso closes the gap | §3.2 — react-virtuoso                    |
-| Shiki on main thread                            | jank on streaming code blocks                                   | §3.3 — worker mode                       |
-| Tool-call follow-along O(N)                     | scales poorly                                                   | §3.4 — index map                         |
-| WS queue duplicates                             | wasteful, not user-visible                                      | §3.4 — dedup                             |
-| 30 live iframes on canvas                       | memory pressure                                                 | §3.6 — IO virtualization + 6-iframe LRU  |
-| Full-tree IPC sync                              | wasteful at scale                                               | §3.7 — delta protocol                    |
-| Cold-start serial fetches                       | feels slow                                                      | §3.8 — cache-first startup               |
-| Bundle size 1.38MB                              | growth path unconstrained                                       | §3.10 — bundle audit                     |
+| Area                                            | Risk after Phase 2                                        | Mitigation in Phase 3                    |
+| ----------------------------------------------- | --------------------------------------------------------- | ---------------------------------------- |
+| Workspace state re-render cascade (canvas-side) | Same shape as Phase 0's chat bug, still present on canvas | §3.1 — workspace store Zustand migration |
+| 30 live iframes on canvas                       | memory pressure                                           | §3.2 — IO virtualization + 6-iframe LRU  |
+| Full-tree IPC sync                              | wasteful at scale                                         | §3.3 — delta protocol                    |
 
 
-### Still risky after both phases (deferred / accept)
+### Will be solid after Phase 4 (cross-cutting)
+
+
+| Area                       | Risk after Phase 3                | Mitigation in Phase 4              |
+| -------------------------- | --------------------------------- | ---------------------------------- |
+| Sidecar runtime ambiguity  | Bun-vs-Node question keeps drifting | §4.1 — explicit decision (stay on Node) |
+| Cold-start serial fetches  | feels slow                        | §4.2 — cache-first startup         |
+| Engine warm-up blocks chat | composer disabled until ready     | §4.3 — non-blocking session boot   |
+| Bundle size 1.38MB         | growth path unconstrained         | §4.4 — bundle audit                |
+
+
+### Still risky after all phases (deferred / accept)
 
 
 | Area                                                       | Risk                                   | Why deferred                                                                                   |
 | ---------------------------------------------------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Engine sidecar Bun migration                               | Marginal wins, real native-module risk | §3.5 — explicitly decided to stay on Node; revisit only if profiling shows it's the bottleneck |
-| WebGL canvas (replace React Flow)                          | Multi-month project                    | Out of Phase 2 scope; iframe virtualization (3.6) buys headroom; revisit if exhausted          |
+| Engine sidecar Bun migration                               | Marginal wins, real native-module risk | §4.1 — explicitly decided to stay on Node; revisit only if profiling shows it's the bottleneck |
+| WebGL canvas (replace React Flow)                          | Multi-month project                    | Out of Phase 3 scope; iframe virtualization (§3.2) buys headroom; revisit if exhausted         |
 | Binary IPC protocol (Protobuf)                             | Build-system complexity                | Not worth it at current message rates; revisit at >1k msg/s                                    |
-| Codex API-key auth                                         | 12 unsupported models                  | §4.B — explicitly removed per user decision                                                    |
+| Codex API-key auth                                         | 12 unsupported models                  | §5.B — explicitly removed per user decision                                                    |
 | TS strict-mode errors in `src/demo/main.tsx`               | unrelated to chat path                 | Pre-existing, not on critical path                                                             |
 | Engine source watcher SIGTERMs on every `src/engine/` edit | inherent to dev mode                   | Could narrow watcher to built artifacts; invasive, leave for now                               |
 
@@ -1239,7 +1272,7 @@ If we revisit this later (a real user asks for it, or codex-cli changes its auth
 
 ---
 
-## 6. Suggested order
+## 7. Suggested order
 
 ### Phase 1 — Done (committed, pushed, tested)
 
@@ -1256,7 +1289,7 @@ If we revisit this later (a real user asks for it, or codex-cli changes its auth
 
 **Verified working** post-1C: agents panel populates, prompts to Cursor / Codex / Claude all return successful turns, build + typecheck clean, `@agentclientprotocol/sdk` zero-references confirmed.
 
-### Phase 1 — Next, in order
+### Phase 2 — In order (col 1+2 chat-side)
 
 
 | #      | Stage                                                                        | Time    | What                                                                                                                                                                                                                                                                                                                                                                                                                              |
@@ -1266,35 +1299,47 @@ If we revisit this later (a real user asks for it, or codex-cli changes its auth
 | **3**  | **Stage 4 — Card system part 2**                                             | ~2.5d   | Search + Plan + Thinking + Question + Error + Usage + Subagent + Fetch + MCP. State-merging via `mergeKey` (TodoWrite as one live block). Includes the §2.4.13 mode pill + auto-switch banner.                                                                                                                                                                                                                                    |
 | **4**  | **Stage 5 — Long-run UX completion**                                         | ~1.5d   | Run-summary roll-up after turn ends; vertical timeline rail (left gutter); long-turn windowing (last K=20 + chevron for older); activity HUD pinned to composer footer; global Stop replaces Send during run; streaming markdown chunking. **Plus context-usage display fix (carryover from Stage 3 testing — see §2.4.x below).**                                                                                                |
 | **5**  | **Stage 6 — Inline permissions + mode controls**                             | ~1.5d   | Move permission UI from global bar to per-tool-card cluster; "Always for X" sticky decisions persisted per chat; mode pill in composer (Phase / Permission / Tier axes); auto-switch banner; ExitPlanMode special permission card.                                                                                                                                                                                                |
-| **6**  | **Stage 7 — Codex + Cursor normalizers** (Track 4.A)                         | ~1.5d   | `codex/normalizer.ts` translates `item.`* events → canonical. `cursor/normalizer.ts` translates Cursor's `tool_call` events → canonical (closes the long-standing Cursor-no-tool-calls gap).                                                                                                                                                                                                                                      |
+| **6**  | **Stage 7 — Codex + Cursor normalizers** (Track 5.A)                         | ~1.5d   | `codex/normalizer.ts` translates `item.`* events → canonical. `cursor/normalizer.ts` translates Cursor's `tool_call` events → canonical (closes the long-standing Cursor-no-tool-calls gap).                                                                                                                                                                                                                                      |
 | **7**  | **Stage 8 — Gemini + Copilot + Droid normalizers**                           | ~2d     | Remaining stream-json/PTY adapters. Gemini's `enter_plan_mode`/`exit_plan_mode` autonomous switching surfaces as canonical `mode.switch` events. Copilot ACP `current_mode_update` notifications.                                                                                                                                                                                                                                 |
 | **8**  | **Stage 8.5 — OpenCode adapter (server-attached)** (§2.10.4)                 | ~1.5-2d | Spawn `opencode serve --port <random>`, attach `@opencode-ai/sdk`, consume SSE bus. SSE-bus → canonical translator (mapping table in §2.10.4). `OPENCODE_CONFIG_CONTENT={...}` env to neuter user config (DPCode trick). Hydrate model picker from `client.provider.list()`. Inject design-tools MCP via `POST /mcp`. **This unlocks the cheap-alternative-models story** — Kimi K2, Qwen3 via Ollama, GLM 4.5, DeepSeek V3, etc. |
 | **9**  | **Stage 9 — Project-context indicator + Memory inspector** (§2.9.5 + §2.9.6) | ~1d     | Chat-header chip showing loaded `CLAUDE.md`/`AGENTS.md`/`GEMINI.md`/`OPENCODE` context files; Settings → Agents memory viewer per agent. Both file-system-driven, no bridge changes.                                                                                                                                                                                                                                              |
 | **10** | **Stage 10 — Per-agent capability test matrix run** (§2.9.8)                 | ~1.5d   | Execute the 7-test corpus against all 7 agents (Claude, Codex, Cursor, Gemini, Copilot, Droid, OpenCode). Document pass/fail per test in `docs/AGENT_CAPABILITY_TEST_MATRIX.md`. CLI versions recorded. Re-run on minor version bumps.                                                                                                                                                                                            |
-| **11** | **Track 4.C HMR Fast Refresh**                                               | 30 min  | Split `sessions-provider.tsx` so Vite Fast Refresh works on it. Drop-in dev win.                                                                                                                                                                                                                                                                                                                                                  |
+| **11** | **Stage 11 — Chat-side performance** (§2.11)                                 | ~3d     | Virtuoso on the new TurnContainer surface (§2.11.1); shiki worker mode (§2.11.2); tool-call index map + WS queue dedup (§2.11.3); SQLite windowed view (§2.11.4). Lands last so it's perf for the *new* renderer surface, not retrofitted later.                                                                                                                                                                                  |
+| **12** | **Track 5.C HMR Fast Refresh**                                               | 30 min  | Split `sessions-provider.tsx` so Vite Fast Refresh works on it. Drop-in dev win.                                                                                                                                                                                                                                                                                                                                                  |
 
 
-**Phase 1 budget:** ~16 days serial (was ~14d before adding Stage 8.5 OpenCode). With parallelization (cards in Stages 3 + 4, normalizers in Stages 7/8/8.5) and one developer: ~11-12 days. Two developers: ~8 days.
+**Phase 2 budget:** ~17-19 days serial. With parallelization (cards in Stages 3 + 4, normalizers in Stages 7/8/8.5) and one developer: ~12-14 days. Two developers: ~9-10 days.
 
-### Phase 2 — After Phase 1 lands
+### Phase 3 — Design canvas (col 3, after Phase 2 lands)
 
 
-| #   | Stage                                                                   | Time            | What                                                                             |
-| --- | ----------------------------------------------------------------------- | --------------- | -------------------------------------------------------------------------------- |
-| 11  | Phase 2.1 — Workspace store Zustand migration                           | ~3-4d           | Highest-leverage canvas-side change. Blocks 14 (iframe virt) and 15 (delta IPC). |
-| 12  | Phase 2.2-2.4 — Virtuoso + Shiki worker + tool-call index + WS dedup    | ~2d             | Parallelizable with 11 once contract is stable.                                  |
-| 13  | Phase 2.5 — Engine sidecar runtime decision                             | (decision-only) | Stay on Node unless profiling proves otherwise; documented in §3.5.              |
-| 14  | Phase 2.6 — Canvas iframe virtualization                                | ~2d             | Depends on 11.                                                                   |
-| 15  | Phase 2.7 — IPC delta protocol                                          | ~2d             | Depends on 11.                                                                   |
-| 16  | Phase 2.8-2.10 — Cache-first startup + non-blocking boot + bundle audit | ~2-3d           | Parallelizable.                                                                  |
-| 17  | Phase 2.11 — SQLite windowed view                                       | ~1d             | Optional polish; pairs with Virtuoso (12).                                       |
+| #   | Stage                                          | Time  | What                                                                                                                                            |
+| --- | ---------------------------------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| 13  | §3.1 — Workspace store Zustand migration       | ~3-4d | Highest-leverage canvas-side change. Blocks 14 + 15. Slices: elements / variants / themes / inspector / project / view / chats / AI / feedback. |
+| 14  | §3.2 — Canvas iframe virtualization            | ~2d   | IO-driven mount/unmount with snapshot fallback; hard cap of 6 live iframes (LRU). Depends on 13.                                                |
+| 15  | §3.3 — IPC delta protocol                      | ~2d   | `UPDATE_ELEMENT` / `INSERT_ELEMENT` patches replace full-tree `SET_ELEMENTS` after initial sync. Depends on 13.                                 |
 
+
+**Phase 3 budget:** ~7-8d serial; 14 and 15 parallelize after 13.
+
+### Phase 4 — Cross-cutting (after Phase 3, mostly parallel)
+
+
+| #   | Stage                                | Time            | What                                                                  |
+| --- | ------------------------------------ | --------------- | --------------------------------------------------------------------- |
+| 16  | §4.1 — Engine sidecar runtime        | (decision-only) | Stay on Node unless profiling proves otherwise; rationale in §4.1.    |
+| 17  | §4.2 — Cache-first startup           | ~1d             | Cache agent registry, last-active per-chat state, bridgeStatus.       |
+| 18  | §4.3 — Non-blocking session boot     | ~0.5d           | Composer interactive during engine warm-up; queue into queuedPreview. |
+| 19  | §4.4 — Bundle + binary trim          | ~1.5d           | lucide-react + Radix audits; asar audit; bundle-visualizer pass.      |
+
+
+**Phase 4 budget:** ~3d; mostly parallelizable.
 
 ### Notes on parallelization
 
-Most of Phase 1 parallelizes well — the registry pattern was specifically designed so each card's a standalone file. Shipping one card per day for a week is realistic with two of us; one card every 1.5 days alone.
+Most of Phase 2 parallelizes well — the registry pattern was specifically designed so each card's a standalone file. Shipping one card per day for a week is realistic with two of us; one card every 1.5 days alone.
 
-The long-run UX foundation (Stage 2 above) is the riskiest piece because sticky-positioning + (eventually) virtuoso + variable card heights interact subtly; budget extra time to profile in real long runs.
+The long-run UX foundation (Stage 2 above) is the riskiest piece because sticky-positioning + (eventually) virtuoso + variable card heights interact subtly; budget extra time to profile in real long runs. Virtuoso lands in Stage 11 *after* the new TurnContainer surface stabilizes — wiring virtuoso onto today's flat message list and then re-wiring it onto TurnContainer would be wasted work.
 
 Stages 7 + 8 + 8.5 (per-agent normalizers) parallelize across agents but each one has its own quirks — Codex's item-types, Cursor's stream-json shape, Gemini/Copilot's PTY-based event extraction, Droid's spec mode, **OpenCode's server-first SSE bus** (the structurally most-different of the eight). Don't try to ship them all on the same day; ship one, run the relevant capability tests (Stage 10), then move to the next.
 
@@ -1302,11 +1347,13 @@ Stages 7 + 8 + 8.5 (per-agent normalizers) parallelize across agents but each on
 
 Stage 10 (capability test matrix) is *not* a single big stage — run the relevant subset of tests after each adapter is finalized in Stages 7 + 8 + 8.5. The Stage 10 milestone is "all 8 agents have a published row in the matrix and any failed tests have a tracked-defect note."
 
+Phase 3 §3.1 (workspace store) is the highest-leverage canvas change but also touches the most files. Don't try to ship §3.1 + §3.2 + §3.3 in the same week — let §3.1 settle and surface re-render bugs before adding the IO virtualization on top.
+
 ---
 
-## 7. End-state vision
+## 8. End-state vision
 
-After Phase 1 + 2:
+After Phases 2-4:
 
 - Every CLI agent's tool call has a purpose-built card matching Conductor / Cursor density, identical across agents.
 - 30-minute Claude runs feel compact: one plan panel, ~30 single-line tool entries, ~5 collapsed thinking chevrons, a few text blocks. The user's prompt stays visible at the top of the active turn for the whole 30 minutes.
@@ -1327,7 +1374,7 @@ That's the *"design tools and layers added on top won't bog down the chat — an
 
 ---
 
-## 8. References
+## 9. References
 
 External research and source citations underlying this rev. Verified during research on 2026-04-27.
 
